@@ -78,7 +78,7 @@ export function SpatialMCFields({
             }
             aria-label="Interpolation method"
           >
-            <option value="idw">IDW</option>
+            <option value="idw">Inverse distance weighting</option>
             <option value="nearest">Nearest</option>
             <option value="linear">Linear</option>
           </select>
@@ -86,10 +86,10 @@ export function SpatialMCFields({
       </div>
       <Label>Data points</Label>
       <DataPointTable
-        headers={["X (m)", "Y (m)", "c (kPa)", "φ (°)", "γ (kN/m³)"]}
+        headers={["x (m)", "y (m)", "c′ (kPa)", "φ′ (°)", "γ (kN/m³)"]}
         rows={rows}
         onChange={handleRowsChange}
-        emptyText="No data points yet: add at least one."
+        emptyText="No data points. Add at least one."
       />
     </div>
   );

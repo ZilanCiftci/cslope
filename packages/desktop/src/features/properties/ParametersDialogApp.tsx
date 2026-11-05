@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetRemoveButton,
+  RowRemoveButton,
+  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
@@ -9,6 +10,7 @@ import { useAppStore } from "../../store/app-store";
 import type { ParameterDef } from "../../store/types";
 import { isElectron } from "../../utils/is-electron";
 import { resolveParameters } from "../../utils/expression";
+import { DialogHeader } from "./DialogHeader";
 
 interface ParametersStatePayload {
   parameters: ParameterDef[];
@@ -178,12 +180,12 @@ export function ParametersDialogApp() {
       },
     },
     {
-      header: null,
+      header: <RemoveColumnHeader />,
       widthClassName: "w-8",
-      cellClassName: "py-1 px-2",
+      cellClassName: "px-1",
       align: "right",
       renderCell: (row, i) => (
-        <SpreadsheetRemoveButton
+        <RowRemoveButton
           ariaLabel={`Remove parameter ${i + 1}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -202,28 +204,23 @@ export function ParametersDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Parameters</h2>
-        <p
-          className="text-[10px] mt-0.5"
-          style={{ color: "var(--color-vsc-text-muted)" }}
-        >
-          Define named variables and reuse them in coordinates and material
-          properties.
-        </p>
-      </div>
+      <DialogHeader
+        title="Parameters"
+        description="Named values to use in coordinates and material properties."
+      />
 
       <div className="flex-1 overflow-y-auto pr-1 space-y-2.5">
         <SpreadsheetTable
           rows={sortedParameters}
           columns={columns}
           getRowKey={(row) => row.id}
+          emptyText="No parameters."
         />
 
         <button
           onClick={addParameter}
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-accent)" }}
+          style={{ color: "var(--color-vsc-link)" }}
         >
           + Add parameter
         </button>

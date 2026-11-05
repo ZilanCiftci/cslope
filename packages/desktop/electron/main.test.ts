@@ -565,7 +565,7 @@ describe("window controls", () => {
 // ── Dialog windows ────────────────────────────────────────────────
 
 const DIALOGS: [channel: string, title: string, hash: string][] = [
-  ["window:openMaterialsDialog", "Define materials", "materials-dialog"],
+  ["window:openMaterialsDialog", "Materials", "materials-dialog"],
   [
     "window:openMaterialAssignmentDialog",
     "Assign materials",
@@ -586,7 +586,7 @@ const DIALOGS: [channel: string, title: string, hash: string][] = [
   ["window:openSearchLimitsDialog", "Search limits", "search-limits-dialog"],
   [
     "window:openCustomSearchPlanesDialog",
-    "Custom search planes",
+    "Custom surfaces",
     "custom-search-planes-dialog",
   ],
   ["window:openOptionsDialog", "Options", "options-dialog"],

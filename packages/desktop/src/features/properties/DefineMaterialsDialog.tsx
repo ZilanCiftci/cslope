@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useId } from "react";
 import { useAppStore } from "../../store/app-store";
 import {
   MATERIAL_MODEL_LABELS,
@@ -28,6 +28,7 @@ import { resolveParameters } from "../../utils/expression";
 import { ImportedDataNotice } from "./ImportedDataNotice";
 import { earlierStageMaterials, earlierStageNoticeText } from "./imported-notices";
 import { strengthParametersText } from "../export/analysisSummary";
+import { DialogHeader, WindowSubheading } from "./DialogHeader";
 
 // ── Constants ──
 
@@ -159,6 +160,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
   };
 
   const model = selected ? getModel(selected) : undefined;
+  const modelSelectId = useId();
   // Materials whose yield stress comes from the earlier stage (tagged in the list).
   const stageIds = useMemo(
     () => new Set(earlierStage ? earlierStageMaterials(materials).map((m) => m.id) : []),
@@ -195,7 +197,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
           testId="earlier-stage-notice"
           text={earlierStageNoticeText(materials)}
           buttonLabel="Remove earlier stage"
-          buttonAriaLabel="Remove the imported earlier stage"
+          buttonTitle="Remove the imported earlier stage"
           onRemove={removeEarlierStage}
         />
       )}
@@ -318,12 +320,14 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
               border: "1px solid var(--color-vsc-border)",
             }}
           >
+            <WindowSubheading className="truncate">{selected.name || "Unnamed material"}</WindowSubheading>
             {/* Model kind selector */}
             <div>
-              <label className="block text-[10px] font-medium mb-1 opacity-70">
+              <label htmlFor={modelSelectId} className="block text-[11px] font-medium mb-1" style={{ color: "var(--color-vsc-text-muted)" }}>
                 Material model
               </label>
               <select
+                id={modelSelectId}
                 value={model.kind}
                 onChange={(e) =>
                   switchKind(
@@ -384,9 +388,10 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
           color: "var(--color-vsc-text)",
         }}
       >
-        <div className="pb-2">
-          <h2 className="text-[12px] font-semibold">Define materials</h2>
-        </div>
+        <DialogHeader
+          title="Materials"
+          description="The soil and rock materials of the model and their strength; select one to edit it."
+        />
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">{body}</div>
         <div
           className="pt-3 mt-2 border-t dialog-buttons"
@@ -405,7 +410,7 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
 
   return (
     <PopupPanel
-      title="Define materials"
+      title="Materials"
       onClose={onClose}
       width={560}
       maxHeight="85vh"

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { RowRemoveButton } from "./SpreadsheetTable";
 
 const normalizeDecimalSeparator = (value: string): string =>
   value.replace(/,/g, ".");
@@ -99,9 +100,11 @@ export function DataPointTable({
                 </th>
               ))}
               <th
-                className="w-6"
+                className="w-7"
                 style={{ borderBottom: "1px solid var(--color-vsc-border)" }}
-              />
+              >
+                <span className="sr-only">Remove</span>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -109,7 +112,7 @@ export function DataPointTable({
               <tr>
                 <td
                   colSpan={headers.length + 1}
-                  className="px-1.5 py-1 text-[11px] italic"
+                  className="px-1.5 py-1 text-[11px]"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   {emptyText}
@@ -117,7 +120,7 @@ export function DataPointTable({
               </tr>
             )}
             {rows.map((row, ri) => (
-              <tr key={ri}>
+              <tr key={ri} className="group">
                 {row.map((val, ci) => (
                   <td
                     key={ci}
@@ -180,7 +183,7 @@ export function DataPointTable({
                   </td>
                 ))}
                 <td
-                  className="w-6 text-center"
+                  className="w-7 text-center leading-none"
                   style={{
                     borderBottom:
                       ri < rows.length - 1
@@ -188,13 +191,10 @@ export function DataPointTable({
                         : "none",
                   }}
                 >
-                  <button
+                  <RowRemoveButton
+                    ariaLabel={`Remove point ${ri + 1}`}
                     onClick={() => removeRow(ri)}
-                    className="text-[9px] opacity-40 hover:opacity-100 hover:text-red-400 cursor-pointer"
-                    aria-label={`Remove row ${ri + 1}`}
-                  >
-                    ✕
-                  </button>
+                  />
                 </td>
               </tr>
             ))}
@@ -203,10 +203,10 @@ export function DataPointTable({
       </div>
       <button
         onClick={addRow}
-        className="text-[10px] cursor-pointer hover:underline font-medium"
-        style={{ color: "var(--color-vsc-accent)" }}
+        className="text-[11px] cursor-pointer hover:underline font-medium"
+        style={{ color: "var(--color-vsc-link)" }}
       >
-        + Add row
+        + Add point
       </button>
     </div>
   );

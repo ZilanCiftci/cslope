@@ -27,11 +27,11 @@ export function earlierStageMaterials(materials: MaterialRow[]): MaterialRow[] {
 
 /** The notice for an imported earlier construction stage (which has no name of its own). */
 export function earlierStageNoticeText(materials: MaterialRow[]): string {
-  const affected = earlierStageMaterials(materials).map((m) => `Material "${m.name}"`);
+  const affected = earlierStageMaterials(materials).map((m) => `material “${m.name}”`);
   const which =
     affected.length === 0
       ? "No material takes its yield stress from it."
-      : `Its effective stresses set the yield stress of ${affected.join(", ")} (marked "stage" in the list). ` +
+      : `Its effective stresses set the yield stress of ${affected.join(", ")} (marked “stage” in the list). ` +
         `Removing it makes ${affected.length === 1 ? "this material" : "these materials"} use ${affected.length === 1 ? "its" : "their"} POP or OCR instead.`;
   return `An earlier stage was imported. ${which}`;
 }

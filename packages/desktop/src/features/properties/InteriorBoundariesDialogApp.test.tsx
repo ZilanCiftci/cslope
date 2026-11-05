@@ -59,7 +59,7 @@ describe("InteriorBoundariesDialogApp", () => {
     expect(bridge.callNames()).toContain("requestInteriorBoundariesState");
     hydrate([]);
     expect(
-      screen.getByText("Add a boundary to start editing boundary coordinates."),
+      screen.getByText("No interior boundaries."),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Delete" })).toHaveAttribute(
       "aria-disabled",
@@ -153,7 +153,7 @@ describe("InteriorBoundariesDialogApp", () => {
     });
     expect(store().selectedMaterialBoundaryId).toBeNull();
     expect(
-      screen.getByText("Add a boundary to start editing boundary coordinates."),
+      screen.getByText("No interior boundaries."),
     ).toBeInTheDocument();
     expect(sentBoundaries()).toEqual([]);
   });

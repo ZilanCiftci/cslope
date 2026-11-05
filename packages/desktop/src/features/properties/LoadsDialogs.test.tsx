@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../utils/is-electron", () => ({ isElectron: true }));
@@ -36,10 +36,10 @@ describe("UdlDialogApp", () => {
       { id: "u1", magnitude: 12, x1: 1, x2: 3 },
       { id: "u2", magnitude: 5, x1: 4, x2: 6, expressions: { x2: "H*2" } },
     ]);
-    const mags = screen.getAllByLabelText("UDL magnitude") as HTMLInputElement[];
+    const mags = screen.getAllByLabelText("Load magnitude") as HTMLInputElement[];
     expect(mags.map((i) => i.value)).toEqual(["12", "5"]);
     // An expression is shown instead of the resolved value.
-    const x2s = screen.getAllByLabelText("UDL x2") as HTMLInputElement[];
+    const x2s = screen.getAllByLabelText("Load x2") as HTMLInputElement[];
     expect(x2s[1].value).toBe("H*2");
     expect(useAppStore.getState().parameters).toEqual(PARAMS);
   });
@@ -71,7 +71,7 @@ describe("UdlDialogApp", () => {
     let last = bridge.sentOf<{ udls: UdlRow[] }>("sendLoadsChanged").at(-1)!;
     expect(last.udls).toHaveLength(1);
 
-    const x1 = screen.getByLabelText("UDL x1");
+    const x1 = screen.getByLabelText("Load x1");
     await userEvent.clear(x1);
     await userEvent.type(x1, "2,5");
     await userEvent.tab();
@@ -79,7 +79,7 @@ describe("UdlDialogApp", () => {
     last = bridge.sentOf<{ udls: UdlRow[] }>("sendLoadsChanged").at(-1)!;
     expect(last.udls[0].x1).toBe(2.5);
 
-    await userEvent.click(screen.getByRole("button", { name: "Remove UDL 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove load 1" }));
     expect(useAppStore.getState().udls).toEqual([]);
     expect(
       bridge.sentOf<{ udls: UdlRow[] }>("sendLoadsChanged").at(-1)!.udls,
@@ -129,7 +129,7 @@ describe("UdlDialogApp", () => {
   it("evaluates parameter expressions and stores the expression text", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
-    const x2 = screen.getByLabelText("UDL x2");
+    const x2 = screen.getByLabelText("Load x2");
     await userEvent.clear(x2);
     await userEvent.type(x2, "H+1");
     await userEvent.tab();
@@ -149,7 +149,7 @@ describe("UdlDialogApp", () => {
   it("keeps the last valid value when an expression cannot be evaluated", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
-    const x1 = screen.getByLabelText("UDL x1");
+    const x1 = screen.getByLabelText("Load x1");
     await userEvent.clear(x1);
     await userEvent.type(x1, "unknown*2");
     await userEvent.tab();
@@ -162,7 +162,7 @@ describe("UdlDialogApp", () => {
   it("clamps the magnitude to a small positive value", async () => {
     render(<UdlDialogApp />);
     hydrate([{ id: "u1", magnitude: 12, x1: 1, x2: 3 }]);
-    const mag = screen.getByLabelText("UDL magnitude");
+    const mag = screen.getByLabelText("Load magnitude");
     await userEvent.clear(mag);
     await userEvent.type(mag, "-4");
     await userEvent.tab();
@@ -187,10 +187,11 @@ describe("UdlDialogApp", () => {
       materialNames: [{ id: "m1", name: "Clay" }, { id: "m2", name: "Peat" }],
     });
     const notes = screen.getByTestId("udl-excess-notes");
-    expect(notes).toHaveTextContent(/UDL 1, material "Clay": excess pore pressure\s*× q \(0 to 1\)/);
-    const clay = screen.getByLabelText('Excess pore pressure ratio of UDL 1 in material "Clay"');
+    // A table: Load | Material | Excess pore pressure (× q, 0–1).
+    expect(within(notes).getAllByRole("row")[1]).toHaveTextContent(/^Load 1Clay/);
+    const clay = screen.getByLabelText('Excess pore pressure ratio of load 1 in material "Clay"');
     expect(clay).toHaveValue("0.5");
-    expect(screen.getByLabelText('Excess pore pressure ratio of UDL 1 in material "Peat"')).toHaveValue("0.25");
+    expect(screen.getByLabelText('Excess pore pressure ratio of load 1 in material "Peat"')).toHaveValue("0.25");
     // Editable from 0 to 1; a value out of range is not taken.
     await userEvent.clear(clay);
     await userEvent.type(clay, "1");
@@ -199,9 +200,9 @@ describe("UdlDialogApp", () => {
     await userEvent.tab();
     expect(useAppStore.getState().udls[0].excessPorePressure?.[0].ratio).toBe(1);
     expect(clay).toHaveValue("1");
-    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in material "Clay"' }));
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of load 1 in material "Clay"' }));
     expect(useAppStore.getState().udls[0].excessPorePressure).toEqual([{ materialId: "m2", ratio: 0.25 }]);
-    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of UDL 1 in material "Peat"' }));
+    await userEvent.click(screen.getByRole("button", { name: 'Remove the excess pore pressure of load 1 in material "Peat"' }));
     expect(useAppStore.getState().udls[0].excessPorePressure).toBeUndefined();
     expect(screen.queryByTestId("udl-excess-notes")).toBeNull();
   });

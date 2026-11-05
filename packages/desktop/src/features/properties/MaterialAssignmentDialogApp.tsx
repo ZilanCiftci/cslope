@@ -7,6 +7,7 @@ import type {
   MaterialRow,
   RegionMaterials,
 } from "../../store/types";
+import { DialogHeader } from "./DialogHeader";
 
 interface MaterialAssignmentStatePayload {
   coordinates: [number, number][];
@@ -82,9 +83,10 @@ export function MaterialAssignmentDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Assign materials</h2>
-      </div>
+      <DialogHeader
+        title="Assign materials"
+        description="The material of each region; click a region on the canvas to select it."
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <MaterialAssignmentSection plain />
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
-import { HelpButton } from "../../components/ui/HelpButton";
+import { DialogHeader, WindowSubheading } from "./DialogHeader";
 import { useAppStore } from "../../store/app-store";
 import type {
   LineLoadRow,
@@ -71,6 +71,12 @@ function formatDistinct(a: number, b: number, min = 2): [string, string] {
     if (sa !== sb) return [sa, sb];
   }
   return [String(a), String(b)];
+}
+
+/** A spacing as shown in the lists: 3 significant digits (0.3048 → 0.305). */
+function formatSignificant(value: number): string {
+  const shown = Number(value.toPrecision(3));
+  return String(shown === 0 ? 0 : shown);
 }
 
 /** Point as shown in the lists: "x, y" with 2 decimals. */
@@ -288,12 +294,7 @@ function DetailPanel({ title, children }: { title: string; children: ReactNode }
       className="p-3 rounded space-y-2"
       style={{ background: "var(--color-vsc-surface-tint)", border: "1px solid var(--color-vsc-border)" }}
     >
-      <h4
-        className="text-[10px] font-bold uppercase tracking-[0.1em]"
-        style={{ color: "var(--color-vsc-text-muted)" }}
-      >
-        {title}
-      </h4>
+      <WindowSubheading>{title}</WindowSubheading>
       {children}
     </div>
   );
@@ -408,16 +409,11 @@ export function ReinforcementDialogApp() {
       className="h-screen flex flex-col p-3"
       style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text)" }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold flex items-center gap-1.5">
-          Reinforcement
-          <HelpButton topic="Reinforcement" page="reinforcement#reinforcement" />
-        </h2>
-        <p className="text-[10px]" style={muted}>
-          End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per meter are
-          capacity / spacing (a geosynthetic sheet with S = 1: per meter of slope; partial coverage A: T × A).
-        </p>
-      </div>
+      <DialogHeader
+        title="Reinforcement"
+        description="Anchors, nails, tiebacks and geosynthetics; end 1 is the head."
+        help={{ topic: "Reinforcement", page: "reinforcement#reinforcement" }}
+      />
       <div className="flex-1 overflow-y-auto pr-1 space-y-3">
         <section aria-label="Reinforcement elements" className="space-y-2">
           <div className="flex gap-3">
@@ -430,8 +426,8 @@ export function ReinforcementDialogApp() {
                 formatPoint(r.x1, r.y1),
                 formatPoint(r.x2, r.y2),
                 Math.hypot(r.x2 - r.x1, r.y2 - r.y1).toFixed(2),
-                formatNumber(r.tensileCapacity),
-                formatNumber(r.spacing),
+                formatNumber(r.tensileCapacity, 1),
+                formatSignificant(r.spacing),
               ]}
               selectedId={selected?.id}
               onSelect={(id) => {
@@ -576,6 +572,7 @@ export function ReinforcementDialogApp() {
                   <>
                     <NumberField
                       label="Development length, end 1 (m)"
+                      span={2}
                       title="The tensile capacity develops linearly over this length; 0 = end fully anchored"
                       value={selected.developmentLength1 ?? 0}
                       ariaLabel="Development length at end 1"
@@ -584,6 +581,7 @@ export function ReinforcementDialogApp() {
                     />
                     <NumberField
                       label="Development length, end 2 (m)"
+                      span={2}
                       title="The tensile capacity develops linearly over this length; 0 = end fully anchored"
                       value={selected.developmentLength2 ?? 0}
                       ariaLabel="Development length at end 2"
@@ -649,18 +647,11 @@ export function ReinforcementDialogApp() {
         </section>
 
         <section aria-label="Piles and sheet piles" className="space-y-2 pt-2">
-          <div>
-            <h2 className="text-[12px] font-semibold flex items-center gap-1.5">
-              Piles and sheet piles
-              <HelpButton topic="Piles and sheet piles" page="reinforcement#piles-and-sheet-piles" />
-            </h2>
-            <p className="text-[10px]" style={muted}>
-              Shear against the sliding mass where the slip surface crosses the pile: tangent to the slip surface,
-              perpendicular to the pile or at angle θ above horizontal. Ito &amp; Matsui needs a vertical pile and
-              S &gt; D; the shear and moment capacities per pile limit the force (0 = no limit). Forces per meter are
-              force / S.
-            </p>
-          </div>
+          <DialogHeader
+            title="Piles and sheet piles"
+            description="Piles and sheet piles that resist the sliding mass in shear."
+            help={{ topic: "Piles and sheet piles", page: "reinforcement#piles-and-sheet-piles" }}
+          />
           <div className="flex gap-3">
             <ElementList
               rows={piles}
@@ -670,7 +661,7 @@ export function ReinforcementDialogApp() {
                 PILE_TYPE_LABELS[p.type],
                 formatPoint(p.x1, p.y1),
                 formatPoint(p.x2, p.y2),
-                p.mode === "force" ? `${formatNumber(p.force)} kN` : "Ito & Matsui",
+                p.mode === "force" ? `${formatNumber(p.force, 1)} kN` : "Ito & Matsui",
               ]}
               selectedId={pile?.id}
               onSelect={(id) => {
@@ -756,7 +747,7 @@ export function ReinforcementDialogApp() {
                     onValue={(v) => updatePile(pile.id, { [key]: v })}
                   />
                 ))}
-                {pile.mode === "force" ? (
+                {pile.mode === "force" && (
                   <NumberField
                     label="Shear force V per pile (kN)"
                     span={2}
@@ -765,13 +756,6 @@ export function ReinforcementDialogApp() {
                     accept={(v) => v >= 0}
                     onValue={(v) => updatePile(pile.id, { force: v })}
                   />
-                ) : (
-                  <div className="col-span-2 flex flex-col gap-0.5">
-                    <Label>Shear force V per pile (kN)</Label>
-                    <span className="text-[11px] py-1" style={muted}>
-                      From the soil (Ito &amp; Matsui)
-                    </span>
-                  </div>
                 )}
                 <NumberField
                   label="Diameter D (m)"
@@ -833,7 +817,7 @@ export function ReinforcementDialogApp() {
                     ))}
                   </select>
                 </Field>
-                {(pile.direction ?? "angle") === "angle" ? (
+                {(pile.direction ?? "angle") === "angle" && (
                   <NumberField
                     label="Angle θ above horizontal (°)"
                     span={2}
@@ -842,8 +826,6 @@ export function ReinforcementDialogApp() {
                     accept={(v) => Math.abs(v) < 90}
                     onValue={(v) => updatePile(pile.id, { angle: v })}
                   />
-                ) : (
-                  <div className="col-span-2" />
                 )}
                 {pile.mode === "ito-matsui" ? (
                   <Field

@@ -69,7 +69,7 @@ describe("imported head and reference lines in the piezometric lines dialog", ()
     expect(screen.getByTestId("waternet-notice")).toHaveTextContent(
       "Pore pressure comes from 2 imported head lines and 1 reference line. The piezometric lines below still set the phreatic level (saturated unit weight, free water, strength above the water) but not the pore pressure. Remove the head lines to use the piezometric lines for pore pressure.",
     );
-    const remove = screen.getByRole("button", { name: "Remove the imported head and reference lines" });
+    const remove = screen.getByRole("button", { name: "Remove head lines" });
     expect(remove).toHaveTextContent("Remove head lines");
     await userEvent.click(remove);
     expect(store().waternet).toBeUndefined();
@@ -92,11 +92,11 @@ describe("an imported earlier stage in the materials dialog", () => {
     importBoth();
     render(<DefineMaterialsDialog onClose={() => {}} />);
     expect(screen.getByTestId("earlier-stage-notice")).toHaveTextContent(
-      'An earlier stage was imported. Its effective stresses set the yield stress of Material "Clay" (marked "stage" in the list). Removing it makes this material use its POP or OCR instead.',
+      'An earlier stage was imported. Its effective stresses set the yield stress of material “Clay” (marked “stage” in the list). Removing it makes this material use its POP or OCR instead.',
     );
     expect(screen.getByTestId("stage-tag")).toHaveTextContent("stage");
     expect(screen.getByTestId("ocr-override")).toHaveTextContent("Overridden by the yield stress from the earlier stage + POP 10 kPa");
-    await userEvent.click(screen.getByRole("button", { name: "Remove the imported earlier stage" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove earlier stage" }));
     expect(store().earlierStage).toBeUndefined();
     expect(store().materials[0].model).not.toHaveProperty("yieldFromEarlierStage");
     expect(store().waternet).toEqual(waternet);
