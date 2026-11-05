@@ -36,6 +36,7 @@ coverage-final.json
 # specification is kept
 /docs/*
 !/docs/file-format.md
+!/docs/design-rules.md
 
 # Client project data: kept on the developer's machine only
 packages/desktop/src/store/lovo.local.ts
