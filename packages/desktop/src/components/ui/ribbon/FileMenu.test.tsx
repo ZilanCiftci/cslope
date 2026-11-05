@@ -45,6 +45,13 @@ async function summaryText(): Promise<string> {
   return text.textContent ?? "";
 }
 
+/** The list items of the summary (what an export leaves out). */
+function summaryItems(): string[] {
+  return within(screen.getByTestId("summary-text"))
+    .queryAllByRole("listitem")
+    .map((li) => li.textContent ?? "");
+}
+
 /** Close the summary dialog. */
 async function closeSummary() {
   const dialog = screen.getByRole("dialog");
@@ -239,7 +246,8 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
-    expect(await summaryText()).toMatch(/^Calculation 1 \(Dike\)\.stix leaves out:\n {2}– /);
+    expect(await summaryText()).toMatch(/^Calculation 1 \(Dike\)\.stix leaves out:/);
+    expect(summaryItems().length).toBeGreaterThan(0);
   });
 
   it("imports a .slim file from Import › .sli/.slim/.slmd file and exports the model as one", async () => {
@@ -264,7 +272,8 @@ describe("FileMenu in a browser", () => {
     URL.revokeObjectURL ??= () => {};
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .slim model file"));
-    expect(await summaryText()).toMatch(/^Cut\.slim leaves out:\n {2}– /);
+    expect(await summaryText()).toMatch(/^Cut\.slim leaves out:/);
+    expect(summaryItems().length).toBeGreaterThan(0);
   });
 
   it("shows the summary in a dialog that copies it", async () => {
@@ -275,10 +284,11 @@ describe("FileMenu in a browser", () => {
     renderMenu();
     await userEvent.click(screen.getByTitle("Export"));
     await userEvent.click(screen.getByTitle("Export the active model as a .stix project file"));
-    const text = await summaryText();
+    await summaryText();
     expect(screen.getByRole("dialog", { name: "Export as .stix" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Copy" }));
-    expect(writeText).toHaveBeenCalledWith(text);
+    // Copy gives the plain text, the items on lines of their own.
+    expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/\.stix leaves out:\n {2}– /));
     expect(await screen.findByRole("status")).toHaveTextContent("Copied");
     fireEvent.keyDown(window, { key: "Escape" });
     expect(screen.queryByRole("dialog")).toBeNull();
