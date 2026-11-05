@@ -52,7 +52,7 @@ export function CustomSearchPlanesSection({
         className="text-[10px] mb-1.5"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
-        Define specific failure surfaces to analyse: circles, or non-circular
+        Define specific failure surfaces to analyze: circles, or non-circular
         surfaces as points through the soil (the ends are extended to the
         ground).
       </div>
@@ -64,7 +64,7 @@ export function CustomSearchPlanesSection({
             onChange={(e) => setCustomPlanesOnly(e.target.checked)}
             className="accent-blue-500"
           />
-          Only analyse these surfaces (skip the search)
+          Only analyze these surfaces (skip the search)
         </label>
       )}
       {planes.map((p) => {
@@ -100,7 +100,7 @@ export function CustomSearchPlanesSection({
                 value={p.cx}
                 onValueChange={(v) => updatePlane(p.id, { cx: v })}
                 className="w-20"
-                aria-label="Circle centre X"
+                aria-label="Circle center X"
               />
             </label>
             <label className="flex flex-col">
@@ -110,7 +110,7 @@ export function CustomSearchPlanesSection({
                 value={p.cy}
                 onValueChange={(v) => updatePlane(p.id, { cy: v })}
                 className="w-20"
-                aria-label="Circle centre Y"
+                aria-label="Circle center Y"
               />
             </label>
             <label className="flex flex-col">

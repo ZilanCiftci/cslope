@@ -19,7 +19,7 @@ The methods differ in which equilibrium conditions they satisfy and in what they
 
 ## Bishop simplified
 
-Bishop's method satisfies moment equilibrium about the centre of a circle and vertical force equilibrium of each slice, and neglects the vertical (shear) interslice forces. The factor of safety follows by iteration from
+Bishop's method satisfies moment equilibrium about the center of a circle and vertical force equilibrium of each slice, and neglects the vertical (shear) interslice forces. The factor of safety follows by iteration from
 
 $$
 F = \frac{\sum \left[c' b + (W - u b)\tan\varphi'\right] / m_\alpha}{\sum W \sin\alpha},
@@ -51,7 +51,7 @@ For a given $\lambda$, cSlope computes one factor of safety from moment equilibr
 
 ### Interslice functions
 
-$f(x)$ is defined between the two ends of the slip surface, with $\xi$ the normalised position from 0 at one end to 1 at the other:
+$f(x)$ is defined between the two ends of the slip surface, with $\xi$ the normalized position from 0 at one end to 1 at the other:
 
 | Function | $f(\xi)$ |
 | --- | --- |
@@ -97,7 +97,7 @@ With partial factors switched on, cSlope divides the strength parameters by thei
 The probabilistic analysis treats selected material properties as random variables with a mean and a standard deviation.
 
 - The **Taylor series** method evaluates $F$ at the mean values and with each variable shifted up and down by one standard deviation, and combines the changes into the standard deviation of $F$. It refuses to run when the mean minus one standard deviation of a strength or unit weight is negative.
-- The **Monte Carlo** method samples the variables many times and analyses each sample on the critical surface found at the mean values.
+- The **Monte Carlo** method samples the variables many times and analyzes each sample on the critical surface found at the mean values.
 
 Both report the reliability index $\beta$, assuming a lognormal distribution of $F$, and the probability of failure $P_f$, the probability that $F < 1$. They also report the normal reliability index $\beta = (\mu_F - 1)/\sigma_F$.
 

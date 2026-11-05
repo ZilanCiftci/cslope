@@ -452,7 +452,7 @@ export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   "s-f-depth": "S = f(depth)",
   "s-f-datum": "S = f(datum)",
   "lime-cement-columns": "Lime-cement columns",
-  "hoek-brown": "Generalised Hoek-Brown",
+  "hoek-brown": "Generalized Hoek-Brown",
   shansep: "SHANSEP",
   "shear-normal": "Shear-normal function",
 };

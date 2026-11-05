@@ -36,7 +36,7 @@ export interface AnalysisHandle {
 /** Rejection reason used when a run is cancelled; never shown to the user. */
 class AnalysisCancelledError extends Error {
   constructor() {
-    super("Analysis cancelled");
+    super("Analysis canceled");
     this.name = "AnalysisCancelledError";
   }
 }

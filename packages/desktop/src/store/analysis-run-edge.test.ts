@@ -769,7 +769,7 @@ describe("executeReliability time budget", () => {
     const w = FakeWorker.instances.at(-1)!;
     handle.cancel();
     handle.cancel(); // idempotent
-    await expect(handle.promise).rejects.toThrow("Analysis cancelled");
+    await expect(handle.promise).rejects.toThrow("Analysis canceled");
     expect(w.terminated).toBe(true);
   });
 });

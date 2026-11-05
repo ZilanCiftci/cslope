@@ -1583,7 +1583,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
       </div>
       {fem.piles?.map((p) => (
         <div key={p.pile} className="flex justify-between">
-          <Label title="Largest bending moment, shear and axial force of the pile (per pile) at the factor of safety, the pile modelled as an elastic beam on springs that let the soil flow between the piles.">
+          <Label title="Largest bending moment, shear and axial force of the pile (per pile) at the factor of safety, the pile modeled as an elastic beam on springs that let the soil flow between the piles.">
             Pile {p.pile + 1} (FE)
           </Label>
           <span className="tabular-nums">

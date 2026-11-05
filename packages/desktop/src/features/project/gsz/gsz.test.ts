@@ -238,7 +238,7 @@ describe(".gsz import", () => {
     expect(d.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 21 });
   });
 
-  it("imports a fully specified slip surface with its axis, analysed alone", () => {
+  it("imports a fully specified slip surface with its axis, analyzed alone", () => {
     const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="4" Y="10" /><DataPoint Number="7" X="12" Y="4" /><DataPoint Number="8" X="24" Y="5" /><DataPoint Number="9" X="14" Y="18" />')
       .replace("<Option>EntryExit</Option>", "<Option>FullySpecified</Option><Axis ID=\"9\" /><FullySpecifiedSlips Len=\"1\"><FullySpecifiedSlip><ID>1</ID><DataPoints Len=\"3\"><DataPoint>6</DataPoint><DataPoint>7</DataPoint><DataPoint>8</DataPoint></DataPoints></FullySpecifiedSlip></FullySpecifiedSlips>");
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
@@ -654,7 +654,7 @@ describe(".gsz export", () => {
     expect(dry.options.seismicHorizontal).toBeUndefined();
   });
 
-  it("writes given circles and surfaces analysed alone as fully specified slip surfaces, and notes them when the model also searches", async () => {
+  it("writes given circles and surfaces analyzed alone as fully specified slip surfaces, and notes them when the model also searches", async () => {
     const circle = { cx: 16, cy: 18, radius: 15 };
     const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "C", options: { method: "Bishop" } });
     const { xml, notes } = modelToGszXml(onCircle);

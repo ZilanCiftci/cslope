@@ -1,13 +1,13 @@
 ---
 title: Reinforcement and piles
 description: Anchors, grouted tiebacks, soil nails, geosynthetics, pile rows and sheet pile walls, and how their forces enter the analysis.
-section: Modelling
+section: Modeling
 order: 5
 ---
 
 Open **Model › Loads & support › Reinforcement**. The window has two tables: **reinforcement** (elements that act in tension) and **piles and sheet piles** (elements that act in shear).
 
-The forces of an element are per element. cSlope divides them by the out-of-plane spacing **S** to get the force per metre run of the slope. For a geosynthetic sheet that covers the whole slope, use S = 1.
+The forces of an element are per element. cSlope divides them by the out-of-plane spacing **S** to get the force per meter run of the slope. For a geosynthetic sheet that covers the whole slope, use S = 1.
 
 ## Reinforcement
 
@@ -31,8 +31,8 @@ These are starting values: changing the type of an element applies the new type'
 Where the slip surface crosses the element, the force it can carry is the smallest of its tensile capacity and its pullout resistance on either side of the crossing.
 
 - **None — ends fully anchored**: the element is held at both ends; only T limits the force.
-- **Bond strength along the element**: a pullout resistance per metre of element, **Bond strength (kN/m)**, acting over the **Bonded length at end 2** (0 means the whole element, as for a soil nail).
-- **Interface friction (overburden)**: for a geosynthetic, the resistance per metre is $r = 2\,(a + \sigma'_v \tan\delta)$, with the **Adhesion a**, the **Interface friction δ** and the vertical effective stress at the element.
+- **Bond strength along the element**: a pullout resistance per meter of element, **Bond strength (kN/m)**, acting over the **Bonded length at end 2** (0 means the whole element, as for a soil nail).
+- **Interface friction (overburden)**: for a geosynthetic, the resistance per meter is $r = 2\,(a + \sigma'_v \tan\delta)$, with the **Adhesion a**, the **Interface friction δ** and the vertical effective stress at the element.
 
 With pullout, **Plate / connection at end 1** and **Anchorage at end 2** limit the force that the ends can take.
 
@@ -68,7 +68,7 @@ The Ito & Matsui method needs a vertical pile and a spacing larger than the diam
 
 ## Lime-cement columns
 
-Lime-cement columns are modelled as a material, not as a support element. See [Materials](/docs/materials#lime-cement-columns).
+Lime-cement columns are modeled as a material, not as a support element. See [Materials](/docs/materials#lime-cement-columns).
 
 ## On the canvas and in the results
 

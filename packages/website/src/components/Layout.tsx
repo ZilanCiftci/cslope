@@ -159,10 +159,10 @@ function SiteFooter() {
       </div>
       <div className="border-t">
         <p className="mx-auto max-w-6xl px-4 py-5 text-xs text-muted-foreground sm:px-6">
-          © {__BUILD_YEAR__} {SITE.company.name}. cSlope is released under the {SITE.licence} licence. The site uses
+          © {__BUILD_YEAR__} {SITE.company.name}. cSlope is released under the {SITE.licence} license. The site uses
           open source software and fonts:{" "}
           <a href="/third-party-licenses.txt" className="underline-offset-2 hover:text-foreground hover:underline">
-            third-party licences
+            third-party licenses
           </a>
           . Windows is a trademark of Microsoft Corporation.
         </p>

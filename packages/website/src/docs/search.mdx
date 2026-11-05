@@ -1,13 +1,13 @@
 ---
 title: Slip surface search
-description: How cSlope searches for the critical slip surface, how to limit the search, and how to analyse surfaces of your own.
+description: How cSlope searches for the critical slip surface, how to limit the search, and how to analyze surfaces of your own.
 section: Analysis
 order: 1
 ---
 
-cSlope looks for the **critical slip surface**: the one with the lowest factor of safety. By default it generates circular surfaces between an entry range near the crest and an exit range near the toe, analyses each, and then refines the search around the best ones. A [block search](#block-search) tries surfaces through regions you choose instead.
+cSlope looks for the **critical slip surface**: the one with the lowest factor of safety. By default it generates circular surfaces between an entry range near the crest and an exit range near the toe, analyzes each, and then refines the search around the best ones. A [block search](#block-search) tries surfaces through regions you choose instead.
 
-<Figure media="allSurfaces" caption="Every analysed surface, coloured by its factor of safety. The critical surface is the lowest." />
+<Figure media="allSurfaces" caption="Every analyzed surface, colored by its factor of safety. The critical surface is the lowest." />
 
 ## Search limits
 
@@ -37,7 +37,7 @@ More iterations give a more thorough search and take longer. For a final analysi
 
 **Sliding direction** in **Options › Search** sets whether the slope fails **Left to right** or **Right to left**. A DXF import guesses the direction from the geometry. Choose **Both** to search both: the opposite direction uses automatic search limits, and the lower factor of safety is reported, with the other one in the summary.
 
-**Circles follow bedrock (composite)** is on by default. A trial circle that reaches impenetrable material (bedrock) on the base of the model follows its top there instead of being rejected: the slip surface runs along the firm base, as for clay on a firm bottom, and the slices along it have a straight base whose forces take their moments about the circle's centre (Duncan & Wright 2014, ch. 7, composite surfaces). The result shows such a surface as a circle with a straight part along the base. Turn it off to analyse circles only, as programs without composite surfaces do.
+**Circles follow bedrock (composite)** is on by default. A trial circle that reaches impenetrable material (bedrock) on the base of the model follows its top there instead of being rejected: the slip surface runs along the firm base, as for clay on a firm bottom, and the slices along it have a straight base whose forces take their moments about the circle's center (Duncan & Wright 2014, ch. 7, composite surfaces). The result shows such a surface as a circle with a straight part along the base. Turn it off to analyze circles only, as programs without composite surfaces do.
 
 **…and the base of the model** (off by default) lets the circles follow the base of the model too, where no impenetrable material lies on it, as if the material below the model were impenetrable. Use it when the base of the model is a firm stratum, not just where the drawing ends; imported .gsz files turn it on, since their circles follow the bottom of the geometry. On the James Bay dyke, whose till is the base of the model, the circles alone give 1.45 and the composite surfaces 1.17, the value Duncan & Wright give for the composite surface.
 
@@ -45,13 +45,13 @@ More iterations give a more thorough search and take longer. For a final analysi
 
 Very shallow surfaces at the ground surface can give a low factor of safety that does not matter for the design, especially in frictional soil. Three settings in the options leave them out:
 
-- **Min. slip depth (m)**: surfaces whose greatest depth below the ground is less than this are not analysed. 0 means no limit.
-- **Min. slip area (m²)**: surfaces whose sliding mass (cross-section area per metre) is smaller than this are left out of the search. 0 means no limit, the default. A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyse.
-- **Min. entry–exit distance (m)**: surfaces whose entry and exit points are closer than this (the straight distance between them; horizontally for planar surfaces) are not analysed. 0 means no limit. In a cohesionless fill (a road bank's 45° edge, a loose fill over clay) the search otherwise finds a thin slide in the fill before any deeper mechanism; when the critical surface is such a slide (its base on average less than 1 m, or a tenth of the ground relief around it, below the ground, with half its base or more in cohesionless soil), the result warns and points to this setting, the minimum depth and the minimum area.
+- **Min. slip depth (m)**: surfaces whose greatest depth below the ground is less than this are not analyzed. 0 means no limit.
+- **Min. slip area (m²)**: surfaces whose sliding mass (cross-section area per meter) is smaller than this are left out of the search. 0 means no limit, the default. A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyze.
+- **Min. entry–exit distance (m)**: surfaces whose entry and exit points are closer than this (the straight distance between them; horizontally for planar surfaces) are not analyzed. 0 means no limit. In a cohesionless fill (a road bank's 45° edge, a loose fill over clay) the search otherwise finds a thin slide in the fill before any deeper mechanism; when the critical surface is such a slide (its base on average less than 1 m, or a tenth of the ground relief around it, below the ground, with half its base or more in cohesionless soil), the result warns and points to this setting, the minimum depth and the minimum area.
 
 ## Non-circular surfaces
 
-Tick **Non-circular optimisation** in the options to let cSlope refine the best circles into non-circular surfaces. It moves the points of each surface to lower the factor of safety further. Use it where a weak layer or a stiff base makes a non-circular failure likely. The optimised surface is shown in the results like any other.
+Tick **Non-circular optimization** in the options to let cSlope refine the best circles into non-circular surfaces. It moves the points of each surface to lower the factor of safety further. Use it where a weak layer or a stiff base makes a non-circular failure likely. The optimized surface is shown in the results like any other.
 
 ## Block search
 
@@ -65,28 +65,28 @@ Where the failure is expected to run along a weak layer or a stiff base, a **blo
 
 Each trial surface takes one point from every object, joins them from left to right as the base of the sliding block, and rises from both ends of the base to the ground. The upslope end rises at the **upslope end angle**, the downslope end at the **downslope end angle**. Left empty, these are the Rankine angles of the soil the end segments cut: 45° + φ/2 upslope (active) and 45° − φ/2 downslope (passive). Give a range, for example 45–70, to let the search try angles within it.
 
-The objects are drawn on the canvas, numbered B1, B2, … as in the options. **Iterations** is the number of block surfaces tried; **Refined iterations** adds surfaces around the best ones, in neighbourhoods that shrink step by step. The draws are repeatable: the same model gives the same result. The search limits apply to block surfaces as to circles. Tick **Non-circular optimisation** to optimise the best block surfaces further; the optimised surfaces may leave the objects.
+The objects are drawn on the canvas, numbered B1, B2, … as in the options. **Iterations** is the number of block surfaces tried; **Refined iterations** adds surfaces around the best ones, in neighborhoods that shrink step by step. The draws are repeatable: the same model gives the same result. The search limits apply to block surfaces as to circles. Tick **Non-circular optimization** to optimize the best block surfaces further; the optimized surfaces may leave the objects.
 
 A typical block search for a weak layer uses two lines or two thin windows along the layer: one under the crest, one under the toe.
 
 <Figure src="/media/tutorials/block-search/02-objects.png" alt="Two block search lines, B1 and B2, along the base of a weak layer" caption="Two lines, B1 and B2, along the base of the weak layer of Arai & Tagyo's example." />
 
-<Figure src="/media/tutorials/block-search/03-result.png" alt="The block surfaces analysed and the critical one along the weak layer" caption="The block surfaces analysed, coloured by factor of safety, and the critical one along the layer (0.450; 0.414 with Non-circular optimisation, the published value)." />
+<Figure src="/media/tutorials/block-search/03-result.png" alt="The block surfaces analyzed and the critical one along the weak layer" caption="The block surfaces analyzed, colored by factor of safety, and the critical one along the layer (0.450; 0.414 with Non-circular optimization, the published value)." />
 
-The critical surface often has flatter end segments than the Rankine angles, especially in cohesive soil: on this example the Rankine angles give 0.538, ranges of 25–70° upslope and 5–45° downslope 0.450. Give ranges, or tick **Non-circular optimisation**, for a final analysis.
+The critical surface often has flatter end segments than the Rankine angles, especially in cohesive soil: on this example the Rankine angles give 0.538, ranges of 25–70° upslope and 5–45° downslope 0.450. Give ranges, or tick **Non-circular optimization**, for a final analysis.
 
 ## Custom surfaces
 
-Open **Model › Analysis › Custom planes** to analyse surfaces of your own:
+Open **Model › Analysis › Custom planes** to analyze surfaces of your own:
 
-- **+ Add Search Plane** adds a circle, given by its centre (cx, cy) and radius R.
+- **+ Add Search Plane** adds a circle, given by its center (cx, cy) and radius R.
 - **+ Add Non-circular Surface** adds a polyline through the soil. Enter its points as `x, y; x, y; …` with x increasing, for example `10, 5; 18, 1; 30, 2; 38, 9`. The ends are extended to the ground.
 
-Custom surfaces are analysed together with the search. Tick **Only analyse these surfaces (skip the search)** to analyse only your own surfaces, for example to check a published case or a surface found in the field.
+Custom surfaces are analyzed together with the search. Tick **Only analyze these surfaces (skip the search)** to analyze only your own surfaces, for example to check a published case or a surface found in the field.
 
 The result summary lists them as *Custom surface 1*, *2*, …, the circles first and then the polylines, each with its factor of safety or the reason it has none. **Results › Display › Surfaces › Custom surfaces** draws them on the sheet (see [Results](/docs/results#the-summary)).
 
-## Surfaces that are not analysed
+## Surfaces that are not analyzed
 
 A surface is skipped when it:
 

@@ -147,7 +147,7 @@ export function UdlDialogApp() {
     },
     {
       header: (
-        <Label title="Pressure between x1 and x2: vertical, per horizontal metre; or normal to the ground, per metre of ground">
+        <Label title="Pressure between x1 and x2: vertical, per horizontal meter; or normal to the ground, per meter of ground">
           q (kPa)
         </Label>
       ),

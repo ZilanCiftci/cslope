@@ -1,7 +1,7 @@
 ---
 title: Geometry
 description: Define the exterior boundary of the section and the boundaries between materials, import them from DXF, and use parameters.
-section: Modelling
+section: Modeling
 order: 1
 ---
 
@@ -11,7 +11,7 @@ The geometry of a model is a cross-section of the slope: an **exterior boundary*
 
 ## Exterior boundary
 
-Open **Model › Boundaries › Exterior**. The window lists the points of the boundary in order, with their X and Y coordinates in metres.
+Open **Model › Boundaries › Exterior**. The window lists the points of the boundary in order, with their X and Y coordinates in meters.
 
 - Type new coordinates in the table, or drag a point on the canvas.
 - **+ Add point** adds a point 5 m to the right of the last one.
@@ -50,7 +50,7 @@ The status bar has a **Snap** checkbox and a grid size from 0.1 m to 5 m. With S
 - **Open polylines on a water layer** become piezometric lines: a layer whose name contains *water*, *piezo*, *vatten* or *grundvatten*, or the word *gw* or *wt*.
 - **All other polylines and lines** become interior boundaries. Lines on the same layer are joined end to end.
 
-The drawing must be an ASCII DXF. Polylines (LWPOLYLINE, POLYLINE) and lines (LINE) are read; arcs, splines and blocks are skipped, and the import message lists what was skipped. Drawing units (mm, cm, m, inches, feet) are converted to metres.
+The drawing must be an ASCII DXF. Polylines (LWPOLYLINE, POLYLINE) and lines (LINE) are read; arcs, splines and blocks are skipped, and the import message lists what was skipped. Drawing units (mm, cm, m, inches, feet) are converted to meters.
 
 After the import, assign materials to the regions, add the materials' properties and set the search limits before running the analysis.
 
@@ -69,7 +69,7 @@ After the import, assign materials to the regions, add the materials' properties
 - **Method, number of slices, direction of sliding and entry and exit ranges** are carried over. Another search (grid and radius, block) is not: cSlope's own search over the whole slope is used.
 - **Reinforcement**: anchors, nails, geosynthetics and piles become reinforcement elements and piles: anchors with their bond (a stress over π × the bond diameter) along the bonded length and the head held by the wall, nails with their bond along the whole length and the plate capacity at the head, geosynthetics with their pullout resistance as given or from the overburden (interface angle, surface area factor), piles and anchors or nails with a shear force with that force along the slip surface. "F of S dependent" elements are passive (divided by the factor of safety). A force the file distributes over the slices acts where the slip surface crosses the element; a user-defined force (a function of distance) is not imported.
 - **Results**: when the file was saved after solving, its critical circle is added as a custom surface, and the message gives its factor of safety for comparison.
-- Imperial files are converted to metres, kN/m³ and kPa.
+- Imperial files are converted to meters, kN/m³ and kPa.
 
 **File › Export › .gsz file** writes the active model as a .gsz file with one analysis: the regions, the Mohr-Coulomb, undrained and bedrock materials, the piezometric lines, distributed loads (as a 1 m fill of unit weight equal to the load), point loads, the method, the entry and exit ranges and a tension crack at a limiting angle. Strength that varies with depth or datum, combined analysis, anisotropy, reinforcement, piles, a tension crack depth and partial factors are not written; the export message lists what was left out. Open the file in the receiving program and check it before use.
 
@@ -83,7 +83,7 @@ After the import, assign materials to the regions, add the materials' properties
 - **Water**: the phreatic line, and the head and reference lines as a **waternet** (see [Water](/docs/water)). Pore pressures from a groundwater flow mesh are not imported.
 - **Loads**: uniform loads, with their **degree of consolidation** per layer (the rest of the load as excess pore pressure below the water), the degree of consolidation under the weight of layers as B̄ = 1 − the degree on the layers below (the loading layer's material as fill), line loads with their angle, and the earthquake coefficients as the seismic load. Tree loads and the spread of loads are not imported.
 - **Reinforcement**: geotextiles, their strength developed over the reduction length at each end. Nails and forbidden lines are not imported.
-- **Method and slip plane**: Bishop and Spencer (as Morgenstern-Price with a constant function). A given circle or slip plane is analysed alone; after a search, cSlope searches the whole slope itself. The direction of sliding follows the file's slip plane. Uplift-Van has no counterpart: its critical slip plane is analysed with Spencer. Design and probabilistic calculations are imported with the soils' given values; the model factor is not imported.
+- **Method and slip plane**: Bishop and Spencer (as Morgenstern-Price with a constant function). A given circle or slip plane is analyzed alone; after a search, cSlope searches the whole slope itself. The direction of sliding follows the file's slip plane. Uplift-Van has no counterpart: its critical slip plane is analyzed with Spencer. Design and probabilistic calculations are imported with the soils' given values; the model factor is not imported.
 - **Results**: the file's critical slip plane is added as a custom surface, and the message gives its factor of safety for comparison.
 
 **File › Export › .stix file** writes the active model as a .stix file with one scenario: the layers, soils, phreatic line or waternet, uniform loads (with their degree of consolidation), line loads, the seismic coefficients, geotextiles and the method, with a given circle (Bishop), a given slip plane (Spencer) or a search grid set from the model's extent. A model with an earlier stage is written as two stages. What is left out is listed; open the file in the receiving program and check it before use.
@@ -96,10 +96,10 @@ After the import, assign materials to the regions, add the materials' properties
 - **Materials**: Mohr-Coulomb, undrained (constant or increasing with depth), the shear-normal function, Hoek-Brown, SHANSEP with an OCR table against elevation and the anisotropic models (as the anisotropic function), with the saturated unit weight, φb with its suction cap and the drawdown (R) envelope.
 - **Water**: the water table and piezometric lines per material, Hu = 1 or automatic (the phreatic correction), the pore pressure ratio rᵤ (the water method rᵤ, or rᵤ on top of the water line), the B-bar method (B̄ on its materials, the materials without B̄ as fill, and B̄ × the loads applied in the second stage), and three-stage rapid drawdown when an R envelope is given. Pressure grids and finite element groundwater are not imported.
 - **Loads and support**: distributed loads (a varying load in ten uniform steps), line loads, seismic coefficients, end-anchored bars, grouted tiebacks and geosynthetics.
-- **Analysis**: the method (Bishop, else Spencer, else the general limit equilibrium as Morgenstern-Price with a half-sine function, else Janbu), the number of slices (at least 10), the direction, given circles and surfaces, slope limits as entry and exit ranges, non-circular optimisation and a tension crack.
-- Imperial files are converted to metres, kN/m³ and kPa.
+- **Analysis**: the method (Bishop, else Spencer, else the general limit equilibrium as Morgenstern-Price with a half-sine function, else Janbu), the number of slices (at least 10), the direction, given circles and surfaces, slope limits as entry and exit ranges, non-circular optimization and a tension crack.
+- Imperial files are converted to meters, kN/m³ and kPa.
 
-**File › Export › .slim file** writes the active model as a .slim file: the regions as triangular cells, the materials, water lines, loads, support, tension crack, method, slices and the custom surfaces or a grid of centres. What is left out is listed; open the file in the receiving program and check it before use.
+**File › Export › .slim file** writes the active model as a .slim file: the regions as triangular cells, the materials, water lines, loads, support, tension crack, method, slices and the custom surfaces or a grid of centers. What is left out is listed; open the file in the receiving program and check it before use.
 
 ## Parameters
 

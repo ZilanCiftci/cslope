@@ -31,7 +31,7 @@ with JSX). Each page starts with frontmatter:
 ---
 title: Water
 description: One sentence for the page header and search results.
-section: Modelling        # Getting started, Modelling, Analysis, Results, Tutorials or Reference
+section: Modeling        # Getting started, Modeling, Analysis, Results, Tutorials or Reference
 order: 3                  # position within the section
 ---
 ```

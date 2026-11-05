@@ -1,11 +1,11 @@
 ---
 title: Materials
 description: The material models cSlope offers, their properties, the strength from suction above the water table, and the saturated unit weight below it.
-section: Modelling
+section: Modeling
 order: 2
 ---
 
-Open **Model › Materials**. The table at the top lists the materials with their name, model and colour. **Add** creates a material; **Delete** removes the selected one (the last material cannot be deleted). Select a material to edit its properties below the table.
+Open **Model › Materials**. The table at the top lists the materials with their name, model and color. **Add** creates a material; **Delete** removes the selected one (the last material cannot be deleted). Select a material to edit its properties below the table.
 
 Every numeric property accepts a number or an expression with [parameters](/docs/geometry#parameters), and a comma as the decimal separator. Problems with the input are listed in red under the form.
 
@@ -86,7 +86,7 @@ $$
 \tau = a\,\tau_\text{col} + (1 - a)\,c_{u,\text{soil}}
 $$
 
-where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per metre below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
+where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per meter below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
 
 ### SHANSEP
 
@@ -96,7 +96,7 @@ $$
 S_u = \sigma'_v \, S \, \mathrm{OCR}^m
 $$
 
-**S** is $S_u/\sigma'_v$ of the normally consolidated soil and **m** the exponent (often 0.8). **OCR** is a constant or a table against elevation; alternatively **Su against σ′v** gives the strength directly from the stress. $\sigma'_v$ is the weight of the slice and the loads on it per metre of width less the pore pressure at its base, so a fill on the clay raises the strength under it and a higher water table lowers it. **Min Su** is a lower limit. The tables are interpolated linearly, or with a cubic spline when the model is imported with one.
+**S** is $S_u/\sigma'_v$ of the normally consolidated soil and **m** the exponent (often 0.8). **OCR** is a constant or a table against elevation; alternatively **Su against σ′v** gives the strength directly from the stress. $\sigma'_v$ is the weight of the slice and the loads on it per meter of width less the pore pressure at its base, so a fill on the clay raises the strength under it and a higher water table lowers it. **Min Su** is a lower limit. The tables are interpolated linearly, or with a cubic spline when the model is imported with one.
 
 Instead of OCR the stress history can be a **POP** (pre-overburden pressure, $\mathrm{OCR} = (\sigma'_v + \mathrm{POP})/\sigma'_v$) or a **yield stress** ($\mathrm{OCR} = \sigma'_y/\sigma'_v$, at least 1). With an earlier stage (imported from .stix files), the yield stress is the effective vertical stress of that stage at the base plus the POP: the stress history the soil kept from it. An imported POP, yield stress or earlier stage overrides OCR: the OCR fields are then disabled, with a note such as "Overridden by imported POP 20 kPa", and **Use OCR instead** clears the stress history so that the OCR fields apply (one step to undo). The Define Materials window says when a model has an earlier stage and which materials take their yield stress from it (marked "stage" in the material list); **Remove earlier stage** drops it, and those materials then use their POP or OCR.
 
@@ -108,7 +108,7 @@ The shear strength against the effective normal stress, $\tau = f(\sigma'_n)$, a
 
 ### Pore pressure ratio (rᵤ)
 
-**rᵤ** on a material sets the pore pressure at a slice base in it to rᵤ times the weight of the soil above the base per metre of width, $u = r_u\,\gamma h$ (Bishop & Morgenstern 1960), added to the pore pressure of its water line if it has one. It is a simple way to describe pore pressure that rises with depth, used in stability charts and in older analyses. 0 ≤ rᵤ < 1; a value outside this range is kept, the field is outlined red and the error shows under it (as for B̄, 0 to 1.5). The finite element analyses do not take it. rᵤ and B̄ are under the heading *Additional pore pressure (added to the water line)*.
+**rᵤ** on a material sets the pore pressure at a slice base in it to rᵤ times the weight of the soil above the base per meter of width, $u = r_u\,\gamma h$ (Bishop & Morgenstern 1960), added to the pore pressure of its water line if it has one. It is a simple way to describe pore pressure that rises with depth, used in stability charts and in older analyses. 0 ≤ rᵤ < 1; a value outside this range is kept, the field is outlined red and the error shows under it (as for B̄, 0 to 1.5). The finite element analyses do not take it. rᵤ and B̄ are under the heading *Additional pore pressure (added to the water line)*.
 
 ### Pore pressure from a fill (B̄)
 
@@ -120,7 +120,7 @@ A Mohr-Coulomb material can have a **drawdown strength (R envelope, cR, φR)**: 
 
 ### High Strength and Bedrock
 
-**High Strength** material is so strong that the slip surface cannot run through it: a surface with a slice base in it is not analysed. The material can lie inside the sliding mass, above the slip surface, where it adds its weight. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analysed. Both are drawn with a hatch on the canvas (HS and BR).
+**High Strength** material is so strong that the slip surface cannot run through it: a surface with a slice base in it is not analyzed. The material can lie inside the sliding mass, above the slip surface, where it adds its weight. **Impenetrable (Bedrock)** stops slip surfaces: a surface that would enter it is not analyzed. Both are drawn with a hatch on the canvas (HS and BR).
 
 ## Strength from suction
 
@@ -141,6 +141,6 @@ Above the material's [piezometric line](/docs/water#pore-pressure) the pore pres
 
 Every model except Bedrock has a **γsat below water** field. Below the material's piezometric line, the soil then weighs γsat instead of γ. Leave it empty to use γ throughout.
 
-## Colours
+## Colors
 
-Each material has a colour, used for its regions on the canvas, in the material table and in exports. Click the colour in the table to change it. **Soil colors** on the Results tab hides the colours in the result view.
+Each material has a color, used for its regions on the canvas, in the material table and in exports. Click the color in the table to change it. **Soil colors** on the Results tab hides the colors in the result view.

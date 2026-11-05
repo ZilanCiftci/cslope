@@ -3,7 +3,7 @@ import type { MDXComponents } from "mdx/types";
 import { cleanSlug, slugOf } from "./slugs";
 
 /** The sidebar groups, in order. */
-export const SECTIONS = ["Getting started", "Modelling", "Analysis", "Results", "Tutorials", "Reference"] as const;
+export const SECTIONS = ["Getting started", "Modeling", "Analysis", "Results", "Tutorials", "Reference"] as const;
 export type DocSection = (typeof SECTIONS)[number];
 
 export interface DocFrontmatter {

@@ -32,15 +32,15 @@ export function homeExampleImage(id: string, title: string): Media {
 }
 
 export const MEDIA = {
-  app: generated("result-app.png", "The cSlope window: the critical slip surface of a homogeneous slope with its centre, slices and factor of safety, the models, the ribbon and the summary of the analysis"),
+  app: generated("result-app.png", "The cSlope window: the critical slip surface of a homogeneous slope with its center, slices and factor of safety, the models, the ribbon and the summary of the analysis"),
   criticalSurface: generated("result-critical-surface.png", "Result view: the critical slip surface of a homogeneous slope with its slices, factor of safety and material table",
   ),
-  allSurfaces: generated("result-all-surfaces.png", "Result view: every analysed slip surface coloured by its factor of safety",
+  allSurfaces: generated("result-all-surfaces.png", "Result view: every analyzed slip surface colored by its factor of safety",
   ),
   annotations: generated("result-annotations.png", "Result view of a layered slope with a material table and text annotations",
   ),
-  showcaseResult: generated("result-showcase.png", "Result view: the optimised non-circular slip surface of Arai and Tagyo's slope, running along its weak layer"),
-  materials: generated("edit-materials.png", "Edit view: a non-homogeneous slope with coloured material regions"),
+  showcaseResult: generated("result-showcase.png", "Result view: the optimized non-circular slip surface of Arai and Tagyo's slope, running along its weak layer"),
+  materials: generated("edit-materials.png", "Edit view: a non-homogeneous slope with colored material regions"),
   showcase: generated("edit-showcase.png", "Edit view: Arai and Tagyo's slope with a weak layer between a stronger upper layer and a strong base"),
   geometry: generated("edit-geometry.png", "Edit view: slope geometry with its boundary points"),
   waterTable: generated("edit-water-table.png", "Edit view: a slope with its piezometric line"),

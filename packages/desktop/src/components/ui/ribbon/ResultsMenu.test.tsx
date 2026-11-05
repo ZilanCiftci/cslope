@@ -125,7 +125,7 @@ describe("ResultsMenu", () => {
     const before = rvs();
     await userEvent.click(screen.getByTitle("Show slices"));
     await userEvent.click(screen.getByTitle("Show FOS label"));
-    await userEvent.click(screen.getByTitle("Show centre mark"));
+    await userEvent.click(screen.getByTitle("Show center mark"));
     await userEvent.click(screen.getByTitle("Soil colors"));
     const after = rvs();
     expect(after.showSlices).toBe(!before.showSlices);

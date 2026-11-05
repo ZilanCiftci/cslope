@@ -425,8 +425,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 <RibbonSmallButton
                   icon={<CentreIcon {...SMALL_ICON} />}
-                  label="Centre"
-                  title="Show centre mark"
+                  label="Center"
+                  title="Show center mark"
                   onClick={() =>
                     setRvs({ showCentreMarker: !rvs.showCentreMarker })
                   }
@@ -507,7 +507,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     },
                     {
                       label: "Circle",
-                      title: "Add a reference circle, drawn below the ground like a slip circle: drag its centre or rim",
+                      title: "Add a reference circle, drawn below the ground like a slip circle: drag its center or rim",
                       onClick: addReferenceCircle,
                     },
                   ]}

@@ -331,14 +331,14 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               {directionButton(
                 "both",
                 "Both",
-                "Analyse both directions",
+                "Analyze both directions",
                 "Both directions: the model's own and the opposite one (with automatic search limits); the lower FOS governs.",
               )}
             </div>
           </div>
           <label
             className="col-span-2 flex items-center gap-1.5"
-            title="A circle that reaches impenetrable material (bedrock) follows its top there instead of being rejected, as on a firm base (composite surface). Off: such circles are not analysed."
+            title="A circle that reaches impenetrable material (bedrock) follows its top there instead of being rejected, as on a firm base (composite surface). Off: such circles are not analyzed."
           >
             <input
               type="checkbox"
@@ -350,7 +350,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           </label>
           <label
             className="col-span-2 flex items-center gap-1.5 pl-4"
-            title="Also follow the base of the model where no impenetrable material lies on it, as if the material below the model were impenetrable. Off: a circle through the base is not analysed (the base is only the edge of the model)."
+            title="Also follow the base of the model where no impenetrable material lies on it, as if the material below the model were impenetrable. Off: a circle through the base is not analyzed (the base is only the edge of the model)."
           >
             <input
               type="checkbox"
@@ -454,8 +454,8 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
             className="col-span-2 flex items-center gap-1.5"
             title={
               options.searchMethod === "block"
-                ? "After the block search, optimise the best block surfaces as free non-circular surfaces (they may leave the search objects)."
-                : "After the circular search, optimise the best circles as non-circular surfaces, which can follow weak layers and stiff bases."
+                ? "After the block search, optimize the best block surfaces as free non-circular surfaces (they may leave the search objects)."
+                : "After the circular search, optimize the best circles as non-circular surfaces, which can follow weak layers and stiff bases."
             }
           >
             <input
@@ -464,9 +464,9 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               onChange={(e) =>
                 setOptions({ nonCircularOptimization: e.target.checked })
               }
-              aria-label="Non-circular optimisation"
+              aria-label="Non-circular optimization"
             />
-            <Label>Non-circular optimisation</Label>
+            <Label>Non-circular optimization</Label>
           </label>
           {options.method === "Bishop" &&
             options.nonCircularOptimization === true && (
@@ -487,7 +487,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               step={0.5}
               onValueChange={(v) => v >= 0 && setOptions({ minSlipDepth: v })}
               aria-label="Minimum slip depth"
-              title="Surfaces less deep than this below the ground are not analysed (e.g. shallow slivers under line loads). 0 = no limit."
+              title="Surfaces less deep than this below the ground are not analyzed (e.g. shallow slivers under line loads). 0 = no limit."
             />
           </label>
           <label className="flex flex-col gap-0.5">
@@ -499,7 +499,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               onValueChange={(v) => v >= 0 && setOptions({ minSlipArea: v })}
               onClear={() => setOptions({ minSlipArea: 0 })}
               aria-label="Minimum slip area"
-              title="Surfaces whose sliding mass (cross-section area per metre) is smaller than this are left out of the search. 0 = no limit (default). A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyse."
+              title="Surfaces whose sliding mass (cross-section area per meter) is smaller than this are left out of the search. 0 = no limit (default). A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyze."
             />
           </label>
           <label className="flex flex-col gap-0.5">
@@ -510,7 +510,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               step={0.5}
               onValueChange={(v) => v >= 0 && setOptions({ minFailureDist: v })}
               aria-label="Minimum entry–exit distance"
-              title="Surfaces whose entry and exit points are closer than this (the straight distance between them) are not analysed, for example thin slides in the edge of a cohesionless road bank. 0 = no limit."
+              title="Surfaces whose entry and exit points are closer than this (the straight distance between them) are not analyzed, for example thin slides in the edge of a cohesionless road bank. 0 = no limit."
             />
           </label>
         </div>
@@ -624,7 +624,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               step={0.05}
               onValueChange={(v) => v >= 0 && v <= 1 && setOptions({ seismicHorizontal: v })}
               aria-label="Horizontal seismic coefficient"
-              title="Horizontal seismic coefficient: each slice carries kh × its weight horizontally in the sliding direction, at its centre of gravity. 0 = none."
+              title="Horizontal seismic coefficient: each slice carries kh × its weight horizontally in the sliding direction, at its center of gravity. 0 = none."
             />
           </label>
           <label className="flex flex-col gap-0.5">

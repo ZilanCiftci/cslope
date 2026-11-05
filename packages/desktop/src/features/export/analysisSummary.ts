@@ -227,7 +227,7 @@ function strengthWithoutSuction(model: MaterialModel): string {
       if (model.mb !== undefined && model.s !== undefined) {
         return `σci = ${fmt(model.ucs)} kPa, mb = ${fmt(model.mb)}, s = ${fmt(model.s)}, a = ${fmt(model.a ?? 0.5)} (Hoek-Brown, parameters given directly)`;
       }
-      return `σci = ${fmt(model.ucs)} kPa, GSI = ${fmt(model.gsi)}, mi = ${fmt(model.mi)}, D = ${fmt(model.disturbance ?? 0)} (generalised Hoek-Brown)`;
+      return `σci = ${fmt(model.ucs)} kPa, GSI = ${fmt(model.gsi)}, mi = ${fmt(model.mi)}, D = ${fmt(model.disturbance ?? 0)} (generalized Hoek-Brown)`;
     case "shansep": {
       const anisotropy = aniso(model.anisotropy);
       const min = model.suMin ? `, at least ${fmt(model.suMin)} kPa` : "";
@@ -287,10 +287,10 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
     res.push({
       label: "Critical surface",
       value: cs.composite
-        ? `composite circle, centre (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m, along the firm base where it reaches it`
+        ? `composite circle, center (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m, along the firm base where it reaches it`
         : cs.points
         ? `non-circular, ${cs.points.length} points`
-        : `circle, centre (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m`,
+        : `circle, center (${fmtM(cs.cx)}, ${fmtM(cs.cy)}) m, radius ${fmtM(cs.radius)} m`,
     });
     res.push({
       label: "Entry / exit",
@@ -308,7 +308,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
           : `${result.otherDirectionMinFOS.toFixed(3)} (automatic search limits)`,
     });
   }
-  res.push({ label: "Surfaces analysed", value: surfaceCountText(result) });
+  res.push({ label: "Surfaces analyzed", value: surfaceCountText(result) });
   if (result.nonConvergedSurfaces) {
     res.push({ label: "Not converged", value: `${result.nonConvergedSurfaces} surfaces (no factor)` });
   }
@@ -346,7 +346,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
             : "infinitely overstrong (eq. 2-3)",
         },
         { label: "F2D,krit,min", value: g.f2dCritical.toFixed(3) },
-        { label: "Its surface", value: `centre (${fmtM(c.cx)}, ${fmtM(c.cy)}), R = ${fmtM(c.radius)} m; F2D = ${c.f2d.toFixed(3)}, FP = ${c.fp.toFixed(3)}` },
+        { label: "Its surface", value: `center (${fmtM(c.cx)}, ${fmtM(c.cy)}), R = ${fmtM(c.radius)} m; F2D = ${c.f2d.toFixed(3)}, FP = ${c.fp.toFixed(3)}` },
         { label: "ME, end face", value: `${fmt(c.drivingMoment)} kNm/m; A = ${fmt(c.endFaceArea)} m², ∫cu r dA = ${fmt(c.endFaceMoment)} kNm` },
         ...(g.options.excludeMaterials.length ? [{ label: "Not in the end faces", value: g.options.excludeMaterials.join(", ") }] : []),
         ...g.warnings.map((w) => ({ label: "Warning", value: w })),
@@ -374,8 +374,8 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         (block ? "block search" : "circular search") +
         (options.nonCircularOptimization
           ? block
-            ? ", best block surfaces optimised as non-circular surfaces"
-            : ", best circles optimised as non-circular surfaces"
+            ? ", best block surfaces optimized as non-circular surfaces"
+            : ", best circles optimized as non-circular surfaces"
           : "") +
         (input.customSurfaceCount ? `, and ${input.customSurfaceCount} custom surfaces` : ""),
     });

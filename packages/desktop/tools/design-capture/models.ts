@@ -203,7 +203,7 @@ export const FEATURE_MODELS: FeatureModel[] = [
   },
 ];
 
-/** The app model of a feature model (its circle analysed alone, or the search). */
+/** The app model of a feature model (its circle analyzed alone, or the search). */
 export function featureModel(f: FeatureModel, withCircle = true): ModelEntry {
   const def: SlopeDefinition = withCircle && f.circle ? { ...f.definition, customSearchPlanes: [f.circle], customPlanesOnly: true } : f.definition;
   return modelFromDefinition(def, { id: `beta-${f.key}`, name: f.title, options: f.options });

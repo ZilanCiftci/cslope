@@ -1,7 +1,7 @@
 ---
 title: Water
 description: Piezometric lines, a line per material, ponded water above the ground, and how pore pressure is computed.
-section: Modelling
+section: Modeling
 order: 3
 ---
 
@@ -41,7 +41,7 @@ A material's line is also the level below which its [saturated unit weight](/doc
 
 ## Head and reference lines (waternet)
 
-A model imported from a .stix file can take its pore pressure from head lines and reference lines. Between two reference lines the head varies linearly with elevation, from the bottom head line of the upper line to the top head line of the lower one; below the lowest line it is that line's bottom head; above the uppermost line it varies linearly from that line's top head to the phreatic level, and above the phreatic line there is no pore pressure. A reference line without head lines is left out. This describes, for example, a clay layer between the phreatic level and an aquifer under a higher head. The pore pressure is $\gamma_w (h - z)$, not negative. The piezometric lines window says when such lines set the pore pressure. The piezometric lines still set the phreatic level then: the saturated unit weight below it, the free water on the ground and the strength above the water line; only the pore pressure comes from the head lines. **Remove head lines** drops the head and reference lines, and the piezometric lines then set the pore pressure too (Undo brings them back). The edit canvas draws the head lines teal and dash-dotted, labelled "head line 1", "head line 2" and so on at their right end, and the reference lines faintly dotted. A .stix stage without a phreatic line takes its phreatic level from the top head line of its uppermost reference line (else its first head line); the import notes say so.
+A model imported from a .stix file can take its pore pressure from head lines and reference lines. Between two reference lines the head varies linearly with elevation, from the bottom head line of the upper line to the top head line of the lower one; below the lowest line it is that line's bottom head; above the uppermost line it varies linearly from that line's top head to the phreatic level, and above the phreatic line there is no pore pressure. A reference line without head lines is left out. This describes, for example, a clay layer between the phreatic level and an aquifer under a higher head. The pore pressure is $\gamma_w (h - z)$, not negative. The piezometric lines window says when such lines set the pore pressure. The piezometric lines still set the phreatic level then: the saturated unit weight below it, the free water on the ground and the strength above the water line; only the pore pressure comes from the head lines. **Remove head lines** drops the head and reference lines, and the piezometric lines then set the pore pressure too (Undo brings them back). The edit canvas draws the head lines teal and dash-dotted, labeled "head line 1", "head line 2" and so on at their right end, and the reference lines faintly dotted. A .stix stage without a phreatic line takes its phreatic level from the top head line of its uppermost reference line (else its first head line); the import notes say so.
 
 ## Free water above the ground
 

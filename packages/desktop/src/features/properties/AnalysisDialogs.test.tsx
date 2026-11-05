@@ -205,8 +205,8 @@ describe("OptionsDialogApp", () => {
   it("toggles non-circular optimisation and both directions", async () => {
     render(<OptionsDialogApp />);
     hydrate();
-    await userEvent.click(screen.getByLabelText("Non-circular optimisation"));
-    const bothButton = screen.getByRole("button", { name: "Analyse both directions" });
+    await userEvent.click(screen.getByLabelText("Non-circular optimization"));
+    const bothButton = screen.getByRole("button", { name: "Analyze both directions" });
     await userEvent.click(bothButton);
     expect(opts()).toMatchObject({ nonCircularOptimization: true, bothDirections: true });
     expect(lastSent().options).toMatchObject({ bothDirections: true });
@@ -348,16 +348,16 @@ describe("CustomSearchPlanesDialogApp", () => {
   it("adds a circle and edits its centre and radius", async () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate();
-    expect(screen.queryByText(/Only analyse these surfaces/)).toBeNull();
+    expect(screen.queryByText(/Only analyze these surfaces/)).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "+ Add circle" }));
     expect(store().customSearchPlanes).toHaveLength(1);
     // A new circle starts inside the model: centre above the middle of the
     // slope face (x 30 to 40), reaching down to just above the base.
     expect(store().customSearchPlanes[0]).toMatchObject({ cx: 35, cy: 15, radius: 14.5 });
-    const cx = screen.getByLabelText("Circle centre X");
+    const cx = screen.getByLabelText("Circle center X");
     await userEvent.clear(cx);
     await userEvent.type(cx, "15");
-    const cy = screen.getByLabelText("Circle centre Y");
+    const cy = screen.getByLabelText("Circle center Y");
     await userEvent.clear(cy);
     await userEvent.type(cy, "-2");
     expect(store().customSearchPlanes[0]).toMatchObject({ cx: 15, cy: -2, radius: 14.5 });
@@ -379,7 +379,7 @@ describe("CustomSearchPlanesDialogApp", () => {
   it("restricts the search to custom planes", async () => {
     render(<CustomSearchPlanesDialogApp />);
     hydrate({ customSearchPlanes: [{ id: "c1", cx: 10, cy: 20, radius: 12 }] });
-    await userEvent.click(screen.getByRole("checkbox", { name: /Only analyse these surfaces/ }));
+    await userEvent.click(screen.getByRole("checkbox", { name: /Only analyze these surfaces/ }));
     expect(store().customPlanesOnly).toBe(true);
     expect(lastSent().customPlanesOnly).toBe(true);
   });
@@ -426,8 +426,8 @@ describe("CustomSearchPlanesDialogApp", () => {
         { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [15, 2], [25, 4]] },
       ],
     });
-    expect(screen.getByLabelText("Circle centre X")).toHaveValue("18.3");
-    expect(screen.getByLabelText("Circle centre Y")).toHaveValue("15.2");
+    expect(screen.getByLabelText("Circle center X")).toHaveValue("18.3");
+    expect(screen.getByLabelText("Circle center Y")).toHaveValue("15.2");
     expect(screen.getByLabelText("Circle radius")).toHaveValue("13");
     expect(screen.getByLabelText("Non-circular surface points")).toHaveValue("5, 8; 15, 2; 25, 4");
     // Nothing is echoed back; a typed number is.

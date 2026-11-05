@@ -37,7 +37,7 @@ describe("ResultPanel", () => {
   it("shows progress bar and percentage when running", () => {
     useAppStore.setState({ runState: "running", progress: 0.45 });
     render(<ResultPanel />);
-    expect(screen.getByText(/Analysing/)).toBeInTheDocument();
+    expect(screen.getByText(/Analyzing/)).toBeInTheDocument();
     expect(screen.getByText("45%")).toBeInTheDocument();
   });
 
@@ -88,7 +88,7 @@ describe("ResultPanel", () => {
     expect(screen.getByText("1")).toBeInTheDocument(); // surfaces count
     expect(screen.getByText("250 ms")).toBeInTheDocument();
     expect(screen.getByText("Critical Surface")).toBeInTheDocument();
-    expect(screen.getByText(/Centre/)).toBeInTheDocument();
+    expect(screen.getByText(/Center/)).toBeInTheDocument();
     expect(screen.getByText(/Radius: 8.50 m/)).toBeInTheDocument();
   });
 

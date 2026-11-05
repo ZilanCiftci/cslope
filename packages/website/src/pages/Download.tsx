@@ -30,7 +30,7 @@ export function Download() {
       <PageHeader
         eyebrow="Download"
         title="Install cSlope"
-        lead="Free and open source under the MIT licence. No account, no licence key, no licence server."
+        lead="Free and open source under the MIT license. No account, no license key, no license server."
       />
 
       <Section>

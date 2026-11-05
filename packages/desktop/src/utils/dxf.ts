@@ -151,10 +151,10 @@ export function parseDxf(text: string): DxfDrawing {
       ? Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys))
       : 0;
     if (extent * unitScale < 1 && extent >= 1) {
-      unitNote = `The drawing says its units are ${unitName(unitScale)}, but the slope would then be ${(extent * unitScale).toPrecision(2)} m across; it was imported as drawn in metres.`;
+      unitNote = `The drawing says its units are ${unitName(unitScale)}, but the slope would then be ${(extent * unitScale).toPrecision(2)} m across; it was imported as drawn in meters.`;
       unitScale = 1;
     } else {
-      unitNote = `Drawing units: ${unitName(unitScale)}, converted to metres.`;
+      unitNote = `Drawing units: ${unitName(unitScale)}, converted to meters.`;
     }
   }
   for (const p of polylines) {
@@ -176,8 +176,8 @@ export function parseDxf(text: string): DxfDrawing {
 
 function unitName(scale: number): string {
   return (
-    { 0.0254: "inches", 0.3048: "feet", 0.001: "millimetres", 0.01: "centimetres", 1000: "kilometres" } as Record<number, string>
-  )[scale] ?? "metres";
+    { 0.0254: "inches", 0.3048: "feet", 0.001: "millimeters", 0.01: "centimeters", 1000: "kilometers" } as Record<number, string>
+  )[scale] ?? "meters";
 }
 
 const TOL = 1e-6;

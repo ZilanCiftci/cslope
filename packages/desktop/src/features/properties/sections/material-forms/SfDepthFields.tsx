@@ -75,7 +75,7 @@ export function SfDepthFields({
           />
         </label>
         <label className="flex flex-col gap-0.5">
-          <Label title="Change of Su per metre of depth: positive, Su increases downwards; negative, it decreases.">
+          <Label title="Change of Su per meter of depth: positive, Su increases downwards; negative, it decreases.">
             Su increase rate (kPa/m)
           </Label>
           <ExpressionNumericInput
@@ -160,7 +160,7 @@ export function SfDepthFields({
             />
           </label>
           <label className="flex flex-col gap-0.5">
-            <Label title="Change of c′ per metre of depth, with the same depth as Su.">c′ increase rate (kPa/m)</Label>
+            <Label title="Change of c′ per meter of depth, with the same depth as Su.">c′ increase rate (kPa/m)</Label>
             <ExpressionNumericInput
               value={model.drainedCohesionRate ?? 0}
               expression={modelExpressions?.drainedCohesionRate}

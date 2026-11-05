@@ -19,7 +19,7 @@ export type WasmSource = BufferSource | WebAssembly.Module;
 /** The exports of the engine (the testing build adds `__test_call`). */
 export type EngineExports = typeof glue;
 
-const NOT_READY = "The cSlope engine is not initialised: call initEngine() first.";
+const NOT_READY = "The cSlope engine is not initialized: call initEngine() first.";
 const BROKEN = "The cSlope engine stopped after an internal error (see the console); it restarts on the next call, and objects made before must be built again.";
 
 let compiled: WebAssembly.Module | undefined;

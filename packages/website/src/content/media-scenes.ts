@@ -89,7 +89,7 @@ export const scenes: Scene[] = [
     id: "edit-materials",
     title: "Material Regions",
     description:
-      "Non-homogeneous slope with coloured soil regions and boundaries",
+      "Non-homogeneous slope with colored soil regions and boundaries",
     benchmark: "T-ACADS Non-Homogeneous",
     setup: { mode: "edit" },
     output: { type: "png", filename: "edit-materials.png", crop: "canvas" },
@@ -142,7 +142,7 @@ export const scenes: Scene[] = [
   {
     id: "result-app",
     title: "The Program",
-    description: "The whole program window with the critical slip surface, its centre and the summary",
+    description: "The whole program window with the critical slip surface, its center and the summary",
     benchmark: "T-ACADS Simple",
     setup: {
       mode: "result",
@@ -164,7 +164,7 @@ export const scenes: Scene[] = [
     id: "result-all-surfaces",
     title: "All Failure Surfaces",
     description:
-      "Result view with all analysed failure surfaces colour-coded by FOS",
+      "Result view with all analyzed failure surfaces color-coded by FOS",
     benchmark: "T-ACADS Simple",
     setup: {
       mode: "result",
@@ -228,7 +228,7 @@ export const scenes: Scene[] = [
   {
     id: "result-showcase",
     title: "Non-Circular Surface along a Weak Layer",
-    description: "The optimised non-circular surface of Arai & Tagyo's slope, following the weak layer",
+    description: "The optimized non-circular surface of Arai & Tagyo's slope, following the weak layer",
     benchmark: "Arai & Tagyo (1985), weak layer",
     setup: {
       mode: "result",
@@ -399,7 +399,7 @@ export const scenes: Scene[] = [
     },
     {
       id: "02-color-bar",
-      title: "All surfaces with a colour bar",
+      title: "All surfaces with a color bar",
       setup: { resultView: { surfaceDisplay: "all", showSlices: false }, afterAnalysis: [["addAnnotation", "color-bar"]] },
       crop: "canvas",
     },

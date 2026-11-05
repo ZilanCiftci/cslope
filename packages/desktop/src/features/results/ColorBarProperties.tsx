@@ -58,7 +58,7 @@ function ColorField({
           onChange={(e) => onChange(e.target.value)}
           className="w-6 h-6 rounded border cursor-pointer bg-transparent p-0 shrink-0"
           style={{ borderColor: "var(--color-vsc-border)" }}
-          aria-label={`${label} colour`}
+          aria-label={`${label} color`}
         />
         <span className="text-[10px] tabular-nums" style={MUTED}>
           {value ?? "Mixed"}
@@ -171,7 +171,7 @@ export function ColorBarProperties({
         {modeValue === "auto" && shownRange && (
           <p className="text-[10px] mt-0.5" style={MUTED}>
             F {shownRange.min.toFixed(2)} to {shownRange.max.toFixed(2)}
-            {shownRange.capped ? " (surfaces above get the top colour)" : ""}
+            {shownRange.capped ? " (surfaces above get the top color)" : ""}
           </p>
         )}
         {modeValue === "filter" && (
@@ -223,7 +223,7 @@ export function ColorBarProperties({
 
       <div>
         <label className={LABEL_CLASS} style={MUTED}>
-          Colour scheme
+          Color scheme
         </label>
         <select
           value={schemeValue ?? MIXED}
@@ -259,7 +259,7 @@ export function ColorBarProperties({
           </div>
           <label className="flex items-center gap-1.5 text-[10px]" style={MUTED}>
             <input type="checkbox" checked={hasMid === true} onChange={(e) => toggleMid(e.target.checked)} />
-            Add a middle colour
+            Add a middle color
           </label>
           {hasMid === true && (
             <div className="flex gap-2">

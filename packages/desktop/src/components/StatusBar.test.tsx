@@ -96,14 +96,14 @@ describe("StatusBar", () => {
     expect(fosEl.style.color).toContain("error");
   });
 
-  it("shows Analysing indicator when running", () => {
+  it("shows Analyzing indicator when running", () => {
     render(<StatusBar {...defaultProps} runState="running" />);
-    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+    expect(screen.getByText("Analyzing...")).toBeInTheDocument();
   });
 
   it("does not show result or analysing when idle", () => {
     render(<StatusBar {...defaultProps} />);
-    expect(screen.queryByText("Analysing...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Analyzing...")).not.toBeInTheDocument();
     expect(screen.queryByText(/FOS:/)).not.toBeInTheDocument();
   });
 
@@ -231,8 +231,8 @@ describe("StatusBar", () => {
     const bar = screen.getByRole("progressbar", { name: "Run All progress" });
     expect(bar).toHaveAttribute("aria-valuenow", "42");
     expect((bar.firstChild as HTMLElement).style.width).toBe("42%");
-    // (the batch stands for the "Analysing..." of a single run)
-    expect(screen.queryByText("Analysing...")).toBeNull();
+    // (the batch stands for the "Analyzing..." of a single run)
+    expect(screen.queryByText("Analyzing...")).toBeNull();
   });
 
   it("shows the outcome of an ended Run All, with the failed models if any", () => {
@@ -248,6 +248,6 @@ describe("StatusBar", () => {
   it("shows no Run All without a batch", () => {
     render(<StatusBar {...defaultProps} runState="running" runAll={null} />);
     expect(screen.queryByTestId("status-run-all")).toBeNull();
-    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+    expect(screen.getByText("Analyzing...")).toBeInTheDocument();
   });
 });

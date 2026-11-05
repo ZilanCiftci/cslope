@@ -390,7 +390,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
     else if (r.pullout.kind === "interface") {
       // a geosynthetic, per metre of slope with its coverage
       const a = r.pullout.coverage ?? 1, sp = r.spacing ?? 1;
-      if (sp !== 1) notes.push(`Reinforcement ${i + 1}: a geosynthetic is written per metre of slope (its strengths divided by the spacing ${sp} m); its pullout is not divided.`);
+      if (sp !== 1) notes.push(`Reinforcement ${i + 1}: a geosynthetic is written per meter of slope (its strengths divided by the spacing ${sp} m); its pullout is not divided.`);
       const conn = (r.end1Capacity ?? 0) > 0 ? ` anch: 2 conn_strength: ${n(r.end1Capacity! / sp / a)}` : " anch: 0";
       anchorTypes.push(`  anchor${k} = type: 4 fa: ${fa} ts: ${n(r.tensileCapacity / sp / a)}${conn} po_type: 1 po_adh: ${n(r.pullout.adhesion)} po_fric: ${n(r.pullout.frictionAngle)} cov_perc: ${n(100 * a)}`);
     }
@@ -415,7 +415,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   }
   if (opts.tensionCrackAuto || opts.tensionCrackAngle) notes.push("The tension crack from the soil's strength or a limiting base inclination is not written.");
 
-  // the surfaces: given circles and surfaces, else a grid of centres above the slope
+  // the surfaces: given circles and surfaces, else a grid of centers above the slope
   const circles = def.customSearchPlanes ?? [];
   const surfaces = (def.customSurfaces ?? []).map((s) => lineIds(s.points));
   const onlyGiven = !!def.customPlanesOnly && circles.length + surfaces.length > 0;
@@ -424,8 +424,8 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   const gx0 = Math.min(toe[0], crest[0]), gx1 = Math.max(toe[0], crest[0]);
   const h = Math.max(1, crest[1] - toe[1]), w = Math.max(1, gx1 - gx0);
   const grid = onlyGiven ? [] : [`  1: x1: ${n(gx0)} y1: ${n(crest[1] + 0.2 * h)}  x2: ${n(gx1 + 0.5 * w)} y2: ${n(crest[1] + 0.2 * h + Math.max(h, w))}  nx: 20 ny: 20`];
-  if (!onlyGiven) notes.push("The search is written as a grid of centres above the slope; adjust it to the slope there.");
-  if (opts.nonCircularOptimization) notes.push("The non-circular optimisation is not written; the search is circular.");
+  if (!onlyGiven) notes.push("The search is written as a grid of centers above the slope; adjust it to the slope there.");
+  if (opts.nonCircularOptimization) notes.push("The non-circular optimization is not written; the search is circular.");
   if (opts.searchMethod === "block" || (def.blockSearchObjects ?? []).length > 0) notes.push("The block search is not written.");
   const groundL = ground[0] ?? [x0, y1], groundR = ground[ground.length - 1] ?? [x1, y1];
   let limits = `  x1: ${n(groundL[0])} y1: ${n(groundL[1])} x2: ${n(groundR[0])} y2: ${n(groundR[1])}`;

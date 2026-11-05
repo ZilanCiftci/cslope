@@ -110,11 +110,11 @@ describe("Explorer — list and selection", () => {
     );
     render(<Explorer />);
     const state = (name: string) => row(name).querySelector("[role=img]")!.getAttribute("aria-label");
-    expect(state("Alpha")).toBe("Analysed");
+    expect(state("Alpha")).toBe("Analyzed");
     expect(state("Beta")).toBe("Analysis failed");
-    expect(state("Gamma")).toBe("Analysed");
+    expect(state("Gamma")).toBe("Analyzed");
     act(() => useAppStore.setState({ result: null, runState: "idle" }));
-    expect(state("Alpha")).toBe("Not analysed");
+    expect(state("Alpha")).toBe("Not analyzed");
   });
 
   it("marks the models whose analysis runs, the active one by its single run", () => {

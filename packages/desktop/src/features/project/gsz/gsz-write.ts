@@ -309,7 +309,7 @@ ${u.direction === "normal" ? "            <Direction>Normal</Direction>\n" : ""}
   const polylines = planes.filter((p) => p.points && p.points.length >= 2);
   const given = model.customPlanesOnly && circles.length + polylines.length > 0;
   if (!given && circles.length + polylines.length > 0) {
-    notes.push("The custom slip surfaces are not written: the format analyses either the given surfaces or a search, and the model searches as well.");
+    notes.push("The custom slip surfaces are not written: the format analyzes either the given surfaces or a search, and the model searches as well.");
   }
   if (!given && !lim?.enabled) notes.push("No search limits in the model: the entry and exit ranges written are the two halves of the ground; check them.");
   const arc = (c: { cx: number; cy: number; radius: number }): Pt[] => {
@@ -332,7 +332,7 @@ ${u.direction === "normal" ? "            <Direction>Normal</Direction>\n" : ""}
   const centre = circles[0];
   const axisId = given && polylines.length === 0 && circles.every((c) => c.cx === centre.cx && c.cy === centre.cy) ? lid([centre.cx, centre.cy]) : undefined;
   if (given) {
-    if (circles.length > 0) notes.push(`${circles.length === 1 ? "The custom circle is" : "The custom circles are"} written as fully specified slip surfaces along the circle (in 2° steps)${axisId !== undefined ? ", with the centre as the axis" : ""}.`);
+    if (circles.length > 0) notes.push(`${circles.length === 1 ? "The custom circle is" : "The custom circles are"} written as fully specified slip surfaces along the circle (in 2° steps)${axisId !== undefined ? ", with the center as the axis" : ""}.`);
     if (axisId === undefined) notes.push("The fully specified slip surfaces are written without an axis; the receiving program takes its own.");
   }
   const slipXml = given

@@ -1033,7 +1033,7 @@ async function partB() {
       const from = rig.shots.length;
       await openProject(file(`${f.key}.json`));
       const d = await customPlanesDialog();
-      const cb = d.getByLabel(/Only analyse these surfaces/i).first();
+      const cb = d.getByLabel(/Only analyze these surfaces/i).first();
       if (f.key.startsWith("01")) {
         await growToContent(d);
         await rig.shot(d, "b1-custom-planes", "Custom planes dialog");

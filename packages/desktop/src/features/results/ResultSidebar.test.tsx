@@ -127,7 +127,7 @@ describe("ResultSidebar summary", () => {
       "Custom surface 2no solution: the circle does not cut the ground twice",
       "Custom surface 3F = 1.500",
     ]);
-    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, centre (10.00, 12.00) m, radius 10.00 m");
+    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, center (10.00, 12.00) m, radius 10.00 m");
     expect(screen.getByText("Custom surface 2")).toHaveAttribute("title", "circle");
     expect(screen.getByText("Custom surface 3")).toHaveAttribute("title", "non-circular, 3 points");
     cleanup();
@@ -485,28 +485,28 @@ describe("ResultSidebar annotation properties", () => {
   it("sets the colour scheme of the colour bar, with custom colours and an optional middle one", () => {
     select(["c"]);
     render(<ResultSidebar />);
-    expect(field("Colour scheme").value).toBe("classic");
+    expect(field("Color scheme").value).toBe("classic");
     // jsdom stores the gradient's colours as rgb().
     const preview = () => screen.getByRole("img", { name: /Scheme preview/ }).style.background;
     expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(255, 0, 0\), /);
 
-    fireEvent.change(field("Colour scheme"), { target: { value: "greyscale" } });
+    fireEvent.change(field("Color scheme"), { target: { value: "greyscale" } });
     expect(anno("c").scheme).toBe("greyscale");
     expect(preview()).toMatch(/rgb\(200, 200, 200\)\)$/);
 
-    fireEvent.change(field("Colour scheme"), { target: { value: "custom" } });
+    fireEvent.change(field("Color scheme"), { target: { value: "custom" } });
     expect(anno("c")).toMatchObject({ scheme: "custom", schemeFrom: "#cc0000", schemeTo: "#0066cc" });
-    fireEvent.change(screen.getByLabelText("From (low F) colour"), { target: { value: "#112233" } });
-    fireEvent.change(screen.getByLabelText("To (high F) colour"), { target: { value: "#445566" } });
+    fireEvent.change(screen.getByLabelText("From (low F) color"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("To (high F) color"), { target: { value: "#445566" } });
     expect(anno("c")).toMatchObject({ schemeFrom: "#112233", schemeTo: "#445566" });
     expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(17, 34, 51\), .*rgb\(68, 85, 102\)\)$/);
 
-    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    fireEvent.click(screen.getByLabelText("Add a middle color"));
     expect(anno("c").schemeMid).toMatch(/^#[0-9a-f]{6}$/);
-    fireEvent.change(screen.getByLabelText("Middle colour"), { target: { value: "#ffffff" } });
+    fireEvent.change(screen.getByLabelText("Middle color"), { target: { value: "#ffffff" } });
     expect(anno("c").schemeMid).toBe("#ffffff");
     expect(preview()).toContain("rgb(255, 255, 255)");
-    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    fireEvent.click(screen.getByLabelText("Add a middle color"));
     expect(anno("c").schemeMid).toBeUndefined();
   });
 
@@ -649,8 +649,8 @@ describe("ResultSidebar reference lines", () => {
   it("edits a circle's centre, radius and clip; several lines share the common fields", () => {
     select(["rc"]);
     render(<ResultSidebar />);
-    fireEvent.change(screen.getByLabelText("Reference circle centre X"), { target: { value: "16" } });
-    fireEvent.change(screen.getByLabelText("Reference circle centre Y"), { target: { value: "13" } });
+    fireEvent.change(screen.getByLabelText("Reference circle center X"), { target: { value: "16" } });
+    fireEvent.change(screen.getByLabelText("Reference circle center Y"), { target: { value: "13" } });
     fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "12" } });
     expect(ref("rc")).toMatchObject({ cx: 16, cy: 13, radius: 12 });
     // Below the smallest radius: kept.
