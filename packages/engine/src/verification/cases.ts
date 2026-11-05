@@ -1,6 +1,6 @@
 /**
  * Verification problems with published factors of safety: the types, the
- * helpers that build slope definitions, and the functions that analyse a
+ * helpers that build slope definitions, and the functions that analyze a
  * problem. The problems themselves are data, in problems.ts (deterministic)
  * and reliability-cases.ts (probabilistic).
  *
@@ -201,9 +201,9 @@ export const VERIFICATION_OPTIONS: Partial<AnalysisOptions> = {
 };
 
 /**
- * Non-circular optimisation ends in a different local minimum with fewer
+ * Non-circular optimization ends in a different local minimum with fewer
  * trial surfaces, so it keeps the full search. The tolerance is the tight
- * one: with a looser tolerance the optimisation exploits the solver's slack
+ * one: with a looser tolerance the optimization exploits the solver's slack
  * and lands a few tenths of a percent below the surface's true value
  * (Fredlund, Krahn & Pufahl 1981).
  */
@@ -236,7 +236,7 @@ export function verificationOptions(method: AnalysisMethod, options: Partial<Ana
   };
 }
 
-/** Run one check; returns the minimum FOS and the analysed slope. */
+/** Run one check; returns the minimum FOS and the analyzed slope. */
 export function runVerification(
   definition: SlopeDefinition,
   method: AnalysisMethod,

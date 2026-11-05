@@ -1,7 +1,7 @@
 /**
  * How close cSlope's factor of safety must come to a reference value for a
  * verification check to pass. The tolerance follows from what is known about
- * the problem before it is analysed, never from the result:
+ * the problem before it is analyzed, never from the result:
  *
  *  - the surface: a given surface 1 %, a searched surface 2 % (two programs'
  *    searches need not find the same critical surface);

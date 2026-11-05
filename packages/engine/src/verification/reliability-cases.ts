@@ -16,7 +16,7 @@ export interface ReliabilityCaseData {
   title: string;
   reference: string;
   description: string;
-  /** Model space, analysed on the given surface. */
+  /** Model space, analyzed on the given surface. */
   definition: SlopeDefinition;
   method: AnalysisMethod | "Spencer";
   options: Partial<AnalysisOptions>;

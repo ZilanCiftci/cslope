@@ -345,7 +345,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   const xMaxM = Math.max(...xs0);
   const mx = (x: number) => (mirror ? xMinM + xMaxM - x : x);
 
-  // World bounds: model plus the arc and (when not far away) the centre.
+  // World bounds: model plus the arc and (when not far away) the center.
   const ys0 = canon.coordinates.map((c) => c[1]);
   let x0 = xMinM;
   let x1 = xMaxM;
@@ -446,7 +446,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.restoreGraphicsState();
   }
 
-  // Water lines (continued horizontally to the model edges, as analysed).
+  // Water lines (continued horizontally to the model edges, as analyzed).
   const waterLines: Pt[][] = [];
   if (canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value)) {
     waterLines.push(canon.waterTable.value as Pt[]);
@@ -551,7 +551,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       prev = p;
     }
     const [ccx, ccy] = P(plane.cx, plane.cy);
-    // Centre and radii only for circles.
+    // Center and radii only for circles.
     const inside = !plane.points && ccy >= fy && ccy <= fy + fh && ccx >= fx && ccx <= fx + fw;
     pdf.setLineWidth(0.15);
     pdf.setLineDashPattern([0.8, 0.8], 0);
@@ -773,10 +773,10 @@ table(
     { title: "Value", width: CONTENT_W - 62 },
   ],
   [
-    ["Slip surfaces", "Circular, or the non-circular surface the source gives. Fixed surfaces where the source gives one, otherwise a critical-circle search (with non-circular optimisation where stated)."],
+    ["Slip surfaces", "Circular, or the non-circular surface the source gives. Fixed surfaces where the source gives one, otherwise a critical-circle search (with non-circular optimization where stated)."],
     ["Number of slices", `${VERIFICATION_OPTIONS.slices} unless the problem states otherwise`],
     ["Search", `${FULL_VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${FULL_VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
-    ["Convergence tolerance", `${VERIFICATION_OPTIONS.tolerance} on the factor of safety; ${NON_CIRCULAR_VERIFICATION_OPTIONS.tolerance} with non-circular optimisation`],
+    ["Convergence tolerance", `${VERIFICATION_OPTIONS.tolerance} on the factor of safety; ${NON_CIRCULAR_VERIFICATION_OPTIONS.tolerance} with non-circular optimization`],
     ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
     [
       "Pore pressure",
@@ -788,7 +788,7 @@ table(
 if (!PUBLIC) {
   heading("Acceptance", 2);
   paragraph(
-    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analysed (packages/engine/src/verification/tolerance.ts).`,
+    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
   );
   y += 2;
 }
@@ -801,7 +801,7 @@ heading("Source of the input data", 2);
 paragraph(
   PUBLIC
     ? "The input data were transcribed from the publications and from the verification manuals of other slope stability programs, most of them commercial, and cross-checked against an independent open-source transcription of the same problems. For each problem the report lists the values the source publishes, with the method where the source names one; some are hand calculations, charts, trial wedges or finite elements rather than the method of slices. For each analysis cSlope runs, it gives the range of results that other programs publish in their verification manuals, without naming the programs, and cSlope's result. The report presents the results; it does not mark them as passed or failed. Problem ids are cSlope's own: a number is one slope, a letter a variant of it."
-    : "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labelled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
+    : "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labeled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
   9.5,
   "normal",
 );
@@ -897,7 +897,7 @@ caseResults.forEach((r, i) => {
   const feOnly = r.results.length === 0 && analysisRows(r).length === 0;
   const surfaceKind = feOnly ? "Finite elements only" : c.surface === "fixed"
     ? nonCircular ? "Specified non-circular surface" : "Fixed circle"
-    : nonCircular ? "Circle search with non-circular optimisation" : "Critical circle search";
+    : nonCircular ? "Circle search with non-circular optimization" : "Critical circle search";
   heading(`3.${i + 1}  ${c.id} — ${c.title}`, 2);
   paragraph(c.reference, 8.5, "italic", MUTED);
   y += 1;
@@ -915,7 +915,7 @@ caseResults.forEach((r, i) => {
     c.definition,
     r.slope,
     r.plane,
-    feOnly ? `Figure ${i + 1}. ${c.id}: geometry and water` : `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analysed surface" : "analysed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
+    feOnly ? `Figure ${i + 1}. ${c.id}: geometry and water` : `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
     units,
   );
   table(

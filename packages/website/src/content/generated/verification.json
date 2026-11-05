@@ -3675,7 +3675,7 @@
      }
     }
    ],
-   "note": "The ACADS referee value 0.78 comes from the 1989 survey, where the participating programs averaged 0.81; optimised non-circular searches today give about 0.68–0.71."
+   "note": "The ACADS referee value 0.78 comes from the 1989 survey, where the participating programs averaged 0.81; optimized non-circular searches today give about 0.68–0.71."
   },
   {
    "id": "V052a",
@@ -5321,7 +5321,7 @@
      "programs": null
     }
    ],
-   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artefact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27.",
+   "note": "The comparison program's 1.19 is not reproduced on the circle it prints with that value: cSlope gives 1.13 there, close to Low's Bishop value 1.14, which is the check. Low himself calls that Bishop value misleading, an artifact of negative effective normal stresses in the stiff bank with φ = 15°: with φ = 0 in the bank both Ordinary and Bishop give 1.31, and his own hand method 1.38. Kim et al. (2002) give 1.17 with Spencer's method on a non-circular surface and limit-analysis bounds of 1.13–1.27.",
    "fem": {
     "flowRule": "associated",
     "levels": [
@@ -6806,7 +6806,7 @@
      }
     }
    ],
-   "note": "USACE's values are for the manual's own piezometric line, which its slice table (fig. F-17a) places lower than the line of the program version analysed here: the kink at about el. 53–59 ft instead of 69 ft, and the tailwater level reached about 18 ft further upstream. On the manual's line cSlope gives Bishop 2.05–2.06 and Spencer 2.06–2.08, depending on where the table's slices are placed: within 0.5 % of USACE's Modified Swedish value 2.07, and 2–2.6 % above its nine-slice Bishop hand calculation. The manual's values are shown for reference and not compared with cSlope's analyses on the program's line."
+   "note": "USACE's values are for the manual's own piezometric line, which its slice table (fig. F-17a) places lower than the line of the program version analyzed here: the kink at about el. 53–59 ft instead of 69 ft, and the tailwater level reached about 18 ft further upstream. On the manual's line cSlope gives Bishop 2.05–2.06 and Spencer 2.06–2.08, depending on where the table's slices are placed: within 0.5 % of USACE's Modified Swedish value 2.07, and 2–2.6 % above its nine-slice Bishop hand calculation. The manual's values are shown for reference and not compared with cSlope's analyses on the program's line."
   },
   {
    "id": "V093",
@@ -7158,7 +7158,7 @@
      "value": 1.429,
      "method": "Bishop simplified",
      "source": "Zhu & Lee (2002)",
-     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the centre as the rigorous methods do and normally comes within a few per cent of them; cSlope gives 1.823 on the paper's circle. Not counted in the error statistics.",
+     "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the center as the rigorous methods do and normally comes within a few per cent of them; cSlope gives 1.823 on the paper's circle. Not counted in the error statistics.",
      "analysis": "Bishop simplified",
      "computed": 1.8229
     },
@@ -7186,7 +7186,7 @@
      "programs": null
     }
    ],
-   "note": "The paper gives surface 3 only in a figure. On the circle fitted to it cSlope comes within 1 % of the paper's Spencer and Morgenstern-Price values (1.836, 1.823), against 2 % on the program's circle of V096c; moving the fitted centre or radius by 0.3 m changes the result by up to 1 %. The paper's simplified Bishop value 1.429 is 22 % below its own rigorous values for the same circle, where cSlope's Bishop gives 1.823 as expected on a circle; it is shown but not counted in the error statistics."
+   "note": "The paper gives surface 3 only in a figure. On the circle fitted to it cSlope comes within 1 % of the paper's Spencer and Morgenstern-Price values (1.836, 1.823), against 2 % on the program's circle of V096c; moving the fitted center or radius by 0.3 m changes the result by up to 1 %. The paper's simplified Bishop value 1.429 is 22 % below its own rigorous values for the same circle, where cSlope's Bishop gives 1.823 as expected on a circle; it is shown but not counted in the error statistics."
   },
   {
    "id": "V096e",
