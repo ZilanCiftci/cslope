@@ -445,7 +445,7 @@ export function exportVectorPdf(data: PdfExportData): void {
 
     // Not for an analysis of prescribed surfaces only (nothing was searched).
     if (analysisLimits.enabled && coordinates.length >= 3 && !customPlanesOnly) {
-      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates, result.criticalSurface ?? null);
+      drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates);
     }
 
     // Reference annotations: the lines under the surfaces, as on the canvas.

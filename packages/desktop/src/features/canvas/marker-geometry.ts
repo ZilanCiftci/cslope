@@ -44,18 +44,15 @@ export interface MarkerDot {
   r: number;
 }
 
-/** Gap kept between a vertex dot and a limit triangle moved off it, px. */
-const DOT_GAP_PX = 2;
-
 /**
  * The marker at canvas (cx, cy): a bar, and unless `towardCanvasX` is null
  * a triangle outside the range pointing into it, towards that canvas x
  * (>| at the start of a range, |< at its end, in any orientation).
  *
- * A triangle that a vertex dot in `dots` would cover (a limit at a
- * vertex: the dots are drawn over the markers) moves outward, away from
- * the range, until it starts `DOT_GAP_PX` beyond the dot; the bar stays
- * at the limit.
+ * The triangle always touches the bar: moving it off a vertex dot made
+ * it jump away from the limit as the limit neared a vertex. A vertex dot
+ * at the limit is drawn over the triangle's tip (`dots` is kept for the
+ * callers but no longer moves the triangle).
  */
 export function limitMarkerGeometry(
   cx: number,
@@ -68,14 +65,8 @@ export function limitMarkerGeometry(
   if (towardCanvasX === null) return { x: cx, y: cy, barH, triangle: null };
   const sz = MARKER_SZ_PX * zoom;
   const inward = towardCanvasX >= cx ? 1 : -1;
-  // Outward offset of the tip: past every dot over the triangle's span.
-  let gap = 0;
-  for (const d of [...dots].sort((a, b) => (a.x - b.x) * -inward)) {
-    const out = (d.x - cx) * -inward;
-    if (Math.abs(d.y - cy) >= sz + d.r || out + d.r <= gap || out - d.r >= gap + 2 * sz) continue;
-    gap = Math.max(gap, out + d.r + DOT_GAP_PX * zoom);
-  }
-  const tipX = cx - inward * gap;
+  void dots;
+  const tipX = cx;
   const baseX = tipX - inward * sz * 2;
   return {
     x: cx,

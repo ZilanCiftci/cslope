@@ -2030,15 +2030,15 @@ export function drawCanvas(
     // Over a result as in the edit view (opaque, standing on the ground).
     const markerAlpha = 1;
     const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
-    const cs = mode === "result" ? (result?.criticalSurface ?? null) : null;
 
     // Dots along the ground over each range (alternating colours where the
-    // entry and exit ranges coincide), none over the sliding mass.
+    // entry and exit ranges coincide), as in the edit view: also over the
+    // sliding mass.
     const dotRadius = ENTRY_EXIT_DOT_RADIUS_PX * paperZoom;
     ctx.save();
     ctx.globalAlpha = markerAlpha;
     for (const d of layoutRangeDots(analysisLimits, coordinates, toC, paperZoom, {
-      skip: cs ? [cs.entryPoint[0], cs.exitPoint[0]] : null,
+      skip: null,
       radius: dotRadius,
     })) {
       ctx.fillStyle = d.range === "entry" ? ENTRY_DOT_COLOR.hex : EXIT_DOT_COLOR.hex;

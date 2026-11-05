@@ -59,21 +59,21 @@ describe("crackMarkerPosition", () => {
 });
 
 describe("limit markers at a vertex dot", () => {
-  it("moves the triangle outward past a dot over it, the bar staying at the limit", () => {
+  it("keeps the triangle at its bar when a dot lies over it (no jump near a vertex)", () => {
     // Start of a range at x = 100 (pointing right), a dot of radius 6 on it.
     const m = limitMarkerGeometry(100, 50, 200, 1, [{ x: 100, y: 50, r: 6 }]);
     expect(m.x).toBe(100);
     expect(m.triangle).toEqual([
-      [92, 50],
-      [78, 43],
-      [78, 57],
+      [100, 50],
+      [86, 43],
+      [86, 57],
     ]);
-    // The end of a range points the other way and moves right.
-    expect(limitMarkerGeometry(100, 50, 0, 1, [{ x: 100, y: 50, r: 6 }]).triangle![0]).toEqual([108, 50]);
-    // A dot elsewhere leaves it alone.
-    expect(limitMarkerGeometry(100, 50, 200, 1, [{ x: 160, y: 50, r: 6 }]).triangle![0]).toEqual([100, 50]);
+    // Without the dot: the same.
+    expect(limitMarkerGeometry(100, 50, 200, 1, []).triangle).toEqual(m.triangle);
+    // The end of a range points the other way.
+    expect(limitMarkerGeometry(100, 50, 0, 1, [{ x: 100, y: 50, r: 6 }]).triangle![0]).toEqual([100, 50]);
     // The boxes follow.
-    expect(limitMarkerBoxes(m)[1]).toEqual({ left: 78, top: 43, right: 92, bottom: 57 });
+    expect(limitMarkerBoxes(m)[1]).toEqual({ left: 86, top: 43, right: 100, bottom: 57 });
   });
 });
 

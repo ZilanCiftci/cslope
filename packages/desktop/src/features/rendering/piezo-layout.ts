@@ -370,7 +370,7 @@ export function piezoObstacles(scene: PiezoScene, toD: (x: number, y: number) =>
       avoid.push(box(m.cx, m.barTop, m.cx, m.barBottom));
       for (const t of m.triangles) avoid.push(box(Math.min(...t.map((p) => p[0])), Math.min(...t.map((p) => p[1])), Math.max(...t.map((p) => p[0])), Math.max(...t.map((p) => p[1]))));
     }
-    const skip: [number, number] | null = scene.critical ? [scene.critical.entryPoint[0], scene.critical.exitPoint[0]] : null;
+    const skip: [number, number] | null = null; // dots over the sliding mass too, as drawn
     const r = ENTRY_EXIT_DOT_RADIUS_PX * unit;
     for (const d of layoutRangeDots(lim, coordinates, toD, unit, { skip, radius: r })) avoid.push(box(d.x - r, d.y - r, d.x + r, d.y + r));
   }

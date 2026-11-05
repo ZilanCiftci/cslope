@@ -645,12 +645,12 @@ describe("drawEntryExitMarkers", () => {
     expect(lastDot).toBeLessThan(firstBar);
   });
 
-  it("puts no dots over the sliding mass; the markers stand on the ground as in the edit view", () => {
+  it("puts dots along both ranges, also over the sliding mass; the markers stand on the ground as in the edit view", () => {
     const rec = recorder();
-    drawEntryExitMarkers(rec.pdf, tf, limits, COORDS, { entryPoint: [ENTRY_X, 10], exitPoint: [22, 5] });
+    drawEntryExitMarkers(rec.pdf, tf, limits, COORDS);
     const xs = rec.of("circle").map((c) => ((c.args[0] as number) - 20) / 5);
-    expect(xs.length).toBeGreaterThan(0);
-    for (const x of xs) expect(x < ENTRY_X || x > 22).toBe(true);
+    expect(xs.some((x) => x > ENTRY_X && x < 8)).toBe(true);
+    expect(xs.some((x) => x > 21 && x < 22)).toBe(true);
     // Four triangles (one per limit), as in the edit view.
     expect(rec.of("moveTo")).toHaveLength(4);
   });

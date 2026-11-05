@@ -382,18 +382,18 @@ describe("drawCanvas — edit mode", () => {
     }
   });
 
-  it("draws vertex dots over the search-limit markers, the triangle moved off the dot", () => {
+  it("draws vertex dots over the search-limit markers, the triangle kept at its bar", () => {
     const rec = draw({
       selection: EXTERIOR,
       analysisLimits: { enabled: true, entryLeftX: 0, entryRightX: 8, exitLeftX: 21, exitRightX: 30 },
     });
     const [vx, vy] = toC(0, 10);
-    // The dot (POINT_RADIUS and half its outline) and 2 px: the tip outside the range, left of the dot.
-    const tipX = vx - (POINT_RADIUS + 0.75 + 2);
-    const triangle = rec.paths.findIndex((p) => p.kind === "fill" && p.segments.length === 4 && close(pathPoints(p)[0], [tipX, vy]));
+    // The tip at the bar (the limit), outside the range: it does not jump away from the dot.
+    const triangle = rec.paths.findIndex((p) => p.kind === "fill" && p.segments.length === 4 && close(pathPoints(p)[0], [vx, vy]));
     const dot = rec.paths.findIndex((p) => p.kind === "fill" && p.segments[0].op === "arc" && close(pathPoints(p)[0], [vx, vy]));
     expect(triangle).toBeGreaterThanOrEqual(0);
-    expect(Math.max(...pathPoints(rec.paths[triangle]).map((q) => q[0]))).toBeLessThan(vx - POINT_RADIUS);
+    expect(Math.max(...pathPoints(rec.paths[triangle]).map((q) => q[0]))).toBeLessThanOrEqual(vx + 1e-9);
+    // Drawn over it.
     expect(dot).toBeGreaterThan(triangle);
   });
 
@@ -1320,7 +1320,7 @@ describe("drawCanvas — result mode", () => {
     expect(draw({ analysisLimits: limits, customPlanesOnly: true }).fills(EXIT_DOT_COLOR.hex).length).toBeGreaterThan(0);
   });
 
-  it("draws the search markers over a result as in the edit view, no dots on the mass", () => {
+  it("draws the search markers and dots over a result as in the edit view", () => {
     const limits = { enabled: true, entryLeftX: 2, entryRightX: 8, exitLeftX: 21, exitRightX: 28 };
     const triangles = (rec: ReturnType<typeof draw>) =>
       rec.fills().filter((p) => pathPoints(p).length === 3 && p.state.fillStyle === MARKER_COLOR.hex);
@@ -1329,13 +1329,11 @@ describe("drawCanvas — result mode", () => {
     expect(tris).toHaveLength(4);
     // The same triangles as in the edit view.
     expect(tris.map(pathPoints)).toEqual(triangles(draw({ analysisLimits: limits })).map(pathPoints));
-    // No dots over the sliding mass (entry ≈ 4.3 to exit 22).
+    // Dots along both ranges as in the edit view, also over the sliding mass (entry ≈ 4.3 to exit 22).
     const dots = rec.fills().filter((p) => p.segments[0].op === "arc" && (p.state.fillStyle === ENTRY_DOT_COLOR.hex || p.state.fillStyle === EXIT_DOT_COLOR.hex));
-    expect(dots.length).toBeGreaterThan(0);
-    for (const d of dots) {
-      const [wx] = canvasToWorld(pathPoints(d)[0][0], pathPoints(d)[0][1], W, H);
-      expect(wx < ENTRY_X || wx > 22).toBe(true);
-    }
+    const xs = dots.map((d) => canvasToWorld(pathPoints(d)[0][0], pathPoints(d)[0][1], W, H)[0]);
+    expect(xs.some((x) => x > ENTRY_X && x < 8)).toBe(true);
+    expect(xs.some((x) => x > 21 && x < 22)).toBe(true);
     // Coinciding ranges: as in the edit view.
     const same = { enabled: true, entryLeftX: 2, entryRightX: 28, exitLeftX: 2, exitRightX: 28 };
     expect(triangles(drawResult({ analysisLimits: same }))).toHaveLength(4);

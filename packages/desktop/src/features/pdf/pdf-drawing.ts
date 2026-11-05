@@ -923,8 +923,8 @@ const RESULT_MARKER_OPACITY = 1;
 
 /**
  * The search limits as on the canvas over a result (layoutLimitMarkers,
- * layoutRangeDots): dots along the ground over each range, none over the
- * sliding mass of `critical`, then at each limit a bar across the ground
+ * layoutRangeDots): dots along the ground over each range (also over the
+ * sliding mass), then at each limit a bar across the ground
  * with a triangle pointing into the range (only a bar for a range of
  * zero width), as in the edit view.
  */
@@ -933,12 +933,11 @@ export function drawEntryExitMarkers(
   tf: PdfTransform,
   limits: AnalysisLimitsState,
   coordinates: [number, number][],
-  critical: Pick<DrawableSurface, "entryPoint" | "exitPoint"> | null = null,
 ) {
   setOpacity(pdf, RESULT_MARKER_OPACITY);
   const radius = ENTRY_EXIT_DOT_RADIUS_PX * tf.mmPerPx;
   for (const d of layoutRangeDots(limits, coordinates, tf.worldToPdf, tf.mmPerPx, {
-    skip: critical ? [critical.entryPoint[0], critical.exitPoint[0]] : null,
+    skip: null,
     radius,
   })) {
     pdf.setFillColor(...(d.range === "entry" ? ENTRY_DOT_COLOR.rgb : EXIT_DOT_COLOR.rgb));
