@@ -62,7 +62,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
             className="text-[12px] font-medium"
             style={{ color: "var(--color-vsc-accent)" }}
           >
-            Analysing…
+            Analyzing…
           </p>
           <div
             className="w-full h-1.5 rounded-full overflow-hidden"
@@ -129,7 +129,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
             </Row>
           )}
           {(result.splitFailureCount ?? 0) > 0 && (
-            <Row label="Geometry Split">
+            <Row label="Geometry split">
               <span style={{ color: "var(--color-vsc-warning-text)" }}>
                 {result.splitFailureCount} split operation(s) failed
               </span>
@@ -144,7 +144,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
                 className="font-medium mb-1"
                 style={{ color: "var(--color-vsc-text-bright)" }}
               >
-                Critical Surface
+                Critical surface
               </p>
               {result.criticalSurface.points && !result.criticalSurface.composite ? (
                 <p>
@@ -153,7 +153,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
               ) : (
                 <>
                   <p>
-                    Centre: ({result.criticalSurface.cx.toFixed(2)},{" "}
+                    Center: ({result.criticalSurface.cx.toFixed(2)},{" "}
                     {result.criticalSurface.cy.toFixed(2)})
                   </p>
                   <p>Radius: {result.criticalSurface.radius.toFixed(2)} m</p>

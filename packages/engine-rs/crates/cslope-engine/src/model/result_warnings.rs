@@ -457,7 +457,7 @@ pub fn shallow_cohesionless_message(
         return None;
     }
     Some(format!(
-        "The critical surface (F = {}) is a shallow slide, on average {} m and at most {} m below the ground, with {} % of its base in cohesionless soil{}. If the stability of the slope as a whole is sought, set a minimum slip depth, slip area or entry–exit distance (Options › Search) to analyse the deeper surfaces.",
+        "The critical surface (F = {}) is a shallow slide, on average {} m and at most {} m below the ground, with {} % of its base in cohesionless soil{}. If the stability of the slope as a whole is sought, set a minimum slip depth, slip area or entry–exit distance (Options › Search) to analyze the deeper surfaces.",
         js::num::to_fixed(fos, 3),
         js::num::to_fixed(mean, 2),
         js::num::to_fixed(deepest, 2),

@@ -1695,7 +1695,7 @@ pub fn ignored_input_warnings(slope: &Slope) -> Vec<String> {
         warnings.push("The earlier stage is not included in the finite element analysis: the yield stress of SHANSEP materials does not come from it.".to_string());
     }
     if slope.drawdown_before().is_some() {
-        warnings.push("Rapid drawdown is not included in the finite element analysis: the slope is analysed with the water after drawdown and the materials' own strengths.".to_string());
+        warnings.push("Rapid drawdown is not included in the finite element analysis: the slope is analyzed with the water after drawdown and the materials' own strengths.".to_string());
     }
     warnings
 }

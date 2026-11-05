@@ -56,12 +56,12 @@ export function ModelRow({
   onDragEnd,
 }: Props) {
   const state = isRunning
-    ? { label: "Analysing", fill: "var(--color-vsc-accent)" }
+    ? { label: "Analyzing", fill: "var(--color-vsc-accent)" }
     : hasError
       ? { label: "Analysis failed", fill: "var(--color-vsc-error)" }
       : hasResult
-        ? { label: "Analysed", fill: "var(--color-vsc-success)" }
-        : { label: "Not analysed", fill: null };
+        ? { label: "Analyzed", fill: "var(--color-vsc-success)" }
+        : { label: "Not analyzed", fill: null };
 
   return (
     <div

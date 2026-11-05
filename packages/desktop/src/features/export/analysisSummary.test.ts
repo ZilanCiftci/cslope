@@ -63,8 +63,8 @@ describe("analysis summary", () => {
     const s = buildAnalysisSummary(input());
     expect(value(s, "Result", "Minimum factor of safety")).toBe("1.235");
     expect(value(s, "Result", "Method")).toBe("Bishop simplified (moment equilibrium)");
-    expect(value(s, "Result", "Critical surface")).toBe("circle, centre (10, 20) m, radius 15 m");
-    expect(value(s, "Result", "Surfaces analysed")).toBe("3 (1 below 1.0)");
+    expect(value(s, "Result", "Critical surface")).toBe("circle, center (10, 20) m, radius 15 m");
+    expect(value(s, "Result", "Surfaces analyzed")).toBe("3 (1 below 1.0)");
     expect(value(s, "Result", "Below minimum size")).toBeUndefined();
     const small = buildAnalysisSummary(input({ result: { ...RESULT, discardedBySize: 7 } }));
     expect(value(small, "Result", "Below minimum size")).toBe(
@@ -197,7 +197,7 @@ describe("analysis summary", () => {
       { kind: "polyline", index: 0, surface: { ...RESULT.criticalSurface, radius: 0, fos: 1.5, points: [[1, 5], [8, 1], [20, 0]] } },
     ];
     const s = buildAnalysisSummary(input({ result: { ...RESULT, customSurfaces } as unknown as AnalysisResult }));
-    expect(value(s, "Result", "Custom surface 1")).toBe("F = 0.664 (circle, centre (10.00, 20.00) m, radius 15.00 m)");
+    expect(value(s, "Result", "Custom surface 1")).toBe("F = 0.664 (circle, center (10.00, 20.00) m, radius 15.00 m)");
     expect(value(s, "Result", "Custom surface 2")).toBe("no solution: the circle does not cut the ground twice");
     expect(value(s, "Result", "Custom surface 3")).toBe("F = 1.500 (non-circular, 3 points)");
     expect(section(buildAnalysisSummary(input()), "Result").rows!.some((r) => r.label.startsWith("Custom surface"))).toBe(false);

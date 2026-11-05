@@ -138,7 +138,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Model Properties"
+        aria-label="Model properties"
         className="w-[480px] rounded-lg shadow-2xl flex flex-col max-h-[90vh]"
         style={{
           background: "var(--color-vsc-bg)",
@@ -147,7 +147,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-vsc-border)]">
           <div>
-            <h3 className="font-semibold text-sm">Model Properties</h3>
+            <h3 className="font-semibold text-sm">Model properties</h3>
             {multiEdit ? (
               <p className="text-[11px] opacity-65 mt-0.5">
                 Editing {initialInfos.length} models
@@ -200,7 +200,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
               />
             </div>
             <div>
-              {fieldLabel("Project No.", "projectNumber")}
+              {fieldLabel("Project no.", "projectNumber")}
               <input
                 type="text"
                 value={info.projectNumber}
@@ -271,7 +271,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
             </div>
 
             <div>
-              {fieldLabel("Canvas Width (m)", "canvasWidth")}
+              {fieldLabel("Canvas width (m)", "canvasWidth")}
               <input
                 type="text"
                 inputMode="decimal"
@@ -285,7 +285,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
               />
             </div>
             <div>
-              {fieldLabel("Canvas Height (m)", "canvasHeight")}
+              {fieldLabel("Canvas height (m)", "canvasHeight")}
               <input
                 type="text"
                 inputMode="decimal"
@@ -322,7 +322,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
             onClick={handleSave}
             className="btn btn-primary min-w-[80px]"
           >
-            Save Changes
+            Save changes
           </button>
         </div>
       </div>

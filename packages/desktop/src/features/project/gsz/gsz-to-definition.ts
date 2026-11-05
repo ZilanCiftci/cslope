@@ -85,7 +85,7 @@ function reinforcementOf(
     if (r.pullout === undefined && !(sheet && r.calculatedPullout)) {
       once(`Reinforcement "${r.name}": the file gives no pullout resistance; both its ends are taken as fully anchored (the tensile capacity wherever it is crossed).`);
     } else if (!sheet && r.pullout !== undefined && !(r.bondDiameter !== undefined && r.bondDiameter > 0)) {
-      once(`Reinforcement "${r.name}": no bond diameter in the file; its pullout resistance is taken per metre of the element.`);
+      once(`Reinforcement "${r.name}": no bond diameter in the file; its pullout resistance is taken per meter of the element.`);
     }
     const orientation = r.orientation ?? 0;
     const direction = orientation <= 0.25 ? "axial" : orientation >= 0.75 ? "tangent" : "bisector";
@@ -713,8 +713,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     ...(stab?.axis ? { axis: L(stab.axis) } : {}),
   }));
   if (customSurfaces.length > 0) {
-    notes.push(`The file's ${customSurfaces.length === 1 ? "fully specified slip surface is" : `${customSurfaces.length} fully specified slip surfaces are`} imported as custom surfaces and analysed alone.`);
-    if (stab?.optimised) notes.push("The optimisation of the specified surface is not carried over; turn on the non-circular optimisation in the options to refine it.");
+    notes.push(`The file's ${customSurfaces.length === 1 ? "fully specified slip surface is" : `${customSurfaces.length} fully specified slip surfaces are`} imported as custom surfaces and analyzed alone.`);
+    if (stab?.optimised) notes.push("The optimization of the specified surface is not carried over; turn on the non-circular optimization in the options to refine it.");
   }
   if (stab?.tensionCrack) {
     const tc = stab.tensionCrack;
@@ -786,7 +786,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
       if (first) pts.unshift(first);
       if (last) pts.push(last);
       truncatedReference = { points: pts, axis: [reference.cx, reference.cy] };
-      notes.push(`The file's critical circle ends where it would run on in the soil (F = ${best.fos.toFixed(3)}); it is carried over as a surface along its slices, with the circle's centre as the axis.`);
+      notes.push(`The file's critical circle ends where it would run on in the soil (F = ${best.fos.toFixed(3)}); it is carried over as a surface along its slices, with the circle's center as the axis.`);
     }
   }
 

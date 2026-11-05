@@ -201,7 +201,7 @@ describe("ResultsPlotDialogApp", () => {
     // The axis selectors become fixed labels.
     expect(screen.queryByRole("combobox", { name: "X axis" })).toBeNull();
     expect(screen.getByText("Lambda")).toBeInTheDocument();
-    expect(screen.getByText("Factor of Safety")).toBeInTheDocument();
+    expect(screen.getByText("Factor of safety")).toBeInTheDocument();
 
     // A later Bishop result falls back to the slip-surface plot.
     bridge.emit("onResultsPlotChanged", {

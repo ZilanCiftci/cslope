@@ -73,7 +73,7 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
     if (isElectron) {
       window.cslope.menuAbout();
     } else {
-      window.alert("cSlope — Slope Stability Analysis\nhttps://cslope.com");
+      window.alert("cSlope — Slope stability analysis\nhttps://cslope.com");
     }
   };
 

@@ -62,7 +62,7 @@ export const FOS_SCHEME_PRESETS: readonly FosSchemePresetDef[] = [
   { id: "traffic", label: "Traffic light (red to green)", colors: ["#d7191c", "#ffd700", "#1a9641"], mode: "oklab" },
   { id: "cool-warm", label: "Warm to cool (red to blue)", colors: ["#b40426", "#dddddd", "#3b4cc0"], mode: "oklab" },
   { id: "viridis", label: "Viridis (purple to yellow)", colors: chroma.brewer.Viridis, mode: "rgb" },
-  { id: "greyscale", label: "Greyscale (black to light grey)", colors: ["#000000", "#c8c8c8"], mode: "oklab" },
+  { id: "greyscale", label: "Grayscale (black to light gray)", colors: ["#000000", "#c8c8c8"], mode: "oklab" },
 ];
 
 export const DEFAULT_FOS_SCHEME_ID: FosSchemePreset = "classic";

@@ -326,7 +326,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     const so = stateOf(own);
     if (so && "pop" in so) {
       const had = popByLabel.get(label);
-      if (had !== undefined && Math.abs(had - so.pop) > 1e-9) notes.push(`Stage "${st.label}" has several layers labelled "${String(layer.Label ?? layer.Id)}" with different states; a later stage takes the last one's.`);
+      if (had !== undefined && Math.abs(had - so.pop) > 1e-9) notes.push(`Stage "${st.label}" has several layers labeled "${String(layer.Label ?? layer.Id)}" with different states; a later stage takes the last one's.`);
       popByLabel.set(label, so.pop);
     }
     const above = String(soil.ShearStrengthModelTypeAbovePhreaticLevel ?? "MohrCoulombAdvanced");
@@ -484,7 +484,7 @@ export function stixToDefinition(file: StixFile, index: number, fileName = "stix
   if (/^Bishop/.test(type)) options.method = "Bishop";
   else {
     Object.assign(options, { method: "Morgenstern-Price", intersliceFunction: "constant" });
-    if (/UpliftVan/.test(type)) notes.push("Uplift-Van (two circles joined by a straight part) has no counterpart in cSlope's search; the file's critical slip plane is carried over as a surface and analysed with Spencer.");
+    if (/UpliftVan/.test(type)) notes.push("Uplift-Van (two circles joined by a straight part) has no counterpart in cSlope's search; the file's critical slip plane is carried over as a surface and analyzed with Spencer.");
   }
   if (type === "Bishop") {
     const c = ((s.Bishop as Json | undefined)?.Circle ?? {}) as Json;

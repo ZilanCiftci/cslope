@@ -105,7 +105,7 @@ describe("GeometryDialogApp", () => {
 describe("GeometrySection in the side panel", () => {
   it("opens and closes with its header", async () => {
     render(<GeometrySection />);
-    const header = screen.getByRole("button", { name: /Exterior Boundary/ });
+    const header = screen.getByRole("button", { name: /Exterior boundary/ });
     if (!screen.queryByRole("button", { name: "+ Add point" })) {
       await userEvent.click(header);
     }
@@ -143,11 +143,11 @@ describe("MaterialAssignmentDialogApp", () => {
   it("assigns a material to a region and sends it", async () => {
     render(<MaterialAssignmentDialogApp />);
     hydrate();
-    await userEvent.selectOptions(screen.getByLabelText("Material for Region 2"), "m2");
+    await userEvent.selectOptions(screen.getByLabelText("Material for region 2"), "m2");
     expect(store().regionMaterials).toHaveLength(1);
     expect(store().regionMaterials[0].materialId).toBe("m2");
     expect(
-      (screen.getByLabelText("Material for Region 2") as HTMLSelectElement).value,
+      (screen.getByLabelText("Material for region 2") as HTMLSelectElement).value,
     ).toBe("m2");
     const sent = bridge.sentOf<{ regionMaterials: unknown[] }>(
       "sendMaterialAssignmentChanged",

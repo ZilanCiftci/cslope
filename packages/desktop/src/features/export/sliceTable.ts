@@ -63,11 +63,11 @@ export function buildSliceTable(
   }
   if (cs) {
     if (cs.composite) {
-      rows.push(["Critical surface", "composite circle (along the firm base)"], ["Centre x (m)", round(cs.cx, 4)], ["Centre y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
+      rows.push(["Critical surface", "composite circle (along the firm base)"], ["Center x (m)", round(cs.cx, 4)], ["Center y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
     } else if (cs.points) {
       rows.push(["Critical surface", `non-circular, ${cs.points.length} points`]);
     } else {
-      rows.push(["Critical surface", "circle"], ["Centre x (m)", round(cs.cx, 4)], ["Centre y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
+      rows.push(["Critical surface", "circle"], ["Center x (m)", round(cs.cx, 4)], ["Center y (m)", round(cs.cy, 4)], ["Radius (m)", round(cs.radius, 4)]);
     }
     rows.push(
       ["Entry x (m)", round(cs.entryPoint[0], 4)],

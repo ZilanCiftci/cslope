@@ -1,7 +1,7 @@
 ---
 title: Loads
 description: Distributed and line loads on the ground surface, how to enter them and how they act on the slices of a slip surface.
-section: Modelling
+section: Modeling
 order: 4
 ---
 
@@ -14,10 +14,10 @@ Open **Model › Loads & support › UDL**. Each row is one load:
 | Column | Meaning |
 | --- | --- |
 | **q** | Pressure in kPa between x1 and x2 |
-| **x1**, **x2** | The horizontal extent of the load, in metres |
-| **Direction** | **Vertical**: q per horizontal metre. **Normal to ground**: q acts normal to the ground surface, as water or earth pressure against a slope |
+| **x1**, **x2** | The horizontal extent of the load, in meters |
+| **Direction** | **Vertical**: q per horizontal meter. **Normal to ground**: q acts normal to the ground surface, as water or earth pressure against a slope |
 
-A pressure q normal to ground inclined at β carries q per horizontal metre vertically, as a vertical load would, and q·tan β horizontally, pushing into the ground. On level ground the two directions are the same. Water standing against a slope is the typical case: entered as a normal load q = γw·(water level − ground), it acts as [free water](/docs/water) does on the ground, without pore pressure in the soil. The canvas labels such a load "⊥ ground".
+A pressure q normal to ground inclined at β carries q per horizontal meter vertically, as a vertical load would, and q·tan β horizontally, pushing into the ground. On level ground the two directions are the same. Water standing against a slope is the typical case: entered as a normal load q = γw·(water level − ground), it acts as [free water](/docs/water) does on the ground, without pore pressure in the soil. The canvas labels such a load "⊥ ground".
 
 **+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas you can drag the two ends of a load horizontally while the UDL window is open.
 
@@ -25,13 +25,13 @@ A distributed load imported from a .stix file can carry a **degree of consolidat
 
 ## Line loads
 
-Open **Model › Loads & support › Line loads**. Each row is a line load **P** in kN per metre run at position **x**. **+ Add Line Load** adds a load of 50 kN/m at x = 10 m. Line loads can also be dragged on the canvas.
+Open **Model › Loads & support › Line loads**. Each row is a line load **P** in kN per meter run at position **x**. **+ Add line load** adds a load of 50 kN/m at x = 10 m. Line loads can also be dragged on the canvas.
 
 **Angle from vertical** inclines the load: 0 is vertical, positive turns it towards +x, ±90 is horizontal (a strut or an anchor force on a wall). Its vertical part acts like a vertical load; its horizontal part acts on the slice under the load, at the ground or at **Load point y** when given (a point on a wall face).
 
 ## How loads enter the analysis
 
-A load on the ground above a slice adds to the slice's weight. The horizontal part of a load normal to the ground acts on the slice as a horizontal force at the ground, with its moment about the centre of the slip surface. A load outside the sliding mass has no effect on that slip surface. The finite element strength reduction takes a normal load normal to the ground; the limit analysis bounds take its vertical part only. All load values accept [parameters](/docs/geometry#parameters).
+A load on the ground above a slice adds to the slice's weight. The horizontal part of a load normal to the ground acts on the slice as a horizontal force at the ground, with its moment about the center of the slip surface. A load outside the sliding mass has no effect on that slip surface. The finite element strength reduction takes a normal load normal to the ground; the limit analysis bounds take its vertical part only. All load values accept [parameters](/docs/geometry#parameters).
 
 With [partial factors](/docs/analysis#partial-factors) switched on, both kinds of load are multiplied by the load factor γQ.
 

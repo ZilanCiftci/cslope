@@ -1157,7 +1157,7 @@ ipcMain.handle("dialog:unsavedChanges", async (event) => {
     title: "Unsaved changes",
     message: `Do you want to save the changes to ${name}?`,
     detail: "Your changes will be lost if you don't save them.",
-    buttons: ["Save", "Don't Save", "Cancel"],
+    buttons: ["Save", "Don't save", "Cancel"],
     defaultId: 0,
     cancelId: 2,
     noLink: true,
@@ -1268,7 +1268,7 @@ ipcMain.handle("dialog:openFile", async (event) => {
     title: "Open cSlope project",
     filters: [
       { name: "cSlope project", extensions: ["cslp", "json", "cslope"] },
-      { name: "All Files", extensions: ["*"] },
+      { name: "All files", extensions: ["*"] },
     ],
     properties: ["openFile"],
   });
@@ -1478,7 +1478,7 @@ ipcMain.on("menu:about", () => {
     title: "About cSlope",
     message: `cSlope v${version}`,
     detail:
-      "Slope Stability Analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
+      "Slope stability analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
   };
   // Modal to the main window so it cannot open behind it.
   if (win) dialog.showMessageBox(win, options);

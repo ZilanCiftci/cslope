@@ -58,7 +58,7 @@ function Hero() {
               </Link>
             </Button>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} licence.</p>
+          <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} license.</p>
         </div>
         {/* The whole program, wide enough to read: below the text, not beside it. */}
         <Screenshot {...MEDIA.app} priority className="animate-fade-up shadow-xl [animation-delay:120ms]" />
@@ -73,7 +73,7 @@ function KeyFigures() {
     { value: String(s.problems), label: "published verification problems" },
     { value: String(s.publishedValues), label: "values published by the sources" },
     { value: "3", label: "limit equilibrium methods" },
-    { value: SITE.licence, label: "licence, no licence server" },
+    { value: SITE.licence, label: "license, no license server" },
   ];
   return (
     <div className="border-b bg-surface">
@@ -98,7 +98,7 @@ const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <Spline className="h-5 w-5" />,
     title: "Circular and non-circular",
-    text: "Search by entry and exit ranges, custom circles and polylines, non-circular optimisation, minimum slip depth and analysis in both slip directions.",
+    text: "Search by entry and exit ranges, custom circles and polylines, non-circular optimization, minimum slip depth and analysis in both slip directions.",
   },
   {
     icon: <Layers className="h-5 w-5" />,
@@ -244,7 +244,7 @@ function Verification() {
 
 const GALLERY = [
   { media: MEDIA.materials, caption: "Material regions of a non-homogeneous slope" },
-  { media: MEDIA.allSurfaces, caption: "Every analysed surface, coloured by factor of safety" },
+  { media: MEDIA.allSurfaces, caption: "Every analyzed surface, colored by factor of safety" },
   { media: MEDIA.showcase, caption: "Slope with a weak layer (Arai & Tagyo, 1985)" },
   { media: MEDIA.showcaseResult, caption: "Non-circular surface along the weak layer" },
 ];
@@ -275,7 +275,7 @@ function OpenSource() {
         <SectionHeading
           eyebrow="Open source"
           title="Yours to inspect, run and keep"
-          lead="cSlope is MIT licensed. There is no licence server, no subscription and no lock-in: install it on every machine in the office, read the solver code behind any result, and keep the version your project was approved with."
+          lead="cSlope is MIT licensed. There is no license server, no subscription and no lock-in: install it on every machine in the office, read the solver code behind any result, and keep the version your project was approved with."
         />
         <ul className="grid gap-4 text-sm">
           {OPEN_SOURCE.map(([title, text]) => (

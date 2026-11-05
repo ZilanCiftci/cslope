@@ -27,7 +27,7 @@ export const PLOT_MARGINS = {
 };
 
 export const createDefaultProjectInfo = (): ProjectInfo => ({
-  title: "New Slope Analysis",
+  title: "New slope analysis",
   subtitle: "",
   client: "",
   projectNumber: "",

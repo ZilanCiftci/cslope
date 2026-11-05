@@ -536,7 +536,7 @@ function strength(f: Fields, ctx: MaterialContext): MaterialModel {
         const width = new Map<number, number>();
         fn.ranges.forEach((r, i) => width.set(r.mat, (width.get(r.mat) ?? 0) + r.to - (i === 0 ? -90 : fn.ranges[i - 1].to)));
         const baseMat = [...width.entries()].sort((p, q) => q[1] - p[1])[0][0];
-        return anisotropicModel(name, unitWeight, ref(baseMat), at, fn.ranges.map((r) => r.to), ctx.rtl, notes, `the generalised anisotropic strength "${f.name}" (by ranges of the base inclination)`);
+        return anisotropicModel(name, unitWeight, ref(baseMat), at, fn.ranges.map((r) => r.to), ctx.rtl, notes, `the generalized anisotropic strength "${f.name}" (by ranges of the base inclination)`);
       }
       if (fn?.kind === "angle") {
         let angle = fn.angle;
@@ -552,9 +552,9 @@ function strength(f: Fields, ctx: MaterialContext): MaterialModel {
           return { c: weak.c + t * (base.c - weak.c), phi: weak.phi + t * (base.phi - weak.phi) };
         };
         return anisotropicModel(name, unitWeight, base, at, [angle - fn.a, angle + fn.a, angle - fn.b, angle + fn.b, angle + 90], ctx.rtl, notes,
-          `the generalised anisotropic strength "${f.name}" (${fn.surface !== undefined ? `along a surface, one direction per material: ${angle}° at x = ${+ctx.x.toFixed(2)}` : `direction ${angle}°`}, A = ${fn.a}°, B = ${fn.b}°)`);
+          `the generalized anisotropic strength "${f.name}" (${fn.surface !== undefined ? `along a surface, one direction per material: ${angle}° at x = ${+ctx.x.toFixed(2)}` : `direction ${angle}°`}, A = ${fn.a}°, B = ${fn.b}°)`);
       }
-      notes.push(`Material "${name}": its generalised anisotropic function "${f.name ?? ""}" is missing; Mohr-Coulomb with c = ${c}, φ = ${phi} is used.`);
+      notes.push(`Material "${name}": its generalized anisotropic function "${f.name ?? ""}" is missing; Mohr-Coulomb with c = ${c}, φ = ${phi} is used.`);
       return mc(c, phi);
     }
     case 18: {
@@ -966,7 +966,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   // a non-circular search: cSlope optimises its best circles as polylines
   if (dn("mode") === 1 && !customPlanesOnly) {
     options.nonCircularOptimization = true;
-    notes.push("The file searches non-circular surfaces; cSlope optimises its best circles as non-circular surfaces (non-circular optimisation is on).");
+    notes.push("The file searches non-circular surfaces; cSlope optimizes its best circles as non-circular surfaces (non-circular optimization is on).");
   }
   // the search's limits on the ground: two ranges (entry and exit) carry over
   const limits = fields((sc.sections.get("slope limits") ?? []).join(" "));

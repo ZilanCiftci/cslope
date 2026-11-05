@@ -75,7 +75,7 @@ export function customSurfaceName(index: number): string {
 export function customSurfaceGeometryText(c: CustomSurfaceResult): string {
   const s = c.surface;
   const fmt = (v: number) => v.toFixed(2);
-  if (s && c.kind === "circle") return `circle, centre (${fmt(s.cx)}, ${fmt(s.cy)}) m, radius ${fmt(s.radius)} m`;
+  if (s && c.kind === "circle") return `circle, center (${fmt(s.cx)}, ${fmt(s.cy)}) m, radius ${fmt(s.radius)} m`;
   if (s?.points) return `non-circular, ${s.points.length} points`;
   return c.kind === "circle" ? "circle" : "non-circular";
 }

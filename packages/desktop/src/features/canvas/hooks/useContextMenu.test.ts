@@ -92,8 +92,8 @@ describe("useContextMenu — edit mode", () => {
     expect(prevented).toHaveBeenCalled();
     expect(params.setMaterialPicker).toHaveBeenCalledWith(null);
     expect(menu()).toMatchObject({ screenX: 100, screenY: 200 });
-    expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete Point", danger: true, disabled: false })]);
-    click("Delete Point");
+    expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete point", danger: true, disabled: false })]);
+    click("Delete point");
     expect(params.removeCoordinate).toHaveBeenCalledWith(2);
     expect(params.setSelectedPoint).toHaveBeenCalledWith(null);
     expect(menu()).toBeNull();
@@ -110,7 +110,7 @@ describe("useContextMenu — edit mode", () => {
     });
     open();
     expect(menu()!.items[0].disabled).toBe(true);
-    click("Delete Point");
+    click("Delete point");
     expect(params.removeCoordinate).not.toHaveBeenCalled();
   });
 
@@ -128,7 +128,7 @@ describe("useContextMenu — edit mode", () => {
     three.open();
     expect(three.params.setActivePiezoLine).toHaveBeenCalledWith("w");
     expect(three.menu()!.items[0].disabled).toBe(false);
-    three.click("Delete Point");
+    three.click("Delete point");
     expect(three.params.removePiezoPoint).toHaveBeenCalledWith(1);
 
     const two = setup({
@@ -137,7 +137,7 @@ describe("useContextMenu — edit mode", () => {
     });
     two.open();
     expect(two.menu()!.items[0].disabled).toBe(true);
-    two.click("Delete Point");
+    two.click("Delete point");
     expect(two.params.removePiezoPoint).not.toHaveBeenCalled();
   });
 
@@ -173,7 +173,7 @@ describe("useContextMenu — edit mode", () => {
     });
     open.open();
     expect(open.menu()!.items[0].disabled).toBe(false);
-    open.click("Delete Point");
+    open.click("Delete point");
     expect(open.params.removeBoundaryPoint).toHaveBeenCalledWith("o", 1);
 
     const missing = setup({
@@ -195,7 +195,7 @@ describe("useContextMenu — edit mode", () => {
     });
     open();
     expect(params.findNearPointUnified).toHaveBeenCalledWith(1, 2);
-    click("Add Point");
+    click("Add point");
     expect(params.insertCoordinateAt).toHaveBeenCalledWith(3, [15, 5]);
     expect(params.setSelectedPoint).toHaveBeenCalledWith(3);
   });
@@ -206,7 +206,7 @@ describe("useContextMenu — edit mode", () => {
     });
     water.open();
     expect(water.params.setActivePiezoLine).toHaveBeenCalledWith("w");
-    water.click("Add Point");
+    water.click("Add point");
     expect(water.params.insertPiezoPointAt).toHaveBeenCalledWith(1, [4, 5]);
 
     const boundary = setup({
@@ -214,7 +214,7 @@ describe("useContextMenu — edit mode", () => {
     });
     boundary.open();
     expect(boundary.params.setSelectedMaterialBoundary).toHaveBeenCalledWith("b");
-    boundary.click("Add Point");
+    boundary.click("Add point");
     expect(boundary.params.insertBoundaryPointAt).toHaveBeenCalledWith("b", 2, [6, 3]);
   });
 
@@ -267,15 +267,15 @@ describe("useContextMenu — result mode", () => {
     const { params, open, menu, click } = setup({ mode: "result", selectedAnnotationIds: ["a", "b"] });
     open(...at(0.2, 0.2));
     expect(menu()!.items.map((i) => i.label)).toEqual([
-      "Align Left",
-      "Align Right",
-      "Align Top",
-      "Align Bottom",
-      "Center Horizontally",
-      "Center Vertically",
+      "Align left",
+      "Align right",
+      "Align top",
+      "Align bottom",
+      "Center horizontally",
+      "Center vertically",
     ]);
     const dirs = ["left", "right", "top", "bottom", "center-h", "center-v"];
-    for (const [i, label] of ["Align Left", "Align Right", "Align Top", "Align Bottom", "Center Horizontally", "Center Vertically"].entries()) {
+    for (const [i, label] of ["Align left", "Align right", "Align top", "Align bottom", "Center horizontally", "Center vertically"].entries()) {
       open(...at(0.2, 0.2));
       click(label);
       expect(params.alignAnnotations).toHaveBeenLastCalledWith(dirs[i]);
@@ -301,13 +301,13 @@ describe("useContextMenu — custom search planes", () => {
     });
     open();
     expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface"]);
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface"]);
     expect(menu()!.items[0]).toMatchObject({ danger: true, disabled: false });
-    click("Delete Point");
+    click("Delete point");
     expect(params.removeCustomPlanePoint).toHaveBeenCalledWith("p1", 1);
     expect(menu()).toBeNull();
     open();
-    click("Delete Surface");
+    click("Delete surface");
     expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("p1");
     expect(menu()).toBeNull();
 
@@ -316,8 +316,8 @@ describe("useContextMenu — custom search planes", () => {
       findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 0 }),
     });
     two.open();
-    expect(two.menu()!.items[0]).toMatchObject({ label: "Delete Point", disabled: true });
-    two.click("Delete Point");
+    expect(two.menu()!.items[0]).toMatchObject({ label: "Delete point", disabled: true });
+    two.click("Delete point");
     expect(two.params.removeCustomPlanePoint).not.toHaveBeenCalled();
   });
 
@@ -329,8 +329,8 @@ describe("useContextMenu — custom search planes", () => {
       });
       open();
       expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("c1");
-      expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete Circle", danger: true })]);
-      click("Delete Circle");
+      expect(menu()!.items).toEqual([expect.objectContaining({ label: "Delete circle", danger: true })]);
+      click("Delete circle");
       expect(params.removeCustomSearchPlane).toHaveBeenCalledWith("c1");
       expect(menu()).toBeNull();
     }
@@ -343,8 +343,8 @@ describe("useContextMenu — custom search planes", () => {
     });
     open();
     expect(params.setSelectedCustomPlane).toHaveBeenCalledWith("p1");
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Add Point"]);
-    click("Add Point");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Add point"]);
+    click("Add point");
     expect(params.insertCustomPlanePointAt).toHaveBeenCalledWith("p1", 2, [20, 3]);
     expect(menu()).toBeNull();
   });
@@ -391,24 +391,24 @@ describe("useContextMenu — reference annotations", () => {
     const { params, open, menu, click } = setup({ mode: "result" });
     open(...at(12, 4));
     expect(params.setSelectedAnnotations).toHaveBeenCalledWith(["l"]);
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Reference Line"]);
-    click("Delete Point");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete reference line"]);
+    click("Delete point");
     expect(line()!.points).toEqual([
       [2, 10],
       [22, 5],
     ]);
     expect(menu()).toBeNull();
     open(...at(2, 10));
-    expect(menu()!.items[0]).toMatchObject({ label: "Delete Point", disabled: true });
-    click("Delete Reference Line");
+    expect(menu()!.items[0]).toMatchObject({ label: "Delete point", disabled: true });
+    click("Delete reference line");
     expect(line()).toBeUndefined();
   });
 
   it("adds a point on a segment at the snapped position", () => {
     const { open, menu, click } = setup({ mode: "result", snapValue: (v) => Math.round(v) });
     open(...at(17.2, 4.6));
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Add Point", "Delete Reference Line"]);
-    click("Add Point");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Add point", "Delete reference line"]);
+    click("Add point");
     expect(line()!.points).toEqual([
       [2, 10],
       [12, 4],
@@ -432,8 +432,8 @@ describe("useContextMenu — reference annotations", () => {
   it("deletes a circle from its arc or centre", () => {
     const { open, menu, click } = setup({ mode: "result" });
     open(...at(15, 6));
-    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete Reference Circle"]);
-    click("Delete Reference Circle");
+    expect(menu()!.items.map((i) => i.label)).toEqual(["Delete reference circle"]);
+    click("Delete reference circle");
     expect(refs().map((a) => a.id)).toEqual(["l"]);
   });
 
@@ -446,8 +446,8 @@ describe("useContextMenu — reference annotations", () => {
       findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
     });
     vertex.open();
-    expect(vertex.menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface", "Add as Reference Line"]);
-    vertex.click("Add as Reference Line");
+    expect(vertex.menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface", "Add as reference line"]);
+    vertex.click("Add as reference line");
     expect(addReferenceFromCustomPlane).toHaveBeenCalledWith("p1");
     expect(vertex.menu()).toBeNull();
 
@@ -457,7 +457,7 @@ describe("useContextMenu — reference annotations", () => {
       findNearPointUnified: pointHit({ kind: "customCircle", planeId: "c1", handle: "rim" }),
     });
     circle.open();
-    expect(circle.menu()!.items.map((i) => i.label)).toEqual(["Delete Circle", "Add as Reference Line"]);
+    expect(circle.menu()!.items.map((i) => i.label)).toEqual(["Delete circle", "Add as reference line"]);
 
     const edge = setup({
       customSearchPlanes: [LINE_PLANE],
@@ -465,7 +465,7 @@ describe("useContextMenu — reference annotations", () => {
       findNearEdgeUnified: edgeHit({ kind: "customPlane", planeId: "p1", insertIndex: 2, snapPoint: [20, 3] }),
     });
     edge.open();
-    expect(edge.menu()!.items.map((i) => i.label)).toEqual(["Add Point", "Add as Reference Line"]);
+    expect(edge.menu()!.items.map((i) => i.label)).toEqual(["Add point", "Add as reference line"]);
 
     // Without the action (the result canvas) the item is not offered.
     const none = setup({
@@ -473,6 +473,6 @@ describe("useContextMenu — reference annotations", () => {
       findNearPointUnified: pointHit({ kind: "customVertex", planeId: "p1", pointIndex: 1 }),
     });
     none.open();
-    expect(none.menu()!.items.map((i) => i.label)).toEqual(["Delete Point", "Delete Surface"]);
+    expect(none.menu()!.items.map((i) => i.label)).toEqual(["Delete point", "Delete surface"]);
   });
 });

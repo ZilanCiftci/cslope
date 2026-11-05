@@ -368,7 +368,7 @@ export function PiezoDialogApp() {
               className="text-[10px] font-bold uppercase tracking-[0.1em]"
               style={{ color: "var(--color-vsc-text-muted)" }}
             >
-              {activeLine.name} Coordinates
+              {activeLine.name} coordinates
             </h4>
 
             <SpreadsheetTable
@@ -455,7 +455,7 @@ export function PiezoDialogApp() {
               className="text-[10px] font-bold uppercase tracking-[0.1em]"
               style={{ color: "var(--color-vsc-text-muted)" }}
             >
-              Material Assignment
+              Material assignment
             </h4>
             <p
               className="text-[10px]"

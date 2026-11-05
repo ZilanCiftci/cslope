@@ -87,7 +87,7 @@ describe("material table cells", () => {
   it("uses the default columns when none are chosen", () => {
     const t = buildMaterialTableData({ id: "t", type: "material-table", x: 0, y: 0 }, [row("a", DEFAULT_MATERIAL.model)]);
     expect(t.columnKeys.slice(0, 2)).toEqual(["color", "name"]);
-    expect(t.header).toContain("Unit Weight (kN/m³)");
+    expect(t.header).toContain("Unit weight (kN/m³)");
     expect(t.columnKeys).toHaveLength(10);
   });
 });
@@ -129,9 +129,9 @@ describe("drawTable", () => {
     expect(nameLines.map((t) => t.text).join(" ")).toBe(materials[0].name);
     for (const t of nameLines) expect(t.y).toBeLessThan(size.h);
     expect(rec.textStrings()).toContain("B");
-    // "Datum Elevation / Ref. Depth (m)" is split over several lines.
+    // "Datum elevation / ref. depth (m)" is split over several lines.
     const headerWords = rec.texts.filter((t) => t.state.font.startsWith("bold")).map((t) => t.text);
-    expect(headerWords).not.toContain("Datum Elevation / Ref. Depth (m)");
+    expect(headerWords).not.toContain("Datum elevation / ref. depth (m)");
     expect(headerWords.join(" ")).toContain("Datum");
   });
 });
@@ -292,7 +292,7 @@ describe("annotation hit boxes enclose what is drawn", () => {
   it("adds the datum, value and rate columns when a material's strength varies with depth", () => {
     const four = { id: "t", type: "material-table" as const, x: 0, y: 0, tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"] as const };
     const plain = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [row("a", DEFAULT_MATERIAL.model)]);
-    expect(plain.header).toEqual(["Color", "Name", "Material Model", "Unit Weight (kN/m³)", "Cohesion / Su (kPa)", "Effective Friction Angle (\u00b0)"]);
+    expect(plain.header).toEqual(["Color", "Name", "Material model", "Unit weight (kN/m³)", "Cohesion / Su (kPa)", "Effective friction angle (\u00b0)"]);
     const varying = buildMaterialTableData({ ...four, tableColumns: [...four.tableColumns] }, [
       row("a", DEFAULT_MATERIAL.model),
       row("clay", { kind: "s-f-datum", unitWeight: 17, suRef: 19, yRef: -1.5, rate: -12.7 }),

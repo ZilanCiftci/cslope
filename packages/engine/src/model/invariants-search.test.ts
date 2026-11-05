@@ -23,7 +23,7 @@ function search(def: SlopeDefinition, method: Method, extra: Partial<AnalysisOpt
 }
 
 describe("critical-surface search", () => {
-  it("the critical circle re-analysed alone gives the reported FOS; a custom circle bounds the minimum", () => {
+  it("the critical circle re-analyzed alone gives the reported FOS; a custom circle bounds the minimum", () => {
     const r = rng(4040);
     for (let i = 0; i < 4; i++) {
       const g = randomCase(r, { water: i % 2 === 1 });

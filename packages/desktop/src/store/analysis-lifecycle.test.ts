@@ -124,7 +124,7 @@ describe("analysis run lifecycle", () => {
     expect(s.models.every((m) => !m.result)).toBe(true);
   });
 
-  it("Run All drops the result of a model edited while it ran", async () => {
+  it("Run all drops the result of a model edited while it ran", async () => {
     const runAll = useAppStore.getState().runAllAnalyses();
     await flush();
     const [x, y] = useAppStore.getState().coordinates[1];

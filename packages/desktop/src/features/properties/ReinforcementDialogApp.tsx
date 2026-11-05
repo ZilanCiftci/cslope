@@ -398,8 +398,8 @@ export function ReinforcementDialogApp() {
       <div className="pb-2">
         <h2 className="text-[12px] font-semibold">Reinforcement</h2>
         <p className="text-[10px]" style={muted}>
-          End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per metre are
-          capacity / spacing (a geosynthetic sheet with S = 1: per metre of slope; partial coverage A: T × A).
+          End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per meter are
+          capacity / spacing (a geosynthetic sheet with S = 1: per meter of slope; partial coverage A: T × A).
         </p>
       </div>
       <div className="flex-1 overflow-y-auto pr-1 space-y-3">
@@ -468,7 +468,7 @@ export function ReinforcementDialogApp() {
                 </Field>
                 <NumberField
                   label="Tensile capacity T (kN)"
-                  title="Tensile capacity per element (strip, bar), kN; per metre of slope it is T / S. A geosynthetic sheet with partial coverage A: enter T × A per metre with S = 1."
+                  title="Tensile capacity per element (strip, bar), kN; per meter of slope it is T / S. A geosynthetic sheet with partial coverage A: enter T × A per meter with S = 1."
                   value={selected.tensileCapacity}
                   ariaLabel="Tensile capacity"
                   accept={(v) => v >= 0}
@@ -538,7 +538,7 @@ export function ReinforcementDialogApp() {
                   <>
                     <NumberField
                       label="Adhesion a (kPa)"
-                      title="r = 2·(a + σ′v·tan δ) per metre"
+                      title="r = 2·(a + σ′v·tan δ) per meter"
                       value={selected.adhesion}
                       ariaLabel="Adhesion"
                       accept={(v) => v >= 0}
@@ -635,7 +635,7 @@ export function ReinforcementDialogApp() {
             <p className="text-[10px]" style={muted}>
               Shear against the sliding mass where the slip surface crosses the pile: tangent to the slip surface,
               perpendicular to the pile or at angle θ above horizontal. Ito &amp; Matsui needs a vertical pile and
-              S &gt; D; the shear and moment capacities per pile limit the force (0 = no limit). Forces per metre are
+              S &gt; D; the shear and moment capacities per pile limit the force (0 = no limit). Forces per meter are
               force / S.
             </p>
           </div>
@@ -692,7 +692,7 @@ export function ReinforcementDialogApp() {
                     aria-label="Pile type"
                     className="w-full"
                     onChange={(e) => {
-                      // The values entered stay; a wall carries a given force per metre.
+                      // The values entered stay; a wall carries a given force per meter.
                       const type = e.target.value as PileType;
                       const preset = pilePreset(type);
                       updatePile(
@@ -757,7 +757,7 @@ export function ReinforcementDialogApp() {
                 />
                 <NumberField
                   label="Spacing S (m)"
-                  title="Centre-to-centre spacing; 1 for a wall"
+                  title="Center-to-center spacing; 1 for a wall"
                   value={pile.spacing}
                   ariaLabel="Pile spacing"
                   accept={(v) => v >= 1e-6}
@@ -783,7 +783,7 @@ export function ReinforcementDialogApp() {
                 />
                 <NumberField
                   label="Bending stiffness EI (kNm², FE; 0 = concrete)"
-                  title="Bending stiffness per pile in the finite element analysis, where the pile is a beam joined to the soil by springs that let the soil flow between the piles. 0: a solid concrete circle of the diameter (E = 30 GPa). For a sheet pile wall: EI per metre with spacing 1."
+                  title="Bending stiffness per pile in the finite element analysis, where the pile is a beam joined to the soil by springs that let the soil flow between the piles. 0: a solid concrete circle of the diameter (E = 30 GPa). For a sheet pile wall: EI per meter with spacing 1."
                   span={2}
                   value={pile.bendingStiffness ?? 0}
                   ariaLabel="Bending stiffness per pile"

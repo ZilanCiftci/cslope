@@ -334,7 +334,7 @@ export function modelToStixDocuments(model: ModelEntry): { docs: Map<string, Jso
   let analysisType = "BishopBruteForce";
   if (def.customPlanesOnly && surface && opts.method !== "Bishop") analysisType = "Spencer";
   else if (def.customPlanesOnly && circle && (def.customSearchPlanes?.length ?? 0) === 1 && !surface) analysisType = "Bishop";
-  if (opts.method !== "Bishop" && analysisType !== "Spencer") notes.push(`The method ${opts.method} is written as Bishop over a search grid (the format's Spencer analyses given slip planes); check the method there.`);
+  if (opts.method !== "Bishop" && analysisType !== "Spencer") notes.push(`The method ${opts.method} is written as Bishop over a search grid (the format's Spencer analyzes given slip planes); check the method there.`);
   if (opts.method === "Bishop" && analysisType === "Spencer") notes.push("Bishop on a non-circular surface is written as Spencer.");
   if (analysisType === "BishopBruteForce") notes.push("The search grid and tangent lines are set from the model's extent; adjust them to the slope there.");
   if (def.analysisLimits) notes.push("The entry and exit ranges are not written (the format limits the search with zones).");

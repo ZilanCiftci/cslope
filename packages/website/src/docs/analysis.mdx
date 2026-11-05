@@ -19,12 +19,12 @@ Open **Model › Analysis › Options**. The settings apply to the active model.
 
 - **Bishop**: Bishop simplified (moment equilibrium).
 - **Janbu**: Janbu simplified (force equilibrium). Tick **Apply correction factor f0** to apply Janbu's correction.
-- **Morgenstern-Price**: full equilibrium. Choose the **Interslice Function**: `constant` (Spencer's method), `half-sine` (default), `clipped-sine`, `trapezoidal` or `data-point-specified`. For the last one, enter the points as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
+- **Morgenstern-Price**: full equilibrium. Choose the **Interslice function**: `constant` (Spencer's method), `half-sine` (default), `clipped-sine`, `trapezoidal` or `data-point-specified`. For the last one, enter the points as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
 
 The [theory](/docs/theory) page gives the equations. The **Tolerance** is the convergence limit on the factor of safety.
 
 <Callout type="warning" title="Bishop on non-circular surfaces">
-  Bishop's simplified method is defined for circular surfaces (Bishop 1955). On a non-circular surface (a polyline you draw, or one from non-circular optimisation) cSlope takes the moments about an axis point, and because the method does not satisfy horizontal force equilibrium the factor of safety depends on where that point is. On a composite surface along a weak seam it ranges from 1.36 to 1.41 for different axis points, while Spencer's method gives 1.379 for all of them. cSlope still computes it, and the results then show a warning. Use Spencer or Morgenstern-Price for non-circular surfaces.
+  Bishop's simplified method is defined for circular surfaces (Bishop 1955). On a non-circular surface (a polyline you draw, or one from non-circular optimization) cSlope takes the moments about an axis point, and because the method does not satisfy horizontal force equilibrium the factor of safety depends on where that point is. On a composite surface along a weak seam it ranges from 1.36 to 1.41 for different axis points, while Spencer's method gives 1.379 for all of them. cSlope still computes it, and the results then show a warning. Use Spencer or Morgenstern-Price for non-circular surfaces.
 </Callout>
 
 <Callout type="tip">
@@ -66,7 +66,7 @@ Which factor applies depends on the material. Undrained models, and Mohr-Coulomb
 
 ## Seismic load (pseudostatic)
 
-**kh** and **kv** under *Seismic (pseudostatic)* add an earthquake load: each slice carries $k_h W$ horizontally in the sliding direction at its centre of gravity, and $k_v W$ vertically (positive downward, adding to the weight; check both signs). The factor of safety with them is the pseudostatic factor of safety.
+**kh** and **kv** under *Seismic (pseudostatic)* add an earthquake load: each slice carries $k_h W$ horizontally in the sliding direction at its center of gravity, and $k_v W$ vertically (positive downward, adding to the weight; check both signs). The factor of safety with them is the pseudostatic factor of safety.
 
 ## 3D effects (temporary slopes)
 
@@ -74,7 +74,7 @@ Tick **3D effects (SGI Vägledning 8)** under **Design** to add the factor of sa
 
 $$F_P = F_{2D} + \frac{2 \int c_u\, r\, dA}{L\, M_E}, \qquad F_{3D} = F_{2D} + k \cdot 0.75\,(F_P - F_{2D})$$
 
-with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's centre) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,krit,min} / F_{2D,överstark,min}$ for finite (eq. 2-4).
+with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's center) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,krit,min} / F_{2D,överstark,min}$ for finite (eq. 2-4).
 
 - **Stage length L (m)**: the length of the excavation open at a time.
 - **Adjacent F2D**: $F_{2D,överstark,min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
@@ -92,15 +92,15 @@ Tick **Run strength reduction (FE)** under **Finite elements** in the options to
 
 ## Search
 
-Iterations, direction, minimum depth and area, and non-circular optimisation are described in [Slip surface search](/docs/search).
+Iterations, direction, minimum depth and area, and non-circular optimization are described in [Slip surface search](/docs/search).
 
 ## Running the analysis
 
-Click **▶ Run** on the floating toolbar. cSlope analyses the active model in the background and switches to result mode when it is done. The status bar shows *Analysing...* meanwhile, and the button becomes **■ Cancel**.
+Click **▶ Run** on the floating toolbar. cSlope analyzes the active model in the background and switches to result mode when it is done. The status bar shows *Analyzing...* meanwhile, and the button becomes **■ Cancel**.
 
 The menu next to Run has:
 
-- **Run all**: analyse every model in the project, several at a time.
+- **Run all**: analyze every model in the project, several at a time.
 - **Clear results**: clear the result of the active model and return to edit mode.
 - **Clear all results**: clear the results of every model.
 

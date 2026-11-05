@@ -38,7 +38,7 @@ export function SearchLimitsSection({
             className="text-[10px] font-bold uppercase tracking-[0.1em]"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Entry Range (crest side — {crestSide})
+            Entry range (crest side — {crestSide})
           </div>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
@@ -64,7 +64,7 @@ export function SearchLimitsSection({
             className="text-[10px] font-bold uppercase tracking-[0.1em]"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Exit Range (toe side — {toeSide})
+            Exit range (toe side — {toeSide})
           </div>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
@@ -101,5 +101,5 @@ export function SearchLimitsSection({
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Search Limits">{content}</Section>;
+  return <Section title="Search limits">{content}</Section>;
 }

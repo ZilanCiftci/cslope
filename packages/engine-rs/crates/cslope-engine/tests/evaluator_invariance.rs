@@ -7,7 +7,7 @@
 //! - `SliceRetention::Critical` gives the same planes, and the critical
 //!   surface's slices are restored identical;
 //! - progress reports the surfaces evaluated; a cancelled run stops with
-//!   "The analysis was cancelled.";
+//!   "The analysis was canceled.";
 //! - evaluate_planes with one scratch for all planes equals one plane at a
 //!   time with fresh scratch;
 //! - analysing a clone equals analysing the original.
@@ -137,7 +137,7 @@ fn a_cancelled_run_stops_with_the_cancellation_error() {
     let mut s = slope_of("V001");
     let e = analyse_slope(&mut s, &mut ctx).unwrap_err();
     assert_eq!(e.kind, ErrorKind::Cancelled);
-    assert_eq!(e.message, "The analysis was cancelled.");
+    assert_eq!(e.message, "The analysis was canceled.");
     // a progress callback that breaks cancels too
     let mut stop = |_: ProgressEvent| ControlFlow::Break(());
     let mut ctx = RunCtx {

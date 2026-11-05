@@ -144,7 +144,7 @@ async function installStubs(a: ElectronApplication, downloadDir: string) {
     };
     (dialog as any).showMessageBox = async (...a: any[]) => {
       const o = opts(a);
-      // Unsaved changes: "Don't Save" unless a test queued another answer.
+      // Unsaved changes: "Don't save" unless a test queued another answer.
       const r = g.__beta.msg.length ? g.__beta.msg.shift() : o.title === "Unsaved changes" ? 1 : (o.cancelId ?? 0);
       g.__beta.calls.push({ kind: "message", title: o.title, message: o.message, detail: o.detail, buttons: o.buttons, answer: o.buttons?.[r] ?? r });
       return { response: r, checkboxChecked: false };
@@ -473,7 +473,7 @@ async function partA() {
       "close with a change, answer Cancel",
       'question "Save / Don\'t Save / Cancel"; app stays open',
       `${box ? `"${box.message}" [${box.buttons?.join(" / ")}]` : "no question"}; app ${open ? "still open" : "closed"}`,
-      !!box && JSON.stringify(box.buttons) === JSON.stringify(["Save", "Don't Save", "Cancel"]) && open,
+      !!box && JSON.stringify(box.buttons) === JSON.stringify(["Save", "Don't save", "Cancel"]) && open,
       from,
     );
     await queue("msg", 1); // Don't Save
@@ -638,7 +638,7 @@ async function partA() {
     await main.getByRole("menuitem", { name: /Properties/ }).first().click();
     await main.waitForTimeout(600);
     const n = await main.getByTestId("import-notes").innerText().catch(() => "");
-    await rig.shot(main, "a4-properties", "Model Properties of the imported model");
+    await rig.shot(main, "a4-properties", "Model properties of the imported model");
     record("A4.props", "right click › Properties: import notes", "import notes listed", n ? n.replace(/\s+/g, " ").slice(0, 200) : "no import notes", !!n, from);
     await main.keyboard.press("Escape");
     await main.waitForTimeout(300);
@@ -935,7 +935,7 @@ async function partA() {
     const d = await udlDialog();
     await growToContent(d);
     const n = await notes(d);
-    const label = 'Excess pore pressure ratio of UDL 1 in Material "Clay"';
+    const label = 'Excess pore pressure ratio of UDL 1 in material "Clay"';
     const field = d.getByLabel(label, { exact: true });
     const ratio = (await field.count()) ? await field.inputValue() : null;
     await rig.shot(d, "a8-udl", "05 Distributed loads: excess pore pressure", `${n.join(" | ")}; ratio ${ratio ?? "no field"}`);
@@ -1033,7 +1033,7 @@ async function partB() {
       const from = rig.shots.length;
       await openProject(file(`${f.key}.json`));
       const d = await customPlanesDialog();
-      const cb = d.getByLabel(/Only analyse these surfaces/i).first();
+      const cb = d.getByLabel(/Only analyze these surfaces/i).first();
       if (f.key.startsWith("01")) {
         await growToContent(d);
         await rig.shot(d, "b1-custom-planes", "Custom planes dialog");

@@ -56,7 +56,7 @@ export function ContextMenu({
     disabled?: boolean;
   }[] = [
     {
-      label: "Model Properties…",
+      label: "Model properties…",
       icon: "M10 20a10 10 0 100-20 10 10 0 000 20zm0-2a8 8 0 100-16 8 8 0 000 16zm-1-11a1 1 0 112 0 1 1 0 01-2 0zm0 4a1 1 0 112 0v5a1 1 0 11-2 0V11z",
       action: () => {
         onProperties();
@@ -83,7 +83,7 @@ export function ContextMenu({
     },
     {
       label: multiSelect
-        ? `Delete Selected (${pos.selectedModelIds.length})`
+        ? `Delete selected (${pos.selectedModelIds.length})`
         : "Delete",
       icon: "M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16",
       action: () => {

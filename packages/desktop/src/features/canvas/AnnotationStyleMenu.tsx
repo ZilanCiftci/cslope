@@ -121,7 +121,7 @@ export function AnnotationStyleMenu({
 
   return (
     <PopupPanel
-      title="Annotation Style"
+      title="Annotation style"
       onClose={handleCancel}
       width={200}
       initialPosition={{ x: menu.screenX, y: menu.screenY }}

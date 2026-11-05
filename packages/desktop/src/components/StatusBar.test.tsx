@@ -96,14 +96,14 @@ describe("StatusBar", () => {
     expect(fosEl.style.color).toContain("error");
   });
 
-  it("shows Analysing indicator when running", () => {
+  it("shows Analyzing indicator when running", () => {
     render(<StatusBar {...defaultProps} runState="running" />);
-    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+    expect(screen.getByText("Analyzing...")).toBeInTheDocument();
   });
 
   it("does not show result or analysing when idle", () => {
     render(<StatusBar {...defaultProps} />);
-    expect(screen.queryByText("Analysing...")).not.toBeInTheDocument();
+    expect(screen.queryByText("Analyzing...")).not.toBeInTheDocument();
     expect(screen.queryByText(/FOS:/)).not.toBeInTheDocument();
   });
 
@@ -227,27 +227,27 @@ describe("StatusBar", () => {
         runAll={{ total: 20, finished: 7, failed: 0, progress: 0.42, running: true }}
       />,
     );
-    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run All 7/20");
-    const bar = screen.getByRole("progressbar", { name: "Run All progress" });
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run all 7/20");
+    const bar = screen.getByRole("progressbar", { name: "Run all progress" });
     expect(bar).toHaveAttribute("aria-valuenow", "42");
     expect((bar.firstChild as HTMLElement).style.width).toBe("42%");
-    // (the batch stands for the "Analysing..." of a single run)
-    expect(screen.queryByText("Analysing...")).toBeNull();
+    // (the batch stands for the "Analyzing..." of a single run)
+    expect(screen.queryByText("Analyzing...")).toBeNull();
   });
 
   it("shows the outcome of an ended Run All, with the failed models if any", () => {
     const { rerender } = render(
       <StatusBar {...defaultProps} runAll={{ total: 20, finished: 20, failed: 2, progress: 1, running: false }} />,
     );
-    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run All done: 20 models, 2 failed");
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent("Run all done: 20 models, 2 failed");
     expect(screen.queryByRole("progressbar")).toBeNull();
     rerender(<StatusBar {...defaultProps} runAll={{ total: 1, finished: 1, failed: 0, progress: 1, running: false }} />);
-    expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run All done: 1 model$/);
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run all done: 1 model$/);
   });
 
   it("shows no Run All without a batch", () => {
     render(<StatusBar {...defaultProps} runState="running" runAll={null} />);
     expect(screen.queryByTestId("status-run-all")).toBeNull();
-    expect(screen.getByText("Analysing...")).toBeInTheDocument();
+    expect(screen.getByText("Analyzing...")).toBeInTheDocument();
   });
 });

@@ -32,7 +32,7 @@ export function MaterialPickerMenu({
         className="px-3 py-1 text-[10px] font-medium"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
-        Assign Material
+        Assign material
       </div>
       {materials.map((m) => (
         <button

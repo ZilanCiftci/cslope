@@ -174,7 +174,7 @@ export function useContextMenu(params: ContextMenuParams) {
               const count = anno.points.length;
               const at = refHit.pointIndex;
               items.push({
-                label: "Delete Point",
+                label: "Delete point",
                 danger: true,
                 // A polyline keeps at least two points.
                 disabled: count <= 2,
@@ -189,7 +189,7 @@ export function useContextMenu(params: ContextMenuParams) {
               const edge = findReferenceEdgeAt(state, canvasRect, e.clientX, e.clientY, snapValue ?? ((v) => v));
               if (edge?.kind === "reference") {
                 items.push({
-                  label: "Add Point",
+                  label: "Add point",
                   action: () => {
                     state.updateAnnotation(refId, {
                       points: [...anno.points.slice(0, edge.insertIndex), edge.snapPoint, ...anno.points.slice(edge.insertIndex)],
@@ -201,7 +201,7 @@ export function useContextMenu(params: ContextMenuParams) {
             }
           }
           items.push({
-            label: anno?.type === "reference" && anno.shape === "circle" ? "Delete Reference Circle" : "Delete Reference Line",
+            label: anno?.type === "reference" && anno.shape === "circle" ? "Delete reference circle" : "Delete reference line",
             danger: true,
             action: () => {
               state.removeAnnotation(refId);
@@ -219,42 +219,42 @@ export function useContextMenu(params: ContextMenuParams) {
           ) {
             const items: ContextMenuState["items"] = [
               {
-                label: "Align Left",
+                label: "Align left",
                 action: () => {
                   alignAnnotations("left");
                   setContextMenu(null);
                 },
               },
               {
-                label: "Align Right",
+                label: "Align right",
                 action: () => {
                   alignAnnotations("right");
                   setContextMenu(null);
                 },
               },
               {
-                label: "Align Top",
+                label: "Align top",
                 action: () => {
                   alignAnnotations("top");
                   setContextMenu(null);
                 },
               },
               {
-                label: "Align Bottom",
+                label: "Align bottom",
                 action: () => {
                   alignAnnotations("bottom");
                   setContextMenu(null);
                 },
               },
               {
-                label: "Center Horizontally",
+                label: "Center horizontally",
                 action: () => {
                   alignAnnotations("center-h");
                   setContextMenu(null);
                 },
               },
               {
-                label: "Center Vertically",
+                label: "Center vertically",
                 action: () => {
                   alignAnnotations("center-v");
                   setContextMenu(null);
@@ -285,7 +285,7 @@ export function useContextMenu(params: ContextMenuParams) {
         const items: ContextMenuState["items"] = [];
         if (pointHit.kind === "external") {
           items.push({
-            label: "Delete Point",
+            label: "Delete point",
             danger: true,
             disabled: coordinates.length <= 3,
             action: () => {
@@ -303,7 +303,7 @@ export function useContextMenu(params: ContextMenuParams) {
           );
           const lineLen = piezoLine?.coordinates.length ?? 0;
           items.push({
-            label: "Delete Point",
+            label: "Delete point",
             danger: true,
             disabled: lineLen <= 2,
             action: () => {
@@ -319,7 +319,7 @@ export function useContextMenu(params: ContextMenuParams) {
             (mb) => mb.id === pointHit.boundaryId,
           );
           items.push({
-            label: "Delete Point",
+            label: "Delete point",
             danger: true,
             // Open polyline: at least 2 points; closed: at least a triangle.
             disabled:
@@ -337,7 +337,7 @@ export function useContextMenu(params: ContextMenuParams) {
           const plane = customSearchPlanes.find((p) => p.id === pointHit.planeId);
           const count = plane?.points?.length ?? 0;
           items.push({
-            label: "Delete Point",
+            label: "Delete point",
             danger: true,
             // A non-circular surface keeps at least two points.
             disabled: count <= 2,
@@ -349,7 +349,7 @@ export function useContextMenu(params: ContextMenuParams) {
             },
           });
           items.push({
-            label: "Delete Surface",
+            label: "Delete surface",
             danger: true,
             action: () => {
               removeCustomSearchPlane(pointHit.planeId);
@@ -358,7 +358,7 @@ export function useContextMenu(params: ContextMenuParams) {
           });
           if (addReferenceFromCustomPlane) {
             items.push({
-              label: "Add as Reference Line",
+              label: "Add as reference line",
               action: () => {
                 addReferenceFromCustomPlane(pointHit.planeId);
                 setContextMenu(null);
@@ -368,7 +368,7 @@ export function useContextMenu(params: ContextMenuParams) {
         } else if (pointHit.kind === "customCircle") {
           setSelectedCustomPlane(pointHit.planeId);
           items.push({
-            label: "Delete Circle",
+            label: "Delete circle",
             danger: true,
             action: () => {
               removeCustomSearchPlane(pointHit.planeId);
@@ -377,7 +377,7 @@ export function useContextMenu(params: ContextMenuParams) {
           });
           if (addReferenceFromCustomPlane) {
             items.push({
-              label: "Add as Reference Line",
+              label: "Add as reference line",
               action: () => {
                 addReferenceFromCustomPlane(pointHit.planeId);
                 setContextMenu(null);
@@ -394,7 +394,7 @@ export function useContextMenu(params: ContextMenuParams) {
         const items: ContextMenuState["items"] = [];
         if (edgeHit.kind === "external") {
           items.push({
-            label: "Add Point",
+            label: "Add point",
             action: () => {
               insertCoordinateAt(edgeHit.insertIndex, edgeHit.snapPoint);
               setSelectedPoint(edgeHit.insertIndex);
@@ -404,7 +404,7 @@ export function useContextMenu(params: ContextMenuParams) {
         } else if (edgeHit.kind === "piezo") {
           setActivePiezoLine(edgeHit.lineId);
           items.push({
-            label: "Add Point",
+            label: "Add point",
             action: () => {
               insertPiezoPointAt(edgeHit.insertIndex, edgeHit.snapPoint);
               setContextMenu(null);
@@ -413,7 +413,7 @@ export function useContextMenu(params: ContextMenuParams) {
         } else if (edgeHit.kind === "customPlane") {
           setSelectedCustomPlane(edgeHit.planeId);
           items.push({
-            label: "Add Point",
+            label: "Add point",
             action: () => {
               insertCustomPlanePointAt(
                 edgeHit.planeId,
@@ -425,7 +425,7 @@ export function useContextMenu(params: ContextMenuParams) {
           });
           if (addReferenceFromCustomPlane) {
             items.push({
-              label: "Add as Reference Line",
+              label: "Add as reference line",
               action: () => {
                 addReferenceFromCustomPlane(edgeHit.planeId);
                 setContextMenu(null);
@@ -435,7 +435,7 @@ export function useContextMenu(params: ContextMenuParams) {
         } else if (edgeHit.kind === "boundary") {
           setSelectedMaterialBoundary(edgeHit.boundaryId);
           items.push({
-            label: "Add Point",
+            label: "Add point",
             action: () => {
               insertBoundaryPointAt(
                 edgeHit.boundaryId,

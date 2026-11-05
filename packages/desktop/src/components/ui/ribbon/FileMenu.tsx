@@ -225,7 +225,7 @@ export function FileMenu({
               <RibbonStack>
                 <RibbonSmallButton
                   icon={<SaveAsIcon {...SMALL_ICON} />}
-                  label="Save As"
+                  label="Save as"
                   shortcut="Ctrl+Shift+S"
                   onClick={handleSaveAs}
                 />

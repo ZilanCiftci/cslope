@@ -110,11 +110,11 @@ describe("Explorer — list and selection", () => {
     );
     render(<Explorer />);
     const state = (name: string) => row(name).querySelector("[role=img]")!.getAttribute("aria-label");
-    expect(state("Alpha")).toBe("Analysed");
+    expect(state("Alpha")).toBe("Analyzed");
     expect(state("Beta")).toBe("Analysis failed");
-    expect(state("Gamma")).toBe("Analysed");
+    expect(state("Gamma")).toBe("Analyzed");
     act(() => useAppStore.setState({ result: null, runState: "idle" }));
-    expect(state("Alpha")).toBe("Not analysed");
+    expect(state("Alpha")).toBe("Not analyzed");
   });
 
   it("marks the models whose analysis runs, the active one by its single run", () => {
@@ -241,7 +241,7 @@ describe("Explorer — context menu", () => {
     await user.keyboard("{/Shift}");
     // All three selected: deleting them all is not offered.
     fireEvent.contextMenu(row("Beta"));
-    expect(screen.getByRole("menuitem", { name: "Delete Selected (3)" })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: "Delete selected (3)" })).toBeDisabled();
     expect(screen.getByRole("menuitem", { name: "Rename" })).toBeDisabled();
     expect(screen.getByRole("menuitem", { name: "Duplicate" })).toBeDisabled();
     await user.keyboard("{Escape}");
@@ -252,7 +252,7 @@ describe("Explorer — context menu", () => {
     await user.click(row("Gamma"));
     await user.keyboard("{/Control}");
     fireEvent.contextMenu(row("Gamma"));
-    await user.click(screen.getByRole("menuitem", { name: "Delete Selected (2)" }));
+    await user.click(screen.getByRole("menuitem", { name: "Delete selected (2)" }));
     expect(names()).toEqual(["Alpha"]);
   });
 
@@ -268,13 +268,13 @@ describe("Explorer — context menu", () => {
   it("edits model properties and saves them to the model", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model Properties…" }));
-    expect(screen.getByText("Model Properties")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
+    expect(screen.getByText("Model properties")).toBeInTheDocument();
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.clear(title);
     await userEvent.type(title, "Section B-B");
-    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-    expect(screen.queryByText("Model Properties")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(screen.queryByText("Model properties")).toBeNull();
     const beta = store().models.find((m) => m.name === "Beta")!;
     expect(beta.projectInfo).toMatchObject({ title: "Section B-B", revision: "0" });
   });
@@ -282,24 +282,24 @@ describe("Explorer — context menu", () => {
   it("closes the properties without saving on Cancel", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model Properties…" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
     const before = structuredClone(store().models.find((m) => m.name === "Beta")!.projectInfo);
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.type(title, "X");
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByText("Model Properties")).toBeNull();
+    expect(screen.queryByText("Model properties")).toBeNull();
     expect(store().models.find((m) => m.name === "Beta")!.projectInfo).toEqual(before);
   });
 
   it("closes the properties without saving on Escape", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model Properties…" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
     const before = structuredClone(store().models.find((m) => m.name === "Beta")!.projectInfo);
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.type(title, "X");
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByText("Model Properties")).toBeNull();
+    expect(screen.queryByText("Model properties")).toBeNull();
     expect(store().models.find((m) => m.name === "Beta")!.projectInfo).toEqual(before);
   });
 
@@ -365,10 +365,10 @@ describe("ProjectInfoDialog", () => {
     render(<ProjectInfoDialog initialInfos={[info()]} onSave={onSave} onClose={() => {}} />);
     expect(input("Client")).toHaveValue("ACME");
     await userEvent.type(input("Author"), "ZC");
-    await userEvent.clear(input("Canvas Width (m)"));
-    await userEvent.type(input("Canvas Width (m)"), "1500");
+    await userEvent.clear(input("Canvas width (m)"));
+    await userEvent.type(input("Canvas width (m)"), "1500");
     await userEvent.type(input("Description / Notes"), "Notes");
-    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({
       author: "ZC",
       canvasWidth: 1500,
@@ -390,10 +390,10 @@ describe("ProjectInfoDialog", () => {
     expect(input("Client")).toHaveValue("");
     expect(input("Client")).toHaveAttribute("placeholder", "Mixed values");
     // Shared values are shown.
-    expect(input("Project No.")).toHaveValue("P1");
+    expect(input("Project no.")).toHaveValue("P1");
     await userEvent.type(input("Client"), "C");
     expect(screen.queryByText("Client (mixed)")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({ client: "C" });
   });
 

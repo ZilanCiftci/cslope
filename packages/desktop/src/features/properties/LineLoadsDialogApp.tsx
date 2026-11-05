@@ -131,7 +131,7 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Line load per metre run of the slope">
+        <Label title="Line load per meter run of the slope">
           P (kN/m)
         </Label>
       ),
@@ -185,7 +185,7 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Elevation of the load point, for a load on a wall face; empty (&quot;ground&quot;) = on the ground at x. Used for an inclined load only: the field is greyed out while the angle is 0 (a vertical load acts the same at any height).">
+        <Label title="Elevation of the load point, for a load on a wall face; empty (&quot;ground&quot;) = on the ground at x. Used for an inclined load only: the field is grayed out while the angle is 0 (a vertical load acts the same at any height).">
           Load point y (m)
         </Label>
       ),

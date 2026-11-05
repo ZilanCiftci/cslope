@@ -136,13 +136,13 @@ describe("parseDxf: units and sections", () => {
   it.each([
     [1, 0.0254, "inches"],
     [2, 0.3048, "feet"],
-    [5, 0.01, "centimetres"],
-    [7, 1000, "kilometres"],
+    [5, 0.01, "centimeters"],
+    [7, 1000, "kilometers"],
   ])("$INSUNITS %i scales by %f (%s)", (units, scale, name) => {
     // 1000 drawing units across: large enough to be taken at face value.
     const d = parseDxf(withUnits(units, ...lw("a", false, [[0, 0], [1000, 0]])));
     expect(d.unitScale).toBe(scale);
-    expect(d.unitNote).toBe(`Drawing units: ${name}, converted to metres.`);
+    expect(d.unitNote).toBe(`Drawing units: ${name}, converted to meters.`);
     expect(d.polylines[0].points[1][0]).toBeCloseTo(1000 * scale, 9);
   });
 
@@ -158,7 +158,7 @@ describe("parseDxf: units and sections", () => {
     const d = parseDxf(withUnits(4));
     expect(d.polylines).toEqual([]);
     expect(d.unitScale).toBe(0.001);
-    expect(d.unitNote).toMatch(/millimetres/);
+    expect(d.unitNote).toMatch(/millimeters/);
   });
 
   it("a tiny drawing (under one unit) keeps its declared units", () => {

@@ -76,7 +76,7 @@ describe("PiezoDialogApp", () => {
       [20, 5],
     ]);
     expect(pl().activeLineId).toBe(pl().lines[0].id);
-    expect(screen.getByText("Line 1 Coordinates")).toBeInTheDocument();
+    expect(screen.getByText("Line 1 coordinates")).toBeInTheDocument();
     const sent = bridge.sentOf<{ piezometricLine: PiezometricLineState }>(
       "sendPiezoChanged",
     );
@@ -144,13 +144,13 @@ describe("PiezoDialogApp", () => {
     });
     await userEvent.click(screen.getByRole("cell", { name: "Line 2" }));
     expect(pl().activeLineId).toBe("b");
-    expect(screen.getByText("Line 2 Coordinates")).toBeInTheDocument();
+    expect(screen.getByText("Line 2 coordinates")).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Piezometric point \d X/)).toHaveLength(3);
 
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(pl().lines.map((l) => l.id)).toEqual(["a"]);
     expect(pl().activeLineId).toBe("a");
-    expect(screen.getByText("Line 1 Coordinates")).toBeInTheDocument();
+    expect(screen.getByText("Line 1 coordinates")).toBeInTheDocument();
   });
 
   it("toggles free water and chooses the main line", async () => {
@@ -183,7 +183,7 @@ describe("PiezoDialogApp", () => {
       ],
       activeLineId: "a",
     });
-    expect(screen.getByText("Material Assignment")).toBeInTheDocument();
+    expect(screen.getByText("Material assignment")).toBeInTheDocument();
     const m = store().materials[0];
     expect(screen.getByText(m.name)).toBeInTheDocument();
     // Unassigned materials follow the main line.

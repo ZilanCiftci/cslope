@@ -75,7 +75,7 @@ export function ReferenceProperties({
               value={single.cx}
               onValueChange={(v) => updateAnnotation(single.id, { cx: v })}
               className="w-full tabular-nums"
-              aria-label="Reference circle centre X"
+              aria-label="Reference circle center X"
             />
           </Field>
           <Field label="cy (m)" className="flex-1 min-w-0">
@@ -84,7 +84,7 @@ export function ReferenceProperties({
               value={single.cy}
               onValueChange={(v) => updateAnnotation(single.id, { cy: v })}
               className="w-full tabular-nums"
-              aria-label="Reference circle centre Y"
+              aria-label="Reference circle center Y"
             />
           </Field>
           <Field label="R (m)" className="flex-1 min-w-0">
@@ -131,7 +131,7 @@ export function ReferenceProperties({
             onClick={() => apply({ color: undefined })}
             className="h-5 px-1.5 rounded-sm cursor-pointer text-[10px]"
             aria-pressed={colorValue === ""}
-            title="The theme's reference colour"
+            title="The theme's reference color"
             style={{
               border: colorValue === "" ? "2px solid var(--color-vsc-accent)" : "1px solid var(--color-vsc-border)",
               color: "var(--color-vsc-text)",

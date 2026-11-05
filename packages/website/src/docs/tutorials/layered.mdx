@@ -7,13 +7,13 @@ order: 3
 
 This tutorial uses ACADS problem 1(c) (Giam & Donald 1989), a slope through three soils. Open **Help › Examples** and click **T-ACADS Non-Homogeneous** in the Explorer.
 
-<Figure src="/media/tutorials/layered/01-model.png" alt="A slope with three soil layers in different colours" caption="Three soils, each with its own colour." />
+<Figure src="/media/tutorials/layered/01-model.png" alt="A slope with three soil layers in different colors" caption="Three soils, each with its own color." />
 
 ## 1. Interior boundaries
 
 Open **Model › Boundaries › Interior**. Each interior boundary is a polyline, open or closed. Here **Boundary 1** is closed and encloses Soil #2, and **Boundary 2** separates Soil #1 from Soil #3.
 
-<Figure src="/media/tutorials/layered/02-interior.png" alt="The Interior Boundaries window with a list of boundaries and the points of the selected one" caption="Select a boundary in the list to edit its points." />
+<Figure src="/media/tutorials/layered/02-interior.png" alt="The Interior boundaries window with a list of boundaries and the points of the selected one" caption="Select a boundary in the list to edit its points." />
 
 To draw a layer boundary of your own, click **Add**: a horizontal line across the model. Then move its points to the layer boundary, by typing coordinates or dragging on the canvas. Let it end on the exterior boundary on both sides; points snap to the boundary when they are close.
 
@@ -27,13 +27,13 @@ Open **Model › Materials**. The three soils are Mohr-Coulomb materials:
 | Soil #2 | 19.5 | 5.3 | 23 |
 | Soil #3 | 19.5 | 7.2 | 20 |
 
-<Figure src="/media/tutorials/layered/03-materials.png" alt="The Define Materials window with three materials" caption="Click Add for a new material, and choose its model and properties below." />
+<Figure src="/media/tutorials/layered/03-materials.png" alt="The Define materials window with three materials" caption="Click Add for a new material, and choose its model and properties below." />
 
 ## 3. Assign the materials
 
 Open **Model › Materials › Assign**. cSlope has found the regions between the boundaries; each has a material.
 
-<Figure src="/media/tutorials/layered/04-assign.png" alt="The Assign Materials window listing regions with a material for each" caption="One row per region. You can also click a region on the canvas to choose its material." />
+<Figure src="/media/tutorials/layered/04-assign.png" alt="The Assign materials window listing regions with a material for each" caption="One row per region. You can also click a region on the canvas to choose its material." />
 
 ## 4. Run
 

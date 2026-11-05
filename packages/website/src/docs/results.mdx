@@ -13,12 +13,12 @@ After an analysis the canvas switches to **result mode**. It shows a print sheet
 
 The result sidebar on the right (collapse or open it at its header row, see [The cSlope window](/docs/interface#layout)) has three parts: **Summary**, **Annotations** and **Properties**. The summary shows:
 
-- **Min FOS**: the lowest factor of safety found, coloured red below 1.0, amber below 1.5 and green above. With partial factors it reads *Min FOS (design values)* and has no amber: 1.0 and above is green.
+- **Min FOS**: the lowest factor of safety found, colored red below 1.0, amber below 1.5 and green above. With partial factors it reads *Min FOS (design values)* and has no amber: 1.0 and above is green.
 - **Method** used.
-- **Surfaces**: how many surfaces were analysed and how many of them have a factor of safety below 1.0.
+- **Surfaces**: how many surfaces were analyzed and how many of them have a factor of safety below 1.0.
 - **Elapsed**: the time the analysis took.
-- With both directions analysed: the **sliding direction** of the critical surface and the factor of safety of the **other direction**.
-- With [custom surfaces](/docs/search#custom-surfaces): a row **Custom surface 1**, **2**, … for each, with its factor of safety (*F = 1.234*) or *no solution* and the reason, for example a circle that misses the ground, a surface that leaves the model, is too shallow or passes through impenetrable material, or one that does not converge. The circles are numbered first, then the polylines. Hover over the name to see the circle's centre and radius or the number of points. The PDF summary lists them too.
+- With both directions analyzed: the **sliding direction** of the critical surface and the factor of safety of the **other direction**.
+- With [custom surfaces](/docs/search#custom-surfaces): a row **Custom surface 1**, **2**, … for each, with its factor of safety (*F = 1.234*) or *no solution* and the reason, for example a circle that misses the ground, a surface that leaves the model, is too shallow or passes through impenetrable material, or one that does not converge. The circles are numbered first, then the polylines. Hover over the name to see the circle's center and radius or the number of points. The PDF summary lists them too.
 - Warnings, for example surfaces discarded because they did not reach equilibrium.
 
 The status bar also shows the factor of safety and the method.
@@ -29,25 +29,25 @@ The status bar also shows the factor of safety and the method.
 
 | Option | Effect |
 | --- | --- |
-| **Critical only** / **All surfaces** / **Filter by FOS** | Show the critical surface, every analysed surface, or only surfaces up to a factor of safety (*FOS ≤*, default 1.5) |
+| **Critical only** / **All surfaces** / **Filter by FOS** | Show the critical surface, every analyzed surface, or only surfaces up to a factor of safety (*FOS ≤*, default 1.5) |
 | **Custom surfaces** | In the *Surfaces* menu, with custom surfaces: each one dashed, with its own factor of safety label (off by default) |
 | **Show slices** | The slices of the critical surface |
 | **Show FOS label** | The factor of safety next to the surface |
-| **Show centre mark** | The centre of the critical circle |
-| **Soil colors** | The material colours |
+| **Show center mark** | The center of the critical circle |
+| **Soil colors** | The material colors |
 | **Plastic zone** / **FE mesh** | With a finite element result: the plastic zone (on by default) and the final mesh (off by default) |
 
-The grid is set in the paper's **Properties** (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analysed.
+The grid is set in the paper's **Properties** (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analyzed.
 
-With **All surfaces**, each surface is coloured by its factor of safety, from red (lowest) through yellow and green to blue. Add a **color bar** annotation to show the scale (see [Reporting](/docs/reporting)).
+With **All surfaces**, each surface is colored by its factor of safety, from red (lowest) through yellow and green to blue. Add a **color bar** annotation to show the scale (see [Reporting](/docs/reporting)).
 
-<Figure media="allSurfaces" caption="All surfaces, coloured by factor of safety." />
+<Figure media="allSurfaces" caption="All surfaces, colored by factor of safety." />
 
 ## Results plots
 
-**Results › Plots › Results Plot** opens a window with plots of the analysed surfaces:
+**Results › Plots › Results plot** opens a window with plots of the analyzed surfaces:
 
-- **Slip Surface Variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force and pulling force. Choose the surface in **Slip surface**: the critical one or any other analysed surface, listed with its factor of safety.
+- **Slip surface variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force and pulling force. Choose the surface in **Slip surface**: the critical one or any other analyzed surface, listed with its factor of safety.
 - **Lambda vs Fm/Ff** (Morgenstern–Price only): the factors of safety from moment and force equilibrium against λ. The factor of safety is where they agree within the tolerance.
 
 <Figure src="/media/tutorials/dam/04-lambda.png" alt="Fm and Ff against lambda for the critical surface of a dam" caption="Lambda vs Fm/Ff: the two factors of safety agree at the result." />

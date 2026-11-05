@@ -56,14 +56,14 @@ describe("DXF import", () => {
     ]);
     const d = parseDxf(mm);
     expect(dxfToGeometry(d).coordinates[2]).toEqual([20, 0]);
-    expect(d.unitNote).toMatch(/millimetres/);
+    expect(d.unitNote).toMatch(/millimeters/);
   });
 
   it("takes a metre drawing with a millimetre template setting as metres", () => {
     const wrongUnits = DRAWING.replace("$INSUNITS\n70\n6", "$INSUNITS\n70\n4");
     const d = parseDxf(wrongUnits);
     expect(dxfToGeometry(d).coordinates[2]).toEqual([20, 0]);
-    expect(d.unitNote).toMatch(/imported as drawn in metres/);
+    expect(d.unitNote).toMatch(/imported as drawn in meters/);
   });
 
   it("does not take the next vertex's y for a vertex without one", () => {

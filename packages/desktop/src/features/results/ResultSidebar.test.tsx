@@ -127,7 +127,7 @@ describe("ResultSidebar summary", () => {
       "Custom surface 2no solution: the circle does not cut the ground twice",
       "Custom surface 3F = 1.500",
     ]);
-    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, centre (10.00, 12.00) m, radius 10.00 m");
+    expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, center (10.00, 12.00) m, radius 10.00 m");
     expect(screen.getByText("Custom surface 2")).toHaveAttribute("title", "circle");
     expect(screen.getByText("Custom surface 3")).toHaveAttribute("title", "non-circular, 3 points");
     cleanup();
@@ -190,13 +190,13 @@ describe("ResultSidebar annotations list", () => {
     // Text annotations by their text.
     expect(screen.getByText("Title")).toBeInTheDocument();
     expect(screen.getByText("Sub")).toBeInTheDocument();
-    expect(screen.getByText("Material Table")).toBeInTheDocument();
+    expect(screen.getByText("Material table")).toBeInTheDocument();
     expect(screen.getByText("Plot")).toBeInTheDocument();
-    expect(screen.getByText("Color Bar")).toBeInTheDocument();
+    expect(screen.getByText("Color bar")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText("Plot"));
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p"]);
-    fireEvent.click(screen.getByText("Color Bar"), { ctrlKey: true });
+    fireEvent.click(screen.getByText("Color bar"), { ctrlKey: true });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p", "c"]);
 
     fireEvent.click(screen.getAllByTitle("Remove annotation")[4]);
@@ -399,8 +399,8 @@ describe("ResultSidebar annotation properties", () => {
     act(() => useAppStore.setState({ result: null }));
     select(["p"]);
     render(<ResultSidebar />);
-    expect(screen.getByText("Top Left", { selector: "span" })).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    expect(screen.getByText("Top left", { selector: "span" })).toBeInTheDocument();
+    fireEvent.click(screen.getByTitle("Bottom right"));
     expect(anno("p")).toMatchObject({ anchor: "bottom-right", x: 0.5, y: 0.6 });
   });
 
@@ -410,7 +410,7 @@ describe("ResultSidebar annotation properties", () => {
       .mockImplementation(() => createRecordingContext(1200, 800).ctx as never);
     select(["p"]);
     render(<ResultSidebar />);
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    fireEvent.click(screen.getByTitle("Bottom right"));
     const p = anno("p");
     expect(p.anchor).toBe("bottom-right");
     // Bottom-right of a box whose top-left stays at (0.5, 0.6), plot ≈ 24 % × 18 %.
@@ -419,7 +419,7 @@ describe("ResultSidebar annotation properties", () => {
     expect(p.y).toBeGreaterThan(0.75);
     expect(p.y).toBeLessThan(0.8);
     // Same anchor again: position unchanged.
-    fireEvent.click(screen.getByTitle("Bottom Right"));
+    fireEvent.click(screen.getByTitle("Bottom right"));
     expect(anno("p")).toEqual(p);
     spy.mockRestore();
   });
@@ -485,28 +485,28 @@ describe("ResultSidebar annotation properties", () => {
   it("sets the colour scheme of the colour bar, with custom colours and an optional middle one", () => {
     select(["c"]);
     render(<ResultSidebar />);
-    expect(field("Colour scheme").value).toBe("classic");
+    expect(field("Color scheme").value).toBe("classic");
     // jsdom stores the gradient's colours as rgb().
     const preview = () => screen.getByRole("img", { name: /Scheme preview/ }).style.background;
     expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(255, 0, 0\), /);
 
-    fireEvent.change(field("Colour scheme"), { target: { value: "greyscale" } });
+    fireEvent.change(field("Color scheme"), { target: { value: "greyscale" } });
     expect(anno("c").scheme).toBe("greyscale");
     expect(preview()).toMatch(/rgb\(200, 200, 200\)\)$/);
 
-    fireEvent.change(field("Colour scheme"), { target: { value: "custom" } });
+    fireEvent.change(field("Color scheme"), { target: { value: "custom" } });
     expect(anno("c")).toMatchObject({ scheme: "custom", schemeFrom: "#cc0000", schemeTo: "#0066cc" });
-    fireEvent.change(screen.getByLabelText("From (low F) colour"), { target: { value: "#112233" } });
-    fireEvent.change(screen.getByLabelText("To (high F) colour"), { target: { value: "#445566" } });
+    fireEvent.change(screen.getByLabelText("From (low F) color"), { target: { value: "#112233" } });
+    fireEvent.change(screen.getByLabelText("To (high F) color"), { target: { value: "#445566" } });
     expect(anno("c")).toMatchObject({ schemeFrom: "#112233", schemeTo: "#445566" });
     expect(preview()).toMatch(/^linear-gradient\(to right, rgb\(17, 34, 51\), .*rgb\(68, 85, 102\)\)$/);
 
-    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    fireEvent.click(screen.getByLabelText("Add a middle color"));
     expect(anno("c").schemeMid).toMatch(/^#[0-9a-f]{6}$/);
-    fireEvent.change(screen.getByLabelText("Middle colour"), { target: { value: "#ffffff" } });
+    fireEvent.change(screen.getByLabelText("Middle color"), { target: { value: "#ffffff" } });
     expect(anno("c").schemeMid).toBe("#ffffff");
     expect(preview()).toContain("rgb(255, 255, 255)");
-    fireEvent.click(screen.getByLabelText("Add a middle colour"));
+    fireEvent.click(screen.getByLabelText("Add a middle color"));
     expect(anno("c").schemeMid).toBeUndefined();
   });
 
@@ -649,8 +649,8 @@ describe("ResultSidebar reference lines", () => {
   it("edits a circle's centre, radius and clip; several lines share the common fields", () => {
     select(["rc"]);
     render(<ResultSidebar />);
-    fireEvent.change(screen.getByLabelText("Reference circle centre X"), { target: { value: "16" } });
-    fireEvent.change(screen.getByLabelText("Reference circle centre Y"), { target: { value: "13" } });
+    fireEvent.change(screen.getByLabelText("Reference circle center X"), { target: { value: "16" } });
+    fireEvent.change(screen.getByLabelText("Reference circle center Y"), { target: { value: "13" } });
     fireEvent.change(screen.getByLabelText("Reference circle radius"), { target: { value: "12" } });
     expect(ref("rc")).toMatchObject({ cx: 16, cy: 13, radius: 12 });
     // Below the smallest radius: kept.

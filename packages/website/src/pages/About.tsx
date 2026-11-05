@@ -4,7 +4,7 @@ import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
 export function About() {
-  usePageMeta("About", `cSlope is developed by ${SITE.company.name} and released as open source under the MIT licence.`);
+  usePageMeta("About", `cSlope is developed by ${SITE.company.name} and released as open source under the MIT license.`);
   return (
     <>
       <PageHeader
@@ -22,7 +22,7 @@ export function About() {
               and check it.
             </p>
             <p>
-              Open source also means the program belongs to its users: no licence server, no subscription that ends,
+              Open source also means the program belongs to its users: no license server, no subscription that ends,
               and the version a project was approved with stays available.
             </p>
           </div>
@@ -39,9 +39,9 @@ export function About() {
               </a>
               .
             </p>
-            <h2 className="pt-4 text-xl font-semibold text-foreground">Licence</h2>
+            <h2 className="pt-4 text-xl font-semibold text-foreground">License</h2>
             <p>
-              cSlope is released under the MIT licence: free to use, copy, modify and distribute, commercially or not,
+              cSlope is released under the MIT license: free to use, copy, modify and distribute, commercially or not,
               provided the copyright notice is kept. It comes without warranty; the engineer remains responsible for
               the analysis and its interpretation.
             </p>
