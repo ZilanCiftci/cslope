@@ -1022,7 +1022,7 @@ fn build_slope_rejects_an_invalid_custom_circle_drops_custom_polylines_that_give
         let e = err(build_slope(&def(
             json!({ "coordinates": LTR, "materials": [soil_def()], "customSearchPlanes": [p] }),
         )));
-        assert!(e.contains("finite centre and a positive radius"), "{e}");
+        assert!(e.contains("finite center and a positive radius"), "{e}");
     }
     let s = build_slope(&def(json!({
         "coordinates": LTR, "materials": [soil_def()],

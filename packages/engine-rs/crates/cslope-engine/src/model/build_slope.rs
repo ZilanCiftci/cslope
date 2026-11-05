@@ -310,7 +310,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
         for (index, p) in planes.iter().enumerate() {
             if ![p.cx, p.cy, p.radius].iter().all(|v| v.is_finite()) || p.radius <= 0.0 {
                 return Err(EngineError::new(format!(
-                    "Custom search circle ({}, {}, R {}) needs a finite centre and a positive radius.",
+                    "Custom search circle ({}, {}, R {}) needs a finite center and a positive radius.",
                     js::num::to_string(p.cx),
                     js::num::to_string(p.cy),
                     js::num::to_string(p.radius)

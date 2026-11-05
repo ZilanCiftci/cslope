@@ -151,7 +151,7 @@ describe("buildSlope", () => {
 
   it("rejects an invalid custom circle; drops custom polylines that give no surface", () => {
     for (const p of [{ cx: 1, cy: 2, radius: 0 }, { cx: NaN, cy: 2, radius: 5 }, { cx: 1, cy: Infinity, radius: 5 }]) {
-      expect(() => buildSlope({ coordinates: LTR, materials: [soil], customSearchPlanes: [p] })).toThrow(/finite centre and a positive radius/);
+      expect(() => buildSlope({ coordinates: LTR, materials: [soil], customSearchPlanes: [p] })).toThrow(/finite center and a positive radius/);
     }
     const s = buildSlope({
       coordinates: LTR,

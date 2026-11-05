@@ -51,7 +51,7 @@ impl EngineError {
     pub fn cancelled() -> Self {
         EngineError {
             kind: ErrorKind::Cancelled,
-            message: "The analysis was cancelled.".into(),
+            message: "The analysis was canceled.".into(),
         }
     }
 }

@@ -290,7 +290,7 @@ pub enum ProgressEvent { Search { done: usize, total_hint: usize, phase: SearchP
 
 Notes on the API:
 - Function-valued TS options become data. `sizeField: (x, y) => number` becomes `enum SizeField { Uniform{h, min}, Refined{…from refinedSizeField} }`. `onProgress` and `onLevel` become `RunCtx.progress`. `runBatch` becomes `FemSearch::step`.
-- Cancellation returns `EngineError::cancelled()` with the message "The analysis was cancelled."
+- Cancellation returns `EngineError::cancelled()` with the message "The analysis was canceled."
 - `api/` modules, `RunCtx` and `FemSearch` are the only additions that are not ports. Everything else keeps the TS module and file boundaries.
 
 ### 2.3 Errors

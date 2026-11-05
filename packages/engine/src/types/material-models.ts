@@ -445,10 +445,10 @@ export type MaterialModelKind = MaterialModel["kind"];
 export const MATERIAL_MODEL_LABELS: Record<MaterialModelKind, string> = {
   "mohr-coulomb": "Mohr-Coulomb",
   undrained: "Undrained",
-  "high-strength": "High Strength",
-  impenetrable: "Impenetrable (Bedrock)",
+  "high-strength": "High strength",
+  impenetrable: "Impenetrable (bedrock)",
   "spatial-mohr-coulomb": "Spatial Mohr-Coulomb",
-  "anisotropic-function": "Anisotropic Function",
+  "anisotropic-function": "Anisotropic function",
   "s-f-depth": "S = f(depth)",
   "s-f-datum": "S = f(datum)",
   "lime-cement-columns": "Lime-cement columns",
