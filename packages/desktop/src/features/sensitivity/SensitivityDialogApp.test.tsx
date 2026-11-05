@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { SensitivityPanel } from "./SensitivityPanel";
+import { SensitivityWindow } from "./SensitivityDialogApp";
 import { useSensitivityStore } from "./store";
+import { sensitivityWindowState, type SensitivityCommand } from "./window-sync";
 import { useAppStore } from "../../store/app-store";
 import { DEFAULT_MATERIAL } from "../../store/defaults";
 
@@ -11,13 +12,16 @@ vi.mock("../../utils/download", async (importOriginal) => ({
 }));
 import { downloadFile } from "../../utils/download";
 
-const run = vi.fn(async () => {});
-const cancel = vi.fn();
+const onCommand = vi.fn<(command: SensitivityCommand) => void>();
 
-function openPanel() {
-  act(() => useSensitivityStore.getState().setOpen(true));
-  act(() => useSensitivityStore.setState({ run, cancel }));
+/** The window with the state the main window would send it. */
+function Harness() {
+  useAppStore((s) => s);
+  useSensitivityStore((s) => s);
+  return <SensitivityWindow state={sensitivityWindowState()} onCommand={onCommand} />;
 }
+
+const renderWindow = () => render(<Harness />);
 
 const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 
@@ -34,25 +38,24 @@ beforeEach(() => {
     materials: [{ ...DEFAULT_MATERIAL }],
     parameters: [{ name: "H", expression: "10" } as never],
   });
-  run.mockClear();
-  cancel.mockClear();
+  onCommand.mockClear();
   vi.mocked(downloadFile).mockClear();
 });
 
 afterEach(() => {
   cleanup();
-  act(() => useSensitivityStore.setState({ open: false, points: [], running: false, total: 0, label: "", runValue: null }));
+  act(() => useSensitivityStore.setState({ points: [], running: false, total: 0, label: "", runValue: null }));
 });
 
-describe("SensitivityPanel", () => {
-  it("renders nothing while closed", () => {
-    render(<SensitivityPanel />);
-    expect(screen.queryByText("Sensitivity analysis")).toBeNull();
+describe("Sensitivity window", () => {
+  it("waits for the main window", () => {
+    render(<SensitivityWindow state={null} onCommand={onCommand} />);
+    expect(screen.getByText("Sensitivity analysis")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
   });
 
   it("lists parameters and material values with ±20 % as the default range", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     const select = screen.getByLabelText("Variable") as HTMLSelectElement;
     expect([...select.options].map((o) => o.textContent)).toEqual([
       "Parameter H, now 10",
@@ -66,8 +69,7 @@ describe("SensitivityPanel", () => {
   });
 
   it("resets the range when another variable is chosen (±5 around zero)", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     const select = screen.getByLabelText("Variable") as HTMLSelectElement;
     fireEvent.change(select, { target: { value: select.options[2].value } });
     expect(input("From").value).toBe("9.6");
@@ -78,52 +80,45 @@ describe("SensitivityPanel", () => {
   });
 
   it("runs the model for evenly spaced values of the chosen variable", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     const select = screen.getByLabelText("Variable") as HTMLSelectElement;
     fireEvent.change(select, { target: { value: select.options[2].value } });
     type("From", "10");
     type("To", "14");
     type("Number of values", "5");
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
-    const [model, variable, info, values] = run.mock.calls[0] as unknown as [
-      { materials: unknown[] },
-      unknown,
-      unknown,
-      number[],
-    ];
-    expect(model.materials).toHaveLength(1);
+    const command = onCommand.mock.calls[0][0];
+    if (command.type !== "run") throw new Error("not a run");
+    const { variable, info, values } = command;
     expect(variable).toEqual({ kind: "material", materialId: DEFAULT_MATERIAL.id, field: "cohesion" });
     expect(info).toEqual({ key: `m:${DEFAULT_MATERIAL.id}:cohesion`, label: "Clay: c (kPa)", value: 12 });
     expect(values).toEqual([10, 11, 12, 13, 14]);
   });
 
   it("cannot run an empty range and ignores an out-of-range number of values", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     type("Number of values", "500");
     type("To", "8");
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
     type("To", "9");
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
-    expect((run.mock.calls[0] as unknown[])[3]).toHaveLength(9);
+    expect(onCommand.mock.calls[0][0]).toMatchObject({ type: "run", values: expect.any(Array) });
+    expect((onCommand.mock.calls[0][0] as { values: number[] }).values).toHaveLength(9);
   });
 
   it("shows progress while running and cancels", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     act(() =>
       useSensitivityStore.setState({ running: true, total: 9, points: [{ value: 8, fos: 1.1 }], label: "Parameter H" }),
     );
     expect(screen.getByText("1 / 9")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(cancel).toHaveBeenCalled();
+    expect(onCommand).toHaveBeenCalledWith({ type: "cancel" });
   });
 
   it("tabulates the results, flags values without a FOS and exports CSV", () => {
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     act(() =>
       useSensitivityStore.setState({
         label: "Parameter H",
@@ -153,16 +148,17 @@ describe("SensitivityPanel", () => {
 
   it("says so when there is nothing to vary", () => {
     act(() => useAppStore.setState({ materials: [], parameters: [] }));
-    render(<SensitivityPanel />);
-    openPanel();
+    renderWindow();
     expect(screen.getByText("The model has no parameters or material values to vary.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
   });
 
-  it("closes when another model becomes active", () => {
-    render(<SensitivityPanel />);
-    openPanel();
-    act(() => useAppStore.setState({ activeModelId: "other" }));
-    expect(useSensitivityStore.getState().open).toBe(false);
+  it("follows edits of the model: a variable that is gone gives way to the first one", () => {
+    renderWindow();
+    const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: select.options[3].value } });
+    act(() => useAppStore.setState({ materials: [{ ...DEFAULT_MATERIAL, name: "Silt", model: { ...DEFAULT_MATERIAL.model, frictionAngle: undefined } as never }] }));
+    expect((screen.getByLabelText("Variable") as HTMLSelectElement).value).toBe("p:H");
+    expect(input("From").value).toBe("8");
   });
 });

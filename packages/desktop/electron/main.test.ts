@@ -575,6 +575,8 @@ const DIALOGS: [channel: string, title: string, hash: string][] = [
     "custom-search-planes-dialog",
   ],
   ["window:openOptionsDialog", "Options", "options-dialog"],
+  ["window:openSensitivityDialog", "Sensitivity analysis", "sensitivity-dialog"],
+  ["window:openReliabilityDialog", "Probabilistic analysis", "reliability-dialog"],
   ["window:openViewSettingsDialog", "View settings", "view-settings-dialog"],
 ];
 
@@ -836,6 +838,37 @@ describe("dialog state routing", () => {
       4,
     );
   });
+
+  it.each(["sensitivity", "reliability"])(
+    "%s: the window asks for state and sends commands; the main window answers and is told when it closes",
+    async (tool) => {
+      await loadMain();
+      const win = mainWin();
+      const opener = tool === "sensitivity" ? "Sensitivity" : "Reliability";
+      const dlg = openDialog(`window:open${opener}Dialog`);
+      win.webContents.send.mockClear();
+      for (const channel of ["requestState", "command"]) {
+        send(`${tool}:${channel}`, win.webContents, 1);
+        send(`${tool}:${channel}`, stranger(), 1);
+      }
+      expect(win.webContents.send).not.toHaveBeenCalled();
+      send(`${tool}:requestState`, dlg.webContents);
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:requestState`);
+      send(`${tool}:command`, dlg.webContents, { type: "cancel" });
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:command`, { type: "cancel" });
+      for (const channel of ["stateResponse", "changed"]) {
+        dlg.webContents.send.mockClear();
+        send(`${tool}:${channel}`, dlg.webContents, 1);
+        expect(dlg.webContents.send).not.toHaveBeenCalled();
+        send(`${tool}:${channel}`, win.webContents, 2);
+        expect(dlg.webContents.send).toHaveBeenLastCalledWith(`${tool}:${channel}`, 2);
+      }
+      dlg.close();
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:closed`);
+      // Closed: nothing to forward to.
+      expect(() => send(`${tool}:changed`, win.webContents, 3)).not.toThrow();
+    },
+  );
 
   it("loads: UDL, line load and reinforcement windows share one channel", async () => {
     await loadMain();

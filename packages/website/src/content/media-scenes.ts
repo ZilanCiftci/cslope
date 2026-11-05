@@ -314,7 +314,6 @@ export const scenes: Scene[] = [
       setup: { runAnalysis: true, click: ["Results", "Results plot"], windowSelect: [["Y axis", "Pore pressure"]] },
       crop: "window",
       window: "Results plot",
-      fitHeight: false,
     },
   ]),
 
@@ -363,7 +362,6 @@ export const scenes: Scene[] = [
       setup: { runAnalysis: true, click: ["Results", "Results plot"], windowSelect: [["Plot", "Lambda vs Fm/Ff"]] },
       crop: "window",
       window: "Results plot",
-      fitHeight: false,
     },
   ]),
 
@@ -475,17 +473,20 @@ export const scenes: Scene[] = [
     {
       id: "01-sensitivity",
       title: "Sensitivity analysis",
-      setup: { click: ["Results", "Sensitivity", "last:Run"], waitForText: "values gave a FOS" },
-      crop: "full",
+      setup: { click: ["Results", "Sensitivity"], windowClick: ["Run"], windowWaitForText: "values gave a FOS" },
+      crop: "window",
+      window: "Sensitivity analysis",
     },
     {
       id: "02-probabilistic",
       title: "Probabilistic analysis",
       setup: {
-        click: ["Results", "Probabilistic", "+ Add variable", "last:Run"],
-        waitForText: "Probability of failure (lognormal)",
+        click: ["Results", "Probabilistic"],
+        windowClick: ["+ Add variable", "Run"],
+        windowWaitForText: "Probability of failure (lognormal)",
       },
-      crop: "full",
+      crop: "window",
+      window: "Probabilistic analysis",
     },
   ]),
 

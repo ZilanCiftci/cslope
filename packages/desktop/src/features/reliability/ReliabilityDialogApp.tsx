@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
-import { PopupPanel } from "../../components/ui/PopupPanel";
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
-import { useAppStore } from "../../store/app-store";
-import { snapshotFromState } from "../../store/slices/analysisSlice";
+import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
 import { downloadFile, safeFileName } from "../../utils/download";
+import { isElectron } from "../../utils/is-electron";
+import { useToolWindowState } from "../../utils/tool-window-sync";
 import {
   defaultSd,
   histogram,
@@ -14,36 +14,57 @@ import {
   toRandomVariables,
   type RandomRow,
 } from "./reliability";
-import { useReliabilityStore } from "./store";
+import type { ReliabilityCommand, ReliabilityWindowState } from "./window-sync";
+
+const TITLE = "Probabilistic analysis";
+const DESCRIPTION =
+  "Material values as random variables: the reliability index and the probability of failure of the active model.";
 
 /**
- * Probabilistic analysis: material values as random variables (mean = the
- * model value), reliability index and probability of failure by the
- * Taylor series method or Monte Carlo sampling.
+ * The Probabilistic analysis window: material values as random variables
+ * (mean = the model value), reliability index and probability of failure
+ * by the Taylor series method or Monte Carlo sampling. The main window
+ * runs the analyses and sends the model and the result here.
  */
-export function ReliabilityPanel() {
-  const open = useReliabilityStore((s) => s.open);
-  const opened = useReliabilityStore((s) => s.opened);
-  if (!open) return null;
-  // Remounted on every open so the model snapshot is current.
-  return <ReliabilityPanelBody key={opened} />;
+export function ReliabilityDialogApp() {
+  const state = useToolWindowState<ReliabilityWindowState>({
+    enabled: isElectron,
+    request: () => window.cslope.requestReliabilityState(),
+    onState: (l) => window.cslope.onReliabilityState(l),
+    onChanged: (l) => window.cslope.onReliabilityChanged(l),
+  });
+  return (
+    <ReliabilityWindow
+      state={state}
+      onCommand={(command) => window.cslope.sendReliabilityCommand(command)}
+    />
+  );
 }
 
-function ReliabilityPanelBody() {
-  const { setOpen, run, cancel, running, progress, result, labels, error } = useReliabilityStore();
-  const designValues = useAppStore((s) => !!s.options.partialFactors);
-  const bothDirections = useAppStore((s) => !!s.options.bothDirections);
-  // The model as it is when the panel opens (edits need a reopen, which remounts).
-  const model = useMemo(() => {
-    const s = useAppStore.getState();
-    const name = s.models.find((m) => m.id === s.activeModelId)?.name ?? "";
-    return { ...snapshotFromState(s), name };
-  }, []);
+/** The window's content for the given state (null: not there yet). */
+export function ReliabilityWindow({
+  state,
+  onCommand,
+}: {
+  state: ReliabilityWindowState | null;
+  onCommand: (command: ReliabilityCommand) => void;
+}) {
+  if (!state) {
+    return <ToolWindowFrame title={TITLE} description={DESCRIPTION} waiting />;
+  }
+  // The variables belong to the model: another model starts afresh.
+  return <ReliabilityBody key={state.model.id} state={state} onCommand={onCommand} />;
+}
+
+function ReliabilityBody({
+  state,
+  onCommand,
+}: {
+  state: ReliabilityWindowState;
+  onCommand: (command: ReliabilityCommand) => void;
+}) {
+  const { model, designValues, bothDirections, running, progress, result, labels, error } = state;
   const candidates = useMemo(() => listRandomCandidates(model), [model]);
-  const activeModelId = useAppStore((s) => s.activeModelId);
-  useEffect(() => {
-    if (activeModelId !== model.id) setOpen(false);
-  }, [activeModelId, model.id, setOpen]);
 
   const [rows, setRows] = useState<RandomRow[]>(() => {
     const first = candidates.find((c) => c.field !== "unitWeight") ?? candidates[0];
@@ -67,24 +88,23 @@ function ReliabilityPanelBody() {
     .map((r) => candidates.find((c) => c.key === r.key)!.label);
 
   const start = () =>
-    void run(
-      model,
+    onCommand({
+      type: "run",
       variables,
-      variableLabels,
-      method === "taylor" ? { method, search } : { method, samples, seed },
-    );
+      labels: variableLabels,
+      options: method === "taylor" ? { method, search } : { method, samples, seed },
+    });
 
   const bars = result?.samples ? histogram(result.samples, 30).map((b) => ({ mid: (b.from + b.to) / 2, count: b.count })) : [];
 
   return (
-    <PopupPanel
-      title="Probabilistic analysis"
-      onClose={() => setOpen(false)}
-      width={480}
+    <ToolWindowFrame
+      title={TITLE}
+      description={DESCRIPTION}
       footer={
         <div className="flex items-center gap-2 text-[11px]">
           {running ? (
-            <button onClick={cancel} className="btn">
+            <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
             </button>
           ) : (
@@ -344,7 +364,7 @@ function ReliabilityPanelBody() {
           </>
         )}
       </div>
-    </PopupPanel>
+    </ToolWindowFrame>
   );
 }
 

@@ -61,8 +61,6 @@ import { APP_VERSION } from "../../../utils/app-version";
 import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
-import { useSensitivityStore } from "../../../features/sensitivity/store";
-import { useReliabilityStore } from "../../../features/reliability/store";
 
 interface Props {
   isOpen: boolean;
@@ -258,6 +256,17 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     );
   };
 
+  // Their own windows; the analyses run here, in the main window.
+  const openSensitivity = () => {
+    if (isElectron) window.cslope.openSensitivityDialog();
+    else window.alert("The sensitivity analysis is available in the desktop app.");
+  };
+
+  const openReliability = () => {
+    if (isElectron) window.cslope.openReliabilityDialog();
+    else window.alert("The probabilistic analysis is available in the desktop app.");
+  };
+
   const openViewSettings = () => {
     if (isElectron) {
       window.cslope.openViewSettingsDialog();
@@ -310,12 +319,12 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonButton
                 icon={<SensitivityIcon {...LARGE_ICON} />}
                 label="Sensitivity"
-                onClick={() => useSensitivityStore.getState().setOpen(true)}
+                onClick={openSensitivity}
               />
               <RibbonButton
                 icon={<ProbabilisticIcon {...LARGE_ICON} />}
                 label="Probabilistic"
-                onClick={() => useReliabilityStore.getState().setOpen(true)}
+                onClick={openReliability}
               />
             </RibbonGroup>
             <RibbonSep />

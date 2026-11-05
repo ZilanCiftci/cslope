@@ -21,6 +21,8 @@ import type {
   UdlRow,
 } from "./store/types";
 import type { PaperContent } from "./features/view/extents";
+import type { SensitivityCommand, SensitivityWindowState } from "./features/sensitivity/window-sync";
+import type { ReliabilityCommand, ReliabilityWindowState } from "./features/reliability/window-sync";
 
 interface MaterialAssignmentStatePayload {
   coordinates: [number, number][];
@@ -151,6 +153,8 @@ declare global {
       openSearchLimitsDialog: () => void;
       openCustomSearchPlanesDialog: () => void;
       openOptionsDialog: () => void;
+      openSensitivityDialog: () => void;
+      openReliabilityDialog: () => void;
       openViewSettingsDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
@@ -269,6 +273,38 @@ declare global {
         listener: (event: unknown, state: ParametersStatePayload) => void,
       ) => () => void;
       // Results plot dialog sync
+      requestSensitivityState: () => void;
+      sendSensitivityState: (state: SensitivityWindowState) => void;
+      sendSensitivityChanged: (state: SensitivityWindowState) => void;
+      sendSensitivityCommand: (command: SensitivityCommand) => void;
+      onSensitivityRequestState: (listener: (event: unknown) => void) => () => void;
+      onSensitivityState: (
+        listener: (event: unknown, state: SensitivityWindowState) => void,
+      ) => () => void;
+      onSensitivityChanged: (
+        listener: (event: unknown, state: SensitivityWindowState) => void,
+      ) => () => void;
+      onSensitivityCommand: (
+        listener: (event: unknown, command: SensitivityCommand) => void,
+      ) => () => void;
+      /** The window closed (sent to the main window). */
+      onSensitivityClosed: (listener: (event: unknown) => void) => () => void;
+      requestReliabilityState: () => void;
+      sendReliabilityState: (state: ReliabilityWindowState) => void;
+      sendReliabilityChanged: (state: ReliabilityWindowState) => void;
+      sendReliabilityCommand: (command: ReliabilityCommand) => void;
+      onReliabilityRequestState: (listener: (event: unknown) => void) => () => void;
+      onReliabilityState: (
+        listener: (event: unknown, state: ReliabilityWindowState) => void,
+      ) => () => void;
+      onReliabilityChanged: (
+        listener: (event: unknown, state: ReliabilityWindowState) => void,
+      ) => () => void;
+      onReliabilityCommand: (
+        listener: (event: unknown, command: ReliabilityCommand) => void,
+      ) => () => void;
+      /** The window closed (sent to the main window). */
+      onReliabilityClosed: (listener: (event: unknown) => void) => () => void;
       requestResultsPlotState: () => void;
       sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
       sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;

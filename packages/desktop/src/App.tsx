@@ -11,6 +11,10 @@ import { ReinforcementDialogApp } from "./features/properties/ReinforcementDialo
 import { PiezoDialogApp } from "./features/properties/PiezoDialogApp";
 import { ParametersDialogApp } from "./features/properties/ParametersDialogApp";
 import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp";
+import { SensitivityDialogApp } from "./features/sensitivity/SensitivityDialogApp";
+import { useSensitivityWindowSync } from "./features/sensitivity/window-sync";
+import { ReliabilityDialogApp } from "./features/reliability/ReliabilityDialogApp";
+import { useReliabilityWindowSync } from "./features/reliability/window-sync";
 import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogApp";
 import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchPlanesDialogApp";
 import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
@@ -316,6 +320,12 @@ function App() {
   const isViewSettingsDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "view-settings-dialog";
+  const isSensitivityDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "sensitivity-dialog";
+  const isReliabilityDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "reliability-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
   const suppressNextMaterialsBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
@@ -340,7 +350,14 @@ function App() {
     isSearchLimitsDialogWindow ||
     isCustomSearchPlanesDialogWindow ||
     isOptionsDialogWindow ||
-    isViewSettingsDialogWindow;
+    isViewSettingsDialogWindow ||
+    isSensitivityDialogWindow ||
+    isReliabilityDialogWindow;
+
+  // The main window runs the analyses of the Sensitivity and Probabilistic
+  // analysis windows and keeps them up to date.
+  useSensitivityWindowSync(!isAnyDialogWindow);
+  useReliabilityWindowSync(!isAnyDialogWindow);
 
   useEffect(() => {
     // Escape closes a dialog window, as its Close button does, also from
@@ -370,7 +387,12 @@ function App() {
     // it within the opening height. Dialogs whose content changes a lot
     // with the selection keep their height.
     const keepsHeight =
-      isMaterialsDialogWindow || isReinforcementDialogWindow || isResultsPlotDialogWindow;
+      isMaterialsDialogWindow ||
+      isReinforcementDialogWindow ||
+      isResultsPlotDialogWindow ||
+      // Their results appear below the inputs.
+      isSensitivityDialogWindow ||
+      isReliabilityDialogWindow;
     if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
     if (typeof ResizeObserver === "undefined") return;
     let sent = 0;
@@ -408,6 +430,8 @@ function App() {
     isMaterialsDialogWindow,
     isReinforcementDialogWindow,
     isResultsPlotDialogWindow,
+    isSensitivityDialogWindow,
+    isReliabilityDialogWindow,
   ]);
 
   useEffect(() => {
@@ -1075,6 +1099,14 @@ function App() {
 
   if (isResultsPlotDialogWindow) {
     return <ResultsPlotDialogApp />;
+  }
+
+  if (isSensitivityDialogWindow) {
+    return <SensitivityDialogApp />;
+  }
+
+  if (isReliabilityDialogWindow) {
+    return <ReliabilityDialogApp />;
   }
 
   if (isSearchLimitsDialogWindow) {

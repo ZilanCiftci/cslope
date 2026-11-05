@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -8,44 +8,63 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { PopupPanel } from "../../components/ui/PopupPanel";
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
-import { useAppStore } from "../../store/app-store";
-import { snapshotFromState } from "../../store/slices/analysisSlice";
+import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
 import { downloadFile, safeFileName } from "../../utils/download";
+import { isElectron } from "../../utils/is-electron";
+import { useToolWindowState } from "../../utils/tool-window-sync";
 import { listVariables, sensitivityCsv, sensitivityValues } from "./sensitivity";
-import { useSensitivityStore } from "./store";
+import type { SensitivityCommand, SensitivityWindowState } from "./window-sync";
+
+const TITLE = "Sensitivity analysis";
+const DESCRIPTION =
+  "The minimum FOS of the active model for a range of values of one parameter or material property.";
 
 /**
- * Sensitivity analysis: run the active model for a range of values of one
- * parameter or material property and plot the minimum FOS.
+ * The Sensitivity window: run the active model for a range of values of
+ * one parameter or material property and plot the minimum FOS. The main
+ * window runs the analyses and sends the model and the results here.
  */
-export function SensitivityPanel() {
-  const open = useSensitivityStore((s) => s.open);
-  const opened = useSensitivityStore((s) => s.opened);
-  if (!open) return null;
-  // Remounted on every open so the model snapshot is current.
-  return <SensitivityPanelBody key={opened} />;
+export function SensitivityDialogApp() {
+  const state = useToolWindowState<SensitivityWindowState>({
+    enabled: isElectron,
+    request: () => window.cslope.requestSensitivityState(),
+    onState: (l) => window.cslope.onSensitivityState(l),
+    onChanged: (l) => window.cslope.onSensitivityChanged(l),
+  });
+  return (
+    <SensitivityWindow
+      state={state}
+      onCommand={(command) => window.cslope.sendSensitivityCommand(command)}
+    />
+  );
 }
 
-function SensitivityPanelBody() {
-  const { setOpen, run, cancel, running, points, total, label, runValue } =
-    useSensitivityStore();
-  const designValues = useAppStore((s) => !!s.options.partialFactors);
-  // The model as it is when the panel opens (edits need a reopen, which remounts).
-  const model = useMemo(() => {
-    const s = useAppStore.getState();
-    const name = s.models.find((m) => m.id === s.activeModelId)?.name ?? "";
-    return { ...snapshotFromState(s), name };
-  }, []);
+/** The window's content for the given state (null: not there yet). */
+export function SensitivityWindow({
+  state,
+  onCommand,
+}: {
+  state: SensitivityWindowState | null;
+  onCommand: (command: SensitivityCommand) => void;
+}) {
+  if (!state) {
+    return <ToolWindowFrame title={TITLE} description={DESCRIPTION} waiting />;
+  }
+  // The inputs belong to the model: another model starts afresh.
+  return <SensitivityBody key={state.model.id} state={state} onCommand={onCommand} />;
+}
+
+function SensitivityBody({
+  state,
+  onCommand,
+}: {
+  state: SensitivityWindowState;
+  onCommand: (command: SensitivityCommand) => void;
+}) {
+  const { model, designValues, running, points, total, label, runValue } = state;
   const variables = useMemo(() => listVariables(model), [model]);
-  // The panel belongs to this model: switching models, a new project or
-  // an import closes it (and stops a run).
-  const activeModelId = useAppStore((s) => s.activeModelId);
-  useEffect(() => {
-    if (activeModelId !== model.id) setOpen(false);
-  }, [activeModelId, model.id, setOpen]);
   const [key, setKey] = useState(variables[0]?.key ?? "");
   const selected = variables.find((v) => v.key === key);
   const defaultRange = (v: number) =>
@@ -65,6 +84,8 @@ function SensitivityPanelBody() {
       setTo(b);
     }
   };
+  // The variable was removed from the model: take the first one left.
+  if (!selected && variables.length > 0) chooseVariable(variables[0].key);
 
   const data = points
     .filter((p) => p.fos != null)
@@ -72,26 +93,25 @@ function SensitivityPanelBody() {
   const failed = points.filter((p) => p.fos == null);
 
   return (
-    <PopupPanel
-      title="Sensitivity analysis"
-      onClose={() => setOpen(false)}
-      width={480}
+    <ToolWindowFrame
+      title={TITLE}
+      description={DESCRIPTION}
       footer={
         <div className="flex items-center gap-2 text-[11px]">
           {running ? (
-            <button onClick={cancel} className="btn">
+            <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
             </button>
           ) : (
             <button
               onClick={() =>
                 selected &&
-                void run(
-                  model,
-                  selected.variable,
-                  { key: selected.key, label: selected.label, value: selected.value },
-                  sensitivityValues(from, to, steps),
-                )
+                onCommand({
+                  type: "run",
+                  variable: selected.variable,
+                  info: { key: selected.key, label: selected.label, value: selected.value },
+                  values: sensitivityValues(from, to, steps),
+                })
               }
               disabled={!selected || from === to}
               className="btn btn-primary min-w-[64px]"
@@ -240,7 +260,7 @@ function SensitivityPanelBody() {
           </p>
         )}
       </div>
-    </PopupPanel>
+    </ToolWindowFrame>
   );
 }
 

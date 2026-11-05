@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReliabilityResult } from "@cslope/engine";
-import { ReliabilityPanel } from "./ReliabilityPanel";
+import { ReliabilityWindow } from "./ReliabilityDialogApp";
 import { useReliabilityStore } from "./store";
+import { reliabilityWindowState, type ReliabilityCommand } from "./window-sync";
 import { useAppStore } from "../../store/app-store";
 import { DEFAULT_MATERIAL } from "../../store/defaults";
 
@@ -12,14 +13,20 @@ vi.mock("../../utils/download", async (importOriginal) => ({
 }));
 import { downloadFile } from "../../utils/download";
 
-const run = vi.fn(async () => {});
+const run = vi.fn<(...args: unknown[]) => Promise<void>>(async () => {});
 const cancel = vi.fn();
 
-function openPanel() {
-  act(() => useReliabilityStore.getState().setOpen(true));
-  // Replace the actions after opening (setOpen itself calls cancel).
-  act(() => useReliabilityStore.setState({ run, cancel }));
+/** The window with the state the main window would send it; its commands go to the spies. */
+function Harness() {
+  useAppStore((s) => s);
+  useReliabilityStore((s) => s);
+  const state = reliabilityWindowState();
+  const onCommand = (c: ReliabilityCommand) =>
+    c.type === "run" ? void run(state.model, c.variables, c.labels, c.options) : cancel();
+  return <ReliabilityWindow state={state} onCommand={onCommand} />;
 }
+
+const renderWindow = () => render(<Harness />);
 
 function taylorResult(over: Partial<ReliabilityResult> = {}): ReliabilityResult {
   return {
@@ -49,18 +56,18 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
-  act(() => useReliabilityStore.setState({ open: false, result: null, error: null, running: false, labels: [] }));
+  act(() => useReliabilityStore.setState({ result: null, error: null, running: false, labels: [] }));
 });
 
-describe("ReliabilityPanel", () => {
-  it("renders nothing while closed", () => {
-    render(<ReliabilityPanel />);
-    expect(screen.queryByText("Probabilistic analysis")).toBeNull();
+describe("Probabilistic analysis window", () => {
+  it("waits for the main window", () => {
+    render(<ReliabilityWindow state={null} onCommand={() => {}} />);
+    expect(screen.getByText("Probabilistic analysis")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
   });
 
   it("starts with the first strength value as a random variable with a typical σ", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     expect(screen.getByText("Probabilistic analysis")).toBeInTheDocument();
     const variable = screen.getByLabelText("Variable 1") as HTMLSelectElement;
     expect(variable.selectedOptions[0].textContent).toBe("Clay: c (kPa), mean 12");
@@ -71,8 +78,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("runs the Taylor series with the chosen variables", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
     expect(run).toHaveBeenCalledTimes(1);
     const [model, variables, labels, options] = run.mock.calls[0] as unknown as [
@@ -88,8 +94,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("adds and removes variables, offering each value once", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     const add = screen.getByRole("button", { name: "+ Add variable" });
     fireEvent.click(add);
     fireEvent.click(add);
@@ -106,8 +111,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("switching the variable resets σ to the new value's default", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     const select = screen.getByLabelText("Variable 1");
     const gamma = [...(select as HTMLSelectElement).options].find((o) => o.textContent!.startsWith("Clay: γ"))!;
     fireEvent.change(select, { target: { value: gamma.value } });
@@ -116,8 +120,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("runs Monte Carlo with samples, seed and distribution", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     fireEvent.click(screen.getByLabelText("Monte Carlo"));
     expect(screen.getByLabelText("Distribution 1")).not.toBeDisabled();
     fireEvent.change(screen.getByLabelText("Distribution 1"), { target: { value: "lognormal" } });
@@ -134,16 +137,14 @@ describe("ReliabilityPanel", () => {
   });
 
   it("can skip the new search per value in the Taylor series", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
     expect((run.mock.calls[0] as unknown[])[3]).toEqual({ method: "taylor", search: false });
   });
 
   it("shows progress and cancels a running analysis", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     act(() => useReliabilityStore.setState({ running: true, progress: 0.42 }));
     expect(screen.getByText("42 %")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
@@ -153,8 +154,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("shows Taylor results with β, Pf and the terms, and exports them as CSV", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     act(() => useReliabilityStore.setState({ result: taylorResult(), labels: ["Clay: c (kPa)"] }));
     const table = within(screen.getByRole("table", { name: "Probabilistic results" }));
     expect(table.getByText("Reliability index β (lognormal)").nextSibling!.textContent).toBe("3.010");
@@ -174,8 +174,7 @@ describe("ReliabilityPanel", () => {
   });
 
   it("formats an infinite β and a tiny Pf, and shows Monte Carlo extras", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     act(() =>
       useReliabilityStore.setState({
         result: taylorResult({
@@ -204,8 +203,7 @@ describe("ReliabilityPanel", () => {
     act(() =>
       useAppStore.setState((s) => ({ options: { ...s.options, partialFactors: { gammaC: 1.5 } as never, bothDirections: true } })),
     );
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     act(() => useReliabilityStore.setState({ error: "Worker failed" }));
     expect(screen.getByText("Worker failed")).toBeInTheDocument();
     expect(screen.getByText(/Partial factors are applied/)).toBeInTheDocument();
@@ -214,16 +212,7 @@ describe("ReliabilityPanel", () => {
 
   it("says so when the model has no material values", () => {
     act(() => useAppStore.setState({ materials: [] }));
-    render(<ReliabilityPanel />);
-    openPanel();
+    renderWindow();
     expect(screen.getByText("The model has no material values to vary.")).toBeInTheDocument();
-  });
-
-  it("closes when another model becomes active", () => {
-    render(<ReliabilityPanel />);
-    openPanel();
-    act(() => useAppStore.setState({ activeModelId: "other" }));
-    expect(useReliabilityStore.getState().open).toBe(false);
-    expect(screen.queryByText("Probabilistic analysis")).toBeNull();
   });
 });

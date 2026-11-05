@@ -48,7 +48,7 @@ await step("dark", async () => {
   }
   await S((s) => s.setMode("result")); await page.waitForTimeout(300);
   const w = await openDialog("Results", "Results plot"); await shotWindow(w, "94-dark-dlg-resultsplot", false); await H.closeOthers();
-  await tab("Results"); await H.clickRibbon("Sensitivity"); await page.waitForTimeout(400); await shot("94-dark-sensitivity");
+  const sens = await openDialog("Results", "Sensitivity"); await shotWindow(sens, "94-dark-dlg-sensitivity", false); await H.closeOthers();
   await page.getByRole("button", { name: "Switch to light mode" }).click().catch(() => {});
 });
 await step("focus", async () => {

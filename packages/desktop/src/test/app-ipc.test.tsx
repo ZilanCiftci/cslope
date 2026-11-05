@@ -280,6 +280,8 @@ describe("dialog windows", () => {
     "custom-search-planes-dialog",
     "options-dialog",
     "view-settings-dialog",
+    "sensitivity-dialog",
+    "reliability-dialog",
   ];
 
   it.each(DIALOGS)("renders only the dialog for #%s and asks the main window for its state", (hash) => {

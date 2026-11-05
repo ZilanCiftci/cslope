@@ -72,9 +72,9 @@ describe("probabilistic analysis", () => {
     expect(useReliabilityStore.getState()).toMatchObject({ running: false, result: null, error: "no surface" });
   });
 
-  it("closing the panel drops the result of its model", async () => {
+  it("a reset (window closed, another model) drops the result", async () => {
     await useReliabilityStore.getState().run(activeModel(), [{ material: 0, field: "cohesion", sd: 1 }], ["c"], { method: "taylor" });
-    useReliabilityStore.getState().setOpen(false);
+    useReliabilityStore.getState().reset();
     expect(useReliabilityStore.getState()).toMatchObject({ result: null, labels: [], error: null });
   });
 

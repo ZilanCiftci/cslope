@@ -108,6 +108,7 @@ The first public release.
 
 ### Interface
 
+- Sensitivity and Probabilistic open in windows of their own, like Results plot, instead of panels over the ribbon: they can stay open beside the model and follow its edits, and their analyses still run in the main window.
 - A failed run shows its error over the edit canvas and in the status bar, with a shortcut to the search limits when no slip surface was found. F5 or Ctrl+Enter runs the analysis; Escape closes the dialog windows and Model properties. A new project starts with a neutral "Model 1" instead of an example's name and title.
 - One analysis runs on several cores (one worker per core, up to 8), with the same result as on one. Run all analyzes several models at a time, the longest expected first, on workers kept for the next run.
 - A run with finite elements shows the limit equilibrium result as soon as it is ready while the finite elements go on, and the status bar names their stage with the time since the run started: "Finite elements: strength reduction, trial F = 1.23 (5)", "upper bound, mesh 2 of up to 4", "Davis B lower bound" (the engine reports each stage as it starts; the results are the same). Cancel stops the run at any stage.

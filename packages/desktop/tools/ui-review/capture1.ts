@@ -84,7 +84,7 @@ await page.waitForFunction(() => ["done", "error"].includes((window as any).__CS
 await S((s) => s.setMode("result"));
 await page.waitForTimeout(800);
 await step("results main", async () => { await tab("Results"); await shot(page, "20-results-tab"); });
-for (const [text, name] of [["Results plot", "resultsplot"], ["Sheet settings", "viewsettings"]] as const) {
+for (const [text, name] of [["Results plot", "resultsplot"], ["Sheet settings", "viewsettings"], ["Sensitivity", "sensitivity"], ["Probabilistic", "probabilistic"]] as const) {
   await step("dialog " + name, async () => {
     await tab("Results"); const before = others().length; await clickRibbon(text);
     const w = await waitNewWindow(before);
@@ -92,7 +92,7 @@ for (const [text, name] of [["Results plot", "resultsplot"], ["Sheet settings", 
     await shotWindow(w, `21-dlg-${name}`);
   });
 }
-for (const [text, name] of [["Sensitivity", "sensitivity"], ["Probabilistic", "probabilistic"], ["Display", "display"], ["More export options", "export-menu"]] as const) {
+for (const [text, name] of [["Display", "display"], ["More export options", "export-menu"]] as const) {
   await step("popup " + name, async () => { await tab("Results"); await clickRibbon(text); await page.waitForTimeout(500); await shot(page, `22-popup-${name}`); });
 }
 await step("help about", async () => { await tab("Help"); await clickRibbon("About"); await page.waitForTimeout(500); await shot(page, "30-about"); });

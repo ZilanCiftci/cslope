@@ -5,7 +5,7 @@ section: Analysis
 order: 3
 ---
 
-Both analyses build on a finished model. Open them from **Results › Plots**.
+Both analyses build on a finished model. Open them from **Results › Plots**; each opens in a window of its own, which can stay open beside the model. The analyses run in the main window with the model as it is when you click **Run**, and the window follows edits of the model. Switching to another model, or closing the window, stops a run and clears its results.
 
 ## Sensitivity analysis
 
@@ -16,7 +16,7 @@ Both analyses build on a finished model. Open them from **Results › Plots**.
 3. Set **Number of values**, the number of analyses between them (2–101, default 9).
 4. Click **Run**.
 
-<Figure src="/media/tutorials/probabilistic/01-sensitivity.png" alt="The sensitivity panel with a chart of the factor of safety against unit weight" caption="A sensitivity analysis of the unit weight." />
+<Figure src="/media/tutorials/probabilistic/01-sensitivity.png" alt="The Sensitivity analysis window with a chart of the factor of safety against unit weight" caption="A sensitivity analysis of the unit weight." />
 
 The chart shows the factor of safety against the value, with a line at 1.0. The table lists the values. **Export CSV** saves them (also with `;` as the separator and `,` as the decimal mark, for spreadsheets in many European locales).
 
@@ -30,7 +30,7 @@ The chart shows the factor of safety against the value, with a line at 1.0. The 
 
 ### Variables
 
-The panel starts with one variable. Click **+ Add variable** for more, and choose a material property in each row. Its mean is the value in the model. Enter its standard deviation **σ** (the default corresponds to a coefficient of variation of 5 % for unit weights, 10 % for friction angles and 25 % for other properties) and its **Distribution**, normal or lognormal. The distribution applies to Monte Carlo only; the Taylor series uses just the mean and σ.
+The window starts with one variable. Click **+ Add variable** for more, and choose a material property in each row. Its mean is the value in the model. Enter its standard deviation **σ** (the default corresponds to a coefficient of variation of 5 % for unit weights, 10 % for friction angles and 25 % for other properties) and its **Distribution**, normal or lognormal. The distribution applies to Monte Carlo only; the Taylor series uses just the mean and σ.
 
 ### Methods
 

@@ -30,8 +30,6 @@ import {
   paperPngDataUrl,
   setPaperDrawSource,
 } from "../../../features/export/paper-png";
-import { useSensitivityStore } from "../../../features/sensitivity/store";
-import { useReliabilityStore } from "../../../features/reliability/store";
 
 const store = () => useAppStore.getState();
 const rvs = () => store().resultViewSettings;
@@ -110,14 +108,13 @@ describe("ResultsMenu", () => {
     expect(alert.mock.calls[0][0]).toMatch(/desktop app/);
   });
 
-  it("opens the sensitivity and probabilistic panels", async () => {
-    useSensitivityStore.getState().setOpen(false);
-    useReliabilityStore.getState().setOpen(false);
+  it("explains that the sensitivity and probabilistic windows need the desktop app in a browser", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
     await userEvent.click(screen.getByTitle("Sensitivity"));
     await userEvent.click(screen.getByTitle("Probabilistic"));
-    expect(useSensitivityStore.getState().open).toBe(true);
-    expect(useReliabilityStore.getState().open).toBe(true);
+    expect(alert).toHaveBeenCalledTimes(2);
+    expect(alert.mock.calls[1][0]).toMatch(/desktop app/);
   });
 
   it("toggles the display options", async () => {

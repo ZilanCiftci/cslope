@@ -49,6 +49,10 @@ export interface SceneSetup {
   waitMs?: number;
   /** In the captured dialog window: choose options, as [field label, option text]. */
   windowSelect?: [string, string][];
+  /** In the captured dialog window, after windowSelect: click buttons by their exact text. */
+  windowClick?: string[];
+  /** In the captured dialog window: wait until this text appears (e.g. the end of a run). */
+  windowWaitForText?: string;
 }
 
 export interface SceneOutput {

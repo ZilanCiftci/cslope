@@ -588,6 +588,58 @@ function createResultsPlotWindow() {
   }
 }
 
+// Tool windows (Sensitivity, Probabilistic analysis). The main window
+// runs their analyses: it gets their commands and sends them the model and
+// the results, and is told when one closes so it stops a run.
+type ToolWindow = "sensitivity" | "reliability";
+const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number }> = {
+  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 540, height: 720 },
+  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 560, height: 760 },
+};
+const toolWins = new Map<ToolWindow, BrowserWindow>();
+
+function createToolWindow(tool: ToolWindow) {
+  if (!win) return;
+
+  const open = toolWins.get(tool);
+  if (open && !open.isDestroyed()) {
+    open.show();
+    open.focus();
+    return;
+  }
+
+  const { title, hash, width, height } = TOOL_WINDOWS[tool];
+  const child = new BrowserWindow({
+    width,
+    height,
+    minWidth: 480,
+    minHeight: 420,
+    title,
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  toolWins.set(tool, child);
+
+  child.on("closed", () => {
+    if (toolWins.get(tool) === child) toolWins.delete(tool);
+    if (win && !win.isDestroyed()) win.webContents.send(`${tool}:closed`);
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    child.loadURL(`${VITE_DEV_SERVER_URL}#${hash}`);
+  } else {
+    child.loadFile(path.join(RENDERER_DIST, "index.html"), { hash });
+  }
+}
+
 function createSearchLimitsWindow() {
   if (!win) return;
 
@@ -845,6 +897,8 @@ ipcMain.on("window:openCustomSearchPlanesDialog", () =>
   createCustomSearchPlanesWindow(),
 );
 ipcMain.on("window:openOptionsDialog", () => createOptionsWindow());
+ipcMain.on("window:openSensitivityDialog", () => createToolWindow("sensitivity"));
+ipcMain.on("window:openReliabilityDialog", () => createToolWindow("reliability"));
 ipcMain.on("window:openViewSettingsDialog", () => createViewSettingsWindow());
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
@@ -1051,6 +1105,26 @@ ipcMain.on("resultsPlot:changed", (event, state) => {
     resultsPlotWin?.webContents.send("resultsPlot:changed", state);
   }
 });
+
+// ── Tool windows sync IPC (main window <-> Sensitivity, Probabilistic) ──
+
+for (const tool of Object.keys(TOOL_WINDOWS) as ToolWindow[]) {
+  const fromTool = (event: Electron.IpcMainEvent) =>
+    event.sender === toolWins.get(tool)?.webContents;
+  ipcMain.on(`${tool}:requestState`, (event) => {
+    if (fromTool(event)) win?.webContents.send(`${tool}:requestState`);
+  });
+  ipcMain.on(`${tool}:command`, (event, command) => {
+    if (fromTool(event)) win?.webContents.send(`${tool}:command`, command);
+  });
+  for (const channel of ["stateResponse", "changed"]) {
+    ipcMain.on(`${tool}:${channel}`, (event, state) => {
+      if (event.sender === win?.webContents) {
+        toolWins.get(tool)?.webContents.send(`${tool}:${channel}`, state);
+      }
+    });
+  }
+}
 
 // ── Analysis windows sync IPC (main window <-> analysis windows) ─────────
 
