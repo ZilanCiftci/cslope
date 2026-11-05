@@ -11,7 +11,7 @@ The result view is a print sheet: what you see is what the PDF export contains.
 
 ## Paper and extents
 
-Click an empty part of the sheet to select the paper and edit it under **Properties** in the sidebar, or open **Results › Display › Settings** (Paper, Grid & Ticks, Plot Extents):
+Click an empty part of the sheet to select the paper and edit it under **Properties** in the sidebar, or open **Results › Display › Settings** (Paper, Grid & ticks, Plot extents):
 
 - **Paper size** A4 to A0 and **orientation** portrait or landscape.
 - **Plot extents**: *Left x*, *Right x*, *Bottom y* and *Top y* (m), the part of the model shown on the sheet. The scale of the drawing follows from the extents and the paper. **Use model bounds**, in the sidebar Properties of the selected paper, fits the whole model.
@@ -38,7 +38,7 @@ Text annotations can show values from the model. They are replaced when the shee
 
 | Field | Shows |
 | --- | --- |
-| `#Title`, `#Subtitle`, `#Client`, `#ProjectNumber`, `#Revision`, `#Author`, `#Checker`, `#Date`, `#Description` | The model's project information (right-click the model in the Explorer, then *Model Properties…*) |
+| `#Title`, `#Subtitle`, `#Client`, `#ProjectNumber`, `#Revision`, `#Author`, `#Checker`, `#Date`, `#Description` | The model's project information (right-click the model in the Explorer, then *Model properties…*) |
 | `#Method` | The analysis method |
 | `#FOS`, `#MinFOS` | The factor of safety |
 | `#FOS3D` | The smallest 3D factor of safety after SGI Vägledning 8 ([3D effects](/docs/analysis#3d-effects-temporary-slopes)); *N/A* when the analysis has no 3D result |
@@ -51,9 +51,9 @@ Text annotations can show values from the model. They are replaced when the shee
 
 A reference line is a line in model coordinates drawn over the result: a slip circle read from another program's printout, a slip surface interpreted from a paper for a benchmark. It is drawn under the critical surface in a color no surface uses, in the PDF and PNG exports too.
 
-**Results › Annotations › Reference line** adds a **Polyline** or a **Circle** through the middle of the sheet. A circle is drawn as the arc below the ground, like a slip circle (*Drawn: Whole circle* in the properties shows all of it). **Options › Custom search planes › + Reference line** copies a custom search plane as a reference line labeled *Custom surface n*; so does *Add as Reference Line* in the right-click menu of a custom plane in the edit view.
+**Results › Annotations › Reference line** adds a **Polyline** or a **Circle** through the middle of the sheet. A circle is drawn as the arc below the ground, like a slip circle (*Drawn: Whole circle* in the properties shows all of it). **Options › Custom search planes › + Reference line** copies a custom search plane as a reference line labeled *Custom surface n*; so does *Add as reference line* in the right-click menu of a custom plane in the edit view.
 
-Click a line to select it, then drag its points, a circle's center or its rim; drag the line itself to move it whole. Right-click a polyline to **Add Point** on a segment or **Delete Point** at a vertex, or to delete the line; <Kbd>Delete</Kbd> removes the selection. Each drag is one undo step. The **Properties** section edits the label (drawn near the line, for example `F = 0.664 (other program)`), the points as `x, y; x, y; …` or the center and radius, the color (*Theme* follows the light or dark theme), the dash, the width and whether the line also shows in the edit view.
+Click a line to select it, then drag its points, a circle's center or its rim; drag the line itself to move it whole. Right-click a polyline to **Add point** on a segment or **Delete point** at a vertex, or to delete the line; <Kbd>Delete</Kbd> removes the selection. Each drag is one undo step. The **Properties** section edits the label (drawn near the line, for example `F = 0.664 (other program)`), the points as `x, y; x, y; …` or the center and radius, the color (*Theme* follows the light or dark theme), the dash, the width and whether the line also shows in the edit view.
 
 Reference lines belong to the model: they are saved with it and left out of view templates.
 

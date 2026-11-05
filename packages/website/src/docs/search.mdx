@@ -13,8 +13,8 @@ cSlope looks for the **critical slip surface**: the one with the lowest factor o
 
 Open **Model › Analysis › Search limits** and tick **Restrict entry/exit ranges** to choose where surfaces may start and end:
 
-- **Entry Range (crest side)**: Min X and Max X of the points where surfaces enter the ground.
-- **Exit Range (toe side)**: Min X and Max X of the points where they leave it.
+- **Entry range (crest side)**: Min X and Max X of the points where surfaces enter the ground.
+- **Exit range (toe side)**: Min X and Max X of the points where they leave it.
 
 <Figure src="/media/tutorials/first-analysis/05-search-limits-canvas.png" alt="A slope with the entry range on the crest and the exit range at the toe" caption="The entry range (green) and the exit range (red) on the canvas." />
 
@@ -79,8 +79,8 @@ The critical surface often has flatter end segments than the Rankine angles, esp
 
 Open **Model › Analysis › Custom planes** to analyze surfaces of your own:
 
-- **+ Add Search Plane** adds a circle, given by its center (cx, cy) and radius R.
-- **+ Add Non-circular Surface** adds a polyline through the soil. Enter its points as `x, y; x, y; …` with x increasing, for example `10, 5; 18, 1; 30, 2; 38, 9`. The ends are extended to the ground.
+- **+ Add circle** adds a circle, given by its center (cx, cy) and radius R.
+- **+ Add non-circular surface** adds a polyline through the soil. Enter its points as `x, y; x, y; …` with x increasing, for example `10, 5; 18, 1; 30, 2; 38, 9`. The ends are extended to the ground.
 
 Custom surfaces are analyzed together with the search. Tick **Only analyze these surfaces (skip the search)** to analyze only your own surfaces, for example to check a published case or a surface found in the field.
 
@@ -90,7 +90,7 @@ The result summary lists them as *Custom surface 1*, *2*, …, the circles first
 
 A surface is skipped when it:
 
-- enters bedrock (Impenetrable) or has a slice base in High Strength material,
+- enters bedrock (Impenetrable) or has a slice base in high strength material,
 - has no driving force in the sliding direction,
 - does not reach equilibrium,
 - is shallower than **Min. slip depth** or smaller than **Min. slip area** (surfaces shallower than 0.1 % of the model height are always skipped),

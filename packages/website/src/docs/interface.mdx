@@ -22,9 +22,9 @@ The **Explorer** (the list of models) is on the left; in result mode the **resul
 
 | Tab | Buttons |
 | --- | --- |
-| **File** | New, Open, Import (DXF file, .gsz file, .stix file, .sli/.slim/.slmd file), Export (.gsz file, .stix file, .slim file), Save, Save As, Exit |
+| **File** | New, Open, Import (DXF file, .gsz file, .stix file, .sli/.slim/.slmd file), Export (.gsz file, .stix file, .slim file), Save, Save as, Exit |
 | **Model** | Boundaries (Exterior, Interior), Materials (Materials, Assign), Loads & support (UDL, Line loads, Reinforcement), Water & parameters (Piezometric lines, Parameters), Analysis (Search limits, Custom planes, Options) |
-| **Results** | Plots (Results Plot, Sensitivity, Probabilistic), Display (Surfaces, Slices, FOS label, Center, Soil colors, Plastic zone and FE mesh with a finite element result, Settings), Annotations (Text, Plot, Material table, Color bar, Reference line), Templates (Export template, Import template), Export (PDF, with PNG and slice data in its menu) |
+| **Results** | Plots (Results plot, Sensitivity, Probabilistic), Display (Surfaces, Slices, FOS label, Center, Soil colors, Plastic zone and FE mesh with a finite element result, Settings), Annotations (Text, Plot, Material table, Color bar, Reference line), Templates (Export template, Import template), Export (PDF, with PNG and slice data in its menu) |
 | **Help** | Resources (Documentation, Shortcuts, Examples, Benchmarks, About) |
 
 Hover over a button to see its shortcut, if it has one. After an analysis the ribbon shows the **Results** tab; back in edit mode it shows the **Model** tab again.
@@ -56,12 +56,12 @@ A project holds one or more **models**, listed in the Explorer under *Models*. E
 - The dot before each model shows its run state: green analyzed, blue running, red failed, hollow gray not analyzed.
 - Double-click a model to rename it.
 - Drag models to reorder them.
-- <Kbd>Ctrl</Kbd>+click or <Kbd>Shift</Kbd>+click to select several models; right-click them for *Delete Selected*.
-- Right-click for *Model Properties…*, *Rename*, *Duplicate* and *Delete*.
+- <Kbd>Ctrl</Kbd>+click or <Kbd>Shift</Kbd>+click to select several models; right-click them for *Delete selected*.
+- Right-click for *Model properties…*, *Rename*, *Duplicate* and *Delete*.
 
-*Duplicate* is the way to try a variant of a model, for example with a different water level, and compare the results. *File › Import* also adds models: one from a DXF file, and one per analysis from a .gsz, .stix, .sli, .slim or .slmd file. A window then lists what was imported and what did not carry over, with a **Copy** button; the notes stay with each model under *Model Properties…*. An import cannot be undone: delete the imported models to remove them. *File › Export* writes the active model as a .gsz, .stix or .slim file; its window lists what the format does not carry.
+*Duplicate* is the way to try a variant of a model, for example with a different water level, and compare the results. *File › Import* also adds models: one from a DXF file, and one per analysis from a .gsz, .stix, .sli, .slim or .slmd file. A window then lists what was imported and what did not carry over, with a **Copy** button; the notes stay with each model under *Model properties…*. An import cannot be undone: delete the imported models to remove them. *File › Export* writes the active model as a .gsz, .stix or .slim file; its window lists what the format does not carry.
 
-**Model Properties…** opens the project information of the model: title, subtitle, client, project number, revision, date, author, checker and notes, and for an imported model the import notes (read-only). Text annotations on the result sheet can show these fields (see [Reporting](/docs/reporting)).
+**Model properties…** opens the project information of the model: title, subtitle, client, project number, revision, date, author, checker and notes, and for an imported model the import notes (read-only). Text annotations on the result sheet can show these fields (see [Reporting](/docs/reporting)).
 
 ## Undo and redo
 
