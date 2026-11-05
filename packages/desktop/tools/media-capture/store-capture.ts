@@ -193,7 +193,6 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
       (document.activeElement as HTMLElement | null)?.blur?.();
       store.getState().setSelectedResultObject?.(null);
       store.getState().setSelectedAnnotations?.([]);
-      store.getState().setActiveSection?.("Exterior Boundary");
       if (model) store.getState().loadProject({ models: [model], activeModelId: model.id });
       else store.getState().loadExamples();
       const state = store.getState();
@@ -203,6 +202,9 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
         throw new Error(`Benchmark "${benchmarkName}" not found. Available: ${names}`);
       }
       store.getState().switchModel(target.id);
+      // The edit view shows the exterior selected, its points labelled
+      // (what an open Exterior window used to show).
+      store.getState().selectCanvasObject?.({ type: "exterior" });
       if (setup.onlyModel) {
         for (const m of store.getState().models) if (m.id !== target.id) store.getState().deleteModel(m.id);
       }

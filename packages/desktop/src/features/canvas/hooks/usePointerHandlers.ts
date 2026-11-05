@@ -970,9 +970,13 @@ export function usePointerHandlers(deps: PointerDeps) {
       setDragging(false);
       stopAutoPan();
       (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-      if (click && press && !press.moved && !drag?.moved) handleEditClick(press);
+      if (click && press && !press.moved && !drag?.moved) {
+        handleEditClick(press);
+        // The hover follows the new selection (the selected object first).
+        updateEditHover(press.candidates);
+      }
     },
-    [commitDragHistoryBatch, handleEditClick, stopAutoPan],
+    [commitDragHistoryBatch, handleEditClick, stopAutoPan, updateEditHover],
   );
 
   const handlePointerUp = useCallback(

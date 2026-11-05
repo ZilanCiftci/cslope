@@ -11,9 +11,10 @@ const MENU_STYLE = {
   boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
 } as const;
 
-/** The box a menu must stay in: the canvas area it is placed in (it clips what sticks out). */
+/** The box a menu must stay in: the canvas area the menu is placed in (it clips what sticks out). */
 function boundsOf(el: HTMLElement): DOMRect {
-  const host = (el.closest("[data-menu-bounds]") as HTMLElement | null) ?? el.offsetParent ?? document.body;
+  const menu = el.closest("[data-context-menu]") as HTMLElement | null;
+  const host = (menu?.offsetParent as HTMLElement | null) ?? document.body;
   return host.getBoundingClientRect();
 }
 
@@ -25,7 +26,7 @@ function SubMenu({ label, items }: { label: string; items: ContextMenuItem[] }) 
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    const b = boundsOf(el.parentElement ?? el);
+    const b = boundsOf(el);
     setFlip({ left: r.right > b.right, up: r.bottom > b.bottom });
   }, []);
   return (
@@ -102,6 +103,7 @@ function Menu({ menu }: { menu: ContextMenuState }) {
     <div
       ref={ref}
       role="menu"
+      data-context-menu
       className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
       style={{ ...at, ...MENU_STYLE }}
       onMouseDown={(e) => e.stopPropagation()}
