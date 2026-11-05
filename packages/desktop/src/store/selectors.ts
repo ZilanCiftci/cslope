@@ -42,13 +42,6 @@ export function useCanvasModelState() {
   const reinforcements = useAppStore((s) => s.reinforcements);
   const piles = useAppStore((s) => s.piles);
   const piezometricLine = useAppStore((s) => s.piezometricLine);
-  const selectedPointIndex = useAppStore((s) => s.selectedPointIndex);
-  const selectedMaterialBoundaryId = useAppStore(
-    (s) => s.selectedMaterialBoundaryId,
-  );
-  const interiorBoundariesDialogOpen = useAppStore(
-    (s) => s.interiorBoundariesDialogOpen,
-  );
   const regionMaterials = useAppStore((s) => s.regionMaterials);
   const assigningMaterialId = useAppStore((s) => s.assigningMaterialId);
   const selectedRegionKey = useAppStore((s) => s.selectedRegionKey);
@@ -78,9 +71,6 @@ export function useCanvasModelState() {
     reinforcements,
     piles,
     piezometricLine,
-    selectedPointIndex,
-    selectedMaterialBoundaryId,
-    interiorBoundariesDialogOpen,
     regionMaterials,
     assigningMaterialId,
     selectedRegionKey,

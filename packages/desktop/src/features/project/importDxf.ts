@@ -1,5 +1,6 @@
 import { inferOrientationFromCoordinates } from "@cslope/engine";
 import { useAppStore } from "../../store/app-store";
+import { importedGeometryLocks } from "../../store/canvas-selection";
 import { dxfToGeometry, parseDxf } from "../../utils/dxf";
 
 /**
@@ -21,6 +22,8 @@ export function importDxf(text: string, fileName: string): string {
   for (const line of geometry.waterLines) s.addPiezoLine(line);
   // The new model's default search limits belong to the default geometry.
   s.setAnalysisLimits({ enabled: false });
+  // The imported geometry starts locked against stray drags (the status bar offers to unlock it).
+  s.setModelLocks(importedGeometryLocks(useAppStore.getState().materialBoundaries.map((b) => b.id)));
   useAppStore.setState({ _pendingFitToScreen: true });
   // One import, not a series of edits to undo one by one (as after Open).
   useAppStore.temporal.getState().clear();

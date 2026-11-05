@@ -63,6 +63,7 @@ export function projectContentSignature(state: AppState): string {
             blockSearchObjects: state.blockSearchObjects,
             waternet: state.waternet,
             earlierStage: state.earlierStage,
+            locks: state.locks,
             options: state.options,
             analysisLimits: state.analysisLimits,
             resultViewSettings: state.resultViewSettings,
@@ -77,6 +78,8 @@ export function projectContentSignature(state: AppState): string {
       reinforcements: entry.reinforcements ?? [],
       piles: entry.piles ?? [],
       blockSearchObjects: entry.blockSearchObjects ?? [],
+      // No locks and an empty set of locks are the same.
+      locks: entry.locks && Object.keys(entry.locks).length > 0 ? entry.locks : undefined,
       ...(entry.resultViewSettings ? { resultViewSettings: withoutPaperViewport(entry.resultViewSettings) } : {}),
     };
     for (const key of VOLATILE_FIELDS) delete content[key];

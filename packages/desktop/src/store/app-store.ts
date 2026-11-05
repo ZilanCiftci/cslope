@@ -6,6 +6,8 @@ import { marksClearOfTitleBlock, modelViewLock, sameViewLock, viewLockContains }
 import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
+import { createCanvasSelectionSlice, selectionMirror } from "./slices/canvasSelectionSlice";
+import { sameSelection, validSelection } from "./canvas-selection";
 import { createGeometrySlice } from "./slices/geometrySlice";
 import { createLayoutSlice } from "./slices/layoutSlice";
 import { createLoadsSlice } from "./slices/loadsSlice";
@@ -50,6 +52,7 @@ type UndoableState = Pick<
   | "analysisLimits"
   | "options"
   | "resultViewSettings"
+  | "locks"
 >;
 
 /** The undo history (set once the store exists). */
@@ -67,6 +70,7 @@ export const useAppStore = create<AppState>()(
       ...createViewportSlice(...args),
       ...createResultViewSlice(...args),
       ...createCanvasToolbarSlice(...args),
+      ...createCanvasSelectionSlice(...args),
     }),
     {
       partialize: (state): UndoableState => ({
@@ -90,6 +94,7 @@ export const useAppStore = create<AppState>()(
         analysisLimits: state.analysisLimits,
         options: state.options,
         resultViewSettings: state.resultViewSettings,
+        locks: state.locks,
       }),
       limit: 50,
       // Typing in a field is one step, not one per keystroke.
@@ -113,6 +118,28 @@ useAppStore.temporal.getState().clear();
 
 // The project the app starts with counts as saved.
 markProjectClean(useAppStore.getState());
+
+// The canvas selection follows the model: an object deleted (in a window,
+// by undo, by another model) is no longer selected, a deleted point no
+// longer picked.
+let selectionFollowsModel = true;
+
+/** Off in a dialog window, whose store holds only part of the model. */
+export function setSelectionFollowsModel(enabled: boolean): void {
+  selectionFollowsModel = enabled;
+}
+
+useAppStore.subscribe((state) => {
+  if (!selectionFollowsModel) return;
+  const valid = validSelection(state, state.canvasSelection);
+  if (!sameSelection(valid, state.canvasSelection)) {
+    useAppStore.setState({
+      canvasSelection: valid,
+      canvasSelectionCycle: valid ? state.canvasSelectionCycle : null,
+      ...selectionMirror(valid, state),
+    });
+  }
+});
 
 /** Set while an undo or redo restores a step: the frame it restores is kept as it was. */
 let restoringHistory = false;

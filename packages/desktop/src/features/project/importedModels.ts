@@ -2,6 +2,7 @@ import { buildSlope, toCanonicalSlopeDefinition, type AnalysisOptions, type Slop
 import { useAppStore } from "../../store/app-store";
 import { modelFromDefinition } from "../../store/definition-model";
 import { nextId } from "../../store/helpers";
+import { importedGeometryLocks } from "../../store/canvas-selection";
 
 /** A model read from another program's project file. */
 export interface ImportedModel {
@@ -72,10 +73,15 @@ export function plural(n: number, word: string, plural = `${word}s`): string {
  * so.
  */
 export function addImportedModels(imports: ImportedModel[], fileName: string, surface: string): string | null {
-  const entries = imports.map((imp) => ({
-    ...modelFromDefinition(imp.definition, { id: nextId("model"), name: imp.name, options: imp.options }),
-    importNotes: [`Imported from ${fileName}.`, ...imp.notes],
-  }));
+  const entries = imports.map((imp) => {
+    const model = modelFromDefinition(imp.definition, { id: nextId("model"), name: imp.name, options: imp.options });
+    return {
+      ...model,
+      importNotes: [`Imported from ${fileName}.`, ...imp.notes],
+      // The imported geometry starts locked against stray drags (the status bar offers to unlock it).
+      locks: importedGeometryLocks(model.materialBoundaries.map((b) => b.id)),
+    };
+  });
   useAppStore.getState().saveCurrentModel();
   useAppStore.setState((s) => ({ models: [...s.models, ...entries] }));
   useAppStore.getState().switchModel(entries[0].id);

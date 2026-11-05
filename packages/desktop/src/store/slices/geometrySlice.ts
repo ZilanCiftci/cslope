@@ -71,15 +71,18 @@ export const createGeometrySlice: SliceCreator<GeometrySlice> = (set, get) => ({
   earlierStage: undefined,
   selectedPointIndex: null,
   selectedMaterialBoundaryId: null,
-  interiorBoundariesDialogOpen: false,
   assigningMaterialId: null,
   selectedRegionKey: null,
 
-  setSelectedPoint: (index) => set({ selectedPointIndex: index }),
+  // The exterior's selected point is the canvas selection's.
+  setSelectedPoint: (index) => {
+    const sel = get().canvasSelection;
+    if (index !== null) get().selectCanvasObject({ type: "exterior" }, index);
+    else if (sel?.object.type === "exterior") get().selectCanvasObject(sel.object, null);
+    else set({ selectedPointIndex: null });
+  },
   setSelectedMaterialBoundary: (boundaryId) =>
     set({ selectedMaterialBoundaryId: boundaryId }),
-  setInteriorBoundariesDialogOpen: (open) =>
-    set({ interiorBoundariesDialogOpen: open }),
   setOrientation: (orientation) => {
     set((s) => syncActiveModel(s, { orientation }));
     get().invalidateAnalysis();

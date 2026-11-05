@@ -463,7 +463,13 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
   },
 
   selectedCustomPlaneId: null,
-  setSelectedCustomPlane: (id) => set({ selectedCustomPlaneId: id }),
+  // The picked plane is the canvas selection's.
+  setSelectedCustomPlane: (id) => {
+    const sel = get().canvasSelection;
+    if (id !== null) get().selectCanvasObject({ type: "customPlane", id });
+    else if (sel?.object.type === "customPlane") get().clearCanvasSelection();
+    else set({ selectedCustomPlaneId: null });
+  },
 
   setCustomPlanesOnly: (value) => {
     set((s) => ({

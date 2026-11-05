@@ -16,9 +16,10 @@ import {
 import type { SliceCreator } from "../helpers";
 import { cloneData, nextId } from "../helpers";
 import { cloneAnnotation } from "../../features/annotations/reference";
-import type { ModelEntry, ModelsSlice } from "../types";
+import type { ModelEntry, ModelLocks, ModelsSlice } from "../types";
 import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
+import { remapLocks } from "../canvas-selection";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
   const clone = globalThis.structuredClone
@@ -103,11 +104,20 @@ export const mapModelToState = (model: ModelEntry) => ({
   progress: model.progress ?? 0,
   result: model.result ?? null,
   errorMessage: model.errorMessage ?? null,
+  locks: model.locks ?? {},
   selectedPointIndex: null,
+  selectedCustomPlaneId: null,
+  canvasSelection: null,
+  canvasSelectionCycle: null,
   assigningMaterialId: null,
   selectedRegionKey: null,
   selectedAnnotationIds: [],
 });
+
+/** The locks as a model entry keeps them: absent when nothing is locked. */
+export function locksEntry(locks: ModelLocks): ModelLocks | undefined {
+  return Object.keys(locks).length > 0 ? locks : undefined;
+}
 
 export const INITIAL_MODEL_ID = "model-initial";
 /** Name of the one model in a new project. */
@@ -217,6 +227,13 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     const bndIdMap = new Map<string, string>();
     const matIdMap = new Map<string, string>();
     const lineIdMap = new Map<string, string>();
+    // The loads', elements' and planes' new ids, for the copy's locks.
+    const objectIdMap = new Map<string, string>();
+    const newObjectId = (prefix: string, old: string) => {
+      const next = nextId(prefix);
+      objectIdMap.set(old, next);
+      return next;
+    };
     const copy: ModelEntry = {
       ...source,
       id: newId,
@@ -283,7 +300,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       },
       udls: source.udls.map((u) => ({
         ...u,
-        id: nextId("udl"),
+        id: newObjectId("udl", u.id),
         ...(u.excessPorePressure
           ? {
               excessPorePressure: u.excessPorePressure.map((e) => ({
@@ -293,15 +310,15 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             }
           : {}),
       })),
-      lineLoads: source.lineLoads.map((l) => ({ ...l, id: nextId("ll") })),
+      lineLoads: source.lineLoads.map((l) => ({ ...l, id: newObjectId("ll", l.id) })),
       reinforcements: (source.reinforcements ?? []).map((r) => ({
         ...r,
-        id: nextId("reinf"),
+        id: newObjectId("reinf", r.id),
       })),
-      piles: (source.piles ?? []).map((p) => ({ ...p, id: nextId("pile") })),
+      piles: (source.piles ?? []).map((p) => ({ ...p, id: newObjectId("pile", p.id) })),
       customSearchPlanes: (source.customSearchPlanes ?? []).map((p) => ({
         ...p,
-        id: nextId("csp"),
+        id: newObjectId("csp", p.id),
       })),
       customPlanesOnly: source.customPlanesOnly ?? false,
       blockSearchObjects: (source.blockSearchObjects ?? []).map((o) => ({
@@ -349,6 +366,9 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       errorMessage: null,
       mode: "edit",
     };
+    const locks = remapLocks(source.locks, new Map([...bndIdMap, ...lineIdMap, ...objectIdMap]));
+    if (locks) copy.locks = locks;
+    else delete copy.locks;
 
     set((st) => ({ models: [...st.models, copy] }));
     get().switchModel(newId);
@@ -416,6 +436,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             blockSearchObjects: s.blockSearchObjects,
             waternet: s.waternet,
             earlierStage: s.earlierStage,
+            locks: locksEntry(s.locks),
             options: s.options,
             analysisLimits: s.analysisLimits,
             editViewOffset: s.editViewOffset,
@@ -465,6 +486,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               blockSearchObjects: s.blockSearchObjects,
               waternet: s.waternet,
               earlierStage: s.earlierStage,
+              locks: locksEntry(s.locks),
               options: s.options,
               analysisLimits: s.analysisLimits,
               editViewOffset: s.editViewOffset,

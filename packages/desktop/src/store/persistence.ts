@@ -23,6 +23,7 @@ import { nextId } from "./helpers";
 import { clampMinorTicks } from "../utils/ruler";
 import { isFosSchemeId, isHexColor } from "../utils/fos-color";
 import { normalizeReferenceAnnotation } from "../features/annotations/reference";
+import { normalizeLocks } from "./canvas-selection";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -247,7 +248,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     coordinates,
   );
 
-  return {
+  const entry: ModelEntry = {
     id: model.id,
     name: typeof model.name === "string" ? model.name : DEFAULT_MODEL_NAME,
     orientation,
@@ -385,6 +386,17 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         ? model.mode
         : undefined,
   };
+  // Absent in older files (nothing locked); locks of objects the model
+  // does not have are dropped.
+  const locks = normalizeLocks(model.locks, {
+    boundaries: new Set(entry.materialBoundaries.map((b) => b.id)),
+    waterLines: new Set(entry.piezometricLine.lines.map((l) => l.id)),
+    loads: new Set([...entry.udls, ...entry.lineLoads].map((l) => l.id)),
+    reinforcement: new Set([...(entry.reinforcements ?? []), ...(entry.piles ?? [])].map((r) => r.id)),
+    customSurfaces: new Set(entry.customSearchPlanes.map((p) => p.id)),
+  });
+  if (locks) entry.locks = locks;
+  return entry;
 }
 
 /**

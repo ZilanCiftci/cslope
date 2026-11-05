@@ -498,6 +498,72 @@ export interface BackgroundImage {
   order: number;
 }
 
+/**
+ * An object on the edit canvas that can be selected: the exterior boundary
+ * and the search limits (one each), or an object with an id.
+ */
+export type CanvasObjectRef =
+  | { type: "exterior" }
+  | { type: "searchLimits" }
+  | {
+      type: "boundary" | "waterLine" | "udl" | "lineLoad" | "reinforcement" | "pile" | "customPlane";
+      id: string;
+    };
+
+export type CanvasObjectType = CanvasObjectRef["type"];
+
+/**
+ * A handle of a canvas object: a vertex index (exterior, boundaries, water
+ * lines, custom polylines), or a named handle: a distributed load's ends
+ * ("x1", "x2"), a line load's point ("x"), an element's ends ("end1",
+ * "end2"), a search limit ("entryLeftX", ...), a circle's centre or rim.
+ */
+export type CanvasPointKey =
+  | number
+  | "x1"
+  | "x2"
+  | "x"
+  | "end1"
+  | "end2"
+  | "entryLeftX"
+  | "entryRightX"
+  | "exitLeftX"
+  | "exitRightX"
+  | "centre"
+  | "rim";
+
+/** The selection on the edit canvas: an object, and one of its points or none. */
+export interface CanvasSelection {
+  object: CanvasObjectRef;
+  point: CanvasPointKey | null;
+}
+
+/**
+ * Objects locked against editing on the canvas, saved with the model: by
+ * id where objects have ids, by type for the exterior boundary and the
+ * search limits. A locked object can be selected, but not dragged, nudged
+ * or have its points deleted on the canvas.
+ */
+export interface ModelLocks {
+  exterior?: true;
+  /** Material boundary ids. */
+  boundaries?: string[];
+  /** Water (piezometric) line ids. */
+  waterLines?: string[];
+  /** Distributed load and line load ids. */
+  loads?: string[];
+  /** Reinforcement element and pile ids. */
+  reinforcement?: string[];
+  searchLimits?: true;
+  /** Custom search plane ids. */
+  customSurfaces?: string[];
+  /** The geometry was locked by an import (the status bar offers to unlock it). */
+  fromImport?: true;
+}
+
+/** The groups of the "Lock all" menu: a key of ModelLocks. */
+export type LockGroup = Exclude<keyof ModelLocks, "fromImport">;
+
 export interface ModelEntry {
   id: string;
   name: string;
@@ -533,6 +599,8 @@ export interface ModelEntry {
    * project file; there is no interface for them yet. Absent: none.
    */
   backgrounds?: BackgroundImage[];
+  /** Objects locked against canvas editing; absent: none. */
+  locks?: ModelLocks;
   options: AnalysisOptions;
   analysisLimits: AnalysisLimitsState;
   editViewOffset?: [number, number];
@@ -556,6 +624,7 @@ export interface LayoutSlice {
   sidebarOpen: boolean;
   explorerLocation: "left" | "right";
   propertiesLocation: "left" | "right";
+  /** The open section of the side panel (an accordion); it has no effect on what the canvas edits. */
   activeSection: string | null;
   snapToGrid: boolean;
   gridSnapSize: number;
@@ -620,13 +689,11 @@ export interface GeometrySlice {
   earlierStage: ModelEarlierStage | undefined;
   selectedPointIndex: number | null;
   selectedMaterialBoundaryId: string | null;
-  interiorBoundariesDialogOpen: boolean;
   assigningMaterialId: string | null;
   selectedRegionKey: string | null;
   setOrientation: (orientation: ModelOrientation) => void;
   setSelectedPoint: (index: number | null) => void;
   setSelectedMaterialBoundary: (boundaryId: string | null) => void;
-  setInteriorBoundariesDialogOpen: (open: boolean) => void;
   setAssigningMaterial: (materialId: string | null) => void;
   setSelectedRegionKey: (key: string | null) => void;
   setCoordinates: (coords: [number, number][]) => void;
@@ -840,6 +907,37 @@ export interface CanvasToolbarSlice {
   setCursorWorld: (pos: [number, number] | null) => void;
 }
 
+export interface CanvasSelectionSlice {
+  /** The object (and point) selected on the edit canvas; not saved, no undo step. */
+  canvasSelection: CanvasSelection | null;
+  /**
+   * While repeated clicks at one spot cycle through the objects under the
+   * pointer: the selected one's place among them (from 1) and their count.
+   */
+  canvasSelectionCycle: { position: number; count: number } | null;
+  /** The active model's locked objects (undoable; saved with the model). */
+  locks: ModelLocks;
+  /** Select an object (and one of its points); null clears the selection. */
+  selectCanvasObject: (
+    object: CanvasObjectRef | null,
+    point?: CanvasPointKey | null,
+    cycle?: { position: number; count: number } | null,
+  ) => void;
+  /** Select a point of the selected object (null: the object only). */
+  selectCanvasPoint: (point: CanvasPointKey | null) => void;
+  clearCanvasSelection: () => void;
+  /** Lock or unlock one object (an undo step). */
+  setObjectLocked: (object: CanvasObjectRef, locked: boolean) => void;
+  /** Lock every object of a group (an undo step). */
+  lockAllOfGroup: (group: LockGroup) => void;
+  /** Unlock everything (an undo step). */
+  unlockAll: () => void;
+  /** Replace the locks (an undo step). */
+  setModelLocks: (locks: ModelLocks) => void;
+  /** Unlock the exterior and the material boundaries (an imported model's geometry). */
+  unlockGeometry: () => void;
+}
+
 export type AppState = LayoutSlice &
   ModelsSlice &
   GeometrySlice &
@@ -848,4 +946,5 @@ export type AppState = LayoutSlice &
   AnalysisSlice &
   ViewportSlice &
   ResultViewSlice &
-  CanvasToolbarSlice;
+  CanvasToolbarSlice &
+  CanvasSelectionSlice;
