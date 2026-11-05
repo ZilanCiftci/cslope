@@ -112,7 +112,12 @@ describe("the Place drawing window's commands", () => {
     await handleDrawingCommand({ type: "addAsset", id: "new", name: "b.png", mime: "image/png", sha256: "f".repeat(64), data }, () => {});
     await handleDrawingCommand({ type: "addAsset", id: "again", name: "b copy.png", mime: "image/png", sha256: "f".repeat(64), data }, () => {});
     await handleDrawingCommand({ type: "addAsset", id: "text", name: "a.txt", mime: "text/plain", sha256: "e".repeat(64), data }, () => {});
+    // an id that is no file name, or one taken, is refused
+    await handleDrawingCommand({ type: "addAsset", id: "../x", name: "c.png", mime: "image/png", sha256: "d".repeat(64), data: new Uint8Array([4]) }, () => {});
+    await handleDrawingCommand({ type: "addAsset", id: "new", name: "c.png", mime: "image/png", sha256: "d".repeat(64), data: new Uint8Array([5]) }, () => {});
     expect(openedProjectAssets().map((a) => a.id)).toEqual(["sheet", "new"]);
+    // the hash is the main window's own, not the one sent
+    expect(openedProjectAssets()[1].sha256).toBe("039058c6f2c0cb492c533b0a4d14ef77cc0f78abccced5287d84a1a2011cfb81");
     const send = vi.fn();
     await handleDrawingCommand({ type: "requestAsset", id: "new" }, send);
     expect(send).toHaveBeenCalledWith({ id: "new", mime: "image/png", data });

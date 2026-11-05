@@ -13,6 +13,8 @@ import { useToolWindowSync } from "../../utils/tool-window-sync";
 import { addProjectAsset, onProjectAssetsChanged, openedProjectAssets, projectAsset, projectAssetBySha } from "./asset-registry";
 import { DRAWING_MIME } from "./sources";
 import { ownBytes } from "../../utils/zip";
+import { SAFE_ID } from "../project/cslp";
+import { sha256Hex } from "../project/input-hash";
 
 /** A drawing file of the project, as the window lists it. */
 export interface DrawingAssetInfo {
@@ -159,14 +161,18 @@ export async function handleDrawingCommand(command: DrawingCommand, send: (asset
       return;
     }
     case "addAsset": {
-      if (DRAWING_MIME[command.mime] === undefined || projectAssetBySha(command.sha256)) return;
+      // What the window sends is checked here: an id that can name a file
+      // in the archive, bytes, and their hash computed again.
+      if (DRAWING_MIME[command.mime] === undefined || !SAFE_ID.test(command.id) || Object.prototype.toString.call(command.data) !== "[object Uint8Array]") return;
       const data = command.data;
+      const sha256 = await sha256Hex(data);
+      if (projectAssetBySha(sha256) || projectAsset(command.id)) return;
       addProjectAsset({
         id: command.id,
         mime: command.mime,
-        originalName: command.name,
+        originalName: typeof command.name === "string" ? command.name : "",
         addedAt: new Date().toISOString(),
-        sha256: command.sha256,
+        sha256,
         bytes: data.length,
         data: () => data,
       });
