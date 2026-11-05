@@ -9,6 +9,7 @@ import { create } from "zustand";
 import { inferOrientationFromCoordinates } from "@cslope/engine";
 import { useAppStore } from "../../store/app-store";
 import { asOneUndoStep } from "../../store/undo-step";
+import { withObjectLocked } from "../../store/canvas-selection";
 import type { BackgroundImage } from "../../store/types";
 import { chainTolerance, exteriorFrom, pickedToModel, type PickedChain } from "./line-pick";
 import { vectorsFor } from "./drawing-cache";
@@ -62,13 +63,17 @@ function pickedPolylines(placement: BackgroundImage, chains: readonly PickedChai
 /**
  * Make model objects of the picked lines; returns what to tell the user
  * (an error, or what was made). `closeTol`: ends this close (m) may be
- * joined to close an exterior boundary, after `confirmClose` says yes.
+ * joined to close an exterior boundary, after `confirmClose` says yes. A
+ * locked exterior boundary is replaced only after `confirmUnlock` says
+ * yes (it is unlocked in the same undo step); new material boundaries
+ * and water lines replace nothing, whatever is locked.
  */
 export function pickedLinesAs(
   as: UseAs,
   closeTol: number,
   confirmClose: (gap: number) => boolean = (gap) =>
     window.confirm(`The ends of the picked lines are ${gap.toFixed(3)} m apart. Close the outline between them?`),
+  confirmUnlock: () => boolean = () => window.confirm("The exterior boundary is locked. Unlock it and replace it with the picked lines?"),
 ): { ok: boolean; message: string } {
   const pick = useLinePick.getState();
   const st = useAppStore.getState();
@@ -85,8 +90,11 @@ export function pickedLinesAs(
       if (!confirmClose(r.gap)) return { ok: false, message: "Not closed: the exterior boundary was not changed." };
       coords = r.coordinates;
     } else return { ok: false, message: r.error };
+    const locked = !!st.locks.exterior;
+    if (locked && !confirmUnlock()) return { ok: false, message: "The exterior boundary is locked: it was not changed." };
     asOneUndoStep(() => {
       const s = useAppStore.getState();
+      if (locked) s.setModelLocks(withObjectLocked(s.locks, { type: "exterior" }, false));
       s.setCoordinates(coords.map(([x, y]): [number, number] => [x, y]));
       s.setOrientation(inferOrientationFromCoordinates(coords));
     });

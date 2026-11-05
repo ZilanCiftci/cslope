@@ -122,6 +122,38 @@ describe("use picked lines as model objects", () => {
     expect(useLinePick.getState().chains).toEqual([]);
   });
 
+  it("a locked exterior boundary is replaced only when the user unlocks it (in the same undo step)", () => {
+    const before = useAppStore.getState().coordinates;
+    useAppStore.getState().setModelLocks({ exterior: true });
+    useAppStore.temporal.getState().clear();
+    useLinePick.getState().setChains([chain(0)]);
+    const refused = pickedLinesAs("exterior", 0.1, () => true, () => false);
+    expect(refused).toEqual({ ok: false, message: "The exterior boundary is locked: it was not changed." });
+    expect(useAppStore.getState().coordinates).toEqual(before);
+    expect(useAppStore.getState().locks.exterior).toBe(true);
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
+
+    let asked = 0;
+    const r = pickedLinesAs("exterior", 0.1, () => true, () => ++asked > 0);
+    expect(r.ok).toBe(true);
+    expect(asked).toBe(1);
+    expect(useAppStore.getState().coordinates).toEqual([[0, 0], [10, 0], [10, -10], [0, -10]]);
+    expect(useAppStore.getState().locks.exterior).toBeUndefined();
+    expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+    useAppStore.temporal.getState().undo();
+    expect(useAppStore.getState().coordinates).toEqual(before);
+    expect(useAppStore.getState().locks.exterior).toBe(true);
+  });
+
+  it("new material boundaries and water lines are added beside locked ones", () => {
+    const id = useAppStore.getState().materialBoundaries[0]?.id;
+    useAppStore.getState().setModelLocks({ exterior: true, ...(id ? { boundaries: [id] } : {}) });
+    const n = useAppStore.getState().materialBoundaries.length;
+    useLinePick.getState().setChains([chain(1)]);
+    expect(pickedLinesAs("boundary", 0.1, () => true, () => false).ok).toBe(true);
+    expect(useAppStore.getState().materialBoundaries).toHaveLength(n + 1);
+  });
+
   it("material boundaries and water lines: one undo step for all", () => {
     useLinePick.getState().setChains([chain(1)]);
     expect(pickedLinesAs("boundary", 0.1).ok).toBe(true);
