@@ -20,6 +20,9 @@ use acadrust::io::dwg::DwgReadOptions;
 use acadrust::{CadDocument, DwgReader};
 use serde::Serialize;
 
+pub mod vectors;
+pub use vectors::{read_dwg_vectors, read_dwg_vectors_json, VectorDrawing};
+
 /// The most decompressed data one read may allocate (acadrust charges each
 /// section's declared size against it before allocating), so that a
 /// malformed or hostile file fails instead of exhausting memory.
@@ -255,5 +258,11 @@ mod wasm {
     #[wasm_bindgen(js_name = readDwg)]
     pub fn read_dwg(bytes: &[u8]) -> Result<String, JsError> {
         super::read_dwg_json(bytes).map_err(|e| JsError::new(&e))
+    }
+
+    /// Reads a DWG file's line work (an underlay): JSON, or an error.
+    #[wasm_bindgen(js_name = readDwgVectors)]
+    pub fn read_dwg_vectors(bytes: &[u8]) -> Result<String, JsError> {
+        super::read_dwg_vectors_json(bytes).map_err(|e| JsError::new(&e))
     }
 }

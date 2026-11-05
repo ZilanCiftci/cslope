@@ -2,7 +2,7 @@
   "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
   "wasmBindgen": "0.2.130",
   "acadrust": "0.6.8",
-  "wasmSha256": "dd29afd31b765d1f55965c227816b36de157a94cbf4eeb4c00208cadc48b1da4",
-  "bytes": 4599117,
-  "brotliBytes": 989771
+  "wasmSha256": "48b80312b7256c47e15e2c56a0544859e42c0e26dd89cc05bb74a5b2ba13deca",
+  "bytes": 4830377,
+  "brotliBytes": 1049251
 }

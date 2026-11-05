@@ -7,6 +7,11 @@
 export function readDwg(bytes: Uint8Array | number[]): string;
 
 /**
+ * Reads a DWG file's line work (an underlay): JSON, or an error.
+ */
+export function readDwgVectors(bytes: Uint8Array | number[]): string;
+
+/**
  * The panic hook: the message is the only trace of a trap.
  */
 export function start(): void;
@@ -16,6 +21,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly readDwg: (a: number, b: number) => [number, number, number, number];
+    readonly readDwgVectors: (a: number, b: number) => [number, number, number, number];
     readonly start: () => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;

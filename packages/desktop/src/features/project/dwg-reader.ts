@@ -6,6 +6,7 @@
  */
 
 import type { DxfPolyline, DxfSegment } from "../../utils/dxf";
+import type { NeutralVectors } from "../drawings/vectors";
 
 /** What the reader returns (packages/dwg-rs/src/lib.rs, `Drawing`). */
 export interface DwgDrawing {
@@ -23,6 +24,9 @@ export interface DwgDrawing {
   /** Problems the reader recovered from. */
   warnings: string[];
 }
+
+/** What the worker is sent: a file to import (its bytes), or one to read as line work (an underlay). */
+export type DwgWorkerRequest = Uint8Array | { vectors: true; bytes: Uint8Array };
 
 export type DwgWorkerResponse =
   | { ok: true; json: string }
@@ -48,7 +52,7 @@ function discard(): void {
   worker = undefined;
 }
 
-function readOnce(bytes: Uint8Array): Promise<DwgDrawing> {
+function readOnce<T>(request: DwgWorkerRequest): Promise<T> {
   return new Promise((resolve, reject) => {
     const w = (worker ??= createWorker());
     const timer = setTimeout(() => {
@@ -59,7 +63,7 @@ function readOnce(bytes: Uint8Array): Promise<DwgDrawing> {
       clearTimeout(timer);
       const r = event.data;
       if (r.ok) {
-        resolve(JSON.parse(r.json) as DwgDrawing);
+        resolve(JSON.parse(r.json) as T);
         return;
       }
       if (r.trapped) {
@@ -74,13 +78,24 @@ function readOnce(bytes: Uint8Array): Promise<DwgDrawing> {
       discard();
       reject(new Error(`The DWG reader could not be started${event.message ? `: ${event.message}` : ""}.`));
     };
-    w.postMessage(bytes);
+    w.postMessage(request);
   });
 }
 
 /** The drawing of a DWG file; rejects with the reason it cannot be read. */
 export function readDwgFile(bytes: Uint8Array): Promise<DwgDrawing> {
-  const result = queue.then(() => readOnce(bytes));
+  const result = queue.then(() => readOnce<DwgDrawing>(bytes));
+  queue = result.catch(() => undefined);
+  return result;
+}
+
+/**
+ * The line work of a DWG file (an underlay: curves as polylines, blocks
+ * expanded, texts; packages/dwg-rs/src/vectors.rs); rejects with the
+ * reason it cannot be read.
+ */
+export function readDwgVectorsFile(bytes: Uint8Array): Promise<NeutralVectors> {
+  const result = queue.then(() => readOnce<NeutralVectors>({ vectors: true, bytes }));
   queue = result.catch(() => undefined);
   return result;
 }

@@ -2,6 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const readDwg: (a: number, b: number) => [number, number, number, number];
+export const readDwgVectors: (a: number, b: number) => [number, number, number, number];
 export const start: () => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;

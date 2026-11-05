@@ -6,9 +6,9 @@
  * instance; the worker says so, and the client (dwg-reader.ts) discards it.
  */
 
-import init, { readDwg } from "../../dwg-wasm/cslope_dwg.js";
+import init, { readDwg, readDwgVectors } from "../../dwg-wasm/cslope_dwg.js";
 import wasmBase64 from "../../dwg-wasm/cslope_dwg_bg.wasm?base64";
-import type { DwgWorkerResponse } from "./dwg-reader";
+import type { DwgWorkerRequest, DwgWorkerResponse } from "./dwg-reader";
 
 let ready: Promise<unknown> | undefined;
 
@@ -19,12 +19,13 @@ function base64Bytes(base64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-self.onmessage = async (event: MessageEvent<Uint8Array>) => {
+self.onmessage = async (event: MessageEvent<DwgWorkerRequest>) => {
   let response: DwgWorkerResponse;
   try {
     ready ??= init({ module_or_path: base64Bytes(wasmBase64) });
     await ready;
-    response = { ok: true, json: readDwg(event.data) };
+    const request = event.data;
+    response = { ok: true, json: request instanceof Uint8Array ? readDwg(request) : readDwgVectors(request.bytes) };
   } catch (err) {
     response = {
       ok: false,
