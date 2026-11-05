@@ -126,6 +126,12 @@ declare global {
       /** Save the project (a .cslp archive); `suggestedName` is offered when a dialog asks for a name. */
       saveFile: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
       saveFileAs: (content: Uint8Array, suggestedName?: string) => Promise<boolean>;
+      /**
+       * Save a copy of the project (File › Save as anonymized…) under the
+       * open file's name with `suffix` added; the open file stays the save
+       * target. The name saved to, or null when cancelled.
+       */
+      saveCopy: (content: Uint8Array, suffix: string) => Promise<string | null>;
       // Window controls
       minimize: () => void;
       maximize: () => void;

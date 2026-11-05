@@ -1684,6 +1684,46 @@ describe("saving", () => {
     expect(fs.readdirSync(dir)).toEqual([]);
   });
 
+  it("saves an anonymized copy next to the open file, which stays the save target", async () => {
+    await loadMain();
+    const win = mainWin();
+    const file = path.join(dir, "Dike 4.cslp");
+    expect(await saveAsTo(file, "original")).toBe(true);
+    const copy = path.join(dir, "Dike 4-anonymized.cslp");
+    fake.dialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: copy });
+    expect(await invoke("dialog:saveCopy", win.webContents, bytes("copy"), "-anonymized")).toBe("Dike 4-anonymized.cslp");
+    const options = fake.dialog.showSaveDialog.mock.calls.at(-1)![1];
+    expect(options.defaultPath).toBe(copy);
+    expect(fs.readFileSync(copy, "utf-8")).toBe("copy");
+    expect(win.title).toBe("Dike 4 — cSlope");
+    // Save still writes the open file.
+    expect(await invoke("dialog:saveFile", win.webContents, bytes("again"))).toBe(true);
+    expect(fs.readFileSync(file, "utf-8")).toBe("again");
+    expect(fs.readFileSync(copy, "utf-8")).toBe("copy");
+    expect(leftovers()).toEqual([]);
+  });
+
+  it("never writes the anonymized copy over the open file; cancelled, nothing", async () => {
+    await loadMain();
+    const win = mainWin();
+    const file = path.join(dir, "p.cslp");
+    expect(await saveAsTo(file, "original")).toBe(true);
+    fake.dialog.showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: file });
+    fake.dialog.showMessageBox.mockResolvedValueOnce({ response: 0 });
+    expect(await invoke("dialog:saveCopy", win.webContents, bytes("copy"), "-anonymized")).toBeNull();
+    expect(fs.readFileSync(file, "utf-8")).toBe("original");
+    fake.dialog.showSaveDialog.mockResolvedValueOnce({ canceled: true, filePath: "" });
+    expect(await invoke("dialog:saveCopy", win.webContents, bytes("copy"), "-anonymized")).toBeNull();
+    expect(fs.readdirSync(dir)).toEqual(["p.cslp"]);
+    // Untitled: cslope-project-anonymized.cslp; other windows and non-bytes refused.
+    await loadMain();
+    fake.dialog.showSaveDialog.mockResolvedValueOnce({ canceled: true, filePath: "" });
+    await invoke("dialog:saveCopy", mainWin().webContents, bytes("x"), "-anonymized");
+    expect(fake.dialog.showSaveDialog.mock.calls.at(-1)![1].defaultPath).toBe("cslope-project-anonymized.cslp");
+    expect(await invoke("dialog:saveCopy", stranger(), bytes("x"), "-anonymized")).toBeNull();
+    expect(await invoke("dialog:saveCopy", mainWin().webContents, "text", "-anonymized")).toBeNull();
+  });
+
   it("refuses saves from other windows and anything but bytes", async () => {
     await loadMain();
     expect(await invoke("dialog:saveFile", stranger(), bytes("x"))).toBe(false);
