@@ -50,3 +50,6 @@ packages/engine-rs/target/
 # testing build is never committed; the product build (packages/engine/src/
 # wasm: the .wasm, its glue and BUILD-INFO.json) is
 packages/engine/src/wasm-testing/
+
+# Design review screenshots and findings (packages/desktop/tools/design-review)
+design-review-out/
