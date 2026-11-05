@@ -121,13 +121,15 @@ describe("Save as anonymized in a browser", () => {
   });
 
   it("saves nothing when the name is cancelled, and closes on Cancel", async () => {
-    vi.spyOn(window, "prompt").mockReturnValue(null);
+    const prompt = vi.spyOn(window, "prompt").mockReturnValue(null);
     renderMenu();
     await userEvent.click(screen.getByRole("button", { name: /Save as anonymized/ }));
     const dialog = screen.getByRole("dialog", { name: "Save as anonymized" });
     await userEvent.click(within(dialog).getByRole("button", { name: "Save…" }));
+    // The save is asynchronous: wait until it has asked for the name.
+    await waitFor(() => expect(prompt).toHaveBeenCalled());
     expect(mocks.downloadFile).not.toHaveBeenCalled();
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
