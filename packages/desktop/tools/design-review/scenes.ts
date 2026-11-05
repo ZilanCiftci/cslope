@@ -1130,7 +1130,7 @@ const windows: Scene[] = [
     area: "windows",
     open: async (ctx) => {
       const win = await placeDrawingWith(ctx, ctx.files.png);
-      await win.getByRole("region", { name: "Crop" }).getByRole("button").first().click();
+      await win.getByRole("button", { name: "Crop", exact: true }).click();
       return { page: win };
     },
   },
