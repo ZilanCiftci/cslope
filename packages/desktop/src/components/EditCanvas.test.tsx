@@ -348,7 +348,7 @@ describe("EditCanvas pointer interaction", () => {
     renderCanvas();
     const [sx, sy] = toScreen([20, 5]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("menuitem", { name: "Lock" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Lock exterior boundary" }));
     expect(useAppStore.getState().locks).toEqual({ exterior: true });
     fireEvent.pointerMove(canvas(), { clientX: sx, clientY: sy, pointerId: 1 });
     expect(screen.getByTestId("locked-tip")).toHaveTextContent("Locked · right-click to unlock");
@@ -358,7 +358,7 @@ describe("EditCanvas pointer interaction", () => {
     fireEvent.pointerUp(canvas(), { button: 0, clientX: sx + 40, clientY: sy, pointerId: 1 });
     expect(useAppStore.getState().coordinates).toContainEqual([20, 5]);
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
-    fireEvent.click(screen.getByRole("menuitem", { name: "Unlock" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Unlock exterior boundary" }));
     expect(useAppStore.getState().locks).toEqual({});
   });
 

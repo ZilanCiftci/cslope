@@ -16,6 +16,7 @@ import { startLinePick } from "../../drawings/line-pick-store";
 import {
   LOCK_GROUPS,
   canDeletePoint,
+  canvasObjectLabel,
   groupHasUnlocked,
   hasLocks,
   isObjectLocked,
@@ -318,8 +319,11 @@ export function useContextMenu(params: ContextMenuParams) {
             });
           }
         }
+        // "Lock exterior boundary": the whole object, not the point.
+        const name = canvasObjectLabel(st, object);
+        const objectName = name.charAt(0).toLowerCase() + name.slice(1);
         items.push({
-          label: locked ? "Unlock" : "Lock",
+          label: `${locked ? "Unlock" : "Lock"} ${objectName}`,
           separator: items.length > 0,
           action: close(() => useAppStore.getState().setObjectLocked(object, !locked)),
         });
@@ -405,7 +409,7 @@ function drawingMenuItems(id: string, close: (fn: () => void) => () => void): Co
     },
     { label: "Recalibrate…", action: close(() => openPlaceDrawing(id)) },
     ...(hasLineWork(st.backgrounds.find((b) => b.id === id)?.assetId)
-      ? [{ label: "Pick lines from drawing…", action: close(() => startLinePick(id)) }]
+      ? [{ label: "Pick lines…", action: close(() => startLinePick(id)) }]
       : []),
     { label: "Hide drawing", action: close(() => useAppStore.getState().updateBackground(id, { visible: false })) },
     { label: "Remove drawing", danger: true, action: close(() => useAppStore.getState().removeBackground(id)) },

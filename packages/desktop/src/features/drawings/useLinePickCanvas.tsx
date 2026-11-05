@@ -28,6 +28,10 @@ interface Params {
 
 const DRAG_PX = 4;
 
+/** The banner's buttons: on one line, white on a darker accent (over 4.5:1); a disabled one fainter. */
+const BANNER_BUTTON = "px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-default disabled:opacity-60";
+const BANNER_BUTTON_STYLE = { background: "rgba(0,0,0,0.28)", color: "#ffffff" } as const;
+
 export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setContextMenu }: Params) {
   const placementId = useLinePick((s) => s.placementId);
   const chains = useLinePick((s) => s.chains);
@@ -183,15 +187,17 @@ export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setC
               }}
             />
           )}
+          {/* As wide as it needs, up to the canvas: the explanation wraps, the buttons do not.
+              White on the accent (4.5:1); the buttons darker still. */}
           <div
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1 select-none"
+            className="absolute top-2 left-1/2 -translate-x-1/2 w-max max-w-[calc(100%-16px)] z-40 flex flex-col items-center gap-1 select-none"
             data-testid="line-pick-banner"
           >
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px]"
-              style={{ background: "var(--color-vsc-accent)", color: "var(--color-canvas-tooltip-text)", boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)" }}
+              style={{ background: "var(--color-vsc-accent)", color: "#ffffff", boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)" }}
             >
-              <span className="whitespace-nowrap">
+              <span className="min-w-0">
                 Pick lines of <strong>{label}</strong>: click a line, Shift+click to add, drag a window.{" "}
                 {chains.length > 0 ? `${chains.length} picked.` : ""}
               </span>
@@ -204,16 +210,16 @@ export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setC
               ).map(([as, text]) => (
                 <button
                   key={as}
-                  className="px-1.5 py-0.5 rounded text-[11px] cursor-pointer disabled:opacity-50"
-                  style={{ background: "rgba(255,255,255,0.2)" }}
+                  className={BANNER_BUTTON}
+                  style={BANNER_BUTTON_STYLE}
                   disabled={chains.length === 0}
-                  title={`Use as ${text.toLowerCase()}${as === "exterior" ? " boundary" : ""}`}
+                  title={chains.length === 0 ? "Pick lines first" : `Use as ${text.toLowerCase()}${as === "exterior" ? " boundary" : ""}`}
                   onClick={() => run(as)}
                 >
                   {text}
                 </button>
               ))}
-              <button className="px-1.5 py-0.5 rounded text-[11px] cursor-pointer" style={{ background: "rgba(255,255,255,0.2)" }} onClick={() => useLinePick.getState().stop()}>
+              <button className={BANNER_BUTTON} style={BANNER_BUTTON_STYLE} title="Stop picking lines (Esc)" onClick={() => useLinePick.getState().stop()}>
                 Done
               </button>
             </div>

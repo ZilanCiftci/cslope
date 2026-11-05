@@ -53,6 +53,16 @@ export function emptyForm(unit: ScaleUnit = "px"): CalibrationForm {
   };
 }
 
+/**
+ * The form a drawing starts with: a DWG or DXF drawing (unit "du") at its
+ * own coordinates; another file in the mode of the one shown before
+ * (`previous`), else axes. `unit` is the file's source unit.
+ */
+export function initialForm(unit: ScaleUnit, previous?: CalibrationForm): CalibrationForm {
+  if (unit === "du") return { ...emptyForm("du"), mode: "drawing" };
+  return { ...emptyForm(unit), mode: !previous || previous.mode === "drawing" ? "axes" : previous.mode };
+}
+
 /** A number typed in a field ("," as the decimal mark too), or null. */
 export function parseNumber(text: string): number | null {
   const t = text.trim().replace(",", ".");
@@ -134,7 +144,7 @@ export function nextTarget(form: CalibrationForm, t: PickTarget | null): PickTar
   return null;
 }
 
-/** The label of a target on the drawing ("1", "x1", "y2", "0"). */
+/** The label of a target on the drawing and its pick button ("1", "x1", "y2", "Origin"). */
 export function targetLabel(t: PickTarget): string {
   switch (t.kind) {
     case "point":
@@ -143,7 +153,7 @@ export function targetLabel(t: PickTarget): string {
     case "y":
       return `${t.kind}${t.index + 1}`;
     case "origin":
-      return "O";
+      return "Origin";
   }
 }
 
@@ -153,6 +163,8 @@ export interface FormResult {
   calibration: DrawingCalibration;
   /** What the fit says, for the window (scales, exaggeration). */
   summary: string[];
+  /** The inputs are not complete yet: the error says what to do next (a prompt, not a failure). */
+  prompt?: boolean;
 }
 
 const fmt = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(1) : Math.abs(v) >= 1 ? v.toFixed(3) : v.toPrecision(3));
@@ -257,7 +269,7 @@ export function drawingUnitOf(t: Affine): number | null {
 }
 
 function fail(error: string, form: CalibrationForm): FormResult {
-  return { fit: { ok: false, error }, calibration: { mode: form.mode, points: [] }, summary: [] };
+  return { fit: { ok: false, error }, calibration: { mode: form.mode, points: [] }, summary: [], prompt: true };
 }
 
 /** The form a stored calibration fills (recalibrating). `fallback` gives two points for a "drawing" placement. */

@@ -65,7 +65,7 @@ export function evaluateFrame(frames: readonly SheetFrame[], frame: SheetFrame, 
       const r = evaluateFrame(frames, other, unitName, new Set([...seen, frame.id]));
       reuse = r.fit.ok ? axisScalesOf(r.fit.transform) : null;
     }
-    if (!reuse) return { ...evaluateForm({ ...frame.form, reuseFrom: null }, null, unitName), fit: { ok: false, error: "The frame whose scale is reused is not calibrated yet." } };
+    if (!reuse) return { ...evaluateForm({ ...frame.form, reuseFrom: null }, null, unitName), fit: { ok: false, error: "The frame whose scale is reused is not calibrated yet." }, prompt: true };
   }
   const result = evaluateForm(frame.form, reuse, unitName);
   // (the calibration names the frame's model and placement once they exist)

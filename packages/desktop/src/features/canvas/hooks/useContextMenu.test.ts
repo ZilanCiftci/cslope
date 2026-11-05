@@ -89,8 +89,8 @@ describe("useContextMenu — edit mode", () => {
     const prevent = open(110, 220);
     expect(prevent).toHaveBeenCalled();
     expect(menu()).toMatchObject({ screenX: 100, screenY: 200 });
-    expect(labels(menu())).toEqual(["Delete point", "Lock"]);
-    expect(item(menu(), "Lock").separator).toBe(true);
+    expect(labels(menu())).toEqual(["Delete point", "Lock exterior boundary"]);
+    expect(item(menu(), "Lock exterior boundary").separator).toBe(true);
     // The right-click selects what the menu acts on.
     expect(st().canvasSelection).toEqual({ object: EXT, point: 1 });
     click("Delete point");
@@ -140,7 +140,7 @@ describe("useContextMenu — edit mode", () => {
     const { open, menu, click } = setup({ findObjectsAt: under({ object: EXT, point: null }), edgeAt });
     open();
     expect(edgeAt).toHaveBeenCalledWith(EXT, 1, 2);
-    expect(labels(menu())).toEqual(["Add point", "Lock"]);
+    expect(labels(menu())).toEqual(["Add point", "Lock exterior boundary"]);
     click("Add point");
     expect(st().coordinates[2]).toEqual([5, 10]);
     expect(st().canvasSelection).toEqual({ object: EXT, point: 2 });
@@ -168,21 +168,21 @@ describe("useContextMenu — edit mode", () => {
     const id = st().udls[0].id;
     const { open, menu } = setup({ findObjectsAt: under({ object: { type: "udl", id }, point: "x1" }) });
     open();
-    expect(labels(menu())).toEqual(["Lock"]);
-    expect(item(menu(), "Lock").separator).toBeFalsy();
+    expect(labels(menu())).toEqual(["Lock distributed load 1"]);
+    expect(item(menu(), "Lock distributed load 1").separator).toBeFalsy();
   });
 
   it("locks and unlocks an object, as one undo step each", () => {
     useAppStore.temporal.getState().clear();
     const lock = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: null }) });
     lock.open();
-    lock.click("Lock");
+    lock.click("Lock material boundary 1");
     expect(st().locks).toEqual({ boundaries: ["b"] });
     const unlock = setup({ findObjectsAt: under({ object: { type: "boundary", id: "b" }, point: null }) });
     unlock.open();
     // A locked object offers no point editing.
-    expect(item(unlock.menu(), "Unlock")).toBeDefined();
-    unlock.click("Unlock");
+    expect(item(unlock.menu(), "Unlock material boundary 1")).toBeDefined();
+    unlock.click("Unlock material boundary 1");
     expect(st().locks).toEqual({});
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(2);
     act(() => useAppStore.temporal.getState().undo());
@@ -322,7 +322,7 @@ describe("useContextMenu — custom search planes", () => {
   it("offers to delete a vertex (a surface keeps two) or the whole surface", () => {
     const { open, menu, click } = setup({ findObjectsAt: under({ object: P1, point: 1 }) });
     open();
-    expect(labels(menu())).toEqual(["Delete point", "Delete surface", "Lock"]);
+    expect(labels(menu())).toEqual(["Delete point", "Delete surface", "Lock custom surface 2"]);
     click("Delete point");
     expect(planes()[0].points).toEqual([
       [5, 8],
@@ -337,7 +337,7 @@ describe("useContextMenu — custom search planes", () => {
   it("offers to delete a circle from its centre or its rim, not when it is locked", () => {
     const rim = setup({ findObjectsAt: under({ object: C1, point: "rim" }) });
     rim.open();
-    expect(labels(rim.menu())).toEqual(["Delete circle", "Lock"]);
+    expect(labels(rim.menu())).toEqual(["Delete circle", "Lock custom circle 1"]);
     expect(useAppStore.getState().canvasSelection).toEqual({ object: C1, point: "rim" });
     act(() => useAppStore.getState().setObjectLocked(C1, true));
     const centre = setup({ findObjectsAt: under({ object: C1, point: "centre" }) });
@@ -362,14 +362,14 @@ describe("useContextMenu — custom search planes", () => {
     const addReferenceFromCustomPlane = vi.fn();
     const vertex = setup({ addReferenceFromCustomPlane, findObjectsAt: under({ object: P1, point: 1 }) });
     vertex.open();
-    expect(labels(vertex.menu())).toEqual(["Delete point", "Delete surface", "Add as reference line", "Lock"]);
+    expect(labels(vertex.menu())).toEqual(["Delete point", "Delete surface", "Add as reference line", "Lock custom surface 2"]);
     vertex.click("Add as reference line");
     expect(addReferenceFromCustomPlane).toHaveBeenCalledWith("p1");
     expect(vertex.menu()).toBeNull();
 
     const circle = setup({ addReferenceFromCustomPlane, findObjectsAt: under({ object: C1, point: "rim" }) });
     circle.open();
-    expect(labels(circle.menu())).toEqual(["Delete circle", "Add as reference line", "Lock"]);
+    expect(labels(circle.menu())).toEqual(["Delete circle", "Add as reference line", "Lock custom circle 1"]);
 
     const edge = setup({
       addReferenceFromCustomPlane,
@@ -377,12 +377,12 @@ describe("useContextMenu — custom search planes", () => {
       edgeAt: vi.fn(() => ({ kind: "customPlane" as const, planeId: "p1", insertIndex: 2, snapPoint: [20, 3] as [number, number] })),
     });
     edge.open();
-    expect(labels(edge.menu())).toEqual(["Add point", "Delete surface", "Add as reference line", "Lock"]);
+    expect(labels(edge.menu())).toEqual(["Add point", "Delete surface", "Add as reference line", "Lock custom surface 2"]);
 
     // Without the action (the result canvas) the item is not offered.
     const none = setup({ findObjectsAt: under({ object: P1, point: 1 }) });
     none.open();
-    expect(labels(none.menu())).toEqual(["Delete point", "Delete surface", "Lock"]);
+    expect(labels(none.menu())).toEqual(["Delete point", "Delete surface", "Lock custom surface 2"]);
   });
 });
 

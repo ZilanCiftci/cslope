@@ -13,7 +13,7 @@ import { MAX_DRAWING_BYTES, fileTooLarge } from "../project/file-limits";
 import type { BackgroundImage } from "../../store/types";
 import { drawingError, pageSizeOf, peekSource, rasterFor, setAssetLoader, vectorsFor } from "./drawing-cache";
 import { DRAWING_ACCEPT, DRAWING_MIME, drawingKindName, pageRect, sniffDrawingMime, type DrawingSource } from "./sources";
-import { DRAWING_UNIT_CHOICES, type VectorDrawing } from "./vectors";
+import { DRAWING_UNIT_CHOICES, INSUNITS, type VectorDrawing } from "./vectors";
 import { drawVectorTexts, vectorPath } from "./vector-render";
 import { apply, cropCorners, normalizeCrop, type Affine, type Crop, type Pt } from "./transform";
 import { newPlacementId, placementLabel } from "./placement";
@@ -24,6 +24,7 @@ import {
   evaluateForm,
   formFromCalibration,
   formForVector,
+  initialForm,
   nextTarget,
   pickTargets,
   sameTarget,
@@ -32,6 +33,7 @@ import {
   withSource,
   type CalibrationForm,
   type CalibrationMode,
+  type FormResult,
   type PickTarget,
   type PointRow,
   type ScaleUnit,
@@ -39,7 +41,7 @@ import {
 } from "./calibration-form";
 import type { DrawingAssetInfo, DrawingCommand, DrawingWindowState } from "./window-sync";
 import { NewModelsWindow } from "./NewModelsWindow";
-import { fileUnitCode, receiveAsset, rememberLocalBytes, useDrawingsTick, windowLoader } from "./place-window-shared";
+import { drawingExtentText, fileUnitCode, receiveAsset, rememberLocalBytes, useDrawingsTick, windowLoader } from "./place-window-shared";
 
 export function PlaceDrawingDialogApp() {
   const send = useCallback((c: DrawingCommand) => window.cslope.sendDrawingCommand(c), []);
@@ -80,6 +82,10 @@ export function PlaceDrawingDialogApp() {
 
 // ── The window ──────────────────────────────────────────────────────
 
+/** The source unit of a drawing file: a DWG or DXF drawing's unit, a PDF point or a pixel. */
+const unitOfMime = (mime: string | undefined): ScaleUnit =>
+  mime && DRAWING_MIME[mime] === "vector" ? "du" : mime === "application/pdf" ? "pt" : "px";
+
 export type Tool = "pick" | "crop" | "pan";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
@@ -100,8 +106,9 @@ export function PlaceDrawingWindow({
   const [assetId, setAssetId] = useState<string | null>(state.assets[0]?.id ?? null);
   const [page, setPage] = useState(1);
   const [crop, setCrop] = useState<Crop | null>(null);
-  const [form, setForm] = useState<CalibrationForm>(() => emptyForm());
-  const [target, setTarget] = useState<PickTarget | null>({ kind: "x", index: 0 });
+  // The drawing shown first starts as a drawing chosen later does (chooseAsset).
+  const [form, setForm] = useState<CalibrationForm>(() => initialForm(unitOfMime(state.assets[0]?.mime)));
+  const [target, setTarget] = useState<PickTarget | null>(() => nextTarget(initialForm(unitOfMime(state.assets[0]?.mime)), null));
   const [tool, setTool] = useState<Tool>("pick");
   const [editing, setEditing] = useState<BackgroundImage | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -115,8 +122,10 @@ export function PlaceDrawingWindow({
   const vector = !!asset && DRAWING_MIME[asset.mime] === "vector";
   const drawing = vector && assetId ? vectorsFor(assetId, 1) : null;
   const fileUnit = fileUnitCode(drawing);
-  const unit: ScaleUnit = vector ? "du" : asset?.mime === "application/pdf" ? "pt" : "px";
-  const unitName = vector ? (drawing?.unitName ?? "drawing unit") : unit === "pt" ? "point" : "pixel";
+  const unit = unitOfMime(asset?.mime);
+  // ("pt": a PDF point, 1/72 in, not a point picked in the drawing)
+  const unitName = vector ? (drawing?.unitName ?? "drawing unit") : unit === "pt" ? "pt" : "pixel";
+  const [fitNonce, setFitNonce] = useState(0);
 
   // A placement to recalibrate: its file, page, crop and inputs.
   if (state.edit && state.edit.nonce !== seenNonce) {
@@ -171,13 +180,7 @@ export function PlaceDrawingWindow({
     setAssetId(id);
     setPage(1);
     setCrop(null);
-    const isVector = DRAWING_MIME[mime] === "vector";
-    // A DWG or DXF drawing starts at its own coordinates; another file keeps the mode.
-    setForm((f) =>
-      isVector
-        ? { ...emptyForm("du"), mode: "drawing" }
-        : { ...emptyForm(f.scale.unit === "du" ? "px" : f.scale.unit), mode: f.mode === "drawing" ? "axes" : f.mode },
-    );
+    setForm((f) => initialForm(unitOfMime(mime), f));
     setTarget(null);
     setEditing(null);
   };
@@ -279,7 +282,13 @@ export function PlaceDrawingWindow({
       <div className="flex-1 min-h-0 flex">
         {source && source.pageCount > 1 && <PageStrip source={source} assetId={assetId!} page={page} onPage={choosePage} />}
         <div className="flex-1 min-w-0 flex flex-col">
-          <ViewerToolbar tool={tool} setTool={setTool} crop={crop} onClearCrop={() => setCrop(null)} unitName={unitName} pageSize={pageSize} />
+          <ViewerToolbar
+            tool={tool}
+            setTool={setTool}
+            disabled={!source}
+            onFit={() => setFitNonce((n) => n + 1)}
+            extent={pageSize && asset ? drawingExtentText(DRAWING_MIME[asset.mime] ?? "image", pageSize, vector ? (INSUNITS[effective.drawingUnit]?.meters ?? (drawing?.metersPerUnit || null)) : null) : null}
+          />
           <div className="flex-1 min-h-0 relative">
             {!assetId ? (
               <EmptyViewer onAdd={() => fileInput.current?.click()} />
@@ -304,23 +313,32 @@ export function PlaceDrawingWindow({
                 form={form}
                 target={target}
                 onPick={pick}
+                fitNonce={fitNonce}
               />
             )}
           </div>
         </div>
         <div className="w-[340px] shrink-0 border-l flex flex-col min-h-0" style={{ borderColor: "var(--color-vsc-border)" }}>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+            {!asset && (
+              <p className="text-[11px]" style={muted} data-testid="no-drawing-steps">
+                Add a drawing to crop and calibrate it.
+              </p>
+            )}
+            {asset && (
+              <>
             <section aria-label="Crop">
               <h3 className="font-semibold text-[12px]">1. Crop</h3>
               <p className="text-[11px] mt-0.5" style={muted}>
-                Optional: drag a rectangle around the section with the crop tool. {crop ? "" : "The whole page is placed now."}
+                Optional: with Crop, drag a rectangle around the section.{" "}
+                {crop ? "" : vector ? "The whole drawing is placed now." : "The whole page is placed now."}
               </p>
               <div className="flex gap-2 mt-1.5">
                 <button className="btn" aria-pressed={tool === "crop"} onClick={() => setTool(tool === "crop" ? "pick" : "crop")} disabled={!source}>
-                  Crop rectangle
+                  Crop…
                 </button>
                 <button className="btn" onClick={() => setCrop(null)} disabled={!crop}>
-                  Whole page
+                  Clear crop
                 </button>
               </div>
             </section>
@@ -330,7 +348,7 @@ export function PlaceDrawingWindow({
                 {(
                   [
                     ...(vector ? ([["drawing", "Drawing coordinates"]] as const) : []),
-                    ["axes", vector ? "Axes" : "Axes (x and y separately)"],
+                    ["axes", "Axes"],
                     ["points", "Points"],
                     ["scale", "Scale"],
                   ] as const
@@ -360,12 +378,12 @@ export function PlaceDrawingWindow({
                 {result.fit.ok ? (
                   <p data-testid="calibration-summary">{result.summary.join(" · ")}</p>
                 ) : (
-                  <p data-testid="calibration-message" style={{ color: "var(--color-vsc-warning, #c78a00)" }}>
-                    {result.fit.error}
-                  </p>
+                  <CalibrationMessage result={result} testId="calibration-message" />
                 )}
               </div>
             </section>
+              </>
+            )}
             <section aria-label="Preview">
               <h3 className="font-semibold text-[12px]">Preview</h3>
               <p className="text-[11px] mt-0.5" style={muted}>
@@ -529,21 +547,23 @@ function PageThumb({ source, assetId, page }: { source: DrawingSource; assetId: 
 export function ViewerToolbar({
   tool,
   setTool,
-  crop,
-  onClearCrop,
-  unitName,
-  pageSize,
+  onFit,
+  disabled = false,
+  extent,
   cropLabel = "Crop",
 }: {
   tool: Tool;
   setTool: (t: Tool) => void;
-  crop: Crop | null;
-  onClearCrop: () => void;
-  unitName: string;
-  pageSize: { width: number; height: number } | null;
+  /** Fit the drawing (or its crop) to the viewer. */
+  onFit: () => void;
+  /** No drawing shown: the tools do nothing. */
+  disabled?: boolean;
+  /** The size of the page or drawing (drawingExtentText), or null. */
+  extent: string | null;
   /** The crop tool's name (the sheet view: "Draw frame"). */
   cropLabel?: string;
 }) {
+  const hint = `Wheel: zoom · middle button or Space + drag: pan${extent ? ` · ${extent}` : ""}`;
   return (
     <div className="px-2 py-1 border-b flex items-center gap-1.5 text-[11px]" style={{ borderColor: "var(--color-vsc-border)" }}>
       {(
@@ -553,19 +573,17 @@ export function ViewerToolbar({
           ["pan", "Pan"],
         ] as const
       ).map(([t, label]) => (
-        <button key={t} className="btn text-[11px]" aria-pressed={tool === t} onClick={() => setTool(t)}>
+        <button key={t} className="btn text-[11px] shrink-0" aria-pressed={tool === t} onClick={() => setTool(t)} disabled={disabled}>
           {label}
         </button>
       ))}
-      {crop && (
-        <button className="btn text-[11px]" onClick={onClearCrop}>
-          Clear crop
-        </button>
-      )}
+      <button className="btn text-[11px] shrink-0" onClick={onFit} disabled={disabled} title="Fit the drawing to the view (Home)">
+        Fit
+      </button>
       <span className="flex-1" />
-      <span style={muted}>
-        Wheel: zoom · middle button or Space + drag: pan
-        {pageSize ? ` · page ${Math.round(pageSize.width)} × ${Math.round(pageSize.height)} ${unitName}s` : ""}
+      {/* One line: cut short (the whole text in the tooltip) rather than wrapped. */}
+      <span className="min-w-0 truncate" style={muted} title={hint} data-testid="viewer-hint">
+        {hint}
       </span>
     </div>
   );
@@ -605,6 +623,7 @@ export function Viewer({
   target,
   onPick,
   frames = [],
+  fitNonce = 0,
 }: {
   assetId: string;
   page: number;
@@ -615,6 +634,8 @@ export function Viewer({
   target: PickTarget | null;
   onPick: (p: Pt) => void;
   frames?: FrameMark[];
+  /** A change fits the drawing to the viewer again (the toolbar's Fit). */
+  fitNonce?: number;
 }) {
   const tick = useDrawingsTick();
   const box = useRef<HTMLDivElement>(null);
@@ -638,9 +659,18 @@ export function Viewer({
     return () => ro.disconnect();
   }, []);
 
-  // Fit the page (or the crop) when the page changes.
-  const fitKey = `${assetId}|${page}|${pageSize ? 1 : 0}`;
+  // Fit the page (or the crop) when the page changes, on Fit (or Home), and
+  // when the viewer is resized, until the user zooms or pans.
+  const [homeNonce, setHomeNonce] = useState(0);
+  const baseKey = `${assetId}|${page}|${pageSize ? 1 : 0}|${fitNonce}|${homeNonce}`;
+  const baseKeyRef = useRef(baseKey);
+  useEffect(() => {
+    baseKeyRef.current = baseKey;
+  }, [baseKey]);
   const [fitted, setFitted] = useState("");
+  // The fit the user zoomed or panned away from (no refit on a resize then).
+  const [moved, setMoved] = useState<string | null>(null);
+  const fitKey = moved === baseKey ? fitted : `${baseKey}|${size.w}x${size.h}`;
   if (pageSize && fitted !== fitKey && size.w > 0) {
     setFitted(fitKey);
     const r = crop ?? pageRect(pageSize);
@@ -650,9 +680,14 @@ export function Viewer({
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (e.code === "Space" && !(e.target instanceof HTMLInputElement)) {
+      const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLTextAreaElement;
+      if (e.code === "Space" && !typing) {
         e.preventDefault();
         setSpace(true);
+      }
+      if (e.key === "Home" && !typing) {
+        e.preventDefault();
+        setHomeNonce((n) => n + 1);
       }
     };
     const up = (e: KeyboardEvent) => e.code === "Space" && setSpace(false);
@@ -783,6 +818,7 @@ export function Viewer({
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     if (e.button === 1 || space || tool === "pan") {
       e.preventDefault();
+      setMoved(baseKeyRef.current);
       drag.current = { kind: "pan", x: p.x, y: p.y, view };
       setPanning(true);
       return;
@@ -818,6 +854,7 @@ export function Viewer({
     if (!c) return;
     const wheel = (e: WheelEvent) => {
       e.preventDefault();
+      setMoved(baseKeyRef.current);
       setView((v) => {
         if (!v) return v;
         const r = c.getBoundingClientRect();
@@ -913,6 +950,26 @@ function drawMarks(ctx: CanvasRenderingContext2D, marks: { at: Pt; label: string
 
 // ── The inputs ──────────────────────────────────────────────────────
 
+/**
+ * Why the calibration gives no transform yet: the next step (plain text,
+ * with a pointer) or an error (in the warning text color).
+ */
+export function CalibrationMessage({ result, testId }: { result: FormResult; testId?: string }) {
+  if (result.fit.ok) return null;
+  return result.prompt ? (
+    <p data-testid={testId} data-kind="prompt" className="flex items-start gap-1">
+      <span aria-hidden style={muted}>
+        ›
+      </span>
+      {result.fit.error}
+    </p>
+  ) : (
+    <p data-testid={testId} data-kind="error" style={{ color: "var(--color-vsc-warning-text)" }}>
+      {result.fit.error}
+    </p>
+  );
+}
+
 interface InputsProps {
   form: CalibrationForm;
   setForm: (f: CalibrationForm) => void;
@@ -924,11 +981,12 @@ const fieldClass = "w-full min-w-0 text-[12px]";
 
 /** A row's "pick" button: the next click in the drawing goes to it. */
 function PickButton({ t, form, target, setTarget }: { t: PickTarget } & Pick<InputsProps, "form" | "target" | "setTarget">) {
+  // (as wide as the column heads' first cell)
   const has = !!targetSource(form, t);
   const active = sameTarget(t, target);
   return (
     <button
-      className="btn text-[11px] min-w-[44px]"
+      className={`btn text-[11px] shrink-0 ${t.kind === "origin" ? "w-[68px]" : "w-[44px]"}`}
       aria-pressed={active}
       title={active ? "Click in the drawing" : "Pick this point in the drawing"}
       onClick={() => setTarget(active ? null : t)}
@@ -940,28 +998,15 @@ function PickButton({ t, form, target, setTarget }: { t: PickTarget } & Pick<Inp
 }
 
 export function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: InputsProps & { reuseOptions: { key: string; label: string }[] }) {
+  const reuse = form.reuseFrom ? (reuseOptions.find((r) => r.key === form.reuseFrom) ?? null) : null;
   const n = form.reuseFrom ? 1 : 2;
   const setTick = (axis: "x" | "y", i: number, value: string) =>
     setForm({ ...form, axes: { ...form.axes, [axis]: form.axes[axis].map((t: TickRow, k: number) => (k === i ? { ...t, value } : t)) } });
   return (
     <div className="mt-2 flex flex-col gap-1.5">
-      <p className="text-[11px]" style={muted}>
-        Click two points on the horizontal axis and type their x; then two on the vertical axis and type their y. The x and y
-        scales are found separately, so a section drawn with vertical exaggeration is placed true to scale.
-      </p>
-      {(["x", "y"] as const).map((axis) =>
-        form.axes[axis].slice(0, n).map((t, i) => (
-          <div key={`${axis}${i}`} className="flex items-center gap-1.5">
-            <PickButton t={{ kind: axis, index: i }} form={form} target={target} setTarget={setTarget} />
-            <span className="w-[48px] text-[11px]" style={muted}>
-              {axis} (m)
-            </span>
-            <input className={fieldClass} value={t.value} aria-label={`${axis}${i + 1} value`} onChange={(e) => setTick(axis, i, e.target.value)} inputMode="decimal" />
-          </div>
-        )),
-      )}
+      {/* Above the rows it changes: reusing a scale leaves one point per axis. */}
       {reuseOptions.length > 0 && (
-        <label className="flex flex-col gap-0.5 mt-1">
+        <label className="flex flex-col gap-0.5">
           <span className="text-[11px]" style={muted}>
             Reuse scale from
           </span>
@@ -983,6 +1028,42 @@ export function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: I
           </select>
         </label>
       )}
+      <p className="text-[11px]" style={muted} data-testid="axes-help">
+        {form.reuseFrom ? (
+          <>
+            Click one point on each axis and type its value; the scale comes from {reuse ? reuse.label : "the chosen drawing"}.
+          </>
+        ) : (
+          <>
+            Click two points on the horizontal axis and type their x; then two on the vertical axis and type their y. The x and y
+            scales are found separately, so a section drawn with vertical exaggeration is placed true to scale.
+          </>
+        )}
+      </p>
+      {(["x", "y"] as const).map((axis) =>
+        form.axes[axis].slice(0, n).map((t, i) => (
+          <div key={`${axis}${i}`} className="flex items-center gap-1.5">
+            <PickButton t={{ kind: axis, index: i }} form={form} target={target} setTarget={setTarget} />
+            <span className="w-[48px] text-[11px]" style={muted}>
+              {axis} (m)
+            </span>
+            <input className={fieldClass} value={t.value} aria-label={`${axis}${i + 1} value`} onChange={(e) => setTick(axis, i, e.target.value)} inputMode="decimal" />
+          </div>
+        )),
+      )}
+    </div>
+  );
+}
+
+/** Column headings over the rows of points, aligned with their fields. */
+function ColumnHeads({ misfit, remove, origin = false }: { misfit: boolean; remove: boolean; origin?: boolean }) {
+  return (
+    <div className="flex items-center gap-1.5 text-[10px]" style={muted} aria-hidden>
+      <span className={`shrink-0 ${origin ? "w-[68px]" : "w-[44px]"}`} />
+      <span className="w-full min-w-0">x (m)</span>
+      <span className="w-full min-w-0">y (m)</span>
+      {misfit && <span className="w-[58px] shrink-0 text-right">misfit</span>}
+      {remove && <span className="w-[22px] shrink-0" />}
     </div>
   );
 }
@@ -990,26 +1071,30 @@ export function AxesInputs({ form, setForm, target, setTarget, reuseOptions }: I
 export function PointsInputs({ form, setForm, target, setTarget, residuals }: InputsProps & { residuals: number[] | null }) {
   const setRow = (i: number, patch: Partial<PointRow>) => setForm({ ...form, points: form.points.map((p, k) => (k === i ? { ...p, ...patch } : p)) });
   const filled = form.points.filter((p) => p.source && p.x.trim() && p.y.trim());
+  const showMisfit = !!residuals && filled.length >= 3;
+  const removable = form.points.length > 2;
   return (
     <div className="mt-2 flex flex-col gap-1.5">
       <p className="text-[11px]" style={muted}>
         Click a point in the drawing and type its model x and y; then a second one. Two points give the scale and the rotation;
         three or more are fitted (least squares), with the misfit of each point.
       </p>
+      <ColumnHeads misfit={showMisfit} remove={removable} />
       {form.points.map((p, i) => (
         <div key={i} className="flex items-center gap-1.5">
           <PickButton t={{ kind: "point", index: i }} form={form} target={target} setTarget={setTarget} />
           <input className={fieldClass} placeholder="x (m)" value={p.x} aria-label={`Point ${i + 1} x`} onChange={(e) => setRow(i, { x: e.target.value })} inputMode="decimal" />
           <input className={fieldClass} placeholder="y (m)" value={p.y} aria-label={`Point ${i + 1} y`} onChange={(e) => setRow(i, { y: e.target.value })} inputMode="decimal" />
-          {residuals && filled.length >= 3 && residuals[filled.indexOf(p)] !== undefined && (
+          {showMisfit && (
             <span className="text-[10px] w-[58px] shrink-0 text-right whitespace-nowrap" style={muted} title="Misfit of this point">
-              {residuals[filled.indexOf(p)].toFixed(3)} m
+              {residuals![filled.indexOf(p)] !== undefined ? `${residuals![filled.indexOf(p)].toFixed(3)} m` : ""}
             </span>
           )}
-          {form.points.length > 2 && (
+          {removable && (
             <button
-              className="btn text-[11px] px-1.5"
+              className="btn text-[11px] px-1.5 w-[22px] shrink-0"
               aria-label={`Remove point ${i + 1}`}
+              title={`Remove point ${i + 1}`}
               onClick={() => {
                 setForm({ ...form, points: form.points.filter((_, k) => k !== i) });
                 setTarget(null);
@@ -1044,6 +1129,7 @@ export function ScaleInputs({ form, setForm, target, setTarget, isPdf, unitName 
       <p className="text-[11px]" style={muted}>
         Click a point whose model coordinates you know and type them; then the drawing&apos;s scale.
       </p>
+      <ColumnHeads misfit={false} remove={false} origin />
       <div className="flex items-center gap-1.5">
         <PickButton t={{ kind: "origin" }} form={form} target={target} setTarget={setTarget} />
         <input className={fieldClass} placeholder="x (m)" value={o.x} aria-label="Origin x" onChange={(e) => set({ origin: { ...o, x: e.target.value } })} inputMode="decimal" />
@@ -1054,7 +1140,7 @@ export function ScaleInputs({ form, setForm, target, setTarget, isPdf, unitName 
         {isPdf ? (
           <select value={form.scale.unit} aria-label="Drawing unit" onChange={(e) => set({ unit: e.target.value as ScaleUnit })}>
             <option value="mm">mm</option>
-            <option value="pt">point (1/72 in)</option>
+            <option value="pt">pt (1/72 in)</option>
           </select>
         ) : (
           <span className="text-[11px]">{unitName}</span>
