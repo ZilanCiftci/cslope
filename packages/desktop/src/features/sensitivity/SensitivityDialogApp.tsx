@@ -11,6 +11,7 @@ import {
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
 import { useToolWindowState } from "../../utils/tool-window-sync";
@@ -65,6 +66,7 @@ function SensitivityBody({
 }) {
   const { model, designValues, running, points, total, label, runValue } = state;
   const variables = useMemo(() => listVariables(model), [model]);
+  const [chartRef, chartWidth] = useWidth(430);
   const [key, setKey] = useState(variables[0]?.key ?? "");
   const selected = variables.find((v) => v.key === key);
   const defaultRange = (v: number) =>
@@ -97,7 +99,7 @@ function SensitivityBody({
       title={TITLE}
       description={DESCRIPTION}
       footer={
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
@@ -193,8 +195,8 @@ function SensitivityBody({
         )}
 
         {data.length > 0 && (
-          <div aria-label="FOS against the varied value">
-            <LineChart width={430} height={220} data={data} margin={{ top: 10, right: 16, left: 0, bottom: 14 }}>
+          <div aria-label="FOS against the varied value" ref={chartRef}>
+            <LineChart width={chartWidth} height={240} data={data} margin={{ top: 10, right: 16, left: 0, bottom: 14 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,130,140,0.35)" />
                 <XAxis
                   type="number"

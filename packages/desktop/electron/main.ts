@@ -592,8 +592,8 @@ function createResultsPlotWindow() {
 // the results, and is told when one closes so it stops a run.
 type ToolWindow = "sensitivity" | "reliability";
 const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number }> = {
-  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 540, height: 720 },
-  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 560, height: 760 },
+  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 620, height: 760 },
+  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 620, height: 780 },
 };
 const toolWins = new Map<ToolWindow, BrowserWindow>();
 

@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } fr
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
 import { useToolWindowState } from "../../utils/tool-window-sync";
@@ -65,6 +66,7 @@ function ReliabilityBody({
 }) {
   const { model, designValues, bothDirections, running, progress, result, labels, error } = state;
   const candidates = useMemo(() => listRandomCandidates(model), [model]);
+  const [chartRef, chartWidth] = useWidth(450);
 
   const [rows, setRows] = useState<RandomRow[]>(() => {
     const first = candidates.find((c) => c.field !== "unitWeight") ?? candidates[0];
@@ -102,7 +104,7 @@ function ReliabilityBody({
       title={TITLE}
       description={DESCRIPTION}
       footer={
-        <div className="flex items-center gap-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-2 text-[11px]">
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
@@ -334,8 +336,8 @@ function ReliabilityBody({
               </table>
             )}
             {bars.length > 0 && (
-              <div aria-label="Distribution of the FOS">
-                <BarChart width={450} height={190} data={bars} margin={{ top: 10, right: 16, left: 0, bottom: 14 }} barCategoryGap={0}>
+              <div aria-label="Distribution of the FOS" ref={chartRef}>
+                <BarChart width={chartWidth} height={200} data={bars} margin={{ top: 10, right: 16, left: 0, bottom: 14 }} barCategoryGap={0}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,130,140,0.35)" />
                   <XAxis
                     type="number"
