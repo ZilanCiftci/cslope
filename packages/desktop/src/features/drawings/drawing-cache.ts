@@ -6,7 +6,7 @@
  * canvas draws what is ready and is told (onDrawingsChanged) when more is.
  */
 import type { BackgroundImage } from "../../store/types";
-import { projectAsset } from "./asset-registry";
+import { onProjectAssetsReplaced, projectAsset } from "./asset-registry";
 import { openDrawingSource, pageRect, type DrawingSource, type PageSize, type Raster } from "./sources";
 import type { Crop } from "./transform";
 import { SegmentIndex } from "./vector-index";
@@ -63,6 +63,8 @@ export function drawingSource(assetId: string): Promise<DrawingSource> {
       .then(({ bytes, mime }) => openDrawingSource(bytes, mime))
       .then(
         (source) => {
+          // (the cache was cleared while it opened: nobody keeps it)
+          if (sources.get(assetId) !== e) source.dispose();
           e.source = source;
           notify();
           return source;
@@ -260,11 +262,34 @@ export async function renderPlacement(p: Pick<BackgroundImage, "assetId" | "page
   return source.render(p.page ?? 1, scale, p.crop, p.hiddenLayers);
 }
 
-/** Forget everything (a test; or the Place drawing window when the project's files change). */
+/** Give back a raster's canvas memory now (an image's own picture is its source's, closed with it). */
+function releaseRaster(raster: Raster | null): void {
+  const image = raster?.image;
+  if ((typeof HTMLCanvasElement !== "undefined" && image instanceof HTMLCanvasElement) || (typeof OffscreenCanvas !== "undefined" && image instanceof OffscreenCanvas)) {
+    image.width = 0;
+    image.height = 0;
+  }
+}
+
+/**
+ * Forget everything: the opened files (a PDF's document in the pdf.js
+ * worker destroyed, decoded images closed), the rasters, the line work and
+ * its segment grids. When another project is opened or a new one started
+ * (adoptProjectAssets), in tests, and in the Place drawing window when the
+ * project's files change.
+ */
 export function clearDrawingCache(): void {
-  for (const e of sources.values()) e.source?.dispose();
+  const opened = [...sources.values()];
   sources.clear();
-  for (const e of rasters.values()) if (e.pending) clearTimeout(e.pending);
+  for (const e of opened) e.source?.dispose();
+  for (const e of rasters.values()) {
+    if (e.pending) clearTimeout(e.pending);
+    releaseRaster(e.raster);
+  }
   rasters.clear();
   vectorEntries.clear();
+  notify();
 }
+
+// The drawings of the previous project are of no use in the next.
+onProjectAssetsReplaced(clearDrawingCache);

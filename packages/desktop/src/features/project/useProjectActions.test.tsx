@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { markProjectClean, useAppStore } from "../../store/app-store";
 import { INITIAL_MODEL } from "../../store/slices/modelsSlice";
 import { useProjectActions } from "./useProjectActions";
+import { adoptProjectAssets, onProjectAssetsReplaced, openedProjectAssets } from "../drawings/asset-registry";
 
 function clone<T>(value: T): T {
   const sc = globalThis.structuredClone as ((v: T) => T) | undefined;
@@ -70,6 +71,19 @@ describe("useProjectActions", () => {
     // newProject resets to a single default model
     expect(useAppStore.getState().models).toHaveLength(1);
     expect(result.current.fileName).toBe("");
+  });
+
+  it("handleNew drops the closed project's drawings", () => {
+    adoptProjectAssets([{ id: "a1", mime: "image/png", originalName: "plan.png", addedAt: "", data: () => new Uint8Array() }]);
+    const replaced = vi.fn();
+    const off = onProjectAssetsReplaced(replaced);
+    const { result } = renderHook(() => useProjectActions("cslope-project"));
+    act(() => {
+      result.current.handleNew();
+    });
+    off();
+    expect(openedProjectAssets()).toEqual([]);
+    expect(replaced).toHaveBeenCalledTimes(1);
   });
 
   // ── handleOpen (browser path) ────────────────────────────────────

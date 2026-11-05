@@ -258,7 +258,12 @@ async function decodeTiff(bytes: Uint8Array): Promise<DrawingSource> {
     const pixels = new Uint8ClampedArray(w * h * 4);
     pixels.set(rgba.subarray(0, w * h * 4));
     ctx.putImageData(new ImageData(pixels, w, h), 0, 0);
-    pages.push({ image: canvas as CanvasImageSource, width: w, height: h });
+    // (closed: its memory given back at once, not when collected)
+    const close = () => {
+      canvas.width = 0;
+      canvas.height = 0;
+    };
+    pages.push({ image: canvas as CanvasImageSource, width: w, height: h, close });
   }
   return imageSource(pages);
 }

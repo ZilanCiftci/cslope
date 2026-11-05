@@ -2,6 +2,7 @@ import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
 import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 
 /**
  * Before replacing the project: offer to save unsaved changes, or else
@@ -38,6 +39,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
       "Reset the entire app store to defaults? This cannot be undone.",
     );
     if (!ok) return;
+    adoptProjectAssets([]);
     useAppStore.getState().newProject();
     if (isElectron) window.cslope.menuNew();
   };
@@ -47,6 +49,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
       "Open the Lovö models as a new project? The current project will be closed.",
     );
     if (!ok) return;
+    adoptProjectAssets([]);
     await useAppStore.getState().loadLovoModels();
     useAppStore.temporal.getState().clear();
     if (isElectron) window.cslope.menuNew();

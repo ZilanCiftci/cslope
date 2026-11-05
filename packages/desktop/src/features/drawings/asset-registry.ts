@@ -22,20 +22,30 @@ export interface ProjectAsset {
 
 let assets: ProjectAsset[] = [];
 const listeners = new Set<() => void>();
+const replacedListeners = new Set<() => void>();
 
 const emit = () => {
   for (const l of listeners) l();
 };
 
 /**
- * Keep `list` (from readProject) as the project's attachments: call it
- * where the project read is loaded, not before, so a file read and then
- * not opened (the user cancels, or saves the current project first)
- * leaves the current project's attachments in place.
+ * Keep `list` (from readProject; none for a new project or the example
+ * models) as the project's attachments: call it where the project read is
+ * loaded, not before, so a file read and then not opened (the user
+ * cancels, or saves the current project first) leaves the current
+ * project's attachments in place. What was made of the previous project's
+ * drawings (drawing-cache.ts) is dropped.
  */
 export function adoptProjectAssets(list: ProjectAsset[]): void {
   assets = list;
+  for (const l of replacedListeners) l();
   emit();
+}
+
+/** Call `listener` when another project's attachments replace these (adoptProjectAssets); returns the unsubscribe. */
+export function onProjectAssetsReplaced(listener: () => void): () => void {
+  replacedListeners.add(listener);
+  return () => replacedListeners.delete(listener);
 }
 
 /** The project's attachments (a save takes these by default). */

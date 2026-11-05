@@ -79,6 +79,8 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
 
   const handleNew = () =>
     withUnsavedChangesCheck(() => {
+      // (no drawings: those of the project closed are dropped)
+      adoptProjectAssets([]);
       useAppStore.getState().newProject();
       useAppStore.temporal.getState().clear();
       setFileName("");

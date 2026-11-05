@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 
 /**
  * Before replacing the project: offer to save unsaved changes, or else
@@ -57,6 +58,7 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
   const loadModels = async (what: string, load: () => void) => {
     const ok = await confirmReplace(`Open ${what} as a new project? The current project will be closed.`);
     if (!ok) return;
+    adoptProjectAssets([]);
     load();
     useAppStore.temporal.getState().clear();
     // The examples are a new, unsaved project: Ctrl+S must not write them
