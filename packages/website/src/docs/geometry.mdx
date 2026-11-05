@@ -13,11 +13,11 @@ The geometry of a model is a cross-section of the slope: an **exterior boundary*
 
 Open **Model › Boundaries › Exterior**. The window lists the points of the boundary in order, with their X and Y coordinates in meters.
 
-- Type new coordinates in the table, or drag a point on the canvas.
+- Type new coordinates in the table, or select the boundary on the canvas and drag its points (see [Editing on the canvas](/docs/interface#editing-on-the-canvas)). Picking a row selects that point on the canvas.
 - **+ Add point** adds a point 5 m to the right of the last one.
 - The button at the end of a row removes the point. The boundary keeps at least three points.
 
-On the canvas you can also right-click an edge and choose **Add point**, or right-click a point and choose **Delete point**. <Kbd>Delete</Kbd> removes the selected point.
+On the canvas you can also right-click an edge and choose **Add point**, or right-click a point and choose **Delete point**. <Kbd>Delete</Kbd> removes the selected point. A model imported from another program or a DXF drawing starts with its exterior and material boundaries locked; click **Unlock** in the status bar, or right-click the boundary and choose **Unlock**, to edit them on the canvas.
 
 The top of the exterior boundary is the ground surface. Slip surfaces enter and leave the slope there.
 
@@ -34,7 +34,7 @@ When you drag a point near a point of another line, it snaps to that point, so t
 
 ## Regions and materials
 
-cSlope finds the regions between the boundaries automatically. Open **Model › Materials › Assign** to give each region a material: the window lists the regions with a material for each. You can also click a region on the canvas and choose its material from the menu. A region without an assignment uses the first material in the list.
+cSlope finds the regions between the boundaries automatically. Open **Model › Materials › Assign** to give each region a material: the window lists the regions with a material for each. You can also right-click a region on the canvas and choose **Assign material…**, or double-click it, and pick its material from the menu. A region without an assignment uses the first material in the list.
 
 Define the materials themselves in **Model › Materials**. See [Materials](/docs/materials).
 

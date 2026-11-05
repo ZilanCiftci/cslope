@@ -19,13 +19,13 @@ Open **Model › Loads & support › UDL**. Each row is one load:
 
 A pressure q normal to ground inclined at β carries q per horizontal meter vertically, as a vertical load would, and q·tan β horizontally, pushing into the ground. On level ground the two directions are the same. Water standing against a slope is the typical case: entered as a normal load q = γw·(water level − ground), it acts as [free water](/docs/water) does on the ground, without pore pressure in the soil. The canvas labels such a load "⊥ ground".
 
-**+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas you can drag the two ends of a load horizontally while the UDL window is open.
+**+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas, select a load and drag its ends horizontally, or drag the load itself to move it whole.
 
 A distributed load imported from a .stix file can carry a **degree of consolidation** per material: the part of the load not yet consolidated, $(1 - U)\,q$, adds to the pore pressure at the slice bases under it in that material, where they are below the water. The UDL window lists these under the table, for example "UDL 1, not consolidated: Material "Clay" 50 % of q (excess pore pressure below the water)"; **Remove** drops one, and the load is then fully consolidated in that material. The PDF report gives them as the degree of consolidation, "degree of consolidation U = 50 % in Clay (the rest of the load as excess pore pressure)".
 
 ## Line loads
 
-Open **Model › Loads & support › Line loads**. Each row is a line load **P** in kN per meter run at position **x**. **+ Add line load** adds a load of 50 kN/m at x = 10 m. Line loads can also be dragged on the canvas.
+Open **Model › Loads & support › Line loads**. Each row is a line load **P** in kN per meter run at position **x**. **+ Add line load** adds a load of 50 kN/m at x = 10 m. A selected line load can also be dragged on the canvas.
 
 **Angle from vertical** inclines the load: 0 is vertical, positive turns it towards +x, ±90 is horizontal (a strut or an anchor force on a wall). Its vertical part acts like a vertical load; its horizontal part acts on the slice under the load, at the ground or at **Load point y** when given (a point on a wall face).
 

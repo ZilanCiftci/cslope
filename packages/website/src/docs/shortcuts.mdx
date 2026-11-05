@@ -15,31 +15,37 @@ order: 3
 | <Kbd>Ctrl</Kbd>+<Kbd>Shift</Kbd>+<Kbd>S</Kbd> | Save as |
 | <Kbd>Ctrl</Kbd>+<Kbd>Z</Kbd> | Undo |
 | <Kbd>Ctrl</Kbd>+<Kbd>Shift</Kbd>+<Kbd>Z</Kbd> or <Kbd>Ctrl</Kbd>+<Kbd>Y</Kbd> | Redo |
-| <Kbd>Delete</Kbd> / <Kbd>Backspace</Kbd> | Delete the selected exterior boundary point (edit mode, with *Exterior* open and more than 3 points) or the selected annotations (result mode) |
-| Arrow keys | Move the selected annotations; with <Kbd>Shift</Kbd> in smaller steps |
+| <Kbd>Delete</Kbd> / <Kbd>Backspace</Kbd> | Delete the selected point (edit mode, where a point can be removed and the object is not locked) or the selected annotations (result mode) |
+| Arrow keys | Edit mode: move the selected point by one snap step, with <Kbd>Shift</Kbd> by ten. Result mode: move the selected annotations; with <Kbd>Shift</Kbd> in smaller steps |
 | <Kbd>F5</Kbd> or <Kbd>Ctrl</Kbd>+<Kbd>Enter</Kbd> | Run the analysis (not while typing in a field) |
-| <Kbd>Esc</Kbd> | Close a menu or a dialog window (a value typed in a field is kept) |
+| <Kbd>Esc</Kbd> | Close a menu or a dialog window (a value typed in a field is kept); on the canvas, clear the selection |
 
 ## Mouse, edit mode
 
 | Action | Effect |
 | --- | --- |
-| Drag a point | Move it (snaps to the grid and to nearby points) |
-| Click a point | Select it |
-| Right-click an edge | **Add point** |
-| Right-click a point | **Delete point** |
-| Click a region (with *Assign* open) | Choose its material |
+| Click an object | Select it: its handles appear |
+| Click a point of the selected object | Select the point |
+| Click again at the same spot | Select the next object under the pointer |
+| Click empty canvas | Clear the selection |
+| Drag a handle of the selected object | Move it (snaps to the grid and to nearby points) |
+| Drag a load or a custom surface (selected) | Move it whole |
+| Double-click a point of the selected object | Type its exact coordinates |
+| Right-click an edge | **Add point**, **Lock** / **Unlock** |
+| Right-click a point | **Delete point**, **Lock** / **Unlock** |
+| Right-click empty canvas | **Assign material…**, **Lock all**, **Unlock all** |
+| Double-click a region | Choose its material |
 | <Kbd>Ctrl</Kbd>+wheel | Zoom at the cursor |
 | Wheel, or middle-button drag | Pan |
 
-What you can drag depends on the open dialog window: boundary points with *Exterior* or *Interior*, water-line points with *Piezometric lines*, load positions with *UDL* or *Line loads*, and the search ranges with *Search limits*.
+Only the selected object can be dragged: a drag over another object moves nothing. A locked object can be selected but not changed. See [Editing on the canvas](/docs/interface#editing-on-the-canvas).
 
 ## Mouse, result mode
 
 | Action | Effect |
 | --- | --- |
 | Click an annotation | Select it; <Kbd>Ctrl</Kbd> or <Kbd>Shift</Kbd>+click adds to the selection |
-| Drag an annotation | Move it |
+| Drag an annotation | Move it (a reference line once it is selected) |
 | Right-click with several selected | Align them |
 | Click the empty sheet | Select the paper, to set its size and extents |
 | <Kbd>Ctrl</Kbd>+wheel | Zoom the sheet |

@@ -33,7 +33,20 @@ Hover over a button to see its shortcut, if it has one. After an analysis the ri
 
 Each button on the **Model** tab opens its own window. The windows are not modal: they stay open next to the main window, and a change in a window shows on the canvas at once (and the other way round). Clicking the button of a window that is already open brings it to the front. <Kbd>Esc</Kbd> closes a window; a value typed in a field is kept.
 
-Opening a window also chooses what you can edit on the canvas. With *Exterior* open you drag the points of the exterior boundary; with *Piezometric lines* open you drag the points of the water lines, and so on.
+A window is a table of objects you also see on the canvas, and opening it does not change what you can edit there. Opening *Exterior* selects the exterior boundary on the canvas; picking a row in a window selects that point on the canvas, and a point you select on the canvas is the selected row in the open window. Closing a window leaves the selection as it is.
+
+## Editing on the canvas
+
+Every object on the canvas can be selected at any time: the exterior boundary, material boundaries, water lines, distributed and line loads, reinforcement and piles, the search limits and custom surfaces.
+
+- **Hover** over an object to highlight it; the pointer becomes a hand.
+- **Click** an object to select it. Its handles appear in the accent color and the status bar names it, for example *Selected: Water line 1*. Only the selected object can be changed: dragging over an object that is not selected moves nothing (with the *Pan* tool on, it pans).
+- **Drag a handle** of the selected object to move that point. It snaps to the grid and to nearby points, shows its coordinates while you drag, and counts as one change for undo. A drag starts only once the pointer has moved a few pixels, so a click never moves anything. A load, or a custom surface, can also be dragged by its body to move it whole (a circle by its center); the exterior and material boundaries are edited point by point.
+- **Click a point** of the selected object to select that point. Repeated clicks at one spot go through all the objects there in turn; the status bar shows, for example, *Water line 1 (2 of 3 under the pointer)*. <Kbd>Esc</Kbd> or a click on empty canvas clears the selection.
+- The **arrow keys** move the selected point by one snap step (with <Kbd>Shift</Kbd> by ten), <Kbd>Delete</Kbd> removes it where a point can be removed, and a **double-click** on a point opens a small editor for its exact x and y.
+- **Right-click** an object for its menu: *Add point* on a line, *Delete point* at a point, and *Lock* or *Unlock*. Right-click empty canvas for *Assign material…* (the region there), *Lock all* by type and *Unlock all*.
+
+A **locked** object can still be selected, to read its coordinates, but its handles are gray with a padlock and it cannot be dragged, nudged or have points deleted on the canvas; the pointer shows *Locked · right-click to unlock*. Models imported from another program or from a DXF drawing start with the exterior and material boundaries locked, and the status bar shows *Geometry is locked (imported) · Unlock*. Locks are saved with each model, and locking or unlocking counts as one change for undo.
 
 ## Edit mode and result mode
 
