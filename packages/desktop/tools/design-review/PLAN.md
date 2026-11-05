@@ -85,10 +85,16 @@ Bedömningen görs mot `docs/design-rules.md`. Varje bild får en checklista; et
 ## 7. Att köra om granskningen
 
 ```
-# från repots rot, i en container som root, under virtuell skärm
-CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 3000x2000x24" bun run packages/desktop/tools/design-review/run.ts
+# från repots rot, i en container som root, under virtuell skärm (ImageMagick behövs för kontaktkartorna och About-rutan)
+CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 3000x2000x24" bun packages/desktop/tools/design-review/run.ts
 bun packages/desktop/tools/design-review/check.ts      # automatiska regelkontroller → findings-auto.json
 bun packages/desktop/tools/design-review/sheets.ts     # kontaktkartor för den visuella granskningen
 ```
 
-Resultat hamnar i `design-review-out/` (ignoreras av git).
+Resultat hamnar i `design-review-out/` (ignoreras av git): `shots/<scen>-<tema>.png`, `metrics/<scen>-<tema>.json`, `index.json`, `findings-auto.json`, `sheets/<område>-<tema>-<n>.png`, och `errors/` med en bild av läget när en scen misslyckades.
+
+- `DESIGN_REVIEW_ONLY=win-materials,ctx-` kör bara scener vars id börjar så (index.json behåller de andra scenernas rader).
+- `DESIGN_REVIEW_SKIP_BUILD=1` återanvänder senaste bygget i `packages/desktop/dist`.
+- `DESIGN_REVIEW_PORT` sätter felsökningsporten (standard 9341).
+
+Filerna: `scenes.ts` (inventeringen: varje scen öppnar sin del med riktiga klick), `run.ts` (startar appen, laddar om sidan före varje bild och startar om appen var tionde scen), `lib.ts` (start, fönster, butik och mätningar inklusive axe-core), `check.ts`, `sheets.ts`.
