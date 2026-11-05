@@ -2,7 +2,9 @@
  * SlopeCanvas — Interactive HTML5 Canvas for editing slope geometry.
  */
 
+import { AssignMaterialHint } from "./AssignMaterialHint";
 import type React from "react";
+import { Lock } from "lucide-react";
 import { useRef, useEffect, useCallback, useState, useMemo } from "react";
 import {
   useAppStore,
@@ -47,7 +49,7 @@ import type { CanvasObjectRef } from "../store/types";
 /** Gap kept around the model by zoom-to-fit, besides the rulers and the toolbar. */
 const FIT_PAD_PX = 16;
 
-/** Beside the pointer over a locked object: how to unlock it. */
+/** Beside the pointer over a locked object: a padlock and how to unlock it. */
 function LockedTip({
   mouseWorld,
   worldToCanvas,
@@ -64,7 +66,7 @@ function LockedTip({
     <div
       role="tooltip"
       data-testid="locked-tip"
-      className="absolute px-1.5 py-0.5 rounded text-[11px] whitespace-nowrap select-none pointer-events-none z-40"
+      className="absolute flex items-center gap-1 px-1.5 py-0.5 rounded-xs text-[11px] whitespace-nowrap select-none pointer-events-none z-40"
       style={{
         left: x + 14,
         top: y + 14,
@@ -73,6 +75,7 @@ function LockedTip({
         border: "1px solid var(--color-vsc-border)",
       }}
     >
+      <Lock size={12} strokeWidth={1.75} aria-hidden="true" style={{ color: "var(--color-vsc-text-muted)" }} />
       Locked · right-click to unlock
     </div>
   );
@@ -892,7 +895,7 @@ export function EditCanvas() {
               width: zoomRect.width,
               height: zoomRect.height,
               border: "1px dashed var(--color-vsc-accent)",
-              background: "rgba(0,120,212,0.12)",
+              background: "var(--color-vsc-selected-bg)",
               zIndex: 35,
             }}
           />
@@ -934,35 +937,11 @@ export function EditCanvas() {
         )}
 
         {assigningMaterialId && (
-          <div
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] font-medium select-none"
-            style={{
-              background: "var(--color-vsc-accent)",
-              color: "var(--color-canvas-tooltip-text)",
-              boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)",
-            }}
-          >
-            <span
-              className="w-3 h-3 rounded-sm inline-block"
-              style={{
-                background:
-                  materials.find((m) => m.id === assigningMaterialId)?.color ??
-                  "#888",
-                border: "1px solid rgba(255,255,255,0.4)",
-              }}
-            />
-            Click a region to assign{" "}
-            <strong>
-              {materials.find((m) => m.id === assigningMaterialId)?.name ?? "?"}
-            </strong>
-            <button
-              onClick={() => setAssigningMaterial(null)}
-              className="ml-1 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-              style={{ background: "rgba(255,255,255,0.2)" }}
-            >
-              Cancel
-            </button>
-          </div>
+          <AssignMaterialHint
+            name={materials.find((m) => m.id === assigningMaterialId)?.name}
+            color={materials.find((m) => m.id === assigningMaterialId)?.color}
+            onCancel={() => setAssigningMaterial(null)}
+          />
         )}
         <ContextMenuOverlay menu={contextMenu} />
         {pointEditor && <PointEditor editor={pointEditor} onClose={() => setPointEditor(null)} />}
