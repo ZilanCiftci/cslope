@@ -20,7 +20,12 @@ checked, and the rules for changing the engine now.
   engine the app ships): the verification problems with their checks, and
   per analysis the minimum F, the critical surface's key and the counts of
   surfaces; `tests/verification_native.rs` compares the native engine with
-  it (F within 1e-6, near-ties in `tests/allowlist.toml`). Until the
+  it (F within 1e-6, near-ties in `tests/allowlist.toml`). The problems'
+  finite element setups and references (`fem`) are there too, for
+  `tests/verification_bounds.rs`: the limit analysis bounds of each FE
+  problem in order, bracketing the rigid-plastic references and the
+  strength reduction factor (understood violations in
+  `tests/bounds_allowlist.toml`). Until the
   cutover, `tools/fixtures/*.fixture.ts` exported fixtures from the
   TypeScript engine under Node (V8) for differential tests; they were
   removed with it (see "Cutover").
