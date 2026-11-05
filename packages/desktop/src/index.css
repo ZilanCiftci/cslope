@@ -32,6 +32,10 @@
   --color-vsc-surface-tint-strong: rgba(255,255,255,0.04);
   --color-vsc-swatch-border: rgba(255,255,255,0.2);
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.15);
+  /* The dimmed window behind a modal dialog. */
+  --color-vsc-backdrop: rgba(0, 0, 0, 0.3);
+  /* Shadow of floating things (menus, popups, modal dialogs). */
+  --color-vsc-shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   /* Form controls (fields, selects, buttons): flat, 1 px borders, 2 px
      corners, like the Windows desktop.  Fields are darker than the panels
@@ -154,6 +158,10 @@
   --color-vsc-surface-tint-strong: rgba(0,0,0,0.04);
   --color-vsc-swatch-border: rgba(0,0,0,0.2);
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.12);
+  /* The dimmed window behind a modal dialog. */
+  --color-vsc-backdrop: rgba(0, 0, 0, 0.3);
+  /* Shadow of floating things (menus, popups, modal dialogs). */
+  --color-vsc-shadow-float: 0 8px 24px rgba(0, 0, 0, 0.16);
 
   --color-vsc-field-bg: #ffffff;
   --color-vsc-field-border: #c4c4c4;
