@@ -47,6 +47,7 @@ body:
     id: confidential
     attributes:
       label: Confidential data
+      description: Attach a copy saved with File › Save as anonymized… (it removes the project information and drawings and gives models and materials generic names), and check it for names in parameters and expressions.
       options:
         - label: I have removed client and confidential information from anything I attached (or attached nothing).
           required: true

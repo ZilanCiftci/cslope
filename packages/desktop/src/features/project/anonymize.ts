@@ -636,7 +636,7 @@ export function anonymizeProject(
           }),
         };
       }
-      if (model.backgrounds) {
+      if (model.backgrounds && !options.removeDrawings) {
         model.backgrounds = model.backgrounds.map((b, i) => {
           summary.objectsRenamed++;
           return { ...b, name: `Drawing ${i + 1}` };

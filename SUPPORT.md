@@ -6,7 +6,7 @@
 
 ## Before you post a project file
 
-Project files often contain client names, locations, borehole data and drawings. Before attaching one, remove the project information (File › Model properties), rename models and materials that identify the client or site, and remove drawings you may not share. A small model that still shows the problem is best.
+Project files often contain client names, locations, borehole data and drawings. Attach a copy saved with **File › Save as anonymized…**: it removes the project information and the drawings, gives models, materials and other objects generic names, replaces the free text of annotations, and can move the model to a local origin (the factor of safety does not change). Names you typed into parameters and expressions stay, so open the copy and check it before you post it. A small model that still shows the problem is best.
 
 ## cSlope is beta software
 
