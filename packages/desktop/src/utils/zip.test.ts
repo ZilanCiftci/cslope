@@ -3,7 +3,7 @@
  * tests cover the limits and the crafted archives).
  */
 import { describe, expect, it } from "vitest";
-import { dosDateTime, openZip, readZip, writeZip, writeZipDeflated } from "./zip";
+import { dosDateTime, openZip, ownBytes, readZip, writeZip, writeZipDeflated } from "./zip";
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -41,7 +41,7 @@ describe("openZip", () => {
     expect(archive.unpacked()).toBe(2);
     const first = await archive.read("dir/b.bin");
     expect(first).toBe(await archive.read("dir/b.bin"));
-    // (a stored entry is a copy of the archive's own bytes: not counted)
+    // (a stored entry is a view of the archive's own bytes: not counted)
     expect(archive.unpacked()).toBe(2);
     await expect(archive.read("none")).rejects.toThrow("no entry none");
   });
@@ -84,6 +84,56 @@ describe("openZip", () => {
     new DataView(z.buffer).setUint32(cen + 24, 100, true);
     await expect(openZip(z).read("z.bin")).rejects.toThrow(/z\.bin is larger than its header says/);
     expect(bomb.length).toBeLessThan(MB);
+  });
+
+  it("reads a stored entry as a view of the archive (no copy), and refuses entries that share or overlap their bytes", async () => {
+    const one = writeZip([{ name: "a.bin", data: new Uint8Array(1000).fill(7) }]);
+    const view = await openZip(one).read("a.bin");
+    expect(view.buffer).toBe(one.buffer);
+    expect(view.length).toBe(1000);
+    expect(ownBytes(view)).not.toBe(view);
+    expect(ownBytes(view)).toEqual(view);
+    expect(ownBytes(one)).toBe(one);
+
+    // 300 names in the central directory, all at the one stored entry
+    const localEnd = 30 + "a.bin".length + 1000;
+    const records: Uint8Array[] = [];
+    for (let i = 0; i < 300; i++) {
+      const name = enc.encode(`n${i}.bin`);
+      const cen = new Uint8Array(46 + name.length);
+      const v = new DataView(cen.buffer);
+      v.setUint32(0, 0x02014b50, true);
+      v.setUint32(20, 1000, true);
+      v.setUint32(24, 1000, true);
+      v.setUint16(28, name.length, true);
+      v.setUint32(42, 0, true);
+      cen.set(name, 46);
+      records.push(cen);
+    }
+    const cenSize = records.reduce((n, r) => n + r.length, 0);
+    const crafted = new Uint8Array(localEnd + cenSize + 22);
+    crafted.set(one.subarray(0, localEnd), 0);
+    let o = localEnd;
+    for (const r of records) {
+      crafted.set(r, o);
+      o += r.length;
+    }
+    const ev = new DataView(crafted.buffer, o);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, 300, true);
+    ev.setUint16(10, 300, true);
+    ev.setUint32(12, cenSize, true);
+    ev.setUint32(16, localEnd, true);
+    expect(() => openZip(crafted)).toThrow(/entries overlap/);
+
+    // an entry whose data runs into the next one's local header
+    const two = writeZip([{ name: "a", data: "xxxx" }, { name: "b", data: "yyyy" }]);
+    const bad = two.slice();
+    const cenA = two.length - 22 - 2 * 47;
+    new DataView(bad.buffer).setUint32(cenA + 20, 40, true);
+    new DataView(bad.buffer).setUint32(cenA + 24, 40, true);
+    expect(() => openZip(bad)).toThrow(/entries overlap/);
+    expect(openZip(two).entries()).toHaveLength(2);
   });
 
   it("refuses what is not an archive, or is cut off", () => {

@@ -7,6 +7,7 @@
 
 import type { DxfPolyline, DxfSegment } from "../../utils/dxf";
 import type { NeutralVectors } from "../drawings/vectors";
+import { ownBytes } from "../../utils/zip";
 
 /** What the reader returns (packages/dwg-rs/src/lib.rs, `Drawing`). */
 export interface DwgDrawing {
@@ -84,7 +85,7 @@ function readOnce<T>(request: DwgWorkerRequest): Promise<T> {
 
 /** The drawing of a DWG file; rejects with the reason it cannot be read. */
 export function readDwgFile(bytes: Uint8Array): Promise<DwgDrawing> {
-  const result = queue.then(() => readOnce<DwgDrawing>(bytes));
+  const result = queue.then(() => readOnce<DwgDrawing>(ownBytes(bytes)));
   queue = result.catch(() => undefined);
   return result;
 }
@@ -95,7 +96,7 @@ export function readDwgFile(bytes: Uint8Array): Promise<DwgDrawing> {
  * reason it cannot be read.
  */
 export function readDwgVectorsFile(bytes: Uint8Array): Promise<NeutralVectors> {
-  const result = queue.then(() => readOnce<NeutralVectors>({ vectors: true, bytes }));
+  const result = queue.then(() => readOnce<NeutralVectors>({ vectors: true, bytes: ownBytes(bytes) }));
   queue = result.catch(() => undefined);
   return result;
 }

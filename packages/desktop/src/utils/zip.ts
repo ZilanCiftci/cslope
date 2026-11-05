@@ -70,8 +70,9 @@ export interface ZipLimits {
   entryBytes: number;
   /**
    * Largest total of the deflated entries read, uncompressed. (A stored
-   * entry is a copy of bytes the archive holds: it cannot unpack to more
-   * than the archive's own size, and does not count.)
+   * entry is read as a view of the archive's own bytes, not a copy, and
+   * the entries may not overlap, so all the stored entries together are
+   * at most the archive's size: they do not count.)
    */
   totalBytes: number;
 }
@@ -103,7 +104,12 @@ export interface ZipEntryInfo {
  * deflated entries unpacked plus the entry's against `totalBytes`), and an entry that
  * unpacks to more than it declares is refused as damaged, so an archive
  * can never unpack to more than the limits allow, however many entries it
- * has. An entry read twice is unpacked once.
+ * has. An entry read twice is unpacked once. A stored entry is a view
+ * of the archive's bytes (a subarray: copy it before handing it to
+ * something that takes over or posts its buffer). Two entries of the
+ * central directory at one local header, or overlapping, are refused
+ * when the archive is opened (a few stored bytes named a thousand times
+ * would otherwise be read a thousand times).
  */
 export interface ZipArchive {
   /** The entries by name, in central directory order (directories left out). */
@@ -147,6 +153,7 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
     // (a name listed twice: the last one, as readers usually take it)
     index.set(name, { name, size, compressedSize, method, encrypted: (flags & 1) !== 0, local });
   }
+  refuseOverlaps([...index.values()], bytes);
   const cache = new Map<string, Uint8Array>();
   let total = 0;
 
@@ -167,7 +174,8 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
     let out: Uint8Array;
     if (method === 0) {
       if (compressedSize > size) throw new Error(`Damaged ZIP archive (${name} is larger than its header says).`);
-      out = data.slice();
+      // (a view: the entries do not overlap, so this holds no more than the archive)
+      out = data;
     } else if (method === 8) {
       try {
         // (what the stream really unpacks is bounded by the declared size)
@@ -196,6 +204,31 @@ export function openZip(bytes: Uint8Array, limits: ZipLimits = ZIP_LIMITS): ZipA
       return out;
     },
   };
+}
+
+/**
+ * `bytes` in a buffer of their own (a copy of a view such as a stored
+ * entry; as they are when they fill their buffer): posting a view to a
+ * worker or another window would send the whole buffer behind it.
+ */
+export function ownBytes(bytes: Uint8Array): Uint8Array {
+  return bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength ? bytes : bytes.slice();
+}
+
+/**
+ * Refuse entries that share a local header or whose local header and data
+ * overlap another's: a real archive's never do, and a crafted one could
+ * name the same bytes over and over.
+ */
+function refuseOverlaps(entries: ZipEntryInfo[], bytes: Uint8Array): void {
+  const spans = entries.map((e) => {
+    const header = e.local + 30 <= bytes.length && u32(bytes, e.local) === 0x04034b50 ? u16(bytes, e.local + 26) + u16(bytes, e.local + 28) : 0;
+    return { start: e.local, end: e.local + 30 + header + e.compressedSize };
+  });
+  spans.sort((a, b) => a.start - b.start);
+  for (let i = 1; i < spans.length; i++) {
+    if (spans[i].start < spans[i - 1].end) throw new Error("Damaged ZIP archive (entries overlap).");
+  }
 }
 
 /**

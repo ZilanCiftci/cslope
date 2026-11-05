@@ -12,6 +12,7 @@ import { isElectron } from "../../utils/is-electron";
 import { useToolWindowSync } from "../../utils/tool-window-sync";
 import { addProjectAsset, onProjectAssetsChanged, openedProjectAssets, projectAsset, projectAssetBySha } from "./asset-registry";
 import { DRAWING_MIME } from "./sources";
+import { ownBytes } from "../../utils/zip";
 
 /** A drawing file of the project, as the window lists it. */
 export interface DrawingAssetInfo {
@@ -151,7 +152,7 @@ export async function handleDrawingCommand(command: DrawingCommand, send: (asset
         return;
       }
       try {
-        send({ id: asset.id, mime: asset.mime, data: await asset.data() });
+        send({ id: asset.id, mime: asset.mime, data: ownBytes(await asset.data()) });
       } catch (err) {
         send({ id: command.id, error: err instanceof Error ? err.message : String(err) });
       }
