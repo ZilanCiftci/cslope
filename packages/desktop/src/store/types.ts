@@ -816,6 +816,14 @@ export interface ResultViewSlice {
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, additive: boolean) => void;
   setSelectedResultObject: (target: "paper-frame" | null) => void;
+  /**
+   * Results › Sheet settings: select the paper on the sheet (result mode),
+   * open the result sidebar and ask it to show the paper's properties.
+   */
+  showPaperProperties: () => void;
+  /** The sidebar is to scroll to the paper's properties (consumed by it). */
+  paperPropertiesFocusPending: boolean;
+  clearPaperPropertiesFocus: () => void;
   alignAnnotations: (
     align: "left" | "right" | "top" | "bottom" | "center-h" | "center-v",
   ) => void;

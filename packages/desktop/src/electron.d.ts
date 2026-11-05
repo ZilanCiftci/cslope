@@ -17,10 +17,8 @@ import type {
   ParameterDef,
   PiezometricLineState,
   RegionMaterials,
-  ResultViewSettings,
   UdlRow,
 } from "./store/types";
-import type { PaperContent } from "./features/view/extents";
 import type { SensitivityCommand, SensitivityWindowState } from "./features/sensitivity/window-sync";
 import type { ReliabilityCommand, ReliabilityWindowState } from "./features/reliability/window-sync";
 
@@ -100,15 +98,6 @@ interface AnalysisStatePayload {
   referenceFromPlaneId?: string;
 }
 
-interface ViewSettingsStatePayload {
-  resultViewSettings: ResultViewSettings;
-  coordinates: [number, number][];
-  resultViewScale: number;
-  resultViewOffset: [number, number];
-  /** What the model draws (main window to the dialog only). */
-  paperContent?: PaperContent;
-}
-
 declare global {
   interface Window {
     cslope: {
@@ -155,7 +144,6 @@ declare global {
       openOptionsDialog: () => void;
       openSensitivityDialog: () => void;
       openReliabilityDialog: () => void;
-      openViewSettingsDialog: () => void;
       onInteriorBoundariesDialogOpenChanged: (
         listener: (event: unknown, open: boolean) => void,
       ) => () => void;
@@ -325,17 +313,6 @@ declare global {
       ) => () => void;
       onAnalysisChanged: (
         listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => () => void;
-      // View settings dialog sync
-      requestViewSettingsState: () => void;
-      sendViewSettingsState: (state: ViewSettingsStatePayload) => void;
-      sendViewSettingsChanged: (state: ViewSettingsStatePayload) => void;
-      onViewSettingsRequestState: (listener: (event: unknown) => void) => () => void;
-      onViewSettingsState: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => () => void;
-      onViewSettingsChanged: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
       ) => () => void;
     };
   }

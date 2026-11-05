@@ -33,6 +33,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
   selectedResultObject: null,
+  paperPropertiesFocusPending: false,
 
   setResultViewSettings: (patch) =>
     set((s) => syncActiveModel(s, { ...s.resultViewSettings, ...patch })),
@@ -131,6 +132,17 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
 
   setSelectedResultObject: (target) =>
     set({ selectedResultObject: target, selectedAnnotationIds: [] }),
+
+  showPaperProperties: () =>
+    set({
+      mode: "result",
+      sidebarOpen: true,
+      selectedResultObject: "paper-frame",
+      selectedAnnotationIds: [],
+      paperPropertiesFocusPending: true,
+    }),
+
+  clearPaperPropertiesFocus: () => set({ paperPropertiesFocusPending: false }),
 
   alignAnnotations: (align) =>
     set((s) => {

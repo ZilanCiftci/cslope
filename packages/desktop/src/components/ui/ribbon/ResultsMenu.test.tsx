@@ -103,9 +103,20 @@ describe("ResultsMenu", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
     await userEvent.click(screen.getByTitle("Results plot"));
-    await userEvent.click(screen.getByTitle("Sheet settings"));
-    expect(alert).toHaveBeenCalledTimes(2);
+    expect(alert).toHaveBeenCalledTimes(1);
     expect(alert.mock.calls[0][0]).toMatch(/desktop app/);
+  });
+
+  it("Sheet settings selects the paper and shows its properties in the sidebar", async () => {
+    act(() => useAppStore.setState({ sidebarOpen: false, selectedResultObject: null }));
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Sheet settings"));
+    expect(useAppStore.getState()).toMatchObject({
+      mode: "result",
+      sidebarOpen: true,
+      selectedResultObject: "paper-frame",
+      paperPropertiesFocusPending: true,
+    });
   });
 
   it("explains that the sensitivity and probabilistic windows need the desktop app in a browser", async () => {

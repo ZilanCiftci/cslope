@@ -267,16 +267,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     else window.alert("The probabilistic analysis is available in the desktop app.");
   };
 
-  const openViewSettings = () => {
-    if (isElectron) {
-      window.cslope.openViewSettingsDialog();
-      return;
-    }
-
-    window.alert(
-      "View settings dialog is available in the desktop app window mode.",
-    );
-  };
+  // The paper's settings are its properties in the result sidebar.
+  const showSheetSettings = () => useAppStore.getState().showPaperProperties();
 
   return (
     <div
@@ -472,7 +464,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<SettingsIcon {...SMALL_ICON} />}
                   label="Sheet settings"
-                  onClick={openViewSettings}
+                  onClick={showSheetSettings}
                 />
               </RibbonStack>
             </RibbonGroup>

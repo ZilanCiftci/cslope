@@ -5,7 +5,7 @@
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { parseDecimalText } from "../../utils/decimal";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
 import { PanelHeaderRow } from "../../components/SidePanelChrome";
@@ -471,6 +471,23 @@ export function ResultSidebar() {
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
 
+  // Results › Sheet settings: open Properties, bring the paper's fields
+  // into view and put the cursor in the first one.
+  const paperFocusPending = useAppStore((s) => s.paperPropertiesFocusPending);
+  const clearPaperPropertiesFocus = useAppStore((s) => s.clearPaperPropertiesFocus);
+  const paperPropertiesRef = useRef<HTMLDivElement>(null);
+  if (paperFocusPending && !openSections.properties) {
+    setOpenSections((prev) => ({ ...prev, properties: true }));
+  }
+  useEffect(() => {
+    if (!paperFocusPending) return;
+    const el = paperPropertiesRef.current;
+    if (!el) return;
+    el.scrollIntoView?.({ block: "nearest" });
+    el.querySelector<HTMLElement>("input, select")?.focus({ preventScroll: true });
+    clearPaperPropertiesFocus();
+  }, [paperFocusPending, paperFrameSelected, openSections.properties, clearPaperPropertiesFocus]);
+
   const setVisibleColumnsForAll = useCallback(
     (next: string[]) => {
       const normalized = next.filter((value): value is MaterialTableColumnKey =>
@@ -737,7 +754,7 @@ export function ResultSidebar() {
         )}
 
         {paperFrameSelected && (
-          <div className="space-y-2 mb-3">
+          <div ref={paperPropertiesRef} className="space-y-2 mb-3" role="group" aria-label="Paper">
             <div
               className="grid gap-2"
               style={{

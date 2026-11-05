@@ -123,7 +123,6 @@ const WINDOW_HASH: Record<string, string> = {
   Options: "options-dialog",
   "Sensitivity analysis": "sensitivity-dialog",
   "Probabilistic analysis": "reliability-dialog",
-  "View settings": "view-settings-dialog",
 };
 
 /**

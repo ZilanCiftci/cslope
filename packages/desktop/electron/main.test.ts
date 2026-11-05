@@ -577,7 +577,6 @@ const DIALOGS: [channel: string, title: string, hash: string][] = [
   ["window:openOptionsDialog", "Options", "options-dialog"],
   ["window:openSensitivityDialog", "Sensitivity analysis", "sensitivity-dialog"],
   ["window:openReliabilityDialog", "Probabilistic analysis", "reliability-dialog"],
-  ["window:openViewSettingsDialog", "View settings", "view-settings-dialog"],
 ];
 
 function openDialog(channel: string): Win {
@@ -689,7 +688,6 @@ const PAIRS: [prefix: string, openChannel: string][] = [
   ["interiorBoundaries", "window:openInteriorBoundariesDialog"],
   ["piezo", "window:openPiezoDialog"],
   ["parameters", "window:openParametersDialog"],
-  ["viewSettings", "window:openViewSettingsDialog"],
 ];
 
 describe("dialog window height", () => {

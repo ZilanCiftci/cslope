@@ -89,7 +89,6 @@ const DIALOG_OPENERS = [
   "SearchLimits",
   "CustomSearchPlanes",
   "Options",
-  "ViewSettings",
   "Sensitivity",
   "Reliability",
 ];
@@ -107,7 +106,6 @@ const SYNC_FAMILIES = [
   "Parameters",
   "ResultsPlot",
   "Analysis",
-  "ViewSettings",
 ];
 // Tool windows: the window sends commands, the main window is told when it closes.
 for (const name of ["Sensitivity", "Reliability"]) {

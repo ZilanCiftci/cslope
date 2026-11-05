@@ -81,8 +81,6 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.send("window:openSensitivityDialog"),
   openReliabilityDialog: () =>
     ipcRenderer.send("window:openReliabilityDialog"),
-  openViewSettingsDialog: () =>
-    ipcRenderer.send("window:openViewSettingsDialog"),
   onInteriorBoundariesDialogOpenChanged: (
     listener: (event: unknown, open: unknown) => void,
   ) => subscribe("interiorBoundaries:dialogOpenChanged", listener),
@@ -248,16 +246,4 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("analysis:stateResponse", listener),
   onAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
     subscribe("analysis:changed", listener),
-  // View settings dialog sync
-  requestViewSettingsState: () => ipcRenderer.send("viewSettings:requestState"),
-  sendViewSettingsState: (state: unknown) =>
-    ipcRenderer.send("viewSettings:stateResponse", state),
-  sendViewSettingsChanged: (state: unknown) =>
-    ipcRenderer.send("viewSettings:changed", state),
-  onViewSettingsRequestState: (listener: (event: unknown) => void) =>
-    subscribe("viewSettings:requestState", listener),
-  onViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
-    subscribe("viewSettings:stateResponse", listener),
-  onViewSettingsChanged: (listener: (event: unknown, state: unknown) => void) =>
-    subscribe("viewSettings:changed", listener),
 });

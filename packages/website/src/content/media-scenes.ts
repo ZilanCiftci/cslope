@@ -402,13 +402,6 @@ export const scenes: Scene[] = [
       crop: "canvas",
     },
     {
-      id: "03-view-settings",
-      title: "View settings window",
-      setup: { click: ["Results", "Settings"] },
-      crop: "window",
-      window: "View settings",
-    },
-    {
       id: "04-export",
       title: "The export menu",
       setup: { click: ["Results", "More export options"] },

@@ -6,7 +6,6 @@ vi.mock("../utils/is-electron", () => ({ isElectron: true }));
 
 import App from "../App";
 import { useAppStore } from "../store/app-store";
-import { paperContentOf } from "../features/view/extents";
 import { DEFAULT_MATERIAL } from "../store/defaults";
 
 type Handler = (event: unknown, payload?: unknown) => void;
@@ -80,12 +79,6 @@ describe("main window IPC", () => {
       ["onPiezoRequestState", "sendPiezoState", { piezometricLine: s.piezometricLine }],
       ["onParametersRequestState", "sendParametersState", { parameters: s.parameters }],
       ["onAnalysisRequestState", "sendAnalysisState", { options: s.options, analysisLimits: s.analysisLimits }],
-      [
-        "onViewSettingsRequestState",
-        "sendViewSettingsState",
-        // What the model draws, for the dialog's "Use model bounds".
-        { resultViewSettings: s.resultViewSettings, paperContent: paperContentOf(s) },
-      ],
     ];
     for (const [request, response, expected] of cases) {
       emit(request);
@@ -205,16 +198,6 @@ describe("main window IPC", () => {
     expect(useAppStore.getState().piezometricLine).not.toHaveProperty("rapidDrawdown");
   });
 
-  it("applies view settings without discarding the result", () => {
-    const s = useAppStore.getState();
-    emit("onViewSettingsChanged", {
-      resultViewSettings: { ...s.resultViewSettings, showGrid: false },
-      coordinates: s.coordinates,
-    });
-    expect(useAppStore.getState().resultViewSettings.showGrid).toBe(false);
-    expect(useAppStore.getState().result).toBe(RESULT);
-  });
-
   it("drops assignments of materials deleted in the Materials window", () => {
     act(() =>
       useAppStore.setState({
@@ -237,8 +220,6 @@ describe("main window IPC", () => {
     expect(sentCount("sendResultsPlotChanged")).toBeGreaterThan(0);
     act(() => useAppStore.getState().setParameters([{ name: "Q", expression: "1" }] as never));
     expect(lastSent("sendParametersChanged")).toEqual({ parameters: [{ name: "Q", expression: "1" }] });
-    act(() => useAppStore.getState().setResultViewSettings({ showSlices: false }));
-    expect((lastSent("sendViewSettingsChanged").resultViewSettings as { showSlices: boolean }).showSlices).toBe(false);
   });
 
   it("tracks whether the Interior Boundaries window is open", () => {
@@ -279,7 +260,6 @@ describe("dialog windows", () => {
     "search-limits-dialog",
     "custom-search-planes-dialog",
     "options-dialog",
-    "view-settings-dialog",
     "sensitivity-dialog",
     "reliability-dialog",
   ];

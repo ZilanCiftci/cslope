@@ -43,7 +43,6 @@ let resultsPlotWin: BrowserWindow | null;
 let searchLimitsWin: BrowserWindow | null;
 let customSearchPlanesWin: BrowserWindow | null;
 let optionsWin: BrowserWindow | null;
-let viewSettingsWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -762,46 +761,6 @@ function createOptionsWindow() {
   }
 }
 
-function createViewSettingsWindow() {
-  if (!win) return;
-
-  if (viewSettingsWin && !viewSettingsWin.isDestroyed()) {
-    viewSettingsWin.show();
-    viewSettingsWin.focus();
-    return;
-  }
-
-  viewSettingsWin = new BrowserWindow({
-    width: 420,
-    height: 620,
-    minWidth: 360,
-    minHeight: 480,
-    title: "View settings",
-    parent: win,
-    modal: false,
-    autoHideMenuBar: true,
-    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-
-  viewSettingsWin.on("closed", () => {
-    viewSettingsWin = null;
-  });
-
-  if (VITE_DEV_SERVER_URL) {
-    viewSettingsWin.loadURL(`${VITE_DEV_SERVER_URL}#view-settings-dialog`);
-  } else {
-    viewSettingsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "view-settings-dialog",
-    });
-  }
-}
-
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -899,7 +858,6 @@ ipcMain.on("window:openCustomSearchPlanesDialog", () =>
 ipcMain.on("window:openOptionsDialog", () => createOptionsWindow());
 ipcMain.on("window:openSensitivityDialog", () => createToolWindow("sensitivity"));
 ipcMain.on("window:openReliabilityDialog", () => createToolWindow("reliability"));
-ipcMain.on("window:openViewSettingsDialog", () => createViewSettingsWindow());
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -1169,30 +1127,6 @@ ipcMain.on("analysis:changed", (event, state) => {
     searchLimitsWin?.webContents.send("analysis:changed", state);
     customSearchPlanesWin?.webContents.send("analysis:changed", state);
     optionsWin?.webContents.send("analysis:changed", state);
-  }
-});
-
-// ── View settings window sync IPC (main window <-> view settings window) ──
-
-ipcMain.on("viewSettings:requestState", (event) => {
-  if (event.sender === viewSettingsWin?.webContents) {
-    win?.webContents.send("viewSettings:requestState");
-  }
-});
-
-ipcMain.on("viewSettings:stateResponse", (event, state) => {
-  if (event.sender === win?.webContents) {
-    viewSettingsWin?.webContents.send("viewSettings:stateResponse", state);
-  }
-});
-
-ipcMain.on("viewSettings:changed", (event, state) => {
-  if (event.sender === viewSettingsWin?.webContents) {
-    win?.webContents.send("viewSettings:changed", state);
-    return;
-  }
-  if (event.sender === win?.webContents) {
-    viewSettingsWin?.webContents.send("viewSettings:changed", state);
   }
 });
 
