@@ -5,9 +5,10 @@
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { parseDecimalText } from "../../utils/decimal";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
+import { HelpButton } from "../../components/ui/HelpButton";
 import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { Label } from "../../components/ui/Label";
 import { MultiSelectComboboxChips } from "../../components/ui/MultiSelectComboboxChips";
@@ -471,6 +472,23 @@ export function ResultSidebar() {
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
 
+  // Results › Sheet settings: open Properties, bring the paper's fields
+  // into view and put the cursor in the first one.
+  const paperFocusPending = useAppStore((s) => s.paperPropertiesFocusPending);
+  const clearPaperPropertiesFocus = useAppStore((s) => s.clearPaperPropertiesFocus);
+  const paperPropertiesRef = useRef<HTMLDivElement>(null);
+  if (paperFocusPending && !openSections.properties) {
+    setOpenSections((prev) => ({ ...prev, properties: true }));
+  }
+  useEffect(() => {
+    if (!paperFocusPending) return;
+    const el = paperPropertiesRef.current;
+    if (!el) return;
+    el.scrollIntoView?.({ block: "nearest" });
+    el.querySelector<HTMLElement>("input, select")?.focus({ preventScroll: true });
+    clearPaperPropertiesFocus();
+  }, [paperFocusPending, paperFrameSelected, openSections.properties, clearPaperPropertiesFocus]);
+
   const setVisibleColumnsForAll = useCallback(
     (next: string[]) => {
       const normalized = next.filter((value): value is MaterialTableColumnKey =>
@@ -737,7 +755,7 @@ export function ResultSidebar() {
         )}
 
         {paperFrameSelected && (
-          <div className="space-y-2 mb-3">
+          <div ref={paperPropertiesRef} className="space-y-2 mb-3" role="group" aria-label="Paper">
             <div
               className="grid gap-2"
               style={{
@@ -1534,18 +1552,21 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
   const headline = !!fem.bounds && (fem.bounds.lower !== null || fem.bounds.upper !== null);
   const srfTitle =
     fem.flowRule === "non-associated"
-      ? "Strength reduction by finite elements with non-associated flow: the largest factor on c and tan φ at which the iteration still finds equilibrium, as other programs compute it. With non-associated flow it has no limit as the mesh is refined (it falls on every refinement), so it is computed on the initial mesh and depends on its size; compare it with other programs' results, not as the factor of safety."
-      : "Strength reduction by finite elements: the largest factor on c and tan φ at which the slope is still in equilibrium. It needs no slip surface; the plastic zone on the canvas shows the mechanism.";
+      ? "Strength reduction with non-associated flow, as other programs compute it. It falls on every mesh refinement, so it is computed on the first mesh: a comparison, not the factor of safety."
+      : "Strength reduction: the largest factor on c and tan φ at which the slope is still in equilibrium. No slip surface needed; the plastic zone on the canvas shows the mechanism.";
   return (
     <div className="mt-1.5 space-y-1 border-t pt-1.5" style={{ borderColor: "var(--color-vsc-border)" }}>
       <h4 className="flex items-center text-[11px] font-semibold">
         Finite elements
         <ExperimentalBadge />
+        <span className="ml-auto">
+          <HelpButton topic="Finite element results" page="analysis#finite-element-results" />
+        </span>
       </h4>
       {fem.bounds && (
         <div className="flex justify-between">
           <Label
-            title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? ` after ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""} where the gap between the bounds lay` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: a statically admissible stress field (lower bound) and a kinematically admissible mechanism (upper bound) of rigid–perfectly plastic soil with associated flow. The factor of safety lies between them; unlike strength reduction with non-associated flow, it converges as the mesh is refined.`}
+            title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? `, ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""}` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: lower and upper bounds of rigid–plastic soil with associated flow. The factor of safety lies between them.`}
           >
             FOS, limit analysis (FE)
           </Label>
@@ -1554,7 +1575,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
       )}
       {fem.bounds?.davis && (
         <div className="flex justify-between">
-          <Label title="The same bounds with Davis B's reduced strength for the dilation angle: the associated material that stands for non-associated flow, usually a conservative estimate of it. The associated range above bounds the non-associated soil's factor of safety from above (Radenković 1962); a wide gap between the two means the flow rule matters for this slope.">
+          <Label title="The same bounds with Davis B's reduced strength, which stands for non-associated flow, usually conservatively. A wide gap to the range above: the flow rule matters here.">
             Davis B (non-associated)
           </Label>
           <span className="tabular-nums">{boundsText(fem.bounds.davis.lower, fem.bounds.davis.upper)}</span>

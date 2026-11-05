@@ -126,7 +126,7 @@ export interface PdfExportData {
   /**
    * Analysis summary: appended as text pages after the drawing unless
    * `resultViewSettings.pdfSummaryPages` is false, and written as a title
-   * line above the drawing when `resultViewSettings.pdfTitleLine` is true.
+   * line above the drawing unless `resultViewSettings.pdfTitleLine` is false.
    */
   summary?: { sections: SummarySection[]; header: SummaryHeader };
 }
@@ -136,7 +136,7 @@ export function pdfPageOptions(rvs: Pick<ResultViewSettings, "pdfSummaryPages" |
   summaryPages: boolean;
   titleLine: boolean;
 } {
-  return { summaryPages: rvs.pdfSummaryPages !== false, titleLine: rvs.pdfTitleLine === true };
+  return { summaryPages: rvs.pdfSummaryPages !== false, titleLine: rvs.pdfTitleLine !== false };
 }
 
 function createTransform(

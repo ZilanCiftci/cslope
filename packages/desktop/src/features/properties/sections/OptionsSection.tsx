@@ -179,7 +179,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
   const content = (
     <div className="space-y-3 text-[12px]">
       <section>
-        <GroupHeading>Method</GroupHeading>
+        <GroupHeading help={{ topic: "Method", page: "analysis#method" }}>Method</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <label className="flex flex-col gap-0.5">
             <Label>Method</Label>
@@ -321,7 +321,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       </section>
 
       <section>
-        <GroupHeading>Search</GroupHeading>
+        <GroupHeading help={{ topic: "Search", page: "search#search-settings" }}>Search</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <div className="col-span-2 flex flex-col gap-1">
             <Label>Sliding direction</Label>
@@ -350,7 +350,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
           </label>
           <label
             className="col-span-2 flex items-center gap-1.5 pl-4"
-            title="Also follow the base of the model where no impenetrable material lies on it, as if the material below the model were impenetrable. Off: a circle through the base is not analyzed (the base is only the edge of the model)."
+            title="Circles also follow the base of the model where no impenetrable material lies on it, as on a firm stratum. Off (default): a circle through the base is not analyzed."
           >
             <input
               type="checkbox"
@@ -499,7 +499,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               onValueChange={(v) => v >= 0 && setOptions({ minSlipArea: v })}
               onClear={() => setOptions({ minSlipArea: 0 })}
               aria-label="Minimum slip area"
-              title="Surfaces whose sliding mass (cross-section area per meter) is smaller than this are left out of the search. 0 = no limit (default). A limit hides small surfaces, such as a low cut at the toe; use it to skip shallow slips you do not want to analyze."
+              title="Smallest sliding mass analyzed: its cross-section area, m² per meter. 0 = no limit (default). A limit can hide a real small failure, such as a low cut at the toe."
             />
           </label>
           <label className="flex flex-col gap-0.5">
@@ -517,7 +517,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       </section>
 
       <section>
-        <GroupHeading>Water and tension crack</GroupHeading>
+        <GroupHeading help={{ topic: "Water and tension crack", page: "analysis#tension-crack" }}>Water and tension crack</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <label className="col-span-2 flex flex-col gap-0.5">
             <Label>Pore pressure below an inclined water line</Label>
@@ -583,7 +583,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 v >= 0 && v < 90 && setOptions({ tensionCrackAngle: v })
               }
               aria-label="Tension crack angle"
-              title="Tension crack at a limiting base inclination: from the entry, the part of the slip surface steeper than this angle is cut off and the surface ends at a vertical crack there (often 45° + φ/2, or about 60°). 0 = none. With a crack depth too, the crack further from the entry governs."
+              title="Base inclination (°) above which the surface's steep upper end is cut off at a vertical crack; often 45° + φ/2 or about 60°. 0 = none (default)."
             />
           </label>
           <label className="flex flex-col gap-0.5">
@@ -613,7 +613,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       <RapidDrawdownFields />
 
       <section>
-        <GroupHeading>Seismic (pseudostatic)</GroupHeading>
+        <GroupHeading help={{ topic: "Seismic", page: "analysis#seismic-load-pseudostatic" }}>Seismic (pseudostatic)</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <label className="flex flex-col gap-0.5">
             <Label>kh (horizontal, + in the sliding direction)</Label>
@@ -643,7 +643,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       </section>
 
       <section>
-        <GroupHeading>Design</GroupHeading>
+        <GroupHeading help={{ topic: "Design", page: "analysis#partial-factors" }}>Design</GroupHeading>
         <div className="grid grid-cols-2 gap-x-3 gap-y-2">
           <PartialFactorsFields
             factors={options.partialFactors ?? null}
@@ -654,7 +654,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
       </section>
 
       <section>
-        <GroupHeading>
+        <GroupHeading help={{ topic: "Finite elements", page: "analysis#finite-elements-experimental" }}>
           Finite elements
           <ExperimentalBadge />
         </GroupHeading>
@@ -829,7 +829,7 @@ function Sgi3dFields({
     <div className="col-span-2 flex flex-col gap-2">
       <label
         className="flex items-center gap-1.5"
-        title="F3D after SGI Vägledning 8 (Temporära slänter, 2024, section 2.1): the critical stretch of length L between two plane end faces of cohesive soil, over the circular surfaces of the analysis. Total stress analysis of normally to lightly overconsolidated clay."
+        title="F3D of a temporary excavation opened in stages of length L (SGI Vägledning 8, 2024): the end faces' undrained strength added to each circle. Off by default."
       >
         <input type="checkbox" checked={s.enabled} onChange={(e) => set({ enabled: e.target.checked })} aria-label="3D effects (SGI)" />
         <Label>3D effects (SGI Vägledning 8)</Label>
@@ -915,7 +915,7 @@ function FemFields({
     <div className="grid grid-cols-2 gap-x-3 gap-y-2">
       <label
         className="col-span-2 flex items-center gap-1.5"
-        title="Reduces c and tan φ by a factor F until the slope can no longer be brought into equilibrium (elastic–perfectly plastic soil, six-node triangles). No slip surface is assumed; the failure mechanism comes out of the analysis. Takes from seconds to minutes."
+        title="Finite element strength reduction after the limit equilibrium analysis: c and tan φ reduced by F until equilibrium fails, with no slip surface assumed. Off by default."
       >
         <input
           type="checkbox"
@@ -943,7 +943,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ flowRule: e.target.value as FemAnalysisSettings["flowRule"] })}
           aria-label="Flow rule"
-          title="Davis B: associated flow with strengths reduced for the dilation angle (Tschuchnigg et al. 2015); fast and stable at high friction angles, and on the safe side: with ψ = 0, φ ≤ 30° and F below 1 it can lie 10–35 % under non-associated flow. Non-associated flow with ψ < φ is closer to other finite element programs at moderate friction angles but several times slower, and can give an oscillating, non-unique factor of safety at high friction angles (Tschuchnigg et al. 2015)."
+          title="Davis B (default): associated flow with strengths reduced for ψ; fast, stable, on the safe side. Non-associated: closer to other programs, several times slower, can oscillate."
         >
           {(Object.keys(FLOW_RULE_LABELS) as FemAnalysisSettings["flowRule"][]).map((r) => (
             <option key={r} value={r}>
@@ -959,7 +959,7 @@ function FemFields({
           disabled={off || settings.flowRule !== "non-associated"}
           onChange={(e) => set({ nonAssociatedSolver: e.target.value as "viscoplastic" | "newton" })}
           aria-label="Finite element solver"
-          title="Davis B and associated flow are always solved by Newton's method. Non-associated flow: the viscoplastic iteration of Griffiths & Lane (default), or Newton's method with the unsymmetric tangent, the reduction factor raised in increments (the implicit method of most finite element programs; within about 1 % of the viscoplastic factor in the verification cases, usually slower)."
+          title="Solver for non-associated flow: the viscoplastic iteration of Griffiths & Lane (default) or Newton's method. Davis B and associated flow always use Newton's method."
         >
           <option value="viscoplastic">Viscoplastic</option>
           <option value="newton">Newton</option>
@@ -972,7 +972,7 @@ function FemFields({
           disabled={off || settings.flowRule !== "non-associated" || settings.nonAssociatedSolver === "newton"}
           onChange={(e) => set({ convergence: e.target.value as "increment" | "equilibrium" })}
           aria-label="Convergence test"
-          title="Convergence test of the viscoplastic iteration. Increment (default): the displacement change of an iteration below 10⁻⁴ of the displacement (Griffiths & Lane). Equilibrium: in addition, the stresses returned to the yield surface must balance the load to 0.1 % (the unbalanced-force test of other programs), with the iteration Anderson-accelerated so that trials near failure converge instead of running out of iterations; closer to other programs at high friction angles (Pruska's slopes −3.4 % against −4.7 %), about 1.5 times the run time. Newton always tests equilibrium (residual 10⁻⁶)."
+          title="Convergence test of the viscoplastic iteration. Increment (default): displacement change below 10⁻⁴. Equilibrium: the load also balanced to 0.1 %, about 1.5 times the run time."
         >
           <option value="increment">Increment</option>
           <option value="equilibrium">Equilibrium</option>
@@ -1041,7 +1041,7 @@ function FemFields({
           disabled={off || settings.flowRule === "non-associated"}
           onValueChange={(v) => v >= 0 && v <= 3 && set({ refinementLevels: Math.round(v) })}
           aria-label="Mesh refinements"
-          title="Adaptive refinements where the plastic dissipation at failure is largest; stops early when F changes by less than 0.01. Each roughly doubles the run time. Not with non-associated flow: its factor falls on every refinement without a limit, so it is computed on the first mesh (the limit analysis bounds refine their own mesh)."
+          title="Adaptive refinements where the plastic dissipation is largest, 0–3 (default 1); each roughly doubles the run time. Not with non-associated flow, computed on the first mesh."
         />
       </label>
       <label className="col-span-2 flex flex-col gap-0.5">
@@ -1051,7 +1051,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ porePressure: e.target.value as "water-table" | "seepage" })}
           aria-label="Finite element pore pressures"
-          title="Steady seepage: the water table gives the reservoir and the tail water where it lies at or above the ground; the phreatic surface and the seepage face come from the flow (one permeability for all soils, unsaturated flow after van Genuchten–Mualem with loam parameters; rigid materials nearly impervious)."
+          title="From the water table (default), or steady seepage by finite elements, with the water table above the ground as reservoir and tail water (experimental)."
         >
           <option value="water-table">From the water table</option>
           <option value="seepage">Steady seepage (FE, experimental)</option>
@@ -1064,7 +1064,7 @@ function FemFields({
           disabled={off}
           onChange={(e) => set({ initialStress: e.target.value as "gravity" | "k0" })}
           aria-label="Initial stresses"
-          title="Gravity loading (default): the weight applied in one step from zero stress. K0 procedure: horizontal stresses K0 × the vertical effective stress from the overburden, as for level ground; under a slope its out-of-balance force is applied with the first solution. With associated flow and Davis B the factor of safety does not depend on the initial stresses (the theorems of limit analysis); with non-associated flow, and for the displacements, it does."
+          title="Gravity loading (default): the weight in one step from zero stress. K0 procedure: horizontal stress K0 × vertical effective stress. Matters for non-associated flow only."
         >
           <option value="gravity">Gravity loading</option>
           <option value="k0">K0 procedure</option>
@@ -1128,7 +1128,7 @@ function FemFields({
       </details>
       <label
         className="flex items-center gap-1.5 self-end"
-        title="No tensile effective stress (Rankine cut-off; on by default). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several per cent higher."
+        title="No tensile effective stress (Rankine cut-off; on by default). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several percent higher."
       >
         <input
           type="checkbox"
@@ -1141,7 +1141,7 @@ function FemFields({
       </label>
       <label
         className="col-span-2 flex items-center gap-1.5"
-        title="The lower and upper bounds of limit analysis (rigid–perfectly plastic soil with associated flow, second-order cone programs): a statically admissible stress field and a kinematically admissible mechanism that bracket the factor of safety, and converge as the mesh is refined. They are then the finite element factor of safety, and the strength reduction a comparison with other programs. Also the same bounds with Davis B's reduced strength for the dilation angle, which stands for non-associated flow. Run on a mesh graded as the strength reduction's, twice as coarse, then refined where the gap between the bounds lies until it is below 3 % (at most three times); adds several minutes, up to about 25."
+        title="Lower and upper bounds of limit analysis (associated flow), refined until within 3 %; they are then the FE factor of safety. On in new projects; adds several minutes."
       >
         <input
           type="checkbox"

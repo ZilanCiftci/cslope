@@ -88,12 +88,12 @@ describe("Model ribbon", () => {
     ["Exterior", "openGeometryDialog", "exterior"],
     ["Interior", "openInteriorBoundariesDialog", "boundary"],
     ["Assign", "openMaterialAssignmentDialog", null],
-    ["UDL", "openUdlDialog", "udl"],
+    ["Distributed loads", "openUdlDialog", "udl"],
     ["Line loads", "openLineLoadsDialog", "lineLoad"],
     ["Reinforcement", "openReinforcementDialog", "reinforcement"],
     ["Piezometric lines", "openPiezoDialog", "waterLine"],
     ["Search limits", "openSearchLimitsDialog", "searchLimits"],
-    ["Custom planes", "openCustomSearchPlanesDialog", "customPlane"],
+    ["Custom surfaces", "openCustomSearchPlanesDialog", "customPlane"],
     ["Options", "openOptionsDialog", null],
   ])("%s opens its window and selects its kind of object on the canvas", async (label, call, type) => {
     withEveryObject();
@@ -117,7 +117,7 @@ describe("Model ribbon", () => {
     act(() => {
       for (const u of store().udls) store().removeUdl(u.id);
     });
-    await userEvent.click(screen.getByTitle("UDL"));
+    await userEvent.click(screen.getByTitle("Distributed loads"));
     expect(store().canvasSelection).toEqual({ object: { type: "exterior" }, point: 2 });
   });
 
@@ -293,7 +293,7 @@ describe("Compact ribbon", () => {
     await userEvent.click(tab("Results"));
     expect(screen.getByRole("menuitem", { name: "Results plot" })).toHaveAttribute("data-size", "large");
     expect(screen.getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByTitle("Settings")).toHaveAttribute("data-size", "small");
+    expect(screen.getByTitle("Sheet settings")).toHaveAttribute("data-size", "small");
   });
 
   it("marks a pressed toggle with aria-pressed", async () => {

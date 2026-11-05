@@ -23,8 +23,8 @@ The **Explorer** (the list of models) is on the left; in result mode the **resul
 | Tab | Buttons |
 | --- | --- |
 | **File** | New, Open, Import (DXF file, .gsz file, .stix file, .sli/.slim/.slmd file), Export (.gsz file, .stix file, .slim file), Save, Save as, Exit |
-| **Model** | Boundaries (Exterior, Interior), Materials (Materials, Assign), Loads & support (UDL, Line loads, Reinforcement), Water & parameters (Piezometric lines, Parameters), Analysis (Search limits, Custom planes, Options) |
-| **Results** | Plots (Results plot, Sensitivity, Probabilistic), Display (Surfaces, Slices, FOS label, Center, Soil colors, Plastic zone and FE mesh with a finite element result, Settings), Annotations (Text, Plot, Material table, Color bar, Reference line), Templates (Export template, Import template), Export (PDF, with PNG and slice data in its menu) |
+| **Model** | Boundaries (Exterior, Interior), Materials (Materials, Assign), Loads & support (Distributed loads, Line loads, Reinforcement), Water & parameters (Piezometric lines, Parameters), Analysis (Search limits, Custom surfaces, Options) |
+| **Results** | Plots (Results plot, Sensitivity, Probabilistic), Display (Surfaces, Slices, FOS label, Center, Soil colors, Plastic zone and FE mesh with a finite element result, Sheet settings), Annotations (Text, Plot, Material table, Color bar, Reference line), Templates (Export template, Import template), Export (Export: PDF, with PNG and slice data in its menu) |
 | **Help** | Resources (Documentation, Shortcuts, Examples, Benchmarks, About) |
 
 Hover over a button to see its shortcut, if it has one. After an analysis the ribbon shows the **Results** tab; back in edit mode it shows the **Model** tab again.
@@ -32,6 +32,8 @@ Hover over a button to see its shortcut, if it has one. After an analysis the ri
 ## Dialog windows
 
 Each button on the **Model** tab opens its own window. The windows are not modal: they stay open next to the main window, and a change in a window shows on the canvas at once (and the other way round). Clicking the button of a window that is already open brings it to the front. <Kbd>Esc</Kbd> closes a window; a value typed in a field is kept.
+
+**Results plot**, **Sensitivity** and **Probabilistic** on the **Results** tab open windows of their own in the same way. A field's tooltip says what it is, its unit and its default; the **?** at a section heading opens this documentation at the part that explains the section.
 
 A window is a table of objects you also see on the canvas, and opening it does not change what you can edit there. Opening *Exterior* selects the exterior boundary on the canvas; picking a row in a window selects that point on the canvas, and a point you select on the canvas is the selected row in the open window. Closing a window leaves the selection as it is.
 

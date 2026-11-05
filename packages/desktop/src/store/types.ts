@@ -470,8 +470,8 @@ export interface ResultViewSettings {
   pdfSummaryPages?: boolean;
   /**
    * PDF export: a title line (model name, factor of safety, method) in the
-   * top margin above the drawing frame. Absent: off; the drawing's own text
-   * annotations (#Title, #Subtitle) carry the title.
+   * top margin above the drawing frame. Absent: on (page 1 is often printed
+   * on its own and must carry the factor of safety); false turns it off.
    */
   pdfTitleLine?: boolean;
 }
@@ -883,6 +883,14 @@ export interface ResultViewSlice {
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, additive: boolean) => void;
   setSelectedResultObject: (target: "paper-frame" | null) => void;
+  /**
+   * Results › Sheet settings: select the paper on the sheet (result mode),
+   * open the result sidebar and ask it to show the paper's properties.
+   */
+  showPaperProperties: () => void;
+  /** The sidebar is to scroll to the paper's properties (consumed by it). */
+  paperPropertiesFocusPending: boolean;
+  clearPaperPropertiesFocus: () => void;
   alignAnnotations: (
     align: "left" | "right" | "top" | "bottom" | "center-h" | "center-v",
   ) => void;

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
-import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
 import { DraftNumberInput } from "../DraftNumberInput";
@@ -61,8 +60,6 @@ import { APP_VERSION } from "../../../utils/app-version";
 import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
-import { useSensitivityStore } from "../../../features/sensitivity/store";
-import { useReliabilityStore } from "../../../features/reliability/store";
 
 interface Props {
   isOpen: boolean;
@@ -258,16 +255,19 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     );
   };
 
-  const openViewSettings = () => {
-    if (isElectron) {
-      window.cslope.openViewSettingsDialog();
-      return;
-    }
-
-    window.alert(
-      "View settings dialog is available in the desktop app window mode.",
-    );
+  // Their own windows; the analyses run here, in the main window.
+  const openSensitivity = () => {
+    if (isElectron) window.cslope.openSensitivityDialog();
+    else window.alert("The sensitivity analysis is available in the desktop app.");
   };
+
+  const openReliability = () => {
+    if (isElectron) window.cslope.openReliabilityDialog();
+    else window.alert("The probabilistic analysis is available in the desktop app.");
+  };
+
+  // The paper's settings are its properties in the result sidebar.
+  const showSheetSettings = () => useAppStore.getState().showPaperProperties();
 
   return (
     <div
@@ -310,12 +310,12 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonButton
                 icon={<SensitivityIcon {...LARGE_ICON} />}
                 label="Sensitivity"
-                onClick={() => useSensitivityStore.getState().setOpen(true)}
+                onClick={openSensitivity}
               />
               <RibbonButton
                 icon={<ProbabilisticIcon {...LARGE_ICON} />}
                 label="Probabilistic"
-                onClick={() => useReliabilityStore.getState().setOpen(true)}
+                onClick={openReliability}
               />
             </RibbonGroup>
             <RibbonSep />
@@ -444,7 +444,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<PlasticZoneIcon {...SMALL_ICON} />}
                     label="Plastic zone"
-                    title={`Shade the plastic zone of the finite element analysis (the failure mechanism). ${FEM_EXPERIMENTAL_NOTE}`}
+                    title="Shade the plastic zone (the failure mechanism) of the finite element analysis, which is experimental."
                     onClick={() =>
                       setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
                     }
@@ -455,15 +455,15 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<FeMeshIcon {...SMALL_ICON} />}
                     label="FE mesh"
-                    title={`Draw the mesh of the finite element analysis: its last refinement, finer where the failure mechanism lies. ${FEM_EXPERIMENTAL_NOTE}`}
+                    title="Draw the last mesh of the finite element analysis, finer where the failure mechanism lies. Finite elements are experimental."
                     onClick={() => setRvs({ showFemMesh: !(rvs.showFemMesh ?? false) })}
                     active={rvs.showFemMesh ?? false}
                   />
                 )}
                 <RibbonSmallButton
                   icon={<SettingsIcon {...SMALL_ICON} />}
-                  label="Settings"
-                  onClick={openViewSettings}
+                  label="Sheet settings"
+                  onClick={showSheetSettings}
                 />
               </RibbonStack>
             </RibbonGroup>
@@ -600,7 +600,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <button
                   onClick={handleExportPdf}
                   disabled={!hasResult}
-                  className={`min-w-[58px] h-[50px] px-2 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer ${hasResult ? "hover:bg-[var(--color-vsc-list-hover)]" : ""}`}
+                  className={`min-w-[58px] h-[50px] pl-2 pr-4 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer ${hasResult ? "hover:bg-[var(--color-vsc-list-hover)]" : ""}`}
                   style={{
                     color: "var(--color-vsc-text)",
                     background: "transparent",
@@ -616,7 +616,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <span className="flex items-center justify-center">
                     <PdfIcon {...LARGE_ICON} />
                   </span>
-                  <span className="text-[11px] leading-none">PDF</span>
+                  <span className="text-[11px] leading-none">Export</span>
                 </button>
 
                 <button

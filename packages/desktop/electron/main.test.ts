@@ -103,6 +103,7 @@ const fake = vi.hoisted(() => {
       this.minHeight = h;
     });
     isDestroyed = () => this.destroyed;
+    getParentWindow = () => this.options?.parent ?? null;
     setTitle = vi.fn((t: string) => {
       this.title = t;
     });
@@ -536,6 +537,20 @@ describe("window controls", () => {
     expect(fake.shell.openExternal).toHaveBeenCalledWith("https://cslope.com/docs");
   });
 
+  it("opens a page of the documentation at a heading, also for a dialog window", async () => {
+    await loadMain();
+    send("help:openDocumentation", mainWin().webContents, "analysis#finite-elements-experimental");
+    expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs/analysis#finite-elements-experimental");
+    const dlg = openDialog("window:openOptionsDialog");
+    send("help:openDocumentation", dlg.webContents, "tutorials/reporting");
+    expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs/tutorials/reporting");
+    // Only a page and a heading: anything else opens the documentation itself.
+    for (const bad of ["https://example.com", "../x", "a#b#c", "Analysis", "a b", 5]) {
+      send("help:openDocumentation", dlg.webContents, bad);
+      expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs");
+    }
+  });
+
   it("shows the About box modal to the main window", async () => {
     await loadMain();
     const win = mainWin();
@@ -575,7 +590,8 @@ const DIALOGS: [channel: string, title: string, hash: string][] = [
     "custom-search-planes-dialog",
   ],
   ["window:openOptionsDialog", "Options", "options-dialog"],
-  ["window:openViewSettingsDialog", "View settings", "view-settings-dialog"],
+  ["window:openSensitivityDialog", "Sensitivity analysis", "sensitivity-dialog"],
+  ["window:openReliabilityDialog", "Probabilistic analysis", "reliability-dialog"],
 ];
 
 function openDialog(channel: string): Win {
@@ -707,7 +723,6 @@ const PAIRS: [prefix: string, openChannel: string][] = [
   ["interiorBoundaries", "window:openInteriorBoundariesDialog"],
   ["piezo", "window:openPiezoDialog"],
   ["parameters", "window:openParametersDialog"],
-  ["viewSettings", "window:openViewSettingsDialog"],
 ];
 
 describe("dialog window height", () => {
@@ -856,6 +871,37 @@ describe("dialog state routing", () => {
       4,
     );
   });
+
+  it.each(["sensitivity", "reliability"])(
+    "%s: the window asks for state and sends commands; the main window answers and is told when it closes",
+    async (tool) => {
+      await loadMain();
+      const win = mainWin();
+      const opener = tool === "sensitivity" ? "Sensitivity" : "Reliability";
+      const dlg = openDialog(`window:open${opener}Dialog`);
+      win.webContents.send.mockClear();
+      for (const channel of ["requestState", "command"]) {
+        send(`${tool}:${channel}`, win.webContents, 1);
+        send(`${tool}:${channel}`, stranger(), 1);
+      }
+      expect(win.webContents.send).not.toHaveBeenCalled();
+      send(`${tool}:requestState`, dlg.webContents);
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:requestState`);
+      send(`${tool}:command`, dlg.webContents, { type: "cancel" });
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:command`, { type: "cancel" });
+      for (const channel of ["stateResponse", "changed"]) {
+        dlg.webContents.send.mockClear();
+        send(`${tool}:${channel}`, dlg.webContents, 1);
+        expect(dlg.webContents.send).not.toHaveBeenCalled();
+        send(`${tool}:${channel}`, win.webContents, 2);
+        expect(dlg.webContents.send).toHaveBeenLastCalledWith(`${tool}:${channel}`, 2);
+      }
+      dlg.close();
+      expect(win.webContents.send).toHaveBeenLastCalledWith(`${tool}:closed`);
+      // Closed: nothing to forward to.
+      expect(() => send(`${tool}:changed`, win.webContents, 3)).not.toThrow();
+    },
+  );
 
   it("loads: UDL, line load and reinforcement windows share one channel", async () => {
     await loadMain();

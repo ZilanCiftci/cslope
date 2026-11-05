@@ -1,6 +1,7 @@
 import { Label } from "../../../../components/ui/Label";
 import { DraftNumberInput } from "../../../../components/ui/DraftNumberInput";
 import { NO_SPINNER } from "./styles";
+import { HelpButton } from "../../../../components/ui/HelpButton";
 
 interface Props {
   /** B̄ of the material; undefined: no excess pore pressure. */
@@ -47,12 +48,15 @@ export function BBarFields({ bBar, bBarLoad, ru, onChange }: Props) {
   const ruError = rangeError(ru, (v) => v >= 0 && v < 1, "rᵤ must be at least 0 and below 1.");
   return (
     <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="bbar-ru-heading">
-      <div id="bbar-ru-heading" className="col-span-2 text-[11px] font-medium">
-        Additional pore pressure (added to the water line)
+      <div className="col-span-2 flex items-center gap-1.5">
+        <div id="bbar-ru-heading" className="text-[11px] font-medium">
+          Additional pore pressure (added to the water line)
+        </div>
+        <HelpButton topic="Additional pore pressure" page="materials#additional-pore-pressure" />
       </div>
       <label
         className="flex flex-col gap-0.5"
-        title="Excess pore pressure at a slice base in this material: B̄ times the vertical stress of the fill above it (the materials marked as fill), added to the pore pressure of its water line. Empty: none. Not used by the finite element analyses."
+        title="Excess pore pressure: B̄ × the vertical stress of the fill above the slice base, added to the water line's. Empty: none (default). Not used by finite elements."
       >
         <Label>B̄ (excess pore pressure from fill above)</Label>
         <DraftNumberInput
@@ -76,7 +80,7 @@ export function BBarFields({ bBar, bBarLoad, ru, onChange }: Props) {
       </label>
       <label
         className="flex flex-col gap-0.5"
-        title="Pore pressure ratio: the pore pressure at a slice base in this material is rᵤ × the vertical stress of the soil above the base (γ·h), added to the pore pressure of its water line. Empty: none. Not used by the finite element analyses."
+        title="Pore pressure ratio: rᵤ × the vertical stress γ·h at the slice base, added to the water line's pore pressure. Empty: none (default). Not used by finite elements."
       >
         <Label>rᵤ (pore pressure ratio)</Label>
         <DraftNumberInput

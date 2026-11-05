@@ -77,8 +77,10 @@ contextBridge.exposeInMainWorld("cslope", {
   openCustomSearchPlanesDialog: () =>
     ipcRenderer.send("window:openCustomSearchPlanesDialog"),
   openOptionsDialog: () => ipcRenderer.send("window:openOptionsDialog"),
-  openViewSettingsDialog: () =>
-    ipcRenderer.send("window:openViewSettingsDialog"),
+  openSensitivityDialog: () =>
+    ipcRenderer.send("window:openSensitivityDialog"),
+  openReliabilityDialog: () =>
+    ipcRenderer.send("window:openReliabilityDialog"),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   onMaximized: (listener: (event: unknown, isMax: unknown) => void) =>
     subscribe("window:maximized", listener),
@@ -88,7 +90,8 @@ contextBridge.exposeInMainWorld("cslope", {
   // Menu actions
   menuNew: () => ipcRenderer.send("menu:new"),
   menuAbout: () => ipcRenderer.send("menu:about"),
-  openDocumentation: () => ipcRenderer.send("help:openDocumentation"),
+  // The documentation, or one of its pages at a heading ("analysis#method").
+  openDocumentation: (page?: string) => ipcRenderer.send("help:openDocumentation", page),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
   // Canvas selection sync (the main window and every dialog window)
   requestSelectionState: () => ipcRenderer.send("selection:requestState"),
@@ -202,6 +205,42 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("resultsPlot:stateResponse", listener),
   onResultsPlotChanged: (listener: (event: unknown, state: unknown) => void) =>
     subscribe("resultsPlot:changed", listener),
+  // Sensitivity window sync (the main window runs the analyses)
+  requestSensitivityState: () => ipcRenderer.send("sensitivity:requestState"),
+  sendSensitivityState: (state: unknown) =>
+    ipcRenderer.send("sensitivity:stateResponse", state),
+  sendSensitivityChanged: (state: unknown) =>
+    ipcRenderer.send("sensitivity:changed", state),
+  sendSensitivityCommand: (command: unknown) =>
+    ipcRenderer.send("sensitivity:command", command),
+  onSensitivityRequestState: (listener: (event: unknown) => void) =>
+    subscribe("sensitivity:requestState", listener),
+  onSensitivityState: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("sensitivity:stateResponse", listener),
+  onSensitivityChanged: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("sensitivity:changed", listener),
+  onSensitivityCommand: (listener: (event: unknown, command: unknown) => void) =>
+    subscribe("sensitivity:command", listener),
+  onSensitivityClosed: (listener: (event: unknown) => void) =>
+    subscribe("sensitivity:closed", listener),
+  // Reliability window sync (the main window runs the analyses)
+  requestReliabilityState: () => ipcRenderer.send("reliability:requestState"),
+  sendReliabilityState: (state: unknown) =>
+    ipcRenderer.send("reliability:stateResponse", state),
+  sendReliabilityChanged: (state: unknown) =>
+    ipcRenderer.send("reliability:changed", state),
+  sendReliabilityCommand: (command: unknown) =>
+    ipcRenderer.send("reliability:command", command),
+  onReliabilityRequestState: (listener: (event: unknown) => void) =>
+    subscribe("reliability:requestState", listener),
+  onReliabilityState: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("reliability:stateResponse", listener),
+  onReliabilityChanged: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("reliability:changed", listener),
+  onReliabilityCommand: (listener: (event: unknown, command: unknown) => void) =>
+    subscribe("reliability:command", listener),
+  onReliabilityClosed: (listener: (event: unknown) => void) =>
+    subscribe("reliability:closed", listener),
   // Analysis popups sync
   requestAnalysisState: () => ipcRenderer.send("analysis:requestState"),
   sendAnalysisState: (state: unknown) =>
@@ -214,16 +253,4 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("analysis:stateResponse", listener),
   onAnalysisChanged: (listener: (event: unknown, state: unknown) => void) =>
     subscribe("analysis:changed", listener),
-  // View settings dialog sync
-  requestViewSettingsState: () => ipcRenderer.send("viewSettings:requestState"),
-  sendViewSettingsState: (state: unknown) =>
-    ipcRenderer.send("viewSettings:stateResponse", state),
-  sendViewSettingsChanged: (state: unknown) =>
-    ipcRenderer.send("viewSettings:changed", state),
-  onViewSettingsRequestState: (listener: (event: unknown) => void) =>
-    subscribe("viewSettings:requestState", listener),
-  onViewSettingsState: (listener: (event: unknown, state: unknown) => void) =>
-    subscribe("viewSettings:stateResponse", listener),
-  onViewSettingsChanged: (listener: (event: unknown, state: unknown) => void) =>
-    subscribe("viewSettings:changed", listener),
 });

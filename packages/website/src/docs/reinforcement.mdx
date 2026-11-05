@@ -45,7 +45,11 @@ With pullout, **Plate / connection at end 1** and **Anchorage at end 2** limit t
 ### Application
 
 - **Active (not divided by F)**: the force is a known, allowable force, such as a prestressed anchor. It is applied as it is.
-- **Passive (divided by F)**: the force is an ultimate capacity that is mobilised together with the soil strength. Like the soil strength it is divided by the factor of safety.
+- **Passive (divided by F)**: the force is an ultimate capacity that is mobilized together with the soil strength. Like the soil strength it is divided by the factor of safety.
+
+### Lock-off load (finite elements)
+
+An element with a bonded length at end 2 has a **Lock-off load (kN, FE)**: the prestress of its free length in the finite element analysis, per element. There the free length is joined to the soil only at its ends. Limit equilibrium does not use it: it takes an active element's force as its capacity.
 
 ## Piles and sheet piles
 
@@ -63,6 +67,8 @@ A pile row or a sheet pile wall resists the sliding mass in shear where the slip
 The **Pile row** starts with Ito & Matsui, D = 0.6 m and S = 2 m, tangent and passive. The **Sheet pile wall** starts with a given force of 100 kN, S = 1 m, active and horizontal.
 
 With Ito & Matsui the soil presses on the pile from its head (or the ground) down to the slip surface. The force acts at the resultant of that pressure, by default, so that its moment is the moment of the pressure; **Force acts at** in the pile's details can put it at the slip surface instead, as Cai & Ugai (2000) apply it, which gives it the longest arm and a slightly higher factor of safety. A given force acts at the slip surface.
+
+**Bending stiffness EI (kNm², FE)** is the bending stiffness per pile in the finite element analysis, where the pile is a beam joined to the soil by springs that let the soil flow between the piles. 0 (the default) means a solid concrete circle of the pile's diameter (E = 30 GPa). For a sheet pile wall, enter EI per meter with a spacing of 1.
 
 The Ito & Matsui method needs a vertical pile and a spacing larger than the diameter. The window warns when a pile does not meet these conditions; give the force of such a pile directly.
 

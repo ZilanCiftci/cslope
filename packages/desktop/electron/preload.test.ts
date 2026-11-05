@@ -89,7 +89,8 @@ const DIALOG_OPENERS = [
   "SearchLimits",
   "CustomSearchPlanes",
   "Options",
-  "ViewSettings",
+  "Sensitivity",
+  "Reliability",
 ];
 for (const name of DIALOG_OPENERS) {
   EXPECTED[`open${name}Dialog`] = ["send", `window:open${name}Dialog`];
@@ -105,8 +106,21 @@ const SYNC_FAMILIES = [
   "Parameters",
   "ResultsPlot",
   "Analysis",
-  "ViewSettings",
 ];
+// Tool windows: the window sends commands, the main window is told when it closes.
+for (const name of ["Sensitivity", "Reliability"]) {
+  const prefix = name.toLowerCase();
+  for (const [key, channel] of [["RequestState", "requestState"], ["State", "stateResponse"], ["Changed", "changed"]]) {
+    EXPECTED[`on${name}${key}`] = ["on", `${prefix}:${channel}`];
+  }
+  EXPECTED[`request${name}State`] = ["send", `${prefix}:requestState`];
+  EXPECTED[`send${name}State`] = ["send", `${prefix}:stateResponse`];
+  EXPECTED[`send${name}Changed`] = ["send", `${prefix}:changed`];
+  EXPECTED[`send${name}Command`] = ["send", `${prefix}:command`];
+  EXPECTED[`on${name}Command`] = ["on", `${prefix}:command`];
+  EXPECTED[`on${name}Closed`] = ["on", `${prefix}:closed`];
+}
+
 for (const name of SYNC_FAMILIES) {
   const prefix = name[0].toLowerCase() + name.slice(1);
   EXPECTED[`request${name}State`] = ["send", `${prefix}:requestState`];

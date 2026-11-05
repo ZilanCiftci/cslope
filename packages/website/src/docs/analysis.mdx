@@ -84,7 +84,67 @@ The result is the smallest $F_{3D}$ over the circular surfaces of the search, wh
 
 ## Finite elements (experimental)
 
-Tick **Run strength reduction (FE)** under **Finite elements** in the options to run a finite element analysis after the limit equilibrium analysis; its settings appear once it is ticked. It runs the limit analysis bounds, Davis B and strength reduction, with the plastic zone on the canvas. It is **experimental**: the analysis is still under development, its results are not verified for design and cannot be guaranteed. Base the design on the limit equilibrium result; the options, the result panel and the canvas mark the finite element results as experimental.
+Tick **Run strength reduction (FE)** under **Finite elements** in the options to run a finite element analysis after the limit equilibrium analysis; its settings appear once it is ticked. It runs the limit analysis bounds, Davis B and strength reduction, with the plastic zone on the canvas. It is **experimental**: the analysis is still under development, it has fewer verification problems than limit equilibrium, its results are not verified for design and cannot be guaranteed, and they may change between versions. Base the design on the limit equilibrium result; the options, the result panel and the canvas mark the finite element results as experimental.
+
+### Strength reduction
+
+**Run strength reduction (FE)** (off by default) reduces c and tan φ by a factor F until the slope can no longer be brought into equilibrium. The soil is elastic–perfectly plastic and the mesh is made of six-node triangles. No slip surface is assumed: the failure mechanism comes out of the analysis, and the plastic zone on the canvas shows it. An analysis takes from seconds to minutes.
+
+### Flow rule
+
+- **Davis B (recommended)**, the default: associated flow with the strengths reduced for the dilation angle (Tschuchnigg et al. 2015). It is fast and stable at high friction angles, and on the safe side: with ψ = 0, φ ≤ 30° and F below 1 it can lie 10–35 % under non-associated flow.
+- **Associated (ψ = φ)**: the dilation angle equals the friction angle.
+- **Non-associated (ψ)**: flow with ψ < φ. It is closer to other finite element programs at moderate friction angles but several times slower, and can give an oscillating, non-unique factor of safety at high friction angles (Tschuchnigg et al. 2015).
+
+**Dilation angle ψ (°)** applies to every soil and is at most φ: usually 0 for clays and loose soils; for dense sands Bolton (1986) gives φ_peak − φ_cv ≈ 0.8ψ.
+
+### Solver and convergence
+
+Davis B and associated flow are always solved by Newton's method. For non-associated flow, **Solver** chooses:
+
+- **Viscoplastic** (default): the viscoplastic iteration of Griffiths & Lane.
+- **Newton**: Newton's method with the unsymmetric tangent, the reduction factor raised in increments (the implicit method of most finite element programs). In the verification cases it is within about 1 % of the viscoplastic factor, and usually slower.
+
+**Convergence** is the convergence test of the viscoplastic iteration:
+
+- **Increment** (default): the displacement change of an iteration is below 10⁻⁴ of the displacement (Griffiths & Lane).
+- **Equilibrium**: in addition, the stresses returned to the yield surface must balance the load to 0.1 % (the unbalanced-force test of other programs). The iteration is then Anderson-accelerated, so that trials near failure converge instead of running out of iterations. It comes closer to other programs at high friction angles (on Pruska's slopes −3.4 % against −4.7 %) and takes about 1.5 times the run time.
+
+Newton's method always tests equilibrium (a residual of 10⁻⁶).
+
+### Mesh and stiffness
+
+- **Element size (m)**: the size of the first mesh. Empty (the default): a twentieth of the model height, finer in thin layers.
+- **Young's modulus E (kPa)** (default 100,000) and **Poisson's ratio ν** (default 0.3) of every soil. E scales the displacements and barely affects the factor of safety.
+- **Mesh refinements** (0–3, default 1): adaptive refinements where the plastic dissipation at failure is largest. They stop early when F changes by less than 0.01, and each roughly doubles the run time. They are not used with non-associated flow: its factor falls on every refinement without a limit, so it is computed on the first mesh. The limit analysis bounds refine their own mesh.
+- **Tension cut-off** (on by default): no tensile effective stress (a Rankine cut-off). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several percent higher.
+
+### Pore pressures
+
+**Pore pressures (FE)**: **From the water table** (default), as in the limit equilibrium analysis, or **Steady seepage** (experimental). With steady seepage the water table gives the reservoir and the tail water where it lies at or above the ground, and the phreatic surface and the seepage face come from the flow. All soils have one permeability, the unsaturated flow follows van Genuchten–Mualem with the parameters of a loam, and rigid materials are nearly impervious.
+
+### Initial stresses
+
+- **Gravity loading** (default): the weight is applied in one step from zero stress.
+- **K0 procedure**: the horizontal stresses are K0 times the vertical effective stress from the overburden, as for level ground; under a slope, the out-of-balance force of these stresses is applied with the first solution. **K0** applies to every soil; empty, it is 1 − sin φ′ (Jaky), and ν/(1 − ν) for undrained and rigid materials. Overconsolidated clays can have K0 above 1. For a cut slope, **Original ground (m)** is the ground level before the excavation: the K0 stresses are those under this level, and their out-of-balance force unloads the excavation. Empty: the present ground surface.
+
+With associated flow and Davis B the factor of safety does not depend on the initial stresses (the theorems of limit analysis); with non-associated flow, and for the displacements, it does.
+
+**Construction stages** builds the materials in stages: stage 0 first, each later stage on the one before, solved at F = 1 (for example an embankment in layers). The strength reduction starts from the last stage.
+
+### Limit analysis bounds
+
+**Limit analysis bounds (the FE factor of safety)** (on in new projects) computes the lower and upper bounds of limit analysis: rigid–perfectly plastic soil with associated flow, solved as second-order cone programs. A statically admissible stress field (the lower bound) and a kinematically admissible mechanism (the upper bound) bracket the factor of safety, and they converge as the mesh is refined. They are then the finite element factor of safety, and the strength reduction is a comparison with other programs.
+
+The same bounds are also computed with Davis B's strength reduced for the dilation angle, which stands for non-associated flow. The bounds run on a mesh graded as the strength reduction's but twice as coarse, which is then refined where the gap between the bounds lies until the gap is below 3 % (at most three times). They add several minutes to the run, up to about 25.
+
+### Finite element results
+
+The result summary lists, under *Finite elements*:
+
+- **FOS, limit analysis (FE)**: the range between the lower bound (a statically admissible stress field) and the upper bound (a kinematically admissible mechanism) of rigid–perfectly plastic soil with associated flow, with the number of elements, the refinements where the gap between the bounds lay and the time. The factor of safety lies between them; unlike strength reduction with non-associated flow, it converges as the mesh is refined.
+- **Davis B (non-associated)**: the same bounds with Davis B's reduced strength for the dilation angle, the associated material that stands for non-associated flow and usually a conservative estimate of it. The associated range above bounds the non-associated soil's factor of safety from above (Radenković 1962); a wide gap between the two means that the flow rule matters for the slope.
+- **FOS, strength reduction (FE)**, or **Strength reduction (comparison)** when the bounds were found: the largest factor on c and tan φ at which the slope is still in equilibrium. With non-associated flow it is the largest factor at which the iteration still finds equilibrium, as other programs compute it; it has no limit as the mesh is refined (it falls on every refinement), so it is computed on the first mesh and depends on its size. Compare it with other programs' results, not as the factor of safety.
 
 ## Pore pressure
 

@@ -9,9 +9,6 @@ import {
 } from "./sensitivity";
 
 interface SensitivityState {
-  open: boolean;
-  /** Bumped on every open; the panel takes a fresh model snapshot. */
-  opened: number;
   running: boolean;
   /** Label of the variable of the current/last run. */
   label: string;
@@ -22,7 +19,8 @@ interface SensitivityState {
   points: SensitivityPoint[];
   /** Number of values in the current run. */
   total: number;
-  setOpen: (open: boolean) => void;
+  /** Stop a run and clear the results (the window closed, another model). */
+  reset: () => void;
   run: (
     model: ModelEntry,
     variable: SensitivityVariable,
@@ -40,20 +38,20 @@ function poolSize(): number {
   return Math.max(1, Math.min(4, coreCount() - 1));
 }
 
-/** Sensitivity panel state (not saved with the project). */
+/**
+ * Sensitivity analysis state (not saved with the project). It lives in the
+ * main window, which runs the analyses; the Sensitivity window shows it.
+ */
 export const useSensitivityStore = create<SensitivityState>((set, get) => ({
-  open: false,
-  opened: 0,
   running: false,
   label: "",
   runKey: "",
   runValue: null,
   points: [],
   total: 0,
-  setOpen: (open) => {
-    // Opening (again) starts from the model as it is now.
+  reset: () => {
     get().cancel();
-    set(open ? { open, opened: get().opened + 1, points: [], total: 0, label: "", runKey: "", runValue: null } : { open });
+    set({ points: [], total: 0, label: "", runKey: "", runValue: null });
   },
   run: async (model, variable, info, values) => {
     get().cancel();

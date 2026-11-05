@@ -1,5 +1,6 @@
 import { Label } from "../../../../components/ui/Label";
 import { DraftNumberInput } from "../../../../components/ui/DraftNumberInput";
+import { HelpButton } from "../../../../components/ui/HelpButton";
 import type { MohrCoulombModel } from "@cslope/engine";
 import { NO_SPINNER } from "./styles";
 
@@ -24,9 +25,10 @@ export function DrawdownFields({ drawdownStrength, cohesion, frictionAngle, onCh
   const r = drawdownStrength;
   return (
     <div className="flex flex-col gap-1">
+      <div className="flex items-center gap-1.5">
       <label
         className="flex items-center gap-1.5"
-        title="The soil does not drain during a rapid drawdown: with a rapid drawdown analysis it takes the undrained strength of the three-stage procedure, from its drawdown strength (R envelope, cR, φR). Off: free-draining."
+        title="Undrained during a rapid drawdown: takes the three-stage undrained strength from its drawdown envelope (cR, φR). Off (default): free-draining."
       >
         <input
           type="checkbox"
@@ -42,6 +44,8 @@ export function DrawdownFields({ drawdownStrength, cohesion, frictionAngle, onCh
         />
         <Label>Drawdown strength (R envelope, cR, φR)</Label>
       </label>
+      <HelpButton topic="Drawdown strength" page="materials#drawdown-envelope-rapid-drawdown" />
+      </div>
       {r && (
         <div className="grid grid-cols-2 gap-2" aria-label="Drawdown envelope (R)">
           <label className="flex flex-col gap-0.5" title="Cohesion intercept cR of the drawdown strength (R envelope).">

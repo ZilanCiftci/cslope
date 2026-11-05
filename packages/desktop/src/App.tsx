@@ -11,10 +11,13 @@ import { ReinforcementDialogApp } from "./features/properties/ReinforcementDialo
 import { PiezoDialogApp } from "./features/properties/PiezoDialogApp";
 import { ParametersDialogApp } from "./features/properties/ParametersDialogApp";
 import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp";
+import { SensitivityDialogApp } from "./features/sensitivity/SensitivityDialogApp";
+import { useSensitivityWindowSync } from "./features/sensitivity/window-sync";
+import { ReliabilityDialogApp } from "./features/reliability/ReliabilityDialogApp";
+import { useReliabilityWindowSync } from "./features/reliability/window-sync";
 import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogApp";
 import { CustomSearchPlanesDialogApp } from "./features/properties/CustomSearchPlanesDialogApp";
 import { OptionsDialogApp } from "./features/properties/OptionsDialogApp";
-import { ViewSettingsDialogApp } from "./features/properties/ViewSettingsDialogApp";
 import { getAnalysisInputSignature, useAppStore } from "./store/app-store";
 import { asDialogEdit } from "./store/undo-coalesce";
 import type {
@@ -35,11 +38,9 @@ import type {
   RegionMaterials,
   PileRow,
   ReinforcementRow,
-  ResultViewSettings,
   UdlRow,
 } from "./store/types";
 import { DIALOG_BODY_SELECTOR, naturalDialogHeight } from "./utils/dialog-height";
-import { paperContentOf, type PaperContent } from "./features/view/extents";
 import { useSelectionSync } from "./features/canvas/useSelectionSync";
 
 interface LoadsStatePayload {
@@ -102,15 +103,6 @@ interface AnalysisStatePayload {
   rapidDrawdown?: PiezometricLineState["rapidDrawdown"] | null;
   /** From a dialog window: a custom search plane to copy into a reference annotation. */
   referenceFromPlaneId?: string;
-}
-
-interface ViewSettingsStatePayload {
-  resultViewSettings: ResultViewSettings;
-  coordinates: [number, number][];
-  resultViewScale: number;
-  resultViewOffset: [number, number];
-  /** What the model draws, for the dialog's "Use model bounds". */
-  paperContent?: PaperContent;
 }
 
 /** Store fields that are also persisted on the active model entry. */
@@ -265,7 +257,6 @@ function App() {
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const options = useAppStore((s) => s.options);
   const analysisLimits = useAppStore((s) => s.analysisLimits);
-  const resultViewSettings = useAppStore((s) => s.resultViewSettings);
   const activeModelId = useAppStore((s) => s.activeModelId);
   const models = useAppStore((s) => s.models);
   const result = useAppStore((s) => s.result);
@@ -311,9 +302,12 @@ function App() {
   const isOptionsDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "options-dialog";
-  const isViewSettingsDialogWindow =
+  const isSensitivityDialogWindow =
     typeof window !== "undefined" &&
-    window.location.hash.replace(/^#/, "") === "view-settings-dialog";
+    window.location.hash.replace(/^#/, "") === "sensitivity-dialog";
+  const isReliabilityDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "reliability-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
   const suppressNextMaterialsBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
@@ -322,7 +316,6 @@ function App() {
   const suppressNextPiezoBroadcastRef = useRef(false);
   const suppressNextParametersBroadcastRef = useRef(false);
   const suppressNextAnalysisBroadcastRef = useRef(false);
-  const suppressNextViewSettingsBroadcastRef = useRef(false);
 
   const isAnyDialogWindow =
     isMaterialsDialogWindow ||
@@ -338,7 +331,13 @@ function App() {
     isSearchLimitsDialogWindow ||
     isCustomSearchPlanesDialogWindow ||
     isOptionsDialogWindow ||
-    isViewSettingsDialogWindow;
+    isSensitivityDialogWindow ||
+    isReliabilityDialogWindow;
+
+  // The main window runs the analyses of the Sensitivity and Probabilistic
+  // analysis windows and keeps them up to date.
+  useSensitivityWindowSync(!isAnyDialogWindow);
+  useReliabilityWindowSync(!isAnyDialogWindow);
 
   useEffect(() => {
     // Escape closes a dialog window, as its Close button does, also from
@@ -368,7 +367,12 @@ function App() {
     // it within the opening height. Dialogs whose content changes a lot
     // with the selection keep their height.
     const keepsHeight =
-      isMaterialsDialogWindow || isReinforcementDialogWindow || isResultsPlotDialogWindow;
+      isMaterialsDialogWindow ||
+      isReinforcementDialogWindow ||
+      isResultsPlotDialogWindow ||
+      // Their results appear below the inputs.
+      isSensitivityDialogWindow ||
+      isReliabilityDialogWindow;
     if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
     if (typeof ResizeObserver === "undefined") return;
     let sent = 0;
@@ -406,6 +410,8 @@ function App() {
     isMaterialsDialogWindow,
     isReinforcementDialogWindow,
     isResultsPlotDialogWindow,
+    isSensitivityDialogWindow,
+    isReliabilityDialogWindow,
   ]);
 
   useEffect(() => {
@@ -935,58 +941,6 @@ function App() {
   useEffect(() => {
     if (!isElectron || isAnyDialogWindow) return;
 
-    const handleViewSettingsRequestState = () => {
-      const state = useAppStore.getState();
-      window.cslope.sendViewSettingsState({
-        resultViewSettings: state.resultViewSettings,
-        coordinates: state.coordinates,
-        resultViewScale: state.resultViewScale,
-        resultViewOffset: state.resultViewOffset,
-        paperContent: paperContentOf(state),
-      });
-    };
-
-    const handleViewSettingsChanged = (
-      _event: unknown,
-      next: ViewSettingsStatePayload,
-    ) => {
-      suppressNextViewSettingsBroadcastRef.current = true;
-      applyDialogPatch({
-        resultViewSettings: next.resultViewSettings,
-        coordinates: next.coordinates,
-      });
-    };
-
-    const unsubscribeViewSettingsRequestState = window.cslope.onViewSettingsRequestState(handleViewSettingsRequestState);
-    const unsubscribeViewSettingsChanged = window.cslope.onViewSettingsChanged(handleViewSettingsChanged);
-
-    return () => {
-      unsubscribeViewSettingsRequestState();
-      unsubscribeViewSettingsChanged();
-    };
-  }, [isAnyDialogWindow]);
-
-  useEffect(() => {
-    if (!isElectron || isAnyDialogWindow) return;
-
-    if (suppressNextViewSettingsBroadcastRef.current) {
-      suppressNextViewSettingsBroadcastRef.current = false;
-      return;
-    }
-
-    window.cslope.sendViewSettingsChanged({
-      resultViewSettings,
-      coordinates,
-      resultViewScale: useAppStore.getState().resultViewScale,
-      resultViewOffset: useAppStore.getState().resultViewOffset,
-      // The whole state, so the critical centre and FOS label count too.
-      paperContent: paperContentOf(useAppStore.getState()),
-    });
-  }, [resultViewSettings, coordinates, piezometricLine, udls, lineLoads, reinforcements, piles, result, isAnyDialogWindow]);
-
-  useEffect(() => {
-    if (!isElectron || isAnyDialogWindow) return;
-
     const handleResultsPlotRequestState = () => {
       window.cslope.sendResultsPlotState(buildResultsPlotPayloadFromState());
     };
@@ -1063,6 +1017,14 @@ function App() {
     return <ResultsPlotDialogApp />;
   }
 
+  if (isSensitivityDialogWindow) {
+    return <SensitivityDialogApp />;
+  }
+
+  if (isReliabilityDialogWindow) {
+    return <ReliabilityDialogApp />;
+  }
+
   if (isSearchLimitsDialogWindow) {
     return <SearchLimitsDialogApp />;
   }
@@ -1073,10 +1035,6 @@ function App() {
 
   if (isOptionsDialogWindow) {
     return <OptionsDialogApp />;
-  }
-
-  if (isViewSettingsDialogWindow) {
-    return <ViewSettingsDialogApp />;
   }
 
   return <AppShell />;

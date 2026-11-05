@@ -344,7 +344,7 @@ async function main() {
       await rig.shot(d, "options", "Options: seismic coefficients and rapid drawdown", seen);
     });
     await rig.step("distributed loads", async () => {
-      const d = await openDialog(rig, "UDL", "udl-dialog", "openUdlDialog");
+      const d = await openDialog(rig, "Distributed loads", "udl-dialog", "openUdlDialog");
       await growToContent(d);
       await rig.shot(d, "udl", "Distributed loads: excess pore pressure per material");
     });

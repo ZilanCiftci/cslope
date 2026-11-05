@@ -21,11 +21,9 @@ import {
 import { confirmUnsavedChanges } from "./features/project/unsavedGuard";
 import { isElectron } from "./utils/is-electron";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
-import { SensitivityPanel } from "./features/sensitivity/SensitivityPanel";
 import { AnalysisErrorBanner } from "./features/analysis/AnalysisErrorBanner";
 import { SelectionStatus } from "./features/canvas/SelectionStatus";
 import { useRunShortcut } from "./features/analysis/run-shortcut";
-import { ReliabilityPanel } from "./features/reliability/ReliabilityPanel";
 
 export function AppShell() {
   useDragDrop();
@@ -261,8 +259,6 @@ export function AppShell() {
         runAll={runAll}
         selectionStatus={<SelectionStatus />}
       />
-      <SensitivityPanel />
-      <ReliabilityPanel />
     </div>
   );
 }

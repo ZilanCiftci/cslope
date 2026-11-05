@@ -4,16 +4,14 @@ import type { ModelEntry } from "../../store/types";
 import { executeReliability, type ReliabilityHandle } from "../../store/slices/analysisSlice";
 
 interface ReliabilityState {
-  open: boolean;
-  /** Bumped on every open; the panel takes a fresh model snapshot. */
-  opened: number;
   running: boolean;
   progress: number;
   result: ReliabilityResult | null;
   /** Labels of the variables of the result, in order. */
   labels: string[];
   error: string | null;
-  setOpen: (open: boolean) => void;
+  /** Stop a run and clear the result (the window closed, another model). */
+  reset: () => void;
   run: (
     model: ModelEntry,
     variables: RandomVariable[],
@@ -26,20 +24,20 @@ interface ReliabilityState {
 let generation = 0;
 let activeHandle: ReliabilityHandle | null = null;
 
-/** Probabilistic analysis panel state (not saved with the project). */
+/**
+ * Probabilistic analysis state (not saved with the project). It lives in
+ * the main window, which runs the analyses; the Probabilistic analysis
+ * window shows it.
+ */
 export const useReliabilityStore = create<ReliabilityState>((set, get) => ({
-  open: false,
-  opened: 0,
   running: false,
   progress: 0,
   result: null,
   labels: [],
   error: null,
-  setOpen: (open) => {
-    // A result belongs to the model snapshot of the panel it was run in;
-    // opening (again) starts from the model as it is now.
+  reset: () => {
     get().cancel();
-    set({ open, ...(open ? { opened: get().opened + 1 } : {}), result: null, labels: [], error: null, progress: 0 });
+    set({ result: null, labels: [], error: null, progress: 0 });
   },
   run: async (model, variables, labels, options) => {
     get().cancel();

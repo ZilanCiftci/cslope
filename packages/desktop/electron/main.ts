@@ -43,7 +43,6 @@ let resultsPlotWin: BrowserWindow | null;
 let searchLimitsWin: BrowserWindow | null;
 let customSearchPlanesWin: BrowserWindow | null;
 let optionsWin: BrowserWindow | null;
-let viewSettingsWin: BrowserWindow | null;
 let splashTimeout: ReturnType<typeof setTimeout> | null = null;
 
 function showMainWindow() {
@@ -580,6 +579,58 @@ function createResultsPlotWindow() {
   }
 }
 
+// Tool windows (Sensitivity, Probabilistic analysis). The main window
+// runs their analyses: it gets their commands and sends them the model and
+// the results, and is told when one closes so it stops a run.
+type ToolWindow = "sensitivity" | "reliability";
+const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number }> = {
+  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 620, height: 760 },
+  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 620, height: 780 },
+};
+const toolWins = new Map<ToolWindow, BrowserWindow>();
+
+function createToolWindow(tool: ToolWindow) {
+  if (!win) return;
+
+  const open = toolWins.get(tool);
+  if (open && !open.isDestroyed()) {
+    open.show();
+    open.focus();
+    return;
+  }
+
+  const { title, hash, width, height } = TOOL_WINDOWS[tool];
+  const child = new BrowserWindow({
+    width,
+    height,
+    minWidth: 480,
+    minHeight: 420,
+    title,
+    parent: win,
+    modal: false,
+    autoHideMenuBar: true,
+    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
+    webPreferences: {
+      preload: path.join(__dirname, "preload.mjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  toolWins.set(tool, child);
+
+  child.on("closed", () => {
+    if (toolWins.get(tool) === child) toolWins.delete(tool);
+    if (win && !win.isDestroyed()) win.webContents.send(`${tool}:closed`);
+  });
+
+  if (VITE_DEV_SERVER_URL) {
+    child.loadURL(`${VITE_DEV_SERVER_URL}#${hash}`);
+  } else {
+    child.loadFile(path.join(RENDERER_DIST, "index.html"), { hash });
+  }
+}
+
 function createSearchLimitsWindow() {
   if (!win) return;
 
@@ -702,46 +753,6 @@ function createOptionsWindow() {
   }
 }
 
-function createViewSettingsWindow() {
-  if (!win) return;
-
-  if (viewSettingsWin && !viewSettingsWin.isDestroyed()) {
-    viewSettingsWin.show();
-    viewSettingsWin.focus();
-    return;
-  }
-
-  viewSettingsWin = new BrowserWindow({
-    width: 420,
-    height: 620,
-    minWidth: 360,
-    minHeight: 480,
-    title: "View settings",
-    parent: win,
-    modal: false,
-    autoHideMenuBar: true,
-    icon: path.join(process.env.VITE_PUBLIC, "mountain.svg"),
-    webPreferences: {
-      preload: path.join(__dirname, "preload.mjs"),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  });
-
-  viewSettingsWin.on("closed", () => {
-    viewSettingsWin = null;
-  });
-
-  if (VITE_DEV_SERVER_URL) {
-    viewSettingsWin.loadURL(`${VITE_DEV_SERVER_URL}#view-settings-dialog`);
-  } else {
-    viewSettingsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "view-settings-dialog",
-    });
-  }
-}
-
 // When the renderer tells us it has mounted, show the main window
 // and close the splash screen.
 ipcMain.on("app:ready", () => {
@@ -837,7 +848,8 @@ ipcMain.on("window:openCustomSearchPlanesDialog", () =>
   createCustomSearchPlanesWindow(),
 );
 ipcMain.on("window:openOptionsDialog", () => createOptionsWindow());
-ipcMain.on("window:openViewSettingsDialog", () => createViewSettingsWindow());
+ipcMain.on("window:openSensitivityDialog", () => createToolWindow("sensitivity"));
+ipcMain.on("window:openReliabilityDialog", () => createToolWindow("reliability"));
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -1044,6 +1056,26 @@ ipcMain.on("resultsPlot:changed", (event, state) => {
   }
 });
 
+// ── Tool windows sync IPC (main window <-> Sensitivity, Probabilistic) ──
+
+for (const tool of Object.keys(TOOL_WINDOWS) as ToolWindow[]) {
+  const fromTool = (event: Electron.IpcMainEvent) =>
+    event.sender === toolWins.get(tool)?.webContents;
+  ipcMain.on(`${tool}:requestState`, (event) => {
+    if (fromTool(event)) win?.webContents.send(`${tool}:requestState`);
+  });
+  ipcMain.on(`${tool}:command`, (event, command) => {
+    if (fromTool(event)) win?.webContents.send(`${tool}:command`, command);
+  });
+  for (const channel of ["stateResponse", "changed"]) {
+    ipcMain.on(`${tool}:${channel}`, (event, state) => {
+      if (event.sender === win?.webContents) {
+        toolWins.get(tool)?.webContents.send(`${tool}:${channel}`, state);
+      }
+    });
+  }
+}
+
 // ── Analysis windows sync IPC (main window <-> analysis windows) ─────────
 
 ipcMain.on("analysis:requestState", (event) => {
@@ -1090,30 +1122,6 @@ ipcMain.on("analysis:changed", (event, state) => {
   }
 });
 
-// ── View settings window sync IPC (main window <-> view settings window) ──
-
-ipcMain.on("viewSettings:requestState", (event) => {
-  if (event.sender === viewSettingsWin?.webContents) {
-    win?.webContents.send("viewSettings:requestState");
-  }
-});
-
-ipcMain.on("viewSettings:stateResponse", (event, state) => {
-  if (event.sender === win?.webContents) {
-    viewSettingsWin?.webContents.send("viewSettings:stateResponse", state);
-  }
-});
-
-ipcMain.on("viewSettings:changed", (event, state) => {
-  if (event.sender === viewSettingsWin?.webContents) {
-    win?.webContents.send("viewSettings:changed", state);
-    return;
-  }
-  if (event.sender === win?.webContents) {
-    viewSettingsWin?.webContents.send("viewSettings:changed", state);
-  }
-});
-
 // ── Canvas selection sync (main window <-> every dialog window) ──────
 // The object (and point) selected on the canvas: the windows' tables show
 // it as their selected row, and a row picked in a window selects it on the
@@ -1133,7 +1141,6 @@ const dialogWindows = () => [
   searchLimitsWin,
   customSearchPlanesWin,
   optionsWin,
-  viewSettingsWin,
 ];
 const isDialogWindow = (sender: Electron.WebContents) =>
   dialogWindows().some((w) => w && !w.isDestroyed() && w.webContents === sender);
@@ -1515,11 +1522,17 @@ ipcMain.on("menu:about", () => {
   else dialog.showMessageBox(options);
 });
 
-// Help › Documentation: the website's documentation in the default
-// browser. The address is fixed here; the renderer cannot pass one.
-ipcMain.on("help:openDocumentation", (event) => {
-  if (event.sender !== win?.webContents) return;
-  void shell.openExternal("https://cslope.com/docs");
+// Help › Documentation, and the "?" buttons of the dialog windows: the
+// website's documentation in the default browser. The renderer can only
+// name a page and a heading under /docs (lower-case words and hyphens);
+// the site is fixed here.
+const DOCS_PAGE = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?(?:#[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+ipcMain.on("help:openDocumentation", (event, page: unknown) => {
+  const sender = BrowserWindow.fromWebContents(event.sender);
+  const fromApp = !!win && (event.sender === win.webContents || sender?.getParentWindow() === win);
+  if (!fromApp) return;
+  const path = typeof page === "string" && DOCS_PAGE.test(page) ? `/${page}` : "";
+  void shell.openExternal(`https://cslope.com/docs${path}`);
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

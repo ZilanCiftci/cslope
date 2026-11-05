@@ -121,7 +121,8 @@ const WINDOW_HASH: Record<string, string> = {
   "Search limits": "search-limits-dialog",
   "Custom search planes": "custom-search-planes-dialog",
   Options: "options-dialog",
-  "View settings": "view-settings-dialog",
+  "Sensitivity analysis": "sensitivity-dialog",
+  "Probabilistic analysis": "reliability-dialog",
 };
 
 /**
@@ -267,6 +268,14 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
         .locator("select")
         .first();
       await select.selectOption({ label: option });
+      await win.waitForTimeout(RENDER_SETTLE_MS);
+    }
+    for (const name of setup.windowClick ?? []) {
+      await win.getByRole("button", { name, exact: true }).first().click();
+      await win.waitForTimeout(150);
+    }
+    if (setup.windowWaitForText) {
+      await win.getByText(setup.windowWaitForText, { exact: false }).first().waitFor({ timeout: ANALYSIS_TIMEOUT_MS * 2 });
       await win.waitForTimeout(RENDER_SETTLE_MS);
     }
     if (output.fitHeight !== false) await fitWindowHeight(win);

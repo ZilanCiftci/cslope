@@ -24,14 +24,13 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { ResultsMenu } from "./ResultsMenu";
 import { useAppStore } from "../../../store/app-store";
+import { materialTableBox } from "../../../features/annotations/colorBarPlacement";
 import {
   PNG_PAPER_LAYOUT_WIDTH_PX,
   PNG_SCALE,
   paperPngDataUrl,
   setPaperDrawSource,
 } from "../../../features/export/paper-png";
-import { useSensitivityStore } from "../../../features/sensitivity/store";
-import { useReliabilityStore } from "../../../features/reliability/store";
 
 const store = () => useAppStore.getState();
 const rvs = () => store().resultViewSettings;
@@ -105,19 +104,29 @@ describe("ResultsMenu", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
     await userEvent.click(screen.getByTitle("Results plot"));
-    await userEvent.click(screen.getByTitle("Settings"));
-    expect(alert).toHaveBeenCalledTimes(2);
+    expect(alert).toHaveBeenCalledTimes(1);
     expect(alert.mock.calls[0][0]).toMatch(/desktop app/);
   });
 
-  it("opens the sensitivity and probabilistic panels", async () => {
-    useSensitivityStore.getState().setOpen(false);
-    useReliabilityStore.getState().setOpen(false);
+  it("Sheet settings selects the paper and shows its properties in the sidebar", async () => {
+    act(() => useAppStore.setState({ sidebarOpen: false, selectedResultObject: null }));
+    renderMenu();
+    await userEvent.click(screen.getByTitle("Sheet settings"));
+    expect(useAppStore.getState()).toMatchObject({
+      mode: "result",
+      sidebarOpen: true,
+      selectedResultObject: "paper-frame",
+      paperPropertiesFocusPending: true,
+    });
+  });
+
+  it("explains that the sensitivity and probabilistic windows need the desktop app in a browser", async () => {
+    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
     await userEvent.click(screen.getByTitle("Sensitivity"));
     await userEvent.click(screen.getByTitle("Probabilistic"));
-    expect(useSensitivityStore.getState().open).toBe(true);
-    expect(useReliabilityStore.getState().open).toBe(true);
+    expect(alert).toHaveBeenCalledTimes(2);
+    expect(alert.mock.calls[1][0]).toMatch(/desktop app/);
   });
 
   it("toggles the display options", async () => {
@@ -154,12 +163,12 @@ describe("ResultsMenu", () => {
     const button = screen.getByTitle(/Shade the plastic zone/);
     expect(button).toHaveAttribute(
       "title",
-      expect.stringMatching(/experimental: fewer verification problems than limit equilibrium/),
+      expect.stringMatching(/finite element analysis, which is experimental/),
     );
     await userEvent.click(button);
     expect(rvs().showFemPlasticZone).toBe(false);
     // the mesh: off by default, on with its button
-    const mesh = screen.getByTitle(/Draw the mesh of the finite element analysis/);
+    const mesh = screen.getByTitle(/Draw the last mesh of the finite element analysis/);
     expect(rvs().showFemMesh ?? false).toBe(false);
     await userEvent.click(mesh);
     expect(rvs().showFemMesh).toBe(true);
@@ -230,7 +239,12 @@ describe("ResultsMenu", () => {
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
-    expect([bar.x, bar.y, bar.anchor]).toEqual([0.94, 0.35, "top-right"]);
+    // Right below the material table.
+    const table = annotations.find((a) => a.type === "material-table")!;
+    const box = materialTableBox(table, store().materials, store().piezometricLine, store().resultViewSettings.paperFrame);
+    expect([bar.x, bar.anchor]).toEqual([0.94, "top-right"]);
+    expect(bar.y).toBeGreaterThan(box.y + box.h);
+    expect(bar.y).toBeLessThan(box.y + box.h + 0.02);
     expect(screen.getByTitle("Remove color bar")).toHaveAttribute("aria-pressed", "true");
     // A second click removes the one there instead of adding another.
     await userEvent.click(screen.getByTitle("Remove color bar"));
@@ -360,18 +374,18 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     const summary = screen.getByRole("checkbox", { name: "Analysis summary pages" });
     const title = screen.getByRole("checkbox", { name: "Title line above the drawing" });
-    // Defaults: summary pages included, no title line in the margin.
+    // Defaults: summary pages included, the title line in the margin.
     expect(summary).toBeChecked();
-    expect(title).not.toBeChecked();
+    expect(title).toBeChecked();
     await userEvent.click(summary);
     await userEvent.click(title);
     expect(rvs().pdfSummaryPages).toBe(false);
-    expect(rvs().pdfTitleLine).toBe(true);
+    expect(rvs().pdfTitleLine).toBe(false);
     // The menu stays open for the export, which gets the choices.
     await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
     const arg = mocks.exportVectorPdf.mock.calls[0][0];
     expect(arg.resultViewSettings.pdfSummaryPages).toBe(false);
-    expect(arg.resultViewSettings.pdfTitleLine).toBe(true);
+    expect(arg.resultViewSettings.pdfTitleLine).toBe(false);
     // Saved with the model in the project file.
     const model = store().models.find((m) => m.id === store().activeModelId)!;
     expect(model.resultViewSettings?.pdfSummaryPages).toBe(false);

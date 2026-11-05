@@ -28,7 +28,7 @@ await step("reinforcement filled", async () => {
   await shotWindow(w, "51-dlg-reinforcement-filled"); await truncation(w, "reinforcement");
 });
 await step("udl/lineloads filled", async () => {
-  let w = await openDialog("Model", "UDL"); await clickAll(w, "+ Add UDL", 2); await shotWindow(w, "52-dlg-udl-filled"); await truncation(w, "udl");
+  let w = await openDialog("Model", "Distributed loads"); await clickAll(w, "+ Add UDL", 2); await shotWindow(w, "52-dlg-udl-filled"); await truncation(w, "udl");
   await H.closeOthers();
   w = await openDialog("Model", "Line loads"); await clickAll(w, "+ Add Line Load", 2); await shotWindow(w, "52-dlg-lineloads-filled"); await truncation(w, "lineloads");
 });
@@ -41,7 +41,7 @@ await step("parameters filled", async () => {
   const w = await openDialog("Model", "Parameters"); await clickAll(w, "+ Add Parameter", 3); await shotWindow(w, "54-dlg-parameters-filled"); await truncation(w, "parameters");
 });
 await step("custom planes filled", async () => {
-  const w = await openDialog("Model", "Custom planes"); await clickAll(w, "+ Add Search Plane", 2); await clickAll(w, "+ Add Non-circular Surface", 1);
+  const w = await openDialog("Model", "Custom surfaces"); await clickAll(w, "+ Add Search Plane", 2); await clickAll(w, "+ Add Non-circular Surface", 1);
   await shotWindow(w, "55-dlg-customplanes-filled"); await truncation(w, "customplanes");
 });
 await step("assign long names", async () => { const w = await openDialog("Model", "Assign"); await shotWindow(w, "56-dlg-assign-long"); await truncation(w, "assign"); });

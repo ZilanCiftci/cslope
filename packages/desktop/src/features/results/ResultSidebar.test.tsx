@@ -238,6 +238,30 @@ describe("ResultSidebar paper frame properties", () => {
     act(() => useAppStore.setState({ selectedResultObject: "paper-frame" }));
   });
 
+  it("Sheet settings opens Properties at the paper and puts the cursor in its first field", () => {
+    act(() => useAppStore.setState({ selectedResultObject: null, mode: "edit", sidebarOpen: false }));
+    render(<ResultSidebar />);
+    // Properties closed by the user.
+    fireEvent.click(screen.getByRole("button", { name: "Properties" }));
+    expect(screen.queryByText("Select an object on the canvas to edit its properties.")).toBeNull();
+    act(() => useAppStore.getState().showPaperProperties());
+    const s = useAppStore.getState();
+    expect(s).toMatchObject({ mode: "result", sidebarOpen: true, selectedResultObject: "paper-frame", selectedAnnotationIds: [] });
+    expect(screen.getByRole("group", { name: "Paper" })).toBeInTheDocument();
+    expect(document.activeElement).toBe(field("Left x (m)"));
+    // Done once: the request is consumed.
+    expect(s.paperPropertiesFocusPending).toBe(false);
+  });
+
+  it("has every paper setting: extents, model bounds, ticks, grid, size and orientation", () => {
+    render(<ResultSidebar />);
+    for (const label of ["Left x (m)", "Right x (m)", "Bottom y (m)", "Top y (m)", "Tick spacing (m)", "Minor ticks", "Paper size", "Paper orientation"]) {
+      expect(field(label), label).toBeInTheDocument();
+    }
+    expect(screen.getByRole("button", { name: "Use model bounds" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Grid lines")).toBeInTheDocument();
+  });
+
   it("reads a decimal comma in an extent", () => {
     render(<ResultSidebar />);
     const left = field("Left x (m)");

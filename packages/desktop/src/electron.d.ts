@@ -17,10 +17,10 @@ import type {
   ParameterDef,
   PiezometricLineState,
   RegionMaterials,
-  ResultViewSettings,
   UdlRow,
 } from "./store/types";
-import type { PaperContent } from "./features/view/extents";
+import type { SensitivityCommand, SensitivityWindowState } from "./features/sensitivity/window-sync";
+import type { ReliabilityCommand, ReliabilityWindowState } from "./features/reliability/window-sync";
 
 interface MaterialAssignmentStatePayload {
   coordinates: [number, number][];
@@ -98,15 +98,6 @@ interface AnalysisStatePayload {
   referenceFromPlaneId?: string;
 }
 
-interface ViewSettingsStatePayload {
-  resultViewSettings: ResultViewSettings;
-  coordinates: [number, number][];
-  resultViewScale: number;
-  resultViewOffset: [number, number];
-  /** What the model draws (main window to the dialog only). */
-  paperContent?: PaperContent;
-}
-
 declare global {
   interface Window {
     cslope: {
@@ -151,7 +142,8 @@ declare global {
       openSearchLimitsDialog: () => void;
       openCustomSearchPlanesDialog: () => void;
       openOptionsDialog: () => void;
-      openViewSettingsDialog: () => void;
+      openSensitivityDialog: () => void;
+      openReliabilityDialog: () => void;
       requestSelectionState: () => void;
       sendSelectionChanged: (selection: unknown) => void;
       onSelectionRequestState: (listener: (event: unknown) => void) => () => void;
@@ -166,7 +158,7 @@ declare global {
       menuNew: () => void;
       menuAbout: () => void;
       /** Open the online documentation in the default browser. */
-      openDocumentation: () => void;
+      openDocumentation: (page?: string) => void;
       toggleDevTools: () => void;
       // Materials dialog sync
       requestMaterialsState: () => void;
@@ -270,6 +262,38 @@ declare global {
         listener: (event: unknown, state: ParametersStatePayload) => void,
       ) => () => void;
       // Results plot dialog sync
+      requestSensitivityState: () => void;
+      sendSensitivityState: (state: SensitivityWindowState) => void;
+      sendSensitivityChanged: (state: SensitivityWindowState) => void;
+      sendSensitivityCommand: (command: SensitivityCommand) => void;
+      onSensitivityRequestState: (listener: (event: unknown) => void) => () => void;
+      onSensitivityState: (
+        listener: (event: unknown, state: SensitivityWindowState) => void,
+      ) => () => void;
+      onSensitivityChanged: (
+        listener: (event: unknown, state: SensitivityWindowState) => void,
+      ) => () => void;
+      onSensitivityCommand: (
+        listener: (event: unknown, command: SensitivityCommand) => void,
+      ) => () => void;
+      /** The window closed (sent to the main window). */
+      onSensitivityClosed: (listener: (event: unknown) => void) => () => void;
+      requestReliabilityState: () => void;
+      sendReliabilityState: (state: ReliabilityWindowState) => void;
+      sendReliabilityChanged: (state: ReliabilityWindowState) => void;
+      sendReliabilityCommand: (command: ReliabilityCommand) => void;
+      onReliabilityRequestState: (listener: (event: unknown) => void) => () => void;
+      onReliabilityState: (
+        listener: (event: unknown, state: ReliabilityWindowState) => void,
+      ) => () => void;
+      onReliabilityChanged: (
+        listener: (event: unknown, state: ReliabilityWindowState) => void,
+      ) => () => void;
+      onReliabilityCommand: (
+        listener: (event: unknown, command: ReliabilityCommand) => void,
+      ) => () => void;
+      /** The window closed (sent to the main window). */
+      onReliabilityClosed: (listener: (event: unknown) => void) => () => void;
       requestResultsPlotState: () => void;
       sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
       sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;
@@ -290,17 +314,6 @@ declare global {
       ) => () => void;
       onAnalysisChanged: (
         listener: (event: unknown, state: AnalysisStatePayload) => void,
-      ) => () => void;
-      // View settings dialog sync
-      requestViewSettingsState: () => void;
-      sendViewSettingsState: (state: ViewSettingsStatePayload) => void;
-      sendViewSettingsChanged: (state: ViewSettingsStatePayload) => void;
-      onViewSettingsRequestState: (listener: (event: unknown) => void) => () => void;
-      onViewSettingsState: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
-      ) => () => void;
-      onViewSettingsChanged: (
-        listener: (event: unknown, state: ViewSettingsStatePayload) => void,
       ) => () => void;
     };
   }
