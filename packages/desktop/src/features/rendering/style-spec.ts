@@ -166,6 +166,9 @@ export const ANNOTATION_DEFAULT_TEXT_COLOR = "#000000";
 /** Number of tick/label positions on the FOS colour bar. */
 export const COLOR_BAR_NUM_TICKS = 5;
 
+/** Space between the colour bar (its title, bar and values) and the edge of its plate, at annotation scale 1. */
+export const COLOR_BAR_PLATE_PAD = 4;
+
 // ── Material model hatch patterns ──────────────────────────────
 
 import type { MaterialModelKind } from "@cslope/engine";

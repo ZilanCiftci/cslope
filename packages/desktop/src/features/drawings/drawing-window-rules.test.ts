@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import type { BackgroundImage } from "../../store/types";
-import { emptyForm, evaluateForm, initialForm, targetLabel, withSource } from "./calibration-form";
+import { emptyForm, evaluateForm, initialForm, targetLabel, withSource, type CalibrationForm } from "./calibration-form";
 import { drawingExtentText } from "./place-window-shared";
 import { PICK_LINES_HIDDEN, PICK_LINES_NO_DRAWING, pickLinesTarget } from "./pick-lines-target";
 import { DWG_MIME } from "./sources";
@@ -65,7 +65,7 @@ describe("calibration messages", () => {
     expect(start.fit.ok).toBe(false);
     expect(start.prompt).toBe(true);
 
-    let form = { ...emptyForm("px"), mode: "points" as const };
+    let form: CalibrationForm = { ...emptyForm("px"), mode: "points" };
     form = withSource(form, { kind: "point", index: 0 }, [10, 10]);
     form = withSource(form, { kind: "point", index: 1 }, [10.0000001, 10]);
     form = { ...form, points: form.points.map((r, i) => ({ ...r, x: String(i), y: "0" })) };
@@ -76,7 +76,7 @@ describe("calibration messages", () => {
 
   it("names the scale origin's button in words, and a PDF's unit as pt", () => {
     expect(targetLabel({ kind: "origin" })).toBe("Origin");
-    let form = { ...emptyForm("pt"), mode: "points" as const };
+    let form: CalibrationForm = { ...emptyForm("pt"), mode: "points" };
     form = withSource(form, { kind: "point", index: 0 }, [0, 0]);
     form = withSource(form, { kind: "point", index: 1 }, [100, 0]);
     form = { ...form, points: [{ ...form.points[0], x: "0", y: "0" }, { ...form.points[1], x: "10", y: "0" }] };

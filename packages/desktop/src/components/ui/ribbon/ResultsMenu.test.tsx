@@ -244,7 +244,7 @@ describe("ResultsMenu", () => {
     const box = materialTableBox(table, store().materials, store().piezometricLine, store().resultViewSettings.paperFrame);
     expect([bar.x, bar.anchor]).toEqual([0.94, "top-right"]);
     expect(bar.y).toBeGreaterThan(box.y + box.h);
-    expect(bar.y).toBeLessThan(box.y + box.h + 0.02);
+    expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
     expect(screen.getByTitle("Remove color bar")).toHaveAttribute("aria-pressed", "true");
     // A second click removes the one there instead of adding another.
     await userEvent.click(screen.getByTitle("Remove color bar"));

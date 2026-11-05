@@ -26,8 +26,8 @@ export const RIGHT_INSIDE_FRAME = Math.round((1 - PLOT_MARGINS.R - FRAME_INSET) 
 export const TOP_INSIDE_FRAME = Math.round((PLOT_MARGINS.T + FRAME_INSET) * 1000) / 1000;
 /** The color bar's place on a sheet without a material table. */
 export const COLOR_BAR_DEFAULT_Y = 0.35;
-/** Gap between the table and the bar (fraction of the paper height). */
-const GAP = 0.015;
+/** Gap between the table and the bar (fraction of the paper height): clear of the bar's plate. */
+const GAP = 0.025;
 
 /** Text width in px at a font: the canvas's measure, or an estimate without one. */
 export type TextMeasure = (text: string, fontPx: number, bold: boolean) => number;

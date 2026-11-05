@@ -97,7 +97,9 @@ describe("PDF annotations match the canvas proportions", () => {
     expect(fixed.texts).toContain("≤ 1.30");
     expect(fixed.texts).toContain("1.58");
     // The gradient runs from the top (high FOS, light grey) to the bottom (black).
-    expect(fixed.fills[0]).toEqual([200, 200, 200]);
+    // (after the white plate under the bar)
+    expect(fixed.fills[0]).toEqual([255, 255, 255]);
+    expect(fixed.fills[1]).toEqual([200, 200, 200]);
     expect(fixed.fills.at(-1)).toEqual([0, 0, 0]);
 
     const follow = record({ ...bar, scaleMode: "filter", scheme: "custom", schemeFrom: "#ff0000", schemeTo: "#0000ff" } as Annotation, RESULT, {
@@ -105,7 +107,7 @@ describe("PDF annotations match the canvas proportions", () => {
     });
     expect(follow.texts).toContain("≥ 1.60");
     expect(follow.texts).toContain("1.10");
-    expect(follow.fills[0]).toEqual([0, 0, 255]);
+    expect(follow.fills[1]).toEqual([0, 0, 255]);
     expect(follow.fills.at(-1)).toEqual([255, 0, 0]);
   });
 

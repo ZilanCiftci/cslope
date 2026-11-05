@@ -104,11 +104,12 @@ export function PointEditor({ editor, onClose }: { editor: PointEditorState; onC
         </div>
       ) : (
         <div className="flex gap-1.5 justify-end">
-          <button className="btn" onClick={onClose}>
-            Cancel
-          </button>
+          {/* The primary button first, as in the other windows. */}
           <button className="btn btn-primary" onClick={apply}>
             Apply
+          </button>
+          <button className="btn" onClick={onClose}>
+            Cancel
           </button>
         </div>
       )}

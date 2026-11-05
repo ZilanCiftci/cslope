@@ -249,6 +249,8 @@ describe("ResultSidebar paper frame properties", () => {
     expect(s).toMatchObject({ mode: "result", sidebarOpen: true, selectedResultObject: "paper-frame", selectedAnnotationIds: [] });
     expect(screen.getByRole("group", { name: "Paper" })).toBeInTheDocument();
     expect(document.activeElement).toBe(field("Left x (m)"));
+    // The section says whose properties these are.
+    expect(screen.getByRole("button", { name: "Properties · Sheet" })).toBeInTheDocument();
     // Done once: the request is consumed.
     expect(s.paperPropertiesFocusPending).toBe(false);
   });

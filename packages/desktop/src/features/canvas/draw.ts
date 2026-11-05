@@ -85,6 +85,7 @@ import {
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
   MODEL_HATCH_PATTERNS,
+  COLOR_BAR_PLATE_PAD,
 } from "../rendering/style-spec";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import {
@@ -1277,11 +1278,22 @@ export function drawCanvas(
   // (draw-underlays.ts says why), as a sheet at their opacity. In the
   // result view only those shown in results.
   if (backgrounds.length > 0) {
+    // Where the rulers are drawn (AxisOverlay: not on the result sheet),
+    // the drawing stays off them: its texts would show through the
+    // rulers' numbers.
+    const rulers = !(mode === "result" && result);
+    ctx.save();
+    if (rulers) {
+      ctx.beginPath();
+      ctx.rect(RULER_SIZE_PX, 0, Math.max(0, w - RULER_SIZE_PX), Math.max(0, h - RULER_SIZE_PX));
+      ctx.clip();
+    }
     drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
       pixelRatio,
       ink: INK.drawingInk,
       include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
     });
+    ctx.restore();
   }
 
   // Draw grid above model fills so lines remain visible over colored regions.
@@ -3092,6 +3104,14 @@ export function drawCanvas(
         );
         const barX = drawX;
         const barY = drawY + titleExtraTop;
+
+        // On a plate, as the table: its values stay readable over the
+        // model, the water-line labels and the result's surfaces.
+        const plate = COLOR_BAR_PLATE_PAD * annoScale;
+        ctx.save();
+        ctx.fillStyle = INK.tableBg;
+        ctx.fillRect(drawX - plate, drawY - plate, contentW + 2 * plate, contentH + 2 * plate);
+        ctx.restore();
 
         const fosMin = fosScale.min;
         const fosMax = fosScale.max;

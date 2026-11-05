@@ -280,6 +280,10 @@ describe("Help ribbon", () => {
     const list = screen.getByRole("table", { name: "Keyboard shortcuts" });
     expect(list).toHaveTextContent("Ctrl+Shift+S");
     expect(list).toHaveTextContent("Run the analysis");
+    // As the edit canvas works now (Keyboard and mouse in the documentation).
+    expect(list).toHaveTextContent("move the selected point one snap step");
+    expect(list).toHaveTextContent("Shift+arrow keys");
+    expect(list).toHaveTextContent("stop picking lines");
     await userEvent.click(screen.getByTitle("Close"));
     expect(screen.queryByRole("table", { name: "Keyboard shortcuts" })).toBeNull();
   });

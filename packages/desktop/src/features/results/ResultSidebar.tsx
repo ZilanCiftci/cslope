@@ -741,7 +741,8 @@ export function ResultSidebar() {
       </Section>
 
       <Section
-        title="Properties"
+        // Names what the fields are of when the sheet itself is selected.
+        title={paperFrameSelected ? "Properties · Sheet" : "Properties"}
         open={openSections.properties}
         onToggle={() => toggleSection("properties")}
       >

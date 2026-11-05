@@ -26,6 +26,21 @@ const syncActiveModel = (
   ),
 });
 
+/** Step between annotations added one after another (fraction of the paper). */
+const CASCADE_STEP = 0.04;
+
+/** The middle of the sheet, or the first step from it that no annotation takes. */
+export function cascadePosition(annotations: readonly { x?: number; y?: number }[]): { x: number; y: number } {
+  const taken = (x: number, y: number) =>
+    annotations.some((a) => Math.abs((a.x ?? 0) - x) < CASCADE_STEP / 2 && Math.abs((a.y ?? 0) - y) < CASCADE_STEP / 2);
+  for (let k = 0; k < 8; k++) {
+    const x = Math.round((0.5 + k * CASCADE_STEP) * 1000) / 1000;
+    const y = Math.round((0.5 + k * CASCADE_STEP) * 1000) / 1000;
+    if (!taken(x, y)) return { x, y };
+  }
+  return { x: 0.5, y: 0.5 };
+}
+
 export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) => ({
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
@@ -49,6 +64,9 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
             state.resultViewSettings.paperFrame,
           )
         : null;
+    // Text and plots start in the middle; one added after another steps
+    // down and right, so a new one is not hidden under the last.
+    const free = cascadePosition(state.resultViewSettings.annotations);
     const anno = {
       id: nextId("anno"),
       type,
@@ -56,8 +74,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       // frame (PLOT_MARGINS from the paper edge), just inside it so the
       // frame line does not run through them; text and plots in the
       // middle, where they are seen.
-      x: bar ? bar.x : type === "material-table" ? RIGHT_INSIDE_FRAME : 0.5,
-      y: bar ? bar.y : type === "material-table" ? TOP_INSIDE_FRAME : 0.5,
+      x: bar ? bar.x : type === "material-table" ? RIGHT_INSIDE_FRAME : free.x,
+      y: bar ? bar.y : type === "material-table" ? TOP_INSIDE_FRAME : free.y,
       anchor: type === "material-table" || type === "color-bar" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
       fontSize: type === "material-table" ? NEW_MATERIAL_TABLE_FONT_SIZE : 12,
