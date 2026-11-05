@@ -1,0 +1,46 @@
+# DWG import for the desktop app (prototype): reads a DWG drawing with the
+# acadrust crate (MPL-2.0, used unmodified from crates.io) and returns the
+# neutral drawing structure the DXF importer also builds
+# (packages/desktop/src/utils/dxf.ts). Built to its own WebAssembly module by
+# tools/build-dwg-wasm.ts, which the app loads only when a DWG is imported.
+#
+# A workspace of its own, outside packages/engine-rs: the engine's source
+# hash (packages/engine-rs/tools/wasm-source-hash.ts) covers that
+# workspace's Cargo.lock and every crate under crates/, so a crate there
+# would make the committed engine build look stale; and the engine's
+# lockfile stays free of acadrust's dependencies.
+[workspace]
+
+[package]
+name = "cslope-dwg"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "DWG reading for the cSlope desktop app (acadrust wrapper, WebAssembly)"
+publish = false
+
+[lib]
+# cdylib for wasm-bindgen; rlib for the native tests and the measuring example.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# No default features: "parallel" (rayon) is native-only and not needed.
+acadrust = { version = "=0.6.8", default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# The same exact version as the engine (packages/engine-rs/Cargo.toml), so
+# that one wasm-bindgen CLI serves both builds.
+wasm-bindgen = "=0.2.130"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# tools/build-dwg-wasm.ts: panics abort (the instance traps; the app's
+# loader, packages/desktop/src/utils/dwg.ts, reports it and starts a new
+# instance for the next file).
+[profile.wasm-release]
+inherits = "release"
+panic = "abort"
+strip = "debuginfo"
