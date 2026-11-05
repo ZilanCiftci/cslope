@@ -7,6 +7,7 @@ import {
   type PointerEvent as RPointerEvent,
   type RefObject,
 } from "react";
+import { annotationsInLayerOrder } from "../../results/layers";
 import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { undoableState, useAppStore } from "../../../store/app-store";
 import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
@@ -593,7 +594,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       );
       const cxPx = clientX - rect.left;
       const cyPx = clientY - rect.top;
-      const annos = state.resultViewSettings.annotations;
+      // In the order they are drawn (Properties › Layers): the topmost is hit first.
+      const annos = annotationsInLayerOrder(state);
       for (let i = annos.length - 1; i >= 0; i--) {
         const a = annos[i];
         // Reference annotations are hit through findReferenceAt.

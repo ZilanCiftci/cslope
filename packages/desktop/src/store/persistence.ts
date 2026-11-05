@@ -23,6 +23,7 @@ import { nextId } from "./helpers";
 import { clampMinorTicks } from "../utils/ruler";
 import { isFosSchemeId, isHexColor } from "../utils/fos-color";
 import { normalizeReferenceAnnotation } from "../features/annotations/reference";
+import { normalizeLayerOrder } from "../features/results/layers";
 import { normalizeLocks } from "./canvas-selection";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
@@ -804,6 +805,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
   const annotations = normalizeAnnotations(view.annotations).map(normalizeColorBarScale);
+  const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
 
   return {
     surfaceDisplay:
@@ -851,6 +853,8 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     ...(typeof view.pdfTitleLine === "boolean"
       ? { pdfTitleLine: view.pdfTitleLine }
       : {}),
+    // The layers' order: only the keys of known layers and annotations.
+    ...(layerOrder ? { layerOrder } : {}),
   };
 }
 

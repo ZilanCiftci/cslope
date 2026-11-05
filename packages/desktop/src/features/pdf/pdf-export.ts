@@ -22,6 +22,9 @@ import { computeViewLockFit } from "../view/fit";
 import {
   drawAnnotations,
   drawClosedPolyline,
+  drawCentreMarkerPdf,
+  drawCriticalFosLabelPdf,
+  drawCriticalSlicesPdf,
   drawCriticalSurface,
   drawCustomSurfaceLabels,
   drawCustomSurfaceLines,
@@ -55,6 +58,7 @@ import { drawDrawingTitle, drawSummaryPages, type SummaryHeader } from "./pdf-su
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
 import { computeRegions } from "../../utils/regions";
+import { baseLayerCount, isPaperStep, layerSteps, resultLayers } from "../results/layers";
 
 interface PdfViewBounds {
   xMin: number;
@@ -366,6 +370,16 @@ export function exportVectorPdf(data: PdfExportData): void {
     pdf.clip();
     (pdf as unknown as { discardPath?: () => void }).discardPath?.();
 
+    // The layers of the sheet in the model's order (bottom first), as on
+    // the canvas: those at the bottom, the soil colours and drawings, with
+    // the model under its lines, as by default; the rest over them.
+    const layers = resultLayers({ resultViewSettings: rvs, result, backgrounds: underlays.map((u) => u.placement) });
+    const baseTotal = baseLayerCount(layers);
+    const soilIndex = layers.slice(0, baseTotal).findIndex((l) => l.key === "soilColor");
+    const underlaysOf = (from: number, to: number) =>
+      layers.slice(from, to).flatMap((l) => (l.kind === "drawing" ? underlays.filter((u) => u.placement.id === l.drawing.id) : []));
+    if (soilIndex > 0) drawPdfUnderlays(pdf, underlaysOf(0, soilIndex), tf.worldToPdf, innerFrame);
+
     if (coordinates.length >= 3) {
       drawMaterialRegions(
         pdf,
@@ -374,12 +388,12 @@ export function exportVectorPdf(data: PdfExportData): void {
         materials,
         materialBoundaries,
         regionMaterials,
-        rvs.showSoilColor ?? true,
+        soilIndex >= 0,
       );
     }
 
     // Placed drawings shown in results: over the fills, under the grid and the lines.
-    drawPdfUnderlays(pdf, underlays, tf.worldToPdf, innerFrame);
+    drawPdfUnderlays(pdf, underlaysOf(soilIndex + 1, baseTotal), tf.worldToPdf, innerFrame);
 
     // Grid on top of the (opaque) regions, as on the canvas.
     if (rvs.showGrid) {
@@ -448,89 +462,144 @@ export function exportVectorPdf(data: PdfExportData): void {
       drawEntryExitMarkers(pdf, tf, analysisLimits, coordinates);
     }
 
-    // Reference annotations: the lines under the surfaces, as on the canvas.
-    const drawnReferences = drawReferenceLinesPdf(pdf, tf, rvs.annotations, coordinates);
-
-    drawSlipSurfaces(pdf, tf, result, rvs);
-
-    // The custom surfaces' lines under the critical surface (and its FOS
-    // label's plate), their labels after it, as on the canvas.
-    const customSurfaces = drawCustomSurfaceLines(pdf, tf, result, rvs);
-    drawCriticalSurface(pdf, tf, result, rvs, coordinates, {
-      options,
-      materials,
-      materialBoundaries,
-      regionMaterials,
+    // The layers over the model's lines, each a step in order: the
+    // model's clipped to the plot frame, the paper annotations not; after
+    // the topmost of the model's layers the reference labels (clear of the
+    // lines and the FOS labels) and the reinforcement forces.
+    const drawnReferences: ReturnType<typeof drawReferenceLinesPdf> = [];
+    let customSurfaces: ReturnType<typeof drawCustomSurfaceLines> = [];
+    let customLabelBoxes: Box[] = [];
+    const criticalContext = { options, materials, materialBoundaries, regionMaterials };
+    const steps = layerSteps(layers.slice(baseTotal));
+    let lastModelStep = -1;
+    steps.forEach((step, i) => {
+      if (!isPaperStep(step)) lastModelStep = i;
     });
-    const customLabelBoxes = drawCustomSurfaceLabels(pdf, tf, result, rvs);
-    // Their labels, clear of the lines and the FOS labels.
-    drawReferenceLabelsPdf(pdf, tf, drawnReferences, {
-      coordinates,
-      materialBoundaries,
-      waterLines: piezometricLine.lines,
-      criticalSurface: result.criticalSurface,
-      showFosLabel: rvs.showFosLabel,
-      customSurfaces,
-      customLabelBoxes,
-      bounds: { left: innerFrame.x, top: innerFrame.y, right: innerFrame.x + innerFrame.w, bottom: innerFrame.y + innerFrame.h },
+    let clipped = true;
+    const clipToFrame = () => {
+      if (clipped) return;
+      pdf.saveGraphicsState();
+      pdf.rect(innerFrame.x, innerFrame.y, innerFrame.w, innerFrame.h, null);
+      pdf.clip();
+      (pdf as unknown as { discardPath?: () => void }).discardPath?.();
+      clipped = true;
+    };
+    const unclip = () => {
+      if (!clipped) return;
+      pdf.restoreGraphicsState();
+      clipped = false;
+    };
+    const finishModel = () => {
+      clipToFrame();
+      // Their labels, clear of the lines and the FOS labels.
+      drawReferenceLabelsPdf(pdf, tf, drawnReferences, {
+        coordinates,
+        materialBoundaries,
+        waterLines: piezometricLine.lines,
+        criticalSurface: result.criticalSurface,
+        showFosLabel: rvs.showFosLabel,
+        customSurfaces,
+        customLabelBoxes,
+        bounds: { left: innerFrame.x, top: innerFrame.y, right: innerFrame.x + innerFrame.w, bottom: innerFrame.y + innerFrame.h },
+      });
+      if (result.criticalSurface?.reinforcementForces?.length) {
+        const cs = result.criticalSurface;
+        drawReinforcementForcesPdf(
+          pdf,
+          tf,
+          cs.reinforcementForces!,
+          forceLabelContext(tf.worldToPdf, {
+            reinforcements,
+            piles,
+            surface: surfacePoints(cs),
+            numberSize: 2.8,
+            model: coordinates,
+            water: piezometricLine.lines.map((l) => l.coordinates),
+            boundaries: materialBoundaries.map((b) => b.coordinates),
+            loads: [
+              ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
+              ...loadLabels,
+            ],
+            markers:
+              analysisLimits.enabled && !customPlanesOnly
+                ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
+                : [],
+            numberScene,
+            // A margin inside the plot frame, as on the canvas.
+            bounds: {
+              left: innerFrame.x + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+              top: innerFrame.y + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+              right: innerFrame.x + innerFrame.w - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+              bottom: innerFrame.y + innerFrame.h - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+            },
+          }),
+        );
+      }
+      unclip();
+    };
+    // The custom surfaces' labels follow the critical one's.
+    const drawFosLabels = () => {
+      customLabelBoxes = drawCustomSurfaceLabels(pdf, tf, result, rvs);
+    };
+    if (lastModelStep < 0) finishModel();
+    steps.forEach((step, i) => {
+      if (step.kind === "paper") {
+        unclip();
+        drawAnnotations(
+          pdf,
+          tf,
+          [step.annotation],
+          result,
+          materials,
+          piezometricLine,
+          projectInfo || {},
+          parameters ?? [],
+          annotationFrame,
+          rvs,
+        );
+      } else {
+        clipToFrame();
+        if (step.kind === "references") {
+          // Reference annotations: the lines under the surfaces, as on the canvas.
+          drawnReferences.push(...drawReferenceLinesPdf(pdf, tf, step.annotations, coordinates));
+        } else if (step.kind === "drawings") {
+          drawPdfUnderlays(pdf, step.drawings.flatMap((d) => underlays.filter((u) => u.placement.id === d.id)), tf.worldToPdf, innerFrame);
+        } else if (step.kind === "critical") {
+          drawCriticalSurface(pdf, tf, result, rvs, coordinates, criticalContext, {
+            slices: step.withSlices,
+            center: step.withCenter,
+            fosLabel: step.withFosLabel,
+          });
+          if (step.withFosLabel) drawFosLabels();
+        } else if (step.layer === "soilColor") {
+          if (coordinates.length >= 3) drawMaterialRegions(pdf, tf, coordinates, materials, materialBoundaries, regionMaterials, true, "fills");
+        } else if (step.layer === "surfaces") {
+          drawSlipSurfaces(pdf, tf, result, rvs);
+        } else if (step.layer === "customSurfaces") {
+          // The custom surfaces' lines under the critical surface (and its
+          // FOS label's plate), their labels after it, as on the canvas.
+          customSurfaces = drawCustomSurfaceLines(pdf, tf, result, rvs);
+        } else if (step.layer === "slices") {
+          drawCriticalSlicesPdf(pdf, tf, result, rvs, coordinates, criticalContext);
+        } else if (step.layer === "center") {
+          drawCentreMarkerPdf(pdf, tf, result, rvs);
+        } else if (step.layer === "fosLabel") {
+          drawCriticalFosLabelPdf(pdf, tf, result, rvs);
+          drawFosLabels();
+        }
+        // (the finite element layers are not drawn in the PDF)
+      }
+      if (i === lastModelStep) finishModel();
     });
-    if (result.criticalSurface?.reinforcementForces?.length) {
-      const cs = result.criticalSurface;
-      drawReinforcementForcesPdf(
-        pdf,
-        tf,
-        cs.reinforcementForces!,
-        forceLabelContext(tf.worldToPdf, {
-          reinforcements,
-          piles,
-          surface: surfacePoints(cs),
-          numberSize: 2.8,
-          model: coordinates,
-          water: piezometricLine.lines.map((l) => l.coordinates),
-          boundaries: materialBoundaries.map((b) => b.coordinates),
-          loads: [
-            ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
-            ...loadLabels,
-          ],
-          markers:
-            analysisLimits.enabled && !customPlanesOnly
-              ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
-              : [],
-          numberScene,
-          // A margin inside the plot frame, as on the canvas.
-          bounds: {
-            left: innerFrame.x + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-            top: innerFrame.y + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-            right: innerFrame.x + innerFrame.w - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-            bottom: innerFrame.y + innerFrame.h - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-          },
-        }),
-      );
-    }
 
-    pdf.restoreGraphicsState();
-
-    drawAnnotations(
-      pdf,
-      tf,
-      rvs.annotations,
-      result,
-      materials,
-      piezometricLine,
-      projectInfo || {},
-      parameters ?? [],
-      annotationFrame,
-      rvs,
-    );
-
-    drawRulerFrame(
-      pdf,
-      tf,
-      viewScale,
-      innerFrame,
-      rvs.gridSpacing,
-      clampMinorTicks(rvs.minorTicks ?? 0),
-    );
+    drawRulerFrame(
+      pdf,
+      tf,
+      viewScale,
+      innerFrame,
+      rvs.gridSpacing,
+      clampMinorTicks(rvs.minorTicks ?? 0),
+    );
 
     // Both are the user's choice (the PDF button's menu): the title line is
     // off by default, as the drawing's text annotations carry the title.

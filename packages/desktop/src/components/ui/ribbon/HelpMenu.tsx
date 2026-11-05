@@ -43,6 +43,7 @@ const KEYBOARD_SHORTCUTS: [keys: string, action: string][] = [
   ["Delete or Backspace", "Delete the selected point (edit mode) or the selected annotations (result mode)"],
   ["Arrow keys", "Edit mode: move the selected point one snap step. Result mode: move the selected annotations"],
   ["Shift+arrow keys", "Edit mode: ten snap steps. Result mode: smaller steps"],
+  ["Alt+Up or Alt+Down", "In the Layers list of the result sidebar: draw the focused layer one above or below"],
   ["Esc", "Close a menu or a window; on the canvas, clear the selection or stop picking lines"],
   ["Double-click", "Edit mode: type the exact coordinates of a point of the selected object; on a region, choose its material"],
   ["Shift+click", "While picking lines: add a line, or remove a picked one"],

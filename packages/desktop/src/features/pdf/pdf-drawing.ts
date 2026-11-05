@@ -295,6 +295,8 @@ export function drawMaterialRegions(
   materialBoundaries: MaterialBoundaryRow[],
   regionMaterials: RegionMaterials,
   showSoilColor?: boolean,
+  /** "fills": the soil colours only (a layer above the outlines); default: both. */
+  part: "all" | "fills" = "all",
 ) {
   const colorEnabled = showSoilColor !== false;
   const defaultMatId = materials[0]?.id ?? "";
@@ -343,9 +345,11 @@ export function drawMaterialRegions(
     }
 
     // Region border stroke
-    pdf.setDrawColor(0, 0, 0);
-    pdf.setLineWidth(0.15);
-    pdfPath(pdf, ops, "S");
+    if (part === "all") {
+      pdf.setDrawColor(0, 0, 0);
+      pdf.setLineWidth(0.15);
+      pdfPath(pdf, ops, "S");
+    }
 
     // ── Hatch pattern overlay for special model kinds ──
     const modelKind = mat.model?.kind;
@@ -1006,6 +1010,12 @@ export interface CriticalSurfaceContext {
   regionMaterials?: RegionMaterials;
 }
 
+/**
+ * The critical surface: the sliding mass, the slices, the water in a
+ * tension crack, the line, the center and the FOS label. The slices, the
+ * center and the FOS label are left out where `include` says so (each
+ * drawn as a layer of its own elsewhere in the layers' order).
+ */
 export function drawCriticalSurface(
   pdf: jsPDF,
   tf: PdfTransform,
@@ -1013,6 +1023,7 @@ export function drawCriticalSurface(
   rvs: ResultViewSettings,
   coordinates: [number, number][],
   context: CriticalSurfaceContext = {},
+  include: { slices?: boolean; center?: boolean; fosLabel?: boolean } = {},
 ) {
   const cs = result.criticalSurface;
   if (!cs) return;
@@ -1068,6 +1079,54 @@ export function drawCriticalSurface(
     }
   }
 
+  if (include.slices !== false) drawCriticalSlicesPdf(pdf, tf, result, rvs, coordinates, context);
+
+  // Water in a tension crack: a blue band in the crack against the face
+  // on the side of the sliding mass, from the crack bottom up to the
+  // water level (as on the canvas).
+  const crackWater = Math.min(1, Math.max(0, context.options?.tensionCrackWater ?? 0));
+  if (crack && crackWater > 0) {
+    const hw = (crack.top - crack.bottom) * crackWater;
+    const [bx, by] = tf.worldToPdf(crack.x, crack.bottom);
+    const [, wy] = tf.worldToPdf(crack.x, crack.bottom + hw);
+    const [massX] = tf.worldToPdf(crack.x + crack.massSide, crack.bottom);
+    const bandW = CRACK_WATER_WIDTH_PX * tf.mmPerPx;
+    const left = massX > bx ? bx : bx - bandW;
+    pdf.setFillColor(...POND_COLOR.rgb);
+    setOpacity(pdf, CRACK_WATER_OPACITY);
+    pdf.rect(left, wy, bandW, by - wy, "F");
+    resetOpacity(pdf);
+    pdf.setDrawColor(...PIEZO_COLOR.rgb);
+    pdf.setLineWidth(0.25);
+    pdf.line(left, wy, left + bandW, wy);
+  }
+
+  {
+    // From the top of a tension crack (its face is part of the surface).
+    const pts: [number, number][] = crack ? [[crack.x, crack.top], ...arcPts] : arcPts;
+    const pdfPts = pts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
+    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
+    pdf.setLineWidth(0.38);
+    const ops = buildPolylinePath(pdfPts, false);
+    pdfPath(pdf, ops, "S");
+  }
+
+  if (include.center !== false) drawCentreMarkerPdf(pdf, tf, result, rvs);
+
+  if (include.fosLabel !== false) drawCriticalFosLabelPdf(pdf, tf, result, rvs);
+}
+
+/** The slice lines of the critical surface (the Slices layer). */
+export function drawCriticalSlicesPdf(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  result: AnalysisResult,
+  rvs: ResultViewSettings,
+  coordinates: [number, number][],
+  context: CriticalSurfaceContext = {},
+) {
+  const cs = result.criticalSurface;
+  if (!cs) return;
   if (rvs.showSlices && result.criticalSlices.length > 0) {
     const arcYAt = (x: number): number | null => surfaceBaseYAt(cs, x);
     // As on the canvas: boundaries closer than 0.7 mm on paper as one line
@@ -1105,37 +1164,12 @@ export function drawCriticalSurface(
 
     resetOpacity(pdf);
   }
+}
 
-  // Water in a tension crack: a blue band in the crack against the face
-  // on the side of the sliding mass, from the crack bottom up to the
-  // water level (as on the canvas).
-  const crackWater = Math.min(1, Math.max(0, context.options?.tensionCrackWater ?? 0));
-  if (crack && crackWater > 0) {
-    const hw = (crack.top - crack.bottom) * crackWater;
-    const [bx, by] = tf.worldToPdf(crack.x, crack.bottom);
-    const [, wy] = tf.worldToPdf(crack.x, crack.bottom + hw);
-    const [massX] = tf.worldToPdf(crack.x + crack.massSide, crack.bottom);
-    const bandW = CRACK_WATER_WIDTH_PX * tf.mmPerPx;
-    const left = massX > bx ? bx : bx - bandW;
-    pdf.setFillColor(...POND_COLOR.rgb);
-    setOpacity(pdf, CRACK_WATER_OPACITY);
-    pdf.rect(left, wy, bandW, by - wy, "F");
-    resetOpacity(pdf);
-    pdf.setDrawColor(...PIEZO_COLOR.rgb);
-    pdf.setLineWidth(0.25);
-    pdf.line(left, wy, left + bandW, wy);
-  }
-
-  {
-    // From the top of a tension crack (its face is part of the surface).
-    const pts: [number, number][] = crack ? [[crack.x, crack.top], ...arcPts] : arcPts;
-    const pdfPts = pts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.38);
-    const ops = buildPolylinePath(pdfPts, false);
-    pdfPath(pdf, ops, "S");
-  }
-
+/** The center of a circular critical surface with its radius lines (the Center layer). */
+export function drawCentreMarkerPdf(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings) {
+  const cs = result.criticalSurface;
+  if (!cs) return;
   if (rvs.showCentreMarker && !cs.points) {
     const [ccx, ccy] = tf.worldToPdf(cs.cx, cs.cy);
     const [epx, epy] = tf.worldToPdf(cs.entryPoint[0], cs.entryPoint[1]);
@@ -1149,7 +1183,12 @@ export function drawCriticalSurface(
     pdf.setFillColor(...CRITICAL_SURFACE_COLOR.rgb);
     pdf.circle(ccx, ccy, 0.8, "F");
   }
+}
 
+/** The critical surface's FOS label (the FOS label layer, with the custom surfaces' labels). */
+export function drawCriticalFosLabelPdf(pdf: jsPDF, tf: PdfTransform, result: AnalysisResult, rvs: ResultViewSettings) {
+  const cs = result.criticalSurface;
+  if (!cs) return;
   if (rvs.showFosLabel) {
     drawFosLabelPdf(pdf, fosLabelLayoutPdf(pdf, tf, cs), CRITICAL_SURFACE_COLOR);
   }

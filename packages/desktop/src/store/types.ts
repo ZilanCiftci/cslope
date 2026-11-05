@@ -461,6 +461,14 @@ export interface ResultViewSettings {
   /** Number of minor tick subdivisions between major ticks. 0 = none. */
   minorTicks?: number;
   annotations: Annotation[];
+  /**
+   * The order the layers of the sheet are drawn in, bottom first
+   * (Properties › Layers): annotation ids, "drawing:" + a drawing's id
+   * and the display layers' keys ("soilColor", "surfaces", "slices",
+   * "center", "fosLabel", ...; features/results/layers.ts). Absent: the
+   * default order.
+   */
+  layerOrder?: string[];
   paperFrame: PaperFrameSettings;
   viewLock?: ViewLock;
   /**
