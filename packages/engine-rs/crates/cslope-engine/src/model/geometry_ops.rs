@@ -120,6 +120,39 @@ pub fn polyline_y_at_x(lx: &[f64], ly: &[f64], x: f64) -> Option<f64> {
 
 // ── getSurfaceLine ────────────────────────────────────────────────
 
+/// Horizontal run per unit rise up to which an end side of the model counts
+/// as vertical (1:100, about 0.6° from the vertical).
+pub const VERTICAL_SIDE_SLOPE: f64 = 0.01;
+
+/// The top of the vertical side of the model at an end vertex of the
+/// polygon (the first `n` vertices, open): from `idx`, up every boundary edge
+/// that rises and runs at most `VERTICAL_SIDE_SLOPE` per unit rise, in
+/// either direction around the polygon. `idx` itself when no edge from it
+/// is such a side.
+fn top_of_vertical_side(px: &[f64], py: &[f64], n: usize, idx: usize) -> usize {
+    let steep_rise = |from: usize, to: usize| {
+        let dy = at(py, to) - at(py, from);
+        dy > 0.0 && (px[to] - px[from]).abs() <= VERTICAL_SIDE_SLOPE * dy
+    };
+    for step in [1, n - 1] {
+        let mut top = idx;
+        let mut moved = false;
+        // (at most n − 1 edges: the polygon cannot be all side)
+        for _ in 0..n - 1 {
+            let next = (top + step) % n;
+            if !steep_rise(top, next) {
+                break;
+            }
+            top = next;
+            moved = true;
+        }
+        if moved {
+            return top;
+        }
+    }
+    idx
+}
+
 /// Extract the upper (surface) boundary of a polygon.
 ///
 /// Replaces `utilities.get_surface_line(Polygon)`.
@@ -157,6 +190,22 @@ pub fn get_surface_line(px: &[f64], py: &[f64]) -> Result<Polyline, EngineError>
             right_idx = i;
         }
     }
+
+    // A side of the model that is vertical but for drawing or rounding
+    // error (a model rotated by 0.005° or drawn without snapping) is not
+    // ground either: from an end vertex below it, the end moves up the side.
+    // Otherwise a side leaning out by a fraction of a millimetre put its
+    // bottom corner at the extreme x, and the whole side, an artificial cut,
+    // in the ground line: the search took circles entering or leaving the
+    // model through it (one reaching the bottom corner was critical).
+    // (not in a polygon narrower than a hundredth of its height, all side)
+    let (left_idx, right_idx) = match (
+        top_of_vertical_side(px, py, n, left_idx),
+        top_of_vertical_side(px, py, n, right_idx),
+    ) {
+        (l, r) if l != r => (l, r),
+        _ => (left_idx, right_idx),
+    };
 
     // Walk forward from leftIdx → rightIdx
     let mut fwd_x = Vec::new();

@@ -96,6 +96,27 @@ describe("runAnalysis", () => {
     expect(both.customSurfaces).toEqual(customs);
   }, 120_000);
 
+  it("both directions: no surface leaves through a side of the model that leans out by a hair", () => {
+    // Level ground at y = 0 (x −20 to 15), a channel down to −2.5 at x −1..1,
+    // the base at −8, turned by 0.006°: the left side leans out by 0.8 mm,
+    // its bottom corner the leftmost vertex. The side once counted as
+    // ground, and circles leaving through it at that corner were critical
+    // in the opposite direction (F 0.34 against 1.48).
+    const level: [number, number][] = [[-20, -8], [-20, 0], [-3.4, 0], [-1, -2.5], [1, -2.5], [3.4, 0], [15, 0], [15, -8]];
+    const a = 1e-4;
+    const coordinates = level.map(([x, y]) => [x * Math.cos(a) + y * Math.sin(a), -x * Math.sin(a) + y * Math.cos(a)] as [number, number]);
+    const def = (c: [number, number][]) => ({
+      orientation: "ltr" as const,
+      coordinates: c,
+      materials: [{ name: "Clay", unitWeight: 17, frictionAngle: 0, cohesion: 12 }],
+    });
+    const o = options({ bothDirections: true, minSlipDepth: 0.5 });
+    const turned = runAnalysis(def(coordinates), o);
+    const onSide = (p: [number, number]) => p[0] < -19.99 && p[1] < -0.01;
+    expect(turned.allSurfaces.filter((s) => onSide(s.entryPoint) || onSide(s.exitPoint))).toHaveLength(0);
+    expect(turned.minFOS).toBeCloseTo(runAnalysis(def(level), o).minFOS, 1);
+  });
+
   it("no valid surface is an error", () => {
     const def = { ...problem("V001"), customSearchPlanes: [{ cx: 0, cy: 0, radius: 0.1 }], customPlanesOnly: true };
     expect(() => runAnalysis(def, options())).toThrow(/No valid slip surface/);
