@@ -1,0 +1,3 @@
+# Commits that only reformat; GitHub and `git blame --ignore-revs-file` skip them.
+# Line endings normalized to LF (#14)
+2a4b60208712390eee7313adefbce22c38dd7cdb
