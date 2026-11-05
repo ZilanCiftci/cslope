@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
+import { HelpButton } from "../../components/ui/HelpButton";
 import { useAppStore } from "../../store/app-store";
 import type {
   LineLoadRow,
@@ -396,7 +397,10 @@ export function ReinforcementDialogApp() {
       style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text)" }}
     >
       <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Reinforcement</h2>
+        <h2 className="text-[12px] font-semibold flex items-center gap-1.5">
+          Reinforcement
+          <HelpButton topic="Reinforcement" page="reinforcement#reinforcement" />
+        </h2>
         <p className="text-[10px]" style={muted}>
           End 1 is the head (at the face), end 2 the embedded end. Capacities per element; forces per meter are
           capacity / spacing (a geosynthetic sheet with S = 1: per meter of slope; partial coverage A: T × A).
@@ -525,7 +529,7 @@ export function ReinforcementDialogApp() {
                     {selected.bondedLength > 0 && (
                       <NumberField
                         label="Lock-off load (kN, FE)"
-                        title="Prestress of the free length in the finite element analysis, per element. The free length is joined to the soil only at its ends there. Limit equilibrium takes an active element's force as its capacity."
+                        title="Prestress of the free length per element (kN) in the finite element analysis; 0 = none (default). Limit equilibrium takes an active element's force as its capacity."
                         value={selected.prestress ?? 0}
                         ariaLabel="Lock-off load"
                         accept={(v) => v >= 0}
@@ -631,7 +635,10 @@ export function ReinforcementDialogApp() {
 
         <section aria-label="Piles and sheet piles" className="space-y-2 pt-2">
           <div>
-            <h2 className="text-[12px] font-semibold">Piles and sheet piles</h2>
+            <h2 className="text-[12px] font-semibold flex items-center gap-1.5">
+              Piles and sheet piles
+              <HelpButton topic="Piles and sheet piles" page="reinforcement#piles-and-sheet-piles" />
+            </h2>
             <p className="text-[10px]" style={muted}>
               Shear against the sliding mass where the slip surface crosses the pile: tangent to the slip surface,
               perpendicular to the pile or at angle θ above horizontal. Ito &amp; Matsui needs a vertical pile and
@@ -783,7 +790,7 @@ export function ReinforcementDialogApp() {
                 />
                 <NumberField
                   label="Bending stiffness EI (kNm², FE; 0 = concrete)"
-                  title="Bending stiffness per pile in the finite element analysis, where the pile is a beam joined to the soil by springs that let the soil flow between the piles. 0: a solid concrete circle of the diameter (E = 30 GPa). For a sheet pile wall: EI per meter with spacing 1."
+                  title="Bending stiffness per pile (kNm²) in the finite element analysis. 0 (default): a solid concrete circle of the diameter, E = 30 GPa. Sheet pile wall: EI per meter, spacing 1."
                   span={2}
                   value={pile.bendingStiffness ?? 0}
                   ariaLabel="Bending stiffness per pile"
@@ -823,7 +830,7 @@ export function ReinforcementDialogApp() {
                 {pile.mode === "ito-matsui" ? (
                   <Field
                     label="Force acts at"
-                    title="The soil pressure acts on the pile from its head down to the slip surface: its resultant gives the moment of that pressure. Cai & Ugai (2000) apply the force at the slip surface, which gives it the longest arm."
+                    title="Where the force acts: at the resultant of the soil pressure above the slip surface (default), or at the slip surface as Cai & Ugai (2000) apply it, the longest arm."
                     span={2}
                   >
                     <select

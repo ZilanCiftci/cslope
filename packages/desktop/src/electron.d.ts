@@ -157,7 +157,7 @@ declare global {
       menuNew: () => void;
       menuAbout: () => void;
       /** Open the online documentation in the default browser. */
-      openDocumentation: () => void;
+      openDocumentation: (page?: string) => void;
       toggleDevTools: () => void;
       // Materials dialog sync
       requestMaterialsState: () => void;

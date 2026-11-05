@@ -45,11 +45,11 @@ export function RapidDrawdownFields() {
 
   return (
     <section>
-      <GroupHeading>Rapid drawdown</GroupHeading>
+      <GroupHeading help={{ topic: "Rapid drawdown", page: "water#rapid-drawdown" }}>Rapid drawdown</GroupHeading>
       <div className="grid grid-cols-2 gap-x-3 gap-y-2">
         <label
           className="col-span-2 flex items-center gap-1.5"
-          title="Three-stage rapid drawdown analysis (Duncan, Wright & Wong 1990): the piezometric lines are the water after drawdown. Materials with a drawdown strength (R envelope, cR, φR) do not drain: they take the undrained strength at their consolidation stresses under the water before drawdown (the drained strength where lower). The other materials drain."
+          title="Three-stage rapid drawdown (Duncan, Wright & Wong 1990): the piezometric lines are the water after drawdown; materials with a drawdown strength do not drain. Off by default."
         >
           <input
             type="checkbox"

@@ -163,12 +163,12 @@ describe("ResultsMenu", () => {
     const button = screen.getByTitle(/Shade the plastic zone/);
     expect(button).toHaveAttribute(
       "title",
-      expect.stringMatching(/experimental: fewer verification problems than limit equilibrium/),
+      expect.stringMatching(/finite element analysis, which is experimental/),
     );
     await userEvent.click(button);
     expect(rvs().showFemPlasticZone).toBe(false);
     // the mesh: off by default, on with its button
-    const mesh = screen.getByTitle(/Draw the mesh of the finite element analysis/);
+    const mesh = screen.getByTitle(/Draw the last mesh of the finite element analysis/);
     expect(rvs().showFemMesh ?? false).toBe(false);
     await userEvent.click(mesh);
     expect(rvs().showFemMesh).toBe(true);

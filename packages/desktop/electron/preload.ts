@@ -93,7 +93,8 @@ contextBridge.exposeInMainWorld("cslope", {
   // Menu actions
   menuNew: () => ipcRenderer.send("menu:new"),
   menuAbout: () => ipcRenderer.send("menu:about"),
-  openDocumentation: () => ipcRenderer.send("help:openDocumentation"),
+  // The documentation, or one of its pages at a heading ("analysis#method").
+  openDocumentation: (page?: string) => ipcRenderer.send("help:openDocumentation", page),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
   // Materials dialog sync
   requestMaterialsState: () => ipcRenderer.send("materials:requestState"),

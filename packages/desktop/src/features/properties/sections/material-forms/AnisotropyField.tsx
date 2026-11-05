@@ -1,5 +1,6 @@
 import { Label } from "../../../../components/ui/Label";
 import { DataPointTable } from "../../../../components/ui/DataPointTable";
+import { HelpButton } from "../../../../components/ui/HelpButton";
 
 /** Passive 0.82, direct 1.0, active 1.5 (relative to the direct shear strength). */
 const DEFAULT_ANISOTROPY: [number, number][] = [
@@ -22,9 +23,10 @@ export function AnisotropyField({ value, onChange }: Props) {
   const on = value !== undefined;
   return (
     <div className="col-span-2 space-y-1">
+      <div className="flex items-center gap-1.5">
       <label
         className="flex items-center gap-1.5"
-        title="Su times a factor of the slice base inclination α: positive α where the base dips in the direction of sliding (active, near the crest), negative where it rises (passive, at the toe). Interpolated linearly, constant beyond the ends. Finite elements and limit analysis take the factor at α = 0."
+        title="Factor on Su by the slice base inclination α (°): positive α near the crest (active), negative at the toe (passive), interpolated. Off by default; finite elements take α = 0."
       >
         <input
           type="checkbox"
@@ -34,6 +36,8 @@ export function AnisotropyField({ value, onChange }: Props) {
         />
         <Label>Anisotropy (factor on Su by base inclination)</Label>
       </label>
+      <HelpButton topic="Anisotropy" page="materials#anisotropy-of-the-undrained-strength" />
+      </div>
       {on && (
         <DataPointTable
           headers={["α (°)", "Factor"]}

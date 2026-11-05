@@ -27,9 +27,8 @@ import {
   RibbonStack,
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
+import { openDocumentation } from "../../../utils/docs";
 
-/** The online documentation (the website's /docs pages). */
-const DOCS_URL = "https://cslope.com/docs";
 
 /** The keyboard shortcuts of the main window, as listed in Help. */
 const KEYBOARD_SHORTCUTS: [keys: string, action: string][] = [
@@ -78,8 +77,7 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
   };
 
   const handleDocs = () => {
-    if (isElectron) window.cslope.openDocumentation();
-    else window.open(DOCS_URL, "_blank", "noopener");
+    openDocumentation();
   };
 
   return (

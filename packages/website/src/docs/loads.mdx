@@ -29,6 +29,8 @@ Open **Model › Loads & support › Line loads**. Each row is a line load **P**
 
 **Angle from vertical** inclines the load: 0 is vertical, positive turns it towards +x, ±90 is horizontal (a strut or an anchor force on a wall). Its vertical part acts like a vertical load; its horizontal part acts on the slice under the load, at the ground or at **Load point y** when given (a point on a wall face).
 
+**Load point y (m)** is the elevation of the load point, for a load on a wall face; empty (*ground*) puts the load on the ground at x. It is used for an inclined load only: the field is grayed out while the angle is 0, since a vertical load acts the same at any height.
+
 ## How loads enter the analysis
 
 A load on the ground above a slice adds to the slice's weight. The horizontal part of a load normal to the ground acts on the slice as a horizontal force at the ground, with its moment about the center of the slip surface. A load outside the sliding mass has no effect on that slip surface. The finite element strength reduction takes a normal load normal to the ground; the limit analysis bounds take its vertical part only. All load values accept [parameters](/docs/geometry#parameters).

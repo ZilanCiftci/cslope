@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
-import { FEM_EXPERIMENTAL_NOTE } from "../../../constants";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
 import { DraftNumberInput } from "../DraftNumberInput";
@@ -445,7 +444,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<PlasticZoneIcon {...SMALL_ICON} />}
                     label="Plastic zone"
-                    title={`Shade the plastic zone of the finite element analysis (the failure mechanism). ${FEM_EXPERIMENTAL_NOTE}`}
+                    title="Shade the plastic zone (the failure mechanism) of the finite element analysis, which is experimental."
                     onClick={() =>
                       setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
                     }
@@ -456,7 +455,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<FeMeshIcon {...SMALL_ICON} />}
                     label="FE mesh"
-                    title={`Draw the mesh of the finite element analysis: its last refinement, finer where the failure mechanism lies. ${FEM_EXPERIMENTAL_NOTE}`}
+                    title="Draw the last mesh of the finite element analysis, finer where the failure mechanism lies. Finite elements are experimental."
                     onClick={() => setRvs({ showFemMesh: !(rvs.showFemMesh ?? false) })}
                     active={rvs.showFemMesh ?? false}
                   />

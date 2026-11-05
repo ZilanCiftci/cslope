@@ -1493,11 +1493,17 @@ ipcMain.on("menu:about", () => {
   else dialog.showMessageBox(options);
 });
 
-// Help › Documentation: the website's documentation in the default
-// browser. The address is fixed here; the renderer cannot pass one.
-ipcMain.on("help:openDocumentation", (event) => {
-  if (event.sender !== win?.webContents) return;
-  void shell.openExternal("https://cslope.com/docs");
+// Help › Documentation, and the "?" buttons of the dialog windows: the
+// website's documentation in the default browser. The renderer can only
+// name a page and a heading under /docs (lower-case words and hyphens);
+// the site is fixed here.
+const DOCS_PAGE = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\/[a-z0-9]+(?:-[a-z0-9]+)*)?(?:#[a-z0-9]+(?:-[a-z0-9]+)*)?$/;
+ipcMain.on("help:openDocumentation", (event, page: unknown) => {
+  const sender = BrowserWindow.fromWebContents(event.sender);
+  const fromApp = !!win && (event.sender === win.webContents || sender?.getParentWindow() === win);
+  if (!fromApp) return;
+  const path = typeof page === "string" && DOCS_PAGE.test(page) ? `/${page}` : "";
+  void shell.openExternal(`https://cslope.com/docs${path}`);
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

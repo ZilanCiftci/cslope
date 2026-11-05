@@ -70,6 +70,10 @@ where $y$ is the elevation of the point and $Y_\text{ref}$ the datum. A positive
 
 The undrained models and lime-cement columns have a **Max Su (cutoff)**. Leave it empty for no cutoff. When the strength is constant or increases with depth, the cutoff is a maximum; when the rate is negative, it is a minimum, so that the strength never falls below it.
 
+### Anisotropy of the undrained strength
+
+The undrained models (Undrained, S = f(depth), S = f(datum) and SHANSEP) can multiply **Su** by a factor of the slice base inclination α: tick **Anisotropy (factor on Su by base inclination)** (off by default) and enter α (°) and the factor. α is positive where the base dips in the direction of sliding (the active zone near the crest) and negative where it rises (the passive zone at the toe). The factor is interpolated linearly between the rows and constant beyond the ends. Ticking the box fills in passive 0.82 at −45°, direct 1.0 at 0° and active 1.5 at 60°. The finite element analyses and the limit analysis take the factor at α = 0.
+
 ### Anisotropic function
 
 Mohr-Coulomb strength in which c and φ are both multiplied by a factor that depends on the inclination α of the slice base, measured relative to the sliding direction. Enter the factors as a table of α (°) and factor; cSlope interpolates between the rows.
@@ -106,11 +110,15 @@ A material can have its own **strength above its water line** (for example drain
 
 The shear strength against the effective normal stress, $\tau = f(\sigma'_n)$, as points; linear between them or a cubic spline, the end segments extended. Each slice base takes the tangent c and φ of the curve at its normal stress, which the analysis updates from the normal stress it finds until the factor of safety settles, as for Hoek-Brown.
 
-### Pore pressure ratio (rᵤ)
+### Additional pore pressure
+
+Under *Additional pore pressure (added to the water line)* a material can have a pore pressure ratio rᵤ or a B̄ from the fills above it. Both are empty (none) by default and add to the pore pressure of the material's water line.
+
+#### Pore pressure ratio (rᵤ)
 
 **rᵤ** on a material sets the pore pressure at a slice base in it to rᵤ times the weight of the soil above the base per meter of width, $u = r_u\,\gamma h$ (Bishop & Morgenstern 1960), added to the pore pressure of its water line if it has one. It is a simple way to describe pore pressure that rises with depth, used in stability charts and in older analyses. 0 ≤ rᵤ < 1; a value outside this range is kept, the field is outlined red and the error shows under it (as for B̄, 0 to 1.5). The finite element analyses do not take it. rᵤ and B̄ are under the heading *Additional pore pressure (added to the water line)*.
 
-### Pore pressure from a fill (B̄)
+#### Pore pressure from a fill (B̄)
 
 **B̄** on a material raises the pore pressure at a slice base in it by $\bar B$ times the vertical stress of the fills above it: the materials ticked **This material is a fill that loads the B̄ materials below**. This is the short-term pore pressure of a soft foundation under a new embankment (Skempton 1954). It adds to the pore pressure of the material's water line. The finite element analyses do not take B̄ either.
 

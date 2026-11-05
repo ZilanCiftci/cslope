@@ -103,6 +103,7 @@ const fake = vi.hoisted(() => {
       this.minHeight = h;
     });
     isDestroyed = () => this.destroyed;
+    getParentWindow = () => this.options?.parent ?? null;
     setTitle = vi.fn((t: string) => {
       this.title = t;
     });
@@ -534,6 +535,20 @@ describe("window controls", () => {
     expect(fake.shell.openExternal).not.toHaveBeenCalled();
     send("help:openDocumentation", mainWin().webContents);
     expect(fake.shell.openExternal).toHaveBeenCalledWith("https://cslope.com/docs");
+  });
+
+  it("opens a page of the documentation at a heading, also for a dialog window", async () => {
+    await loadMain();
+    send("help:openDocumentation", mainWin().webContents, "analysis#finite-elements-experimental");
+    expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs/analysis#finite-elements-experimental");
+    const dlg = openDialog("window:openOptionsDialog");
+    send("help:openDocumentation", dlg.webContents, "tutorials/reporting");
+    expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs/tutorials/reporting");
+    // Only a page and a heading: anything else opens the documentation itself.
+    for (const bad of ["https://example.com", "../x", "a#b#c", "Analysis", "a b", 5]) {
+      send("help:openDocumentation", dlg.webContents, bad);
+      expect(fake.shell.openExternal).toHaveBeenLastCalledWith("https://cslope.com/docs");
+    }
   });
 
   it("shows the About box modal to the main window", async () => {

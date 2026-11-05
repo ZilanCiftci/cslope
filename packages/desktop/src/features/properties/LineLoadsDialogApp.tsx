@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
+import { HelpButton } from "../../components/ui/HelpButton";
 import {
   SpreadsheetNumberInput,
   SpreadsheetRemoveButton,
@@ -185,7 +186,7 @@ export function LineLoadsDialogApp() {
     },
     {
       header: (
-        <Label title="Elevation of the load point, for a load on a wall face; empty (&quot;ground&quot;) = on the ground at x. Used for an inclined load only: the field is grayed out while the angle is 0 (a vertical load acts the same at any height).">
+        <Label title="Elevation of the load point (m), for a load on a wall face. Empty (&quot;ground&quot;, default): on the ground at x. Inclined loads only; grayed out while the angle is 0.">
           Load point y (m)
         </Label>
       ),
@@ -238,8 +239,9 @@ export function LineLoadsDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
+      <div className="pb-2 flex items-center gap-1.5">
         <h2 className="text-[12px] font-semibold">Line loads</h2>
+        <HelpButton topic="Line loads" page="loads#line-loads" />
       </div>
       <div className="flex-1 overflow-y-auto pr-1">
         <SpreadsheetTable
