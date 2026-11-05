@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { isLegacyEntry, normalizeBackgrounds, placementLabel, translateCalibration } from "./placement";
 import { imageSize } from "./image-size";
-import { boundedScale, MAX_RASTER_PIXELS, MAX_RASTER_SIDE, sniffDrawingMime } from "./sources";
+import { boundedScale, MAX_RASTER_PIXELS, MAX_RASTER_SIDE, MAX_TIFF_PIXELS, openDrawingSource, sniffDrawingMime, tiffTooLarge } from "./sources";
 
 const entry = {
   id: "drawing-1",
@@ -126,5 +126,49 @@ describe("drawing files", () => {
     expect(boundedScale(10000, 10, 2) * 10000).toBeLessThanOrEqual(MAX_RASTER_SIDE);
     const s = boundedScale(5000, 5000, 4);
     expect(5000 * 5000 * s * s).toBeLessThanOrEqual(MAX_RASTER_PIXELS + 1);
+  });
+});
+
+/** A little-endian TIFF with the given tags (LONG values), its data left out. */
+function tiffOf(tags: Record<number, number[]>): Uint8Array {
+  const ids = Object.keys(tags).map(Number).sort((a, b) => a - b);
+  const ifdAt = 8;
+  let extraAt = ifdAt + 2 + ids.length * 12 + 4;
+  const out = new Uint8Array(extraAt + ids.reduce((n, id) => n + (tags[id].length > 1 ? tags[id].length * 4 : 0), 0) + 16);
+  const v = new DataView(out.buffer);
+  out.set([0x49, 0x49, 0x2a, 0]);
+  v.setUint32(4, ifdAt, true);
+  v.setUint16(ifdAt, ids.length, true);
+  ids.forEach((id, i) => {
+    const at = ifdAt + 2 + i * 12;
+    const values = tags[id];
+    v.setUint16(at, id, true);
+    v.setUint16(at + 2, 4, true); // LONG
+    v.setUint32(at + 4, values.length, true);
+    if (values.length === 1) v.setUint32(at + 8, values[0], true);
+    else {
+      v.setUint32(at + 8, extraAt, true);
+      values.forEach((x, k) => v.setUint32(extraAt + k * 4, x, true));
+      extraAt += values.length * 4;
+    }
+  });
+  return out;
+}
+
+describe("TIFF drawings", () => {
+  it("refuses an image whose header declares too many pixels, before decoding it", async () => {
+    const strip = (w: number, h: number, bits: number[] = [8]) =>
+      tiffOf({ 256: [w], 257: [h], 258: bits, 259: [1], 262: [1], 273: [8], 277: [bits.length], 278: [h], 279: [16] });
+    // 30000 × 30000: 900 MP (3.6 GB as RGBA) declared in a file of a hundred bytes
+    const bomb = strip(30000, 30000);
+    expect(bomb.length).toBeLessThan(300);
+    await expect(openDrawingSource(bomb, "image/tiff")).rejects.toThrow(/too large to show \(30000 × 30000 pixels, 900 MP; at most 60 MP\)/);
+    // the samples' bits count too, as the decoder takes them
+    await expect(openDrawingSource(strip(100, 100, new Array(64).fill(8)), "image/tiff")).rejects.toThrow(/512 bits per pixel/);
+    expect(tiffTooLarge({ t256: [7000], t257: [8000], t258: [8, 8, 8] })).toBeNull();
+    expect(tiffTooLarge({ t256: [7000], t257: [8000], t258: [32, 32, 32, 32] })).toMatch(/128 bits per pixel/);
+    expect(tiffTooLarge({ t256: [100], t257: [100], t259: [1], t262: [32803], t278: [100], t279: [1e9] })).toMatch(/bits per pixel/);
+    expect(tiffTooLarge({ t256: [0], t257: [100] })).toMatch(/too large/);
+    expect(MAX_TIFF_PIXELS).toBeLessThanOrEqual(60e6);
   });
 });

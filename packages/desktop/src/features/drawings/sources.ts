@@ -182,8 +182,45 @@ async function decodeBrowserImage(bytes: Uint8Array, mime: string): Promise<Draw
 interface UtifIfd {
   width?: number;
   height?: number;
+  /** Width, height, bits per sample, samples per pixel. */
   t256?: number[];
   t257?: number[];
+  t258?: number[];
+  t277?: number[];
+  /** Compression, photometric interpretation, rows per strip, strip byte counts. */
+  t259?: number[];
+  t262?: number[];
+  t278?: number[];
+  t279?: number[];
+}
+
+/**
+ * The largest TIFF image decoded (pixels), and all the pages of a file
+ * together: each page is decoded whole into memory (its samples, then
+ * RGBA, then a canvas), so a header declaring a huge image is refused
+ * before anything is decoded.
+ */
+export const MAX_TIFF_PIXELS = 60e6;
+export const MAX_TIFF_TOTAL_PIXELS = 100e6;
+
+/** Why a TIFF image of these tags is not decoded, or null. */
+export function tiffTooLarge(ifd: UtifIfd): string | null {
+  const w = ifd.t256?.[0] ?? 0;
+  const h = ifd.t257?.[0] ?? 0;
+  // Bits per pixel as UTIF.decodeImage takes them (it allocates height × width × that).
+  let bitsPerPixel = ifd.t258 ? Math.min(32, ifd.t258[0] ?? 0) * ifd.t258.length : (ifd.t277?.[0] ?? 1);
+  if ((ifd.t259?.[0] ?? 1) === 1 && ifd.t279 && ifd.t278 && ifd.t262?.[0] === 32803) {
+    bitsPerPixel = Math.round(((ifd.t279[0] ?? 0) * 8) / (w * (ifd.t278[0] ?? 0)));
+  }
+  const mp = (n: number) => `${Math.round(n / 1e6)} MP`;
+  if (!(w > 0 && h > 0) || w * h > MAX_TIFF_PIXELS) {
+    return `The TIFF image is too large to show (${w} × ${h} pixels, ${mp(w * h)}; at most ${mp(MAX_TIFF_PIXELS)}).`;
+  }
+  // (the decoded samples, before they are made RGBA)
+  if (!(bitsPerPixel > 0) || bitsPerPixel > 128 || (w * h * bitsPerPixel) / 8 > MAX_TIFF_PIXELS * 4) {
+    return `The TIFF image is too large to show (${w} × ${h} pixels at ${bitsPerPixel} bits per pixel).`;
+  }
+  return null;
 }
 interface Utif {
   decode(buffer: ArrayBuffer): UtifIfd[];
@@ -197,12 +234,23 @@ async function decodeTiff(bytes: Uint8Array): Promise<DrawingSource> {
   // Every image of the file with a size is a page (thumbnails are sub-IFDs).
   const ifds = UTIF.decode(buffer).filter((d) => (d.t256?.[0] ?? 0) > 0 && (d.t257?.[0] ?? 0) > 0);
   if (ifds.length === 0) throw new Error("The TIFF file holds no image.");
+  // The sizes the tags declare, checked before anything is decoded.
+  let total = 0;
+  for (const ifd of ifds) {
+    const why = tiffTooLarge(ifd);
+    if (why) throw new Error(why);
+    total += ifd.t256![0] * ifd.t257![0];
+  }
+  if (total > MAX_TIFF_TOTAL_PIXELS) {
+    throw new Error(`The TIFF file's pages are too large to show together (${Math.round(total / 1e6)} MP; at most ${Math.round(MAX_TIFF_TOTAL_PIXELS / 1e6)} MP).`);
+  }
   const pages = [];
   for (const ifd of ifds) {
     UTIF.decodeImage(buffer, ifd);
     const w = ifd.width ?? 0;
     const h = ifd.height ?? 0;
-    if (!(w > 0 && h > 0) || w * h > MAX_RASTER_PIXELS * 4) throw new Error("The TIFF image is too large to show.");
+    // (the decoded size must be the declared one)
+    if (!(w > 0 && h > 0) || w !== ifd.t256![0] || h !== ifd.t257![0]) throw new Error("The TIFF image is damaged.");
     const rgba = UTIF.toRGBA8(ifd);
     const canvas = makeCanvas(w, h);
     const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
