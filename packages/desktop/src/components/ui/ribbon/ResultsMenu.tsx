@@ -600,7 +600,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <button
                   onClick={handleExportPdf}
                   disabled={!hasResult}
-                  className={`min-w-[58px] h-[50px] px-2 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer ${hasResult ? "hover:bg-[var(--color-vsc-list-hover)]" : ""}`}
+                  className={`min-w-[58px] h-[50px] pl-2 pr-4 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer ${hasResult ? "hover:bg-[var(--color-vsc-list-hover)]" : ""}`}
                   style={{
                     color: "var(--color-vsc-text)",
                     background: "transparent",
