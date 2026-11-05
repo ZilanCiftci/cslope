@@ -28,7 +28,7 @@ export type CanvasObjectsState = Pick<
   | "piles"
   | "customSearchPlanes"
   | "analysisLimits"
->;
+> & Partial<Pick<AppState, "backgrounds">>;
 
 /** The lock group an object type belongs to. */
 export const LOCK_GROUP_OF: Record<CanvasObjectType, LockGroup> = {
@@ -41,6 +41,7 @@ export const LOCK_GROUP_OF: Record<CanvasObjectType, LockGroup> = {
   pile: "reinforcement",
   searchLimits: "searchLimits",
   customPlane: "customSurfaces",
+  background: "backgrounds",
 };
 
 /** The "Lock all" menu's groups with their labels, in menu order. */
@@ -52,6 +53,7 @@ export const LOCK_GROUPS: { group: LockGroup; label: string }[] = [
   { group: "reinforcement", label: "Reinforcement" },
   { group: "searchLimits", label: "Search limits" },
   { group: "customSurfaces", label: "Custom surfaces" },
+  { group: "backgrounds", label: "Drawings" },
 ];
 
 export function sameObject(a: CanvasObjectRef | null | undefined, b: CanvasObjectRef | null | undefined): boolean {
@@ -88,7 +90,7 @@ function tidyLocks(locks: ModelLocks): ModelLocks {
   const out: ModelLocks = {};
   if (locks.exterior) out.exterior = true;
   if (locks.searchLimits) out.searchLimits = true;
-  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces"] as const) {
+  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces", "backgrounds"] as const) {
     const ids = locks[key];
     if (ids && ids.length > 0) out[key] = [...new Set(ids)];
   }
@@ -125,6 +127,8 @@ export function groupIds(state: CanvasObjectsState, group: LockGroup): string[] 
       return [...state.reinforcements.map((r) => r.id), ...state.piles.map((p) => p.id)];
     case "customSurfaces":
       return state.customSearchPlanes.map((p) => p.id);
+    case "backgrounds":
+      return (state.backgrounds ?? []).map((b) => b.id);
     default:
       return [];
   }
@@ -177,7 +181,7 @@ export function normalizeLocks(
   const out: ModelLocks = {};
   if (r.exterior === true) out.exterior = true;
   if (r.searchLimits === true) out.searchLimits = true;
-  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces"] as const) {
+  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces", "backgrounds"] as const) {
     const v = r[key];
     if (!Array.isArray(v)) continue;
     const known = ids?.[key];
@@ -193,7 +197,7 @@ export function normalizeLocks(
 export function remapLocks(locks: ModelLocks | undefined, idMap: Map<string, string>): ModelLocks | undefined {
   if (!locks) return undefined;
   const out: ModelLocks = { ...locks };
-  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces"] as const) {
+  for (const key of ["boundaries", "waterLines", "loads", "reinforcement", "customSurfaces", "backgrounds"] as const) {
     const ids = locks[key];
     if (ids) out[key] = ids.map((id) => idMap.get(id) ?? id);
   }
@@ -221,6 +225,8 @@ export function objectExists(state: CanvasObjectsState, ref: CanvasObjectRef): b
       return state.piles.some((p) => p.id === ref.id);
     case "customPlane":
       return state.customSearchPlanes.some((p) => p.id === ref.id);
+    case "background":
+      return (state.backgrounds ?? []).some((b) => b.id === ref.id);
   }
 }
 
@@ -301,6 +307,11 @@ export function canvasObjectLabel(state: CanvasObjectsState, ref: CanvasObjectRe
       const plane = state.customSearchPlanes.find((p) => p.id === ref.id);
       const kind = plane?.points ? "Custom surface" : "Custom circle";
       return `${kind}${n(order.findIndex((p) => p.id === ref.id))}`;
+    }
+    case "background": {
+      const list = state.backgrounds ?? [];
+      const b = list.find((v) => v.id === ref.id);
+      return b?.name ? `Drawing ${b.name}` : `Drawing${n(list.findIndex((v) => v.id === ref.id))}`;
     }
   }
 }

@@ -7,6 +7,7 @@ import { paperContentOf } from "../features/view/extents";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createCanvasSelectionSlice, selectionMirror } from "./slices/canvasSelectionSlice";
+import { createBackgroundsSlice } from "./slices/backgroundsSlice";
 import { sameSelection, validSelection } from "./canvas-selection";
 import { createGeometrySlice } from "./slices/geometrySlice";
 import { createLayoutSlice } from "./slices/layoutSlice";
@@ -53,6 +54,7 @@ type UndoableState = Pick<
   | "options"
   | "resultViewSettings"
   | "locks"
+  | "backgrounds"
 >;
 
 /** The undo history (set once the store exists). */
@@ -71,6 +73,7 @@ export const useAppStore = create<AppState>()(
       ...createResultViewSlice(...args),
       ...createCanvasToolbarSlice(...args),
       ...createCanvasSelectionSlice(...args),
+      ...createBackgroundsSlice(...args),
     }),
     {
       partialize: (state): UndoableState => ({
@@ -95,6 +98,7 @@ export const useAppStore = create<AppState>()(
         options: state.options,
         resultViewSettings: state.resultViewSettings,
         locks: state.locks,
+        backgrounds: state.backgrounds,
       }),
       limit: 50,
       // Typing in a field is one step, not one per keystroke.

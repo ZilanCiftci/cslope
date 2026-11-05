@@ -4,6 +4,7 @@ import { PanelHeaderRow } from "../../components/SidePanelChrome";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
+import { DrawingsPanel } from "../drawings/DrawingsPanel";
 import type { ModelEntry } from "../../store/types";
 
 type DropPosition = "before" | "after";
@@ -344,6 +345,12 @@ export function Explorer() {
           })}
         </div>
       )}
+
+      {/* The active model's drawings, below its list. */}
+      {!modelsOpen && <div className="flex-1" />}
+      <div className="shrink-0 max-h-[55%] overflow-y-auto">
+        <DrawingsPanel />
+      </div>
 
       {menu && (
         <ContextMenu

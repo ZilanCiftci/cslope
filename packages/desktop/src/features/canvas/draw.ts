@@ -46,6 +46,7 @@ import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
 import type { PointHit } from "./types";
+import { drawUnderlays, placementCanvasCorners } from "../drawings/draw-underlays";
 import { drawReferenceLabels, drawReferenceLines, referenceSegments } from "./reference-draw";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -606,6 +607,13 @@ export interface DrawCanvasParams {
   hoverObject?: { object: CanvasObjectRef; point: CanvasPointKey | null } | null;
   /** The locked objects of the edit view. */
   locks?: ModelLocks;
+  /**
+   * The model's placed drawings: drawn above the fills, below the lines
+   * (in the result view only those shown in results).
+   */
+  backgrounds?: AppState["backgrounds"];
+  /** Device pixels per canvas unit (the drawings' raster resolution follows it). */
+  pixelRatio?: number;
   worldToCanvas: (
     wx: number,
     wy: number,
@@ -622,6 +630,7 @@ export interface DrawCanvasParams {
 }
 
 const NO_LOCKS: ModelLocks = {};
+const NO_BACKGROUNDS: AppState["backgrounds"] = [];
 
 export function drawCanvas(
   ctx: CanvasRenderingContext2D,
@@ -658,6 +667,8 @@ export function drawCanvas(
     selection = null,
     hoverObject = null,
     locks = NO_LOCKS,
+    backgrounds = NO_BACKGROUNDS,
+    pixelRatio = 1,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX,
@@ -738,6 +749,11 @@ export function drawCanvas(
         const r = list.find((v) => v.id === ref.id);
         return r ? [{ pts: toC([[r.x1, r.y1], [r.x2, r.y2]]), closed: false }] : [];
       }
+      case "background": {
+        const b = backgrounds.find((v) => v.id === ref.id);
+        const corners = b ? placementCanvasCorners(b, (x, y) => worldToCanvas(x, y, w, h)) : null;
+        return corners ? [{ pts: corners, closed: true }] : [];
+      }
       case "customPlane": {
         const p = customSearchPlanes?.find((v) => v.id === ref.id);
         if (!p) return [];
@@ -749,9 +765,9 @@ export function drawCanvas(
         return [];
     }
   };
-  const strokeObject = (ref: CanvasObjectRef, color: string, width: number, alpha: number) => {
+  const strokeObject = (ref: CanvasObjectRef, color: string, width: number, alpha: number, dash: number[] = []) => {
     ctx.save();
-    ctx.setLineDash([]);
+    ctx.setLineDash(dash);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.strokeStyle = color;
@@ -805,6 +821,10 @@ export function drawCanvas(
         const p = customSearchPlanes?.find((v) => v.id === ref.id);
         if (!p) return null;
         return p.points ? vertex(p.points) : at(p.cx, p.cy);
+      }
+      case "background": {
+        const b = backgrounds.find((v) => v.id === ref.id);
+        return (b && placementCanvasCorners(b, (x, y) => worldToCanvas(x, y, w, h))?.[0]) ?? null;
       }
     }
   };
@@ -1251,6 +1271,16 @@ export function drawCanvas(
         ctx.restore();
       }
     }
+  }
+
+  // ── Placed drawings: above the fills, below the grid and every line ──
+  // (draw-underlays.ts says why), as a sheet at their opacity. In the
+  // result view only those shown in results.
+  if (backgrounds.length > 0) {
+    drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
+      pixelRatio,
+      include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
+    });
   }
 
   // Draw grid above model fills so lines remain visible over colored regions.
@@ -2056,6 +2086,10 @@ export function drawCanvas(
   if (mode !== "result") {
     if (selObject?.type === "exterior") strokeObject(selObject, SELECTED_BOUNDARY_COLOR, 2, 0.9);
     if (hoverObject) strokeObject(hoverObject.object, SELECTED_BOUNDARY_COLOR, 8, 0.3);
+    // A selected drawing: its crop frame, dashed (grey when locked).
+    if (selObject?.type === "background") {
+      strokeObject(selObject, selLocked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR, 1.75, 1, [7, 4]);
+    }
   }
 
   // Vertex dots go over the markers and the dotted ranges.

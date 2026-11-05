@@ -1284,11 +1284,11 @@ describe("opening files", () => {
 
     const big = path.join(dir, "big.cslp");
     fs.writeFileSync(big, "");
-    fs.truncateSync(big, 50 * 1024 * 1024 + 1);
+    fs.truncateSync(big, 500 * 1024 * 1024 + 1);
     expect(await invoke("file:openPath", win.webContents, big)).toBeNull();
 
-    // Exactly at the cap is still accepted.
-    fs.truncateSync(big, 50 * 1024 * 1024);
+    // Below the cap (500 MB, for projects with drawings) is accepted.
+    fs.truncateSync(big, 60 * 1024 * 1024);
     const atCap = await invoke("file:openPath", win.webContents, big);
     expect(atCap).toBeInstanceOf(Uint8Array);
   });
@@ -1384,7 +1384,7 @@ describe("opening files", () => {
 
     const big = path.join(dir, "big.cslp");
     fs.writeFileSync(big, "");
-    fs.truncateSync(big, 50 * 1024 * 1024 + 1);
+    fs.truncateSync(big, 500 * 1024 * 1024 + 1);
     fake.dialog.showOpenDialog.mockResolvedValueOnce({
       canceled: false,
       filePaths: [big],

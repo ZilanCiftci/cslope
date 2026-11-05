@@ -53,7 +53,8 @@ import {
 } from "../../../features/annotations/reference";
 import { surfaceYAtX } from "../../../features/view/surface";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
-import type { SurfaceDisplayMode } from "../../../store/types";
+import type { AppState, SurfaceDisplayMode } from "../../../store/types";
+import { pdfUnderlays, type PdfUnderlay } from "../../../features/drawings/pdf-underlay";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
 import { buildAnalysisSummary } from "../../../features/export/analysisSummary";
 import { APP_VERSION } from "../../../utils/app-version";
@@ -153,6 +154,16 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const handleExportPdf = () => {
     const state = useAppStore.getState();
     if (!state.result) return;
+    // Drawings shown in results are rendered first (a PDF page takes a moment).
+    if (state.backgrounds.some((b) => b.visible && b.showInResults && b.opacity > 0)) {
+      void pdfUnderlays(state.backgrounds).then((underlays) => exportPdfOf(state, underlays));
+    } else {
+      exportPdfOf(state, []);
+    }
+  };
+
+  const exportPdfOf = (state: AppState, underlays: PdfUnderlay[]) => {
+    if (!state.result) return;
 
     const vl = state.resultViewSettings.viewLock;
     let viewBounds:
@@ -215,6 +226,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
           date: new Date().toISOString().slice(0, 10),
         },
       },
+      underlays,
     });
   };
 

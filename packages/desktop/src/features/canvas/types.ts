@@ -18,6 +18,8 @@ export type PointHit =
   | { kind: "elementEnd"; element: "reinforcement" | "pile"; id: string; end: "end1" | "end2" }
   /** A custom non-circular surface's line: a drag moves it whole. */
   | { kind: "customPlaneBody"; planeId: string }
+  /** A drawing (unlocked) moved whole. */
+  | { kind: "backgroundBody"; id: string }
   | { kind: "annotation"; annoId: string }
   /** A custom search circle: its centre dot, or its rim (drag sets the radius). */
   | { kind: "customCircle"; planeId: string; handle: "centre" | "rim" }

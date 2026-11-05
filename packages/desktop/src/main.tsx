@@ -6,6 +6,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { LongTitleTooltip } from "./components/ui/LongTitleTooltip";
 import { useAppStore } from "./store/app-store";
 import { paperPngDataUrl } from "./features/export/paper-png";
+import { adoptProjectAssets, buildProjectArchive, readProject } from "./features/project/cslp";
 import { installFocusSource } from "./utils/focus-source";
 import { initEngine } from "@cslope/engine";
 // The engine's WebAssembly, inlined: the app runs from file://, where it
@@ -24,6 +25,20 @@ installFocusSource();
 (window as unknown as Record<string, unknown>).__CSLOPE_STORE__ = useAppStore;
 // The result plot exactly as "Export PNG" saves it (website images).
 (window as unknown as Record<string, unknown>).__CSLOPE_EXPORT_PNG__ = paperPngDataUrl;
+// Save to bytes and open from bytes as File > Save and Open do (the tests of
+// projects with drawings, without the native file dialogs).
+(window as unknown as Record<string, unknown>).__CSLOPE_PROJECT_FILE__ = {
+  save: () => {
+    useAppStore.getState().saveCurrentModel();
+    return buildProjectArchive(useAppStore.getState());
+  },
+  open: async (bytes: Uint8Array) => {
+    const read = await readProject(bytes);
+    adoptProjectAssets(read.assets);
+    useAppStore.getState().loadProject(read.file);
+    useAppStore.temporal.getState().clear();
+  },
+};
 
 /** The base64 of the `?base64` import as bytes. */
 function base64Bytes(base64: string): Uint8Array<ArrayBuffer> {

@@ -18,6 +18,7 @@ export { ExteriorIcon } from "./technical/ExteriorIcon";
 export { InteriorIcon } from "./outline/InteriorIcon";
 export { MaterialsIcon } from "./outline/MaterialsIcon";
 export { AssignIcon } from "./outline/AssignIcon";
+export { DrawingIcon } from "./outline/DrawingIcon";
 export { UdlIcon } from "./technical/UdlIcon";
 export { LineLoadIcon } from "./technical/LineLoadIcon";
 export { ReinforcementIcon } from "./outline/ReinforcementIcon";

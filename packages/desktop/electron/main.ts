@@ -579,13 +579,15 @@ function createResultsPlotWindow() {
   }
 }
 
-// Tool windows (Sensitivity, Probabilistic analysis). The main window
-// runs their analyses: it gets their commands and sends them the model and
-// the results, and is told when one closes so it stops a run.
-type ToolWindow = "sensitivity" | "reliability";
-const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number }> = {
+// Tool windows (Sensitivity, Probabilistic analysis, Place drawing). The
+// main window runs their analyses or keeps what they edit: it gets their
+// commands and sends them the model and the results (the drawing window
+// also the drawing files it asks for), and is told when one closes.
+type ToolWindow = "sensitivity" | "reliability" | "drawing";
+const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number; minWidth?: number; minHeight?: number }> = {
   sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 620, height: 760 },
   reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 620, height: 780 },
+  drawing: { title: "Place drawing", hash: "place-drawing-dialog", width: 1280, height: 860, minWidth: 900, minHeight: 600 },
 };
 const toolWins = new Map<ToolWindow, BrowserWindow>();
 
@@ -599,12 +601,12 @@ function createToolWindow(tool: ToolWindow) {
     return;
   }
 
-  const { title, hash, width, height } = TOOL_WINDOWS[tool];
+  const { title, hash, width, height, minWidth = 480, minHeight = 420 } = TOOL_WINDOWS[tool];
   const child = new BrowserWindow({
     width,
     height,
-    minWidth: 480,
-    minHeight: 420,
+    minWidth,
+    minHeight,
     title,
     parent: win,
     modal: false,
@@ -850,6 +852,7 @@ ipcMain.on("window:openCustomSearchPlanesDialog", () =>
 ipcMain.on("window:openOptionsDialog", () => createOptionsWindow());
 ipcMain.on("window:openSensitivityDialog", () => createToolWindow("sensitivity"));
 ipcMain.on("window:openReliabilityDialog", () => createToolWindow("reliability"));
+ipcMain.on("window:openPlaceDrawingDialog", () => createToolWindow("drawing"));
 
 // ── Materials window sync IPC (main window <-> materials window) ─────
 
@@ -1067,7 +1070,7 @@ for (const tool of Object.keys(TOOL_WINDOWS) as ToolWindow[]) {
   ipcMain.on(`${tool}:command`, (event, command) => {
     if (fromTool(event)) win?.webContents.send(`${tool}:command`, command);
   });
-  for (const channel of ["stateResponse", "changed"]) {
+  for (const channel of ["stateResponse", "changed", ...(tool === "drawing" ? ["asset"] : [])]) {
     ipcMain.on(`${tool}:${channel}`, (event, state) => {
       if (event.sender === win?.webContents) {
         toolWins.get(tool)?.webContents.send(`${tool}:${channel}`, state);
@@ -1225,10 +1228,12 @@ function sendFileName(name: string | null) {
 }
 
 /**
- * Largest project file accepted (a real project is a few hundred kB). The
- * renderer's file pickers have the same limit (src/features/project/file-limits.ts).
+ * Largest project file accepted: a project is a few hundred kB, but the
+ * drawings placed under its models are stored in it (up to 100 MB each).
+ * The renderer has the same limit (MAX_PROJECT_FILE_BYTES in
+ * src/features/project/file-limits.ts) and opens the archive lazily.
  */
-const MAX_PROJECT_BYTES = 50 * 1024 * 1024;
+const MAX_PROJECT_BYTES = 500 * 1024 * 1024;
 
 /**
  * The project file: a .cslp archive. Projects saved before it are JSON

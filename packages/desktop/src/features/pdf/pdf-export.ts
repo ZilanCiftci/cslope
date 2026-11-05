@@ -1,4 +1,5 @@
 import { jsPDF } from "jspdf";
+import { drawPdfUnderlays, type PdfUnderlay } from "../drawings/pdf-underlay";
 import type { AnalysisOptions, AnalysisResult } from "@cslope/engine";
 import type {
   AnalysisLimitsState,
@@ -129,6 +130,8 @@ export interface PdfExportData {
    * line above the drawing unless `resultViewSettings.pdfTitleLine` is false.
    */
   summary?: { sections: SummarySection[]; header: SummaryHeader };
+  /** The placed drawings shown in results, rendered (drawings/pdf-underlay.ts): over the fills, under the lines. */
+  underlays?: PdfUnderlay[];
 }
 
 /** The PDF export's page choices of a result view, with their defaults. */
@@ -191,6 +194,7 @@ export function exportVectorPdf(data: PdfExportData): void {
       parameters,
       viewBounds,
       summary,
+      underlays = [],
     } = data;
 
     const hasSurfaces =
@@ -373,6 +377,9 @@ export function exportVectorPdf(data: PdfExportData): void {
         rvs.showSoilColor ?? true,
       );
     }
+
+    // Placed drawings shown in results: over the fills, under the grid and the lines.
+    drawPdfUnderlays(pdf, underlays, tf.worldToPdf, innerFrame);
 
     // Grid on top of the (opaque) regions, as on the canvas.
     if (rvs.showGrid) {

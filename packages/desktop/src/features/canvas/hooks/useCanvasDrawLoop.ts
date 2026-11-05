@@ -2,6 +2,7 @@ import { useEffect, type MutableRefObject } from "react";
 import { useAppStore, getActiveViewport } from "../../../store/app-store";
 import { drawCanvas, type DrawCanvasParams } from "../draw";
 import type { CanvasSize } from "./useCanvasSizing";
+import { onDrawingsChanged } from "../../drawings/drawing-cache";
 
 interface UseCanvasDrawLoopParams {
   canvasRef: MutableRefObject<HTMLCanvasElement | null>;
@@ -75,6 +76,7 @@ export function useCanvasDrawLoop({
         const updatedArgs: DrawCanvasParams = {
           ...activeArgs,
           viewScale: currentViewScale,
+          pixelRatio: drawMetaRef.current.dpr,
           worldToCanvas: currentWorldToCanvas,
           canvasToWorld: currentCanvasToWorld,
         };
@@ -118,7 +120,8 @@ export function useCanvasDrawLoop({
         state.udls !== prevState.udls ||
         state.lineLoads !== prevState.lineLoads ||
         state.reinforcements !== prevState.reinforcements ||
-        state.piles !== prevState.piles;
+        state.piles !== prevState.piles ||
+        state.backgrounds !== prevState.backgrounds;
 
       const resultViewRenderChanged =
         state.resultViewSettings !== prevState.resultViewSettings ||
@@ -142,6 +145,7 @@ export function useCanvasDrawLoop({
             lineLoads: state.lineLoads,
             reinforcements: state.reinforcements,
             piles: state.piles,
+            backgrounds: state.backgrounds,
             result: state.result,
             resultViewSettings: state.resultViewSettings,
             selectedAnnotationIds: state.selectedAnnotationIds,
@@ -152,8 +156,15 @@ export function useCanvasDrawLoop({
       }
     });
 
+    // A drawing opened, or a sharper raster of one rendered.
+    const unsubDrawings = onDrawingsChanged(() => {
+      drawDirtyRef.current = true;
+      requestDraw();
+    });
+
     return () => {
       unsub();
+      unsubDrawings();
     };
   }, [
     canvasRef,

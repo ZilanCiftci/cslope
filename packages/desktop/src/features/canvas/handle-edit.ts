@@ -92,6 +92,8 @@ export function handlePosition(
       if (p.points) return typeof point === "number" ? (p.points[point] ?? null) : null;
       return point === "centre" ? [p.cx, p.cy] : point === "rim" ? [p.cx + p.radius, p.cy] : null;
     }
+    case "background":
+      return null;
   }
 }
 
@@ -170,6 +172,8 @@ export function moveHandleTo(
       else return false;
       return true;
     }
+    case "background":
+      return false;
   }
 }
 

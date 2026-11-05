@@ -12,6 +12,10 @@ import { lineLoadArrow } from "../rendering/overlay-layout";
 import { distanceToSegment } from "./label-layout";
 import { projectOnSegment } from "./custom-plane-geometry";
 import type { EdgeHit, LimitHandle, PointHit } from "./types";
+import { isObjectLocked } from "../../store/canvas-selection";
+import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
+import { placementCanvasCorners } from "../drawings/draw-underlays";
+import { insideConvex } from "../drawings/transform";
 
 type Pt = [number, number];
 type ToPx = (wx: number, wy: number) => Pt;
@@ -23,7 +27,7 @@ export interface CanvasCandidate {
 }
 
 /** What the hit test reads: the model's objects and the ground. */
-export type ObjectHitState = CanvasObjectsState & Pick<AppState, "customSearchPlanes">;
+export type ObjectHitState = CanvasObjectsState & Pick<AppState, "customSearchPlanes"> & Partial<Pick<AppState, "locks">>;
 
 const LIMIT_HANDLES: LimitHandle[] = ["entryLeftX", "entryRightX", "exitLeftX", "exitRightX"];
 
@@ -197,12 +201,34 @@ export function findCanvasObjectsAt(
   }
 
   const rank = (c: CanvasCandidate) => TYPE_ORDER.indexOf(c.object.type);
-  return [...handles.sort((a, b) => rank(a) - rank(b)), ...bodies.sort((a, b) => rank(a) - rank(b))];
+  return [
+    ...handles.sort((a, b) => rank(a) - rank(b)),
+    ...bodies.sort((a, b) => rank(a) - rank(b)),
+    // Drawings last: only an unlocked one is picked by a click, and only
+    // where no object of the model is (a locked drawing lets clicks through).
+    ...findBackgroundsAt(state, mx, my, toPx, false).map((id): CanvasCandidate => ({ object: { type: "background", id }, point: null })),
+  ];
+}
+
+/**
+ * The visible drawings under the pointer, topmost first; locked ones only
+ * with `includeLocked` (the context menu offers to unlock them).
+ */
+export function findBackgroundsAt(state: ObjectHitState, mx: number, my: number, toPx: ToPx, includeLocked: boolean): string[] {
+  const locks = state.locks ?? {};
+  return sortedBackgrounds(state.backgrounds ?? [])
+    .reverse()
+    .filter((b) => b.visible && (includeLocked || !isObjectLocked(locks, { type: "background", id: b.id })))
+    .filter((b) => {
+      const corners = placementCanvasCorners(b, toPx);
+      return !!corners && insideConvex(corners, [mx, my]);
+    })
+    .map((b) => b.id);
 }
 
 /** True when a drag on the object's line or area moves it whole: loads and custom surfaces. */
 export function bodyDraggable(object: CanvasObjectRef): boolean {
-  return object.type === "udl" || object.type === "lineLoad" || object.type === "customPlane";
+  return object.type === "udl" || object.type === "lineLoad" || object.type === "customPlane" || object.type === "background";
 }
 
 /** The drag a press on a handle (or the body, `point` null) of an object starts, or null. */
@@ -235,6 +261,8 @@ export function dragHitOf(state: ObjectHitState, object: CanvasObjectRef, point:
       }
       return point === "centre" || point === "rim" ? { kind: "customCircle", planeId: object.id, handle: point } : null;
     }
+    case "background":
+      return point === null ? { kind: "backgroundBody", id: object.id } : null;
   }
 }
 

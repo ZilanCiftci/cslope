@@ -91,6 +91,7 @@ const DIALOG_OPENERS = [
   "Options",
   "Sensitivity",
   "Reliability",
+  "PlaceDrawing",
 ];
 for (const name of DIALOG_OPENERS) {
   EXPECTED[`open${name}Dialog`] = ["send", `window:open${name}Dialog`];
@@ -108,7 +109,7 @@ const SYNC_FAMILIES = [
   "Analysis",
 ];
 // Tool windows: the window sends commands, the main window is told when it closes.
-for (const name of ["Sensitivity", "Reliability"]) {
+for (const name of ["Sensitivity", "Reliability", "Drawing"]) {
   const prefix = name.toLowerCase();
   for (const [key, channel] of [["RequestState", "requestState"], ["State", "stateResponse"], ["Changed", "changed"]]) {
     EXPECTED[`on${name}${key}`] = ["on", `${prefix}:${channel}`];
@@ -120,6 +121,9 @@ for (const name of ["Sensitivity", "Reliability"]) {
   EXPECTED[`on${name}Command`] = ["on", `${prefix}:command`];
   EXPECTED[`on${name}Closed`] = ["on", `${prefix}:closed`];
 }
+// The Place drawing window also gets the drawing files it asks for.
+EXPECTED.sendDrawingAsset = ["send", "drawing:asset"];
+EXPECTED.onDrawingAsset = ["on", "drawing:asset"];
 
 for (const name of SYNC_FAMILIES) {
   const prefix = name[0].toLowerCase() + name.slice(1);

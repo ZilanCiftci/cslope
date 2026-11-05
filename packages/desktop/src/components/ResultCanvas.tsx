@@ -100,6 +100,7 @@ export function ResultCanvas() {
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   // Imported head and reference lines, drawn as on the edit canvas.
   const waternet = useAppStore((s) => s.waternet);
+  const backgrounds = useAppStore((s) => s.backgrounds);
   const {
     setAnalysisLimits,
     updateUdl,
@@ -371,6 +372,7 @@ export function ResultCanvas() {
       piles,
       piezometricLine,
       waternet,
+      backgrounds,
       viewScale,
       mouseWorld: null,
       hoverHit,
@@ -392,6 +394,7 @@ export function ResultCanvas() {
       piles,
       piezometricLine,
       waternet,
+      backgrounds,
       viewScale,
       hoverHit,
       canvasToWorld,

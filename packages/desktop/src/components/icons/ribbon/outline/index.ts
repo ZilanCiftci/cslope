@@ -46,3 +46,4 @@ export { ExamplesIcon } from "./ExamplesIcon";
 export { BenchmarksIcon } from "./BenchmarksIcon";
 export { ShortcutsIcon } from "./ShortcutsIcon";
 export { AboutIcon } from "./AboutIcon";
+export { DrawingIcon } from "./DrawingIcon";

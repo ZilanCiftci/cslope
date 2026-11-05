@@ -21,6 +21,7 @@ import type {
 } from "./store/types";
 import type { SensitivityCommand, SensitivityWindowState } from "./features/sensitivity/window-sync";
 import type { ReliabilityCommand, ReliabilityWindowState } from "./features/reliability/window-sync";
+import type { DrawingAssetPayload, DrawingCommand, DrawingWindowState } from "./features/drawings/window-sync";
 
 interface MaterialAssignmentStatePayload {
   coordinates: [number, number][];
@@ -144,6 +145,7 @@ declare global {
       openOptionsDialog: () => void;
       openSensitivityDialog: () => void;
       openReliabilityDialog: () => void;
+      openPlaceDrawingDialog: () => void;
       requestSelectionState: () => void;
       sendSelectionChanged: (selection: unknown) => void;
       onSelectionRequestState: (listener: (event: unknown) => void) => () => void;
@@ -294,6 +296,20 @@ declare global {
       ) => () => void;
       /** The window closed (sent to the main window). */
       onReliabilityClosed: (listener: (event: unknown) => void) => () => void;
+      // Place drawing window sync
+      requestDrawingState: () => void;
+      sendDrawingState: (state: DrawingWindowState) => void;
+      sendDrawingChanged: (state: DrawingWindowState) => void;
+      /** A drawing file's bytes, asked for by the window (main window to the window). */
+      sendDrawingAsset: (asset: DrawingAssetPayload) => void;
+      sendDrawingCommand: (command: DrawingCommand) => void;
+      onDrawingRequestState: (listener: (event: unknown) => void) => () => void;
+      onDrawingState: (listener: (event: unknown, state: DrawingWindowState) => void) => () => void;
+      onDrawingChanged: (listener: (event: unknown, state: DrawingWindowState) => void) => () => void;
+      onDrawingAsset: (listener: (event: unknown, asset: DrawingAssetPayload) => void) => () => void;
+      onDrawingCommand: (listener: (event: unknown, command: DrawingCommand) => void) => () => void;
+      /** The window closed (sent to the main window). */
+      onDrawingClosed: (listener: (event: unknown) => void) => () => void;
       requestResultsPlotState: () => void;
       sendResultsPlotState: (state: ResultsPlotStatePayload) => void;
       sendResultsPlotChanged: (state: ResultsPlotStatePayload) => void;

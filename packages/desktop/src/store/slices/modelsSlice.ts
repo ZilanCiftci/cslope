@@ -20,6 +20,7 @@ import type { ModelEntry, ModelLocks, ModelsSlice } from "../types";
 import { abortAllAnalyses, cancelRunForModel } from "./analysisSlice";
 import { markProjectClean } from "../unsaved";
 import { remapLocks } from "../canvas-selection";
+import { backgroundsEntry } from "./backgroundsSlice";
 
 function cloneModelEntry(model: ModelEntry): ModelEntry {
   const clone = globalThis.structuredClone
@@ -105,6 +106,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   result: model.result ?? null,
   errorMessage: model.errorMessage ?? null,
   locks: model.locks ?? {},
+  backgrounds: model.backgrounds ?? [],
   selectedPointIndex: null,
   selectedCustomPlaneId: null,
   canvasSelection: null,
@@ -437,6 +439,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
             waternet: s.waternet,
             earlierStage: s.earlierStage,
             locks: locksEntry(s.locks),
+            backgrounds: backgroundsEntry(s.backgrounds),
             options: s.options,
             analysisLimits: s.analysisLimits,
             editViewOffset: s.editViewOffset,
@@ -487,6 +490,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
               waternet: s.waternet,
               earlierStage: s.earlierStage,
               locks: locksEntry(s.locks),
+              backgrounds: backgroundsEntry(s.backgrounds),
               options: s.options,
               analysisLimits: s.analysisLimits,
               editViewOffset: s.editViewOffset,

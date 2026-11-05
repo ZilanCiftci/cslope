@@ -81,6 +81,8 @@ contextBridge.exposeInMainWorld("cslope", {
     ipcRenderer.send("window:openSensitivityDialog"),
   openReliabilityDialog: () =>
     ipcRenderer.send("window:openReliabilityDialog"),
+  openPlaceDrawingDialog: () =>
+    ipcRenderer.send("window:openPlaceDrawingDialog"),
   isMaximized: () => ipcRenderer.invoke("window:isMaximized"),
   onMaximized: (listener: (event: unknown, isMax: unknown) => void) =>
     subscribe("window:maximized", listener),
@@ -241,6 +243,28 @@ contextBridge.exposeInMainWorld("cslope", {
     subscribe("reliability:command", listener),
   onReliabilityClosed: (listener: (event: unknown) => void) =>
     subscribe("reliability:closed", listener),
+  // Place drawing window sync (the main window keeps the drawings)
+  requestDrawingState: () => ipcRenderer.send("drawing:requestState"),
+  sendDrawingState: (state: unknown) =>
+    ipcRenderer.send("drawing:stateResponse", state),
+  sendDrawingChanged: (state: unknown) =>
+    ipcRenderer.send("drawing:changed", state),
+  sendDrawingAsset: (asset: unknown) =>
+    ipcRenderer.send("drawing:asset", asset),
+  sendDrawingCommand: (command: unknown) =>
+    ipcRenderer.send("drawing:command", command),
+  onDrawingRequestState: (listener: (event: unknown) => void) =>
+    subscribe("drawing:requestState", listener),
+  onDrawingState: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("drawing:stateResponse", listener),
+  onDrawingChanged: (listener: (event: unknown, state: unknown) => void) =>
+    subscribe("drawing:changed", listener),
+  onDrawingAsset: (listener: (event: unknown, asset: unknown) => void) =>
+    subscribe("drawing:asset", listener),
+  onDrawingCommand: (listener: (event: unknown, command: unknown) => void) =>
+    subscribe("drawing:command", listener),
+  onDrawingClosed: (listener: (event: unknown) => void) =>
+    subscribe("drawing:closed", listener),
   // Analysis popups sync
   requestAnalysisState: () => ipcRenderer.send("analysis:requestState"),
   sendAnalysisState: (state: unknown) =>

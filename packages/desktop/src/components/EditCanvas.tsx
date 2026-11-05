@@ -32,7 +32,7 @@ import { surfaceYAtX as surfaceY } from "../features/view/surface";
 import { ContextMenuOverlay } from "../features/canvas/ContextMenuOverlay";
 import { MaterialPickerMenu } from "../features/canvas/MaterialPickerMenu";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
-import { edgeInsertAt, findCanvasObjectsAt } from "../features/canvas/object-hits";
+import { edgeInsertAt, findBackgroundsAt, findCanvasObjectsAt } from "../features/canvas/object-hits";
 import { PointEditor, type PointEditorState } from "../features/canvas/PointEditor";
 import { nudgeHandle } from "../features/canvas/handle-edit";
 import { canDeletePoint, isObjectLocked } from "../store/canvas-selection";
@@ -123,6 +123,7 @@ export function EditCanvas() {
   const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
   const canvasSelection = useAppStore((s) => s.canvasSelection);
   const locks = useAppStore((s) => s.locks);
+  const backgrounds = useAppStore((s) => s.backgrounds);
   const addReferenceFromCustomPlane = useAppStore((s) => s.addReferenceFromCustomPlane);
   const blockSearchObjects = useAppStore((s) => s.blockSearchObjects);
   const waternet = useAppStore((s) => s.waternet);
@@ -202,6 +203,19 @@ export function EditCanvas() {
     [surfaceYAtX, worldToCanvas],
   );
 
+  /** The topmost visible drawing at a world point, locked or not (its context menu). */
+  const findDrawingAt = useCallback(
+    (wx: number, wy: number) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return null;
+      const rect = canvas.getBoundingClientRect();
+      const toPx = (x: number, y: number) => worldToCanvas(x, y, rect.width, rect.height);
+      const [mx, my] = toPx(wx, wy);
+      return findBackgroundsAt(useAppStore.getState(), mx, my, toPx, true)[0] ?? null;
+    },
+    [worldToCanvas],
+  );
+
   /** Where a point would be added on an object's line at a world point. */
   const edgeAt = useCallback(
     (object: CanvasObjectRef, wx: number, wy: number) => {
@@ -231,6 +245,7 @@ export function EditCanvas() {
     alignAnnotations,
     getEventWorldPos,
     findObjectsAt,
+    findDrawingAt,
     edgeAt,
     findRegionAtPoint: hitTest.findRegionAtPoint,
     setMaterialPicker,
@@ -325,6 +340,7 @@ export function EditCanvas() {
       selection: canvasSelection,
       hoverObject,
       locks,
+      backgrounds,
       worldToCanvas,
       canvasToWorld,
       surfaceYAtX,
@@ -350,6 +366,7 @@ export function EditCanvas() {
       canvasSelection,
       hoverObject,
       locks,
+      backgrounds,
       canvasToWorld,
       worldToCanvas,
       selectedRegionKey,

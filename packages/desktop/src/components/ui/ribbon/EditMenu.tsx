@@ -9,6 +9,7 @@ import {
 import {
   AssignIcon,
   CustomPlanesIcon,
+  DrawingIcon,
   ExteriorIcon,
   InteriorIcon,
   LineLoadIcon,
@@ -29,6 +30,7 @@ import {
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import type { CanvasObjectRef, CanvasObjectType } from "../../../store/types";
+import { openPlaceDrawing } from "../../../features/drawings/window-sync";
 
 /**
  * A window of the Model tab is a table of objects on the canvas: opening it
@@ -165,6 +167,17 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
         panelHost &&
         createPortal(
           <div className="h-full flex items-stretch gap-0" role="menu">
+            <RibbonGroup label="Drawing">
+              <RibbonButton
+                icon={<DrawingIcon {...LARGE_ICON} />}
+                label="Drawing"
+                tooltip="Place drawing… (a section drawing under the model: PNG, JPEG, TIFF or PDF)"
+                onClick={() => openPlaceDrawing()}
+              />
+            </RibbonGroup>
+
+            <RibbonSep />
+
             <RibbonGroup label="Boundaries">
               <RibbonButton
                 icon={<ExteriorIcon {...LARGE_ICON} />}

@@ -217,6 +217,7 @@ describe("useContextMenu — edit mode", () => {
       "Reinforcement",
       "Search limits",
       "Custom surfaces",
+      "Drawings",
     ]);
     // Nothing to lock among loads, reinforcement and custom surfaces here.
     expect(groups.filter((g) => g.disabled).map((g) => g.label)).toEqual(

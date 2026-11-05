@@ -13,6 +13,8 @@ import { ParametersDialogApp } from "./features/properties/ParametersDialogApp";
 import { ResultsPlotDialogApp } from "./features/properties/ResultsPlotDialogApp";
 import { SensitivityDialogApp } from "./features/sensitivity/SensitivityDialogApp";
 import { useSensitivityWindowSync } from "./features/sensitivity/window-sync";
+import { useDrawingWindowSync } from "./features/drawings/window-sync";
+import { PlaceDrawingDialogApp } from "./features/drawings/PlaceDrawingWindow";
 import { ReliabilityDialogApp } from "./features/reliability/ReliabilityDialogApp";
 import { useReliabilityWindowSync } from "./features/reliability/window-sync";
 import { SearchLimitsDialogApp } from "./features/properties/SearchLimitsDialogApp";
@@ -308,6 +310,9 @@ function App() {
   const isReliabilityDialogWindow =
     typeof window !== "undefined" &&
     window.location.hash.replace(/^#/, "") === "reliability-dialog";
+  const isPlaceDrawingDialogWindow =
+    typeof window !== "undefined" &&
+    window.location.hash.replace(/^#/, "") === "place-drawing-dialog";
   const suppressNextGeometryBroadcastRef = useRef(false);
   const suppressNextMaterialsBroadcastRef = useRef(false);
   const suppressNextMaterialAssignmentBroadcastRef = useRef(false);
@@ -332,12 +337,15 @@ function App() {
     isCustomSearchPlanesDialogWindow ||
     isOptionsDialogWindow ||
     isSensitivityDialogWindow ||
-    isReliabilityDialogWindow;
+    isReliabilityDialogWindow ||
+    isPlaceDrawingDialogWindow;
 
   // The main window runs the analyses of the Sensitivity and Probabilistic
   // analysis windows and keeps them up to date.
   useSensitivityWindowSync(!isAnyDialogWindow);
   useReliabilityWindowSync(!isAnyDialogWindow);
+  // The Place drawing window: the drawings are kept here.
+  useDrawingWindowSync(!isAnyDialogWindow);
 
   useEffect(() => {
     // Escape closes a dialog window, as its Close button does, also from
@@ -372,7 +380,8 @@ function App() {
       isResultsPlotDialogWindow ||
       // Their results appear below the inputs.
       isSensitivityDialogWindow ||
-      isReliabilityDialogWindow;
+      isReliabilityDialogWindow ||
+      isPlaceDrawingDialogWindow;
     if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
     if (typeof ResizeObserver === "undefined") return;
     let sent = 0;
@@ -412,6 +421,7 @@ function App() {
     isResultsPlotDialogWindow,
     isSensitivityDialogWindow,
     isReliabilityDialogWindow,
+    isPlaceDrawingDialogWindow,
   ]);
 
   useEffect(() => {
@@ -1023,6 +1033,10 @@ function App() {
 
   if (isReliabilityDialogWindow) {
     return <ReliabilityDialogApp />;
+  }
+
+  if (isPlaceDrawingDialogWindow) {
+    return <PlaceDrawingDialogApp />;
   }
 
   if (isSearchLimitsDialogWindow) {

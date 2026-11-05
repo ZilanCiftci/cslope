@@ -10,6 +10,7 @@ import type { AppMode, CanvasObjectRef } from "../../../store/types";
 import type { ContextMenuItem, ContextMenuState, EdgeHit, MaterialPickerState } from "../types";
 import { findReferenceEdgeAt, findReferenceHitAt, referenceHitId } from "../reference-geometry";
 import type { CanvasCandidate } from "../object-hits";
+import { openPlaceDrawing } from "../../drawings/window-sync";
 import {
   LOCK_GROUPS,
   canDeletePoint,
@@ -33,6 +34,8 @@ interface ContextMenuParams {
   }) => [number, number];
   /** Edit view: every object under the pointer, topmost first. */
   findObjectsAt?: (wx: number, wy: number) => CanvasCandidate[];
+  /** Edit view: the topmost visible drawing under the pointer, locked or not. */
+  findDrawingAt?: (wx: number, wy: number) => string | null;
   /** Edit view: where a point would be added on the object's line under the pointer. */
   edgeAt?: (object: CanvasObjectRef, wx: number, wy: number) => EdgeHit | null;
   /** Edit view: the material region under the pointer. */
@@ -53,6 +56,7 @@ export function useContextMenu(params: ContextMenuParams) {
     alignAnnotations,
     getEventWorldPos,
     findObjectsAt,
+    findDrawingAt,
     edgeAt,
     findRegionAtPoint,
     setMaterialPicker,
@@ -290,6 +294,10 @@ export function useContextMenu(params: ContextMenuParams) {
             });
           }
         }
+        if (object.type === "background") {
+          setContextMenu({ screenX, screenY, items: drawingMenuItems(object.id, close) });
+          return;
+        }
         if (object.type === "customPlane") {
           const plane = st.customSearchPlanes.find((p) => p.id === object.id);
           items.push({
@@ -317,12 +325,17 @@ export function useContextMenu(params: ContextMenuParams) {
         return;
       }
 
-      // Empty canvas: the material of the region there, and the locks.
+      // Empty canvas: a drawing there (locked ones let clicks through, so
+      // this is where they are unlocked), the material of the region there,
+      // and the locks.
       const items: ContextMenuItem[] = [];
+      const drawingId = findDrawingAt?.(wx, wy) ?? null;
+      if (drawingId) items.push(...drawingMenuItems(drawingId, close));
       const region = findRegionAtPoint?.(wx, wy) ?? null;
       if (region) {
         items.push({
           label: "Assign material…",
+          separator: items.length > 0,
           action: () => {
             st.setSelectedRegionKey(region.regionKey);
             setContextMenu(null);
@@ -355,6 +368,7 @@ export function useContextMenu(params: ContextMenuParams) {
       canvasRef,
       edgeAt,
       findObjectsAt,
+      findDrawingAt,
       findRegionAtPoint,
       getEventWorldPos,
       mode,
@@ -370,6 +384,27 @@ export function useContextMenu(params: ContextMenuParams) {
     setContextMenu,
     handleContextMenu,
   };
+}
+
+/** The menu of a drawing on the canvas: lock, recalibrate, hide, remove. */
+function drawingMenuItems(id: string, close: (fn: () => void) => () => void): ContextMenuItem[] {
+  const st = useAppStore.getState();
+  const object: CanvasObjectRef = { type: "background", id };
+  const locked = isObjectLocked(st.locks, object);
+  return [
+    {
+      label: locked ? "Unlock drawing" : "Lock drawing",
+      action: close(() => {
+        const s = useAppStore.getState();
+        s.setObjectLocked(object, !locked);
+        // Unlocked: selected, so it can be moved at once.
+        if (locked) s.selectCanvasObject(object);
+      }),
+    },
+    { label: "Recalibrate…", action: close(() => openPlaceDrawing(id)) },
+    { label: "Hide drawing", action: close(() => useAppStore.getState().updateBackground(id, { visible: false })) },
+    { label: "Remove drawing", danger: true, action: close(() => useAppStore.getState().removeBackground(id)) },
+  ];
 }
 
 /** Remove a vertex of an object (the caller checks it may be removed). */

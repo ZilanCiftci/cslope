@@ -29,7 +29,9 @@ import {
 } from "../custom-plane-geometry";
 import { findReferenceHitAt, isSameReferenceHit, referenceHitId } from "../reference-geometry";
 import { isPaperAnnotation, MIN_REFERENCE_RADIUS, translateReference } from "../../annotations/reference";
-import type { Annotation, ReferenceAnnotation } from "../../../store/types";
+import type { Annotation, BackgroundImage, ReferenceAnnotation } from "../../../store/types";
+import { translateCalibration } from "../../drawings/placement";
+import { translate } from "../../drawings/transform";
 import { bodyDraggable, dragHitOf, type CanvasCandidate } from "../object-hits";
 import { isObjectLocked, nextCycleIndex, sameObject } from "../../../store/canvas-selection";
 import { handleAxes, moveHandleTo, type HandleActions } from "../handle-edit";
@@ -215,6 +217,8 @@ export function usePointerHandlers(deps: PointerDeps) {
     /** A load or surface moved whole, as it was when the drag began. */
     udl?: UdlRow;
     plane?: CustomSearchPlane;
+    /** A drawing moved whole: its transform when the drag began. */
+    background?: BackgroundImage;
   } | null>(null);
   /**
    * Edit view: a press that is a click until the pointer moves past the
@@ -300,6 +304,8 @@ export function usePointerHandlers(deps: PointerDeps) {
         return b.kind === "elementEnd" && a.id === b.id && a.end === b.end;
       case "customPlaneBody":
         return b.kind === "customPlaneBody" && a.planeId === b.planeId;
+      case "backgroundBody":
+        return b.kind === "backgroundBody" && a.id === b.id;
       case "boundary":
         return (
           b.kind === "boundary" &&
@@ -522,6 +528,20 @@ export function usePointerHandlers(deps: PointerDeps) {
         setDragTip({ text: `x ${(start.x1 + d).toFixed(2)} to ${(start.x2 + d).toFixed(2)} m`, ...tipAt });
         return;
       }
+      // A drawing follows the pointer exactly (no grid steps: its lines are
+      // not on the grid).
+      if (drag.hit.kind === "backgroundBody") {
+        const start = drag.background;
+        if (!start) return;
+        const ddx = rawX - drag.startWorld[0];
+        const ddy = rawY - drag.startWorld[1];
+        useAppStore.getState().updateBackground(start.id, {
+          transform: translate(start.transform, ddx, ddy),
+          calibration: translateCalibration(start.calibration, ddx, ddy),
+        });
+        setDragTip({ text: `moved ${ddx.toFixed(2)}, ${ddy.toFixed(2)} m`, ...tipAt });
+        return;
+      }
       if (drag.hit.kind === "customPlaneBody") {
         const start = drag.plane;
         if (!start?.points) return;
@@ -678,6 +698,7 @@ export function usePointerHandlers(deps: PointerDeps) {
         point: own.point,
         udl: hit.kind === "udlBody" ? st.udls.find((u) => u.id === hit.udlId) : undefined,
         plane: hit.kind === "customPlaneBody" ? st.customSearchPlanes.find((p) => p.id === hit.planeId) : undefined,
+        background: hit.kind === "backgroundBody" ? st.backgrounds.find((b) => b.id === hit.id) : undefined,
       };
     },
     [],
@@ -1129,5 +1150,7 @@ function handleStart(st: AppState, object: CanvasObjectRef, point: CanvasPointKe
       if (p.points) return typeof point === "number" && p.points[point] ? [p.points[point][0], p.points[point][1]] : null;
       return point === "centre" ? [p.cx, p.cy] : null;
     }
+    case "background":
+      return null;
   }
 }
