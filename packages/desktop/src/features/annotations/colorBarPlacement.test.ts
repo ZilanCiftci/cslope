@@ -41,7 +41,7 @@ describe("color bar default position", () => {
     expect(pos.x).toBe(RIGHT_INSIDE_FRAME);
     // Below the table, with a small gap (1.5 % of the paper, rounded).
     expect(pos.y).toBeGreaterThan(box.y + box.h);
-    expect(pos.y - (box.y + box.h)).toBeCloseTo(0.015, 2);
+    expect(pos.y - (box.y + box.h)).toBeCloseTo(0.025, 2);
     // The whole bar stays inside the plot frame.
     expect(pos.y + colorBarHeight(A4)).toBeLessThanOrEqual(frameBottom);
   });
@@ -86,7 +86,7 @@ describe("color bar default position", () => {
     const low: Annotation = { ...TABLE, id: "t2", x: 0.94, y: 0.5, anchor: "bottom-right" };
     const box = materialTableBox(low, mats, undefined, A4, measure);
     expect(box.y + box.h).toBeCloseTo(0.5, 9);
-    expect(colorBarDefaultPosition([TABLE, low], mats, undefined, A4, measure).y).toBeCloseTo(0.515, 3);
+    expect(colorBarDefaultPosition([TABLE, low], mats, undefined, A4, measure).y).toBeCloseTo(0.525, 3);
   });
 });
 
@@ -104,6 +104,6 @@ describe("Color bar button", () => {
     const box = materialTableBox(table, materials(10), undefined, s.resultViewSettings.paperFrame);
     expect(bar).toMatchObject({ x: RIGHT_INSIDE_FRAME, anchor: "top-right" });
     expect(bar.y).toBeGreaterThan(box.y + box.h);
-    expect(bar.y).toBeLessThan(box.y + box.h + 0.02);
+    expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
   });
 });

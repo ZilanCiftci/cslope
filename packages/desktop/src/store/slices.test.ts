@@ -1089,6 +1089,24 @@ describe("store slices", () => {
     expect(added.y).toBe(0.5);
   });
 
+  it("resultViewSlice addAnnotation puts a new text or plot clear of the ones there", () => {
+    const st = () => useAppStore.getState();
+    st().setResultViewSettings({ annotations: [] });
+    st().addAnnotation("plot");
+    st().addAnnotation("text");
+    st().addAnnotation("text");
+    const [plot, text1, text2] = st().resultViewSettings.annotations;
+    // The plot in the middle, the first text right below it, the next below that.
+    expect([plot.x, plot.y]).toEqual([0.5, 0.5]);
+    expect([text1.x, text1.y]).toEqual([0.5, 0.7]);
+    expect([text2.x, text2.y]).toEqual([0.5, 0.755]);
+    // Moved away, the middle is free again.
+    st().updateAnnotation(plot.id, { x: 0.2, y: 0.3 });
+    st().addAnnotation("text");
+    const last = st().resultViewSettings.annotations.at(-1)!;
+    expect([last.x, last.y]).toEqual([0.5, 0.5]);
+  });
+
   it("resultViewSlice addAnnotation adds non-text annotation types", () => {
     for (const type of ["material-table", "color-bar", "plot"] as const) {
       useAppStore.getState().addAnnotation(type);
@@ -1132,7 +1150,7 @@ describe("store slices", () => {
   it("resultViewSlice updateAnnotation patches an existing annotation", () => {
     useAppStore.getState().addAnnotation("text");
     const annos = useAppStore.getState().resultViewSettings.annotations;
-    const id = annos[annos.length - 1].id;
+    const { id, y } = annos[annos.length - 1];
 
     useAppStore.getState().updateAnnotation(id, { x: 0.9, fontSize: 20 });
     const updated = useAppStore
@@ -1140,7 +1158,7 @@ describe("store slices", () => {
       .resultViewSettings.annotations.find((a) => a.id === id)!;
     expect(updated.x).toBe(0.9);
     expect(updated.fontSize).toBe(20);
-    expect(updated.y).toBe(0.5); // unchanged
+    expect(updated.y).toBe(y); // unchanged
   });
 
   it("resultViewSlice removeAnnotation removes annotation and deselects it", () => {

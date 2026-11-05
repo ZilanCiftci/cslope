@@ -9,6 +9,10 @@ import { markProjectClean, useAppStore } from "../../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../../test/fake-bridge";
 import { readProjectBytes } from "../../../features/project/cslp";
 import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
+import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
+import { PICK_LINES_HIDDEN, PICK_LINES_NO_DRAWING } from "../../../features/drawings/pick-lines-target";
+import { DWG_MIME } from "../../../features/drawings/sources";
+import { useLinePick } from "../../../features/drawings/line-pick-store";
 
 let bridge: FakeBridge;
 const store = () => useAppStore.getState();
@@ -151,6 +155,60 @@ describe("Model ribbon", () => {
     expect(store().coordinates).toEqual(edited);
   });
 
+  it("places a drawing from the Drawing split button; its menu makes new models and picks lines", async () => {
+    adoptProjectAssets([]);
+    render(<MenuBar />);
+    await userEvent.click(tab("Model"));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Drawing" }));
+    expect(bridge.callNames()).toContain("openPlaceDrawingDialog");
+
+    const more = screen.getByRole("button", { name: "More drawing commands" });
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("menuitem", { name: "Place drawing…" })).toBeInTheDocument();
+    // Without a DWG, DXF or PDF drawing in the model, Pick lines… says why it is off.
+    const pick = screen.getByRole("menuitem", { name: "Pick lines…" });
+    expect(pick).toHaveAttribute("aria-disabled", "true");
+    expect(pick).toHaveAttribute("title", PICK_LINES_NO_DRAWING);
+    await userEvent.click(pick);
+    expect(useLinePick.getState().placementId).toBeNull();
+    // Escape closes the menu; a command closes it too.
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menuitem", { name: "Place drawing…" })).toBeNull();
+    await userEvent.click(more);
+    await userEvent.click(screen.getByRole("menuitem", { name: "New models from drawing…" }));
+    expect(screen.queryByRole("menuitem", { name: "Place drawing…" })).toBeNull();
+    expect(bridge.callNames().filter((c) => c === "openPlaceDrawingDialog")).toHaveLength(2);
+
+    // A DWG drawing in the model: picking starts on it (in edit mode), unless it is hidden.
+    act(() => {
+      adoptProjectAssets([{ id: "dwg", mime: DWG_MIME, originalName: "sections.dwg", addedAt: "", data: () => new Uint8Array() }]);
+      store().addBackground({
+        id: "d1",
+        assetId: "dwg",
+        name: "sections.dwg",
+        calibration: { mode: "drawing", points: [] },
+        transform: { a: 1, b: 0, c: 0, d: -1, e: 0, f: 0 },
+        opacity: 0.8,
+        visible: false,
+        order: 0,
+      });
+    });
+    await userEvent.click(more);
+    expect(screen.getByRole("menuitem", { name: "Pick lines…" })).toHaveAttribute("title", PICK_LINES_HIDDEN);
+    await userEvent.keyboard("{Escape}");
+    act(() => store().updateBackground("d1", { visible: true }));
+    act(() => store().setMode("result"));
+    await userEvent.click(tab("Model"));
+    await userEvent.click(screen.getByRole("button", { name: "More drawing commands" }));
+    const enabled = screen.getByRole("menuitem", { name: "Pick lines…" });
+    expect(enabled).not.toHaveAttribute("aria-disabled");
+    await userEvent.click(enabled);
+    expect(useLinePick.getState().placementId).toBe("d1");
+    expect(store().mode).toBe("edit");
+    act(() => useLinePick.getState().stop());
+  });
+
   it("leaves Ctrl+Z to text fields", () => {
     render(
       <>
@@ -222,6 +280,10 @@ describe("Help ribbon", () => {
     const list = screen.getByRole("table", { name: "Keyboard shortcuts" });
     expect(list).toHaveTextContent("Ctrl+Shift+S");
     expect(list).toHaveTextContent("Run the analysis");
+    // As the edit canvas works now (Keyboard and mouse in the documentation).
+    expect(list).toHaveTextContent("move the selected point one snap step");
+    expect(list).toHaveTextContent("Shift+arrow keys");
+    expect(list).toHaveTextContent("stop picking lines");
     await userEvent.click(screen.getByTitle("Close"));
     expect(screen.queryByRole("table", { name: "Keyboard shortcuts" })).toBeNull();
   });

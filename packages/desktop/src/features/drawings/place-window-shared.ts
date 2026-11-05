@@ -56,3 +56,25 @@ export function fileUnitCode(drawing: VectorDrawing | null): number | null {
   return hit ? Number(hit[0]) : null;
 }
 
+// ── The viewer's hint ───────────────────────────────────────────────
+
+const group = (v: number, digits: number) => v.toLocaleString("en-US", { maximumFractionDigits: digits, minimumFractionDigits: 0 });
+
+/**
+ * The size of what the viewer shows, in the file's terms: a PDF page in
+ * mm, an image in pixels, a DWG or DXF drawing's extent in meters (by its
+ * unit, `metersPerUnit`; in drawing units when that is not known).
+ */
+export function drawingExtentText(kind: "image" | "pdf" | "vector", size: { width: number; height: number }, metersPerUnit: number | null): string {
+  if (kind === "pdf") {
+    const mm = (pt: number) => Math.round((pt * 25.4) / 72);
+    return `page ${group(mm(size.width), 0)} × ${group(mm(size.height), 0)} mm`;
+  }
+  if (kind === "image") return `${group(Math.round(size.width), 0)} × ${group(Math.round(size.height), 0)} px`;
+  if (metersPerUnit === null) return `extent ${group(size.width, 1)} × ${group(size.height, 1)} drawing units`;
+  const w = size.width * metersPerUnit;
+  const h = size.height * metersPerUnit;
+  const digits = Math.max(w, h) >= 100 ? 1 : Math.max(w, h) >= 1 ? 2 : 3;
+  return `extent ${group(w, digits)} × ${group(h, digits)} m`;
+}
+

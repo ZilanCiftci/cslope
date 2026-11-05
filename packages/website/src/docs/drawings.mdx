@@ -11,25 +11,25 @@ The drawing file is stored once in the project file. Each model places it on its
 
 ## Place a drawing
 
-Open **Model › Drawing**. The **Place drawing** window opens for the active model.
+Click **Model › Drawing** (or choose **Place drawing…** in its ▾ menu). The **Place drawing** window opens for the active model.
 
 1. Under **Drawings in this project**, pick a drawing, or click **Add file…** and choose a PNG, JPEG, TIFF, PDF, DWG or DXF file (at most 100 MB). For a PDF or a TIFF with several pages, pick the page in the strip on the left.
-2. **Crop** (optional): click **Crop rectangle** and drag a rectangle around the section on the page. Without a crop, the whole page is placed.
+2. **Crop** (optional): click **Crop…** (or the **Crop** tool) and drag a rectangle around the section on the page. Without a crop, the whole page is placed; **Clear crop** removes the crop again.
 3. **Calibrate**: tell cSlope where the drawing lies in the model (below).
 4. Check the **Preview**, which shows the placed drawing under the model's outline, and click **Place**.
 
-In the drawing, the mouse wheel zooms and the middle mouse button (or <Kbd>Space</Kbd> and drag, or the **Pan** tool) pans. A magnifier and a crosshair follow the pointer, so you can pick a tick mark or a corner exactly.
+In the drawing, the mouse wheel zooms and the middle mouse button (or <Kbd>Space</Kbd> and drag, or the **Pan** tool) pans. **Fit** (or <Kbd>Home</Kbd>) shows the whole page or crop again; until you zoom or pan, the drawing is fitted again when the window is resized. The toolbar also gives the size of what is shown: a PDF page in mm, an image in pixels, a DWG or DXF drawing's extent in meters. A magnifier and a crosshair follow the pointer, so you can pick a tick mark or a corner exactly.
 
 ## Calibrate
 
 Choose how the drawing is calibrated:
 
 - **Drawing coordinates** (DWG and DXF only, chosen first): the drawing is placed at its own coordinates, so a section drawn at its true coordinates (its stations as x, its elevations as y) needs no calibration. The **Drawing unit** comes from the file (its `$INSUNITS`, such as millimeters or meters) and is converted to meters; choose it when the file does not say.
-- **Axes (x and y separately)**: click two points on the horizontal axis and type their x, then two points on the vertical axis and type their y. The x and y scales are found separately, so a section drawn with **vertical exaggeration** is placed true to scale. The drawing is not rotated. When the same drawing is placed in another model, choose it under **Reuse scale from**; then one point per axis is enough, which suits a second section on the same sheet.
+- **Axes**: click two points on the horizontal axis and type their x, then two points on the vertical axis and type their y. The x and y scales are found separately, so a section drawn with **vertical exaggeration** is placed true to scale. The drawing is not rotated. When the same drawing is placed in another model, choose it under **Reuse scale from**; then one point per axis is enough, which suits a second section on the same sheet.
 - **Points**: click a point in the drawing and type its model x and y, then a second point. Two points give the scale and the rotation (the same scale in both directions). Add a third point or more for a best fit that also takes different scales in x and y; the misfit of each point is shown in meters.
-- **Scale**: click one point whose model coordinates you know, type them, and type the scale: how many meters one drawing unit is. The unit is a pixel for an image; for a PDF, a millimeter or a point (1/72 in) of the sheet; for a DWG or DXF drawing, its own unit. A sheet drawn at 1:200 has 1 mm = 0.2 m.
+- **Scale**: click one point whose model coordinates you know, type them, and type the scale: how many meters one drawing unit is. The unit is a pixel for an image; for a PDF, a millimeter or a point (pt, 1/72 in) of the sheet; for a DWG or DXF drawing, its own unit. A sheet drawn at 1:200 has 1 mm = 0.2 m.
 
-The window says what is still missing, and refuses points that are too close together or that do not span the drawing.
+The window says what to do next, and refuses points that are too close together or that do not span the drawing.
 
 <Callout type="tip">
   Calibrate on the drawing's own axes or grid where it has them: they are where its coordinates are known best. Pick points far apart.
@@ -54,7 +54,7 @@ A point of the model nearby still comes first. Only the part of a drawing inside
 
 ## Use a drawing's lines as boundaries
 
-You can make the model's objects of a drawing's lines instead of tracing them. Click **Pick lines…** under the drawing in the Drawings section, or right-click the drawing and choose **Pick lines from drawing…** (DWG, DXF and PDF drawings). A banner at the top of the canvas shows that lines are being picked; the model's objects do not take clicks then.
+You can make the model's objects of a drawing's lines instead of tracing them. Click **Pick lines…** under the drawing in the Drawings section, right-click the drawing and choose **Pick lines…**, or choose **Pick lines…** in the ▾ menu of **Model › Drawing** (it picks the lines of the model's topmost shown DWG, DXF or PDF drawing). A hidden drawing's lines cannot be picked: show it first. A banner at the top of the canvas shows that lines are being picked; the model's objects do not take clicks then.
 
 - Click a line to pick it, with the lines that continue it end to end: a polyline drawn as separate lines is picked whole, up to a point where three or more lines meet.
 - <Kbd>Shift</Kbd>+click adds a line, or removes a picked one.
@@ -64,12 +64,12 @@ Then click **Exterior**, **Material boundary** or **Water line** in the banner, 
 
 ## New models from a drawing
 
-A sheet with several sections can become several models at once. Choose **Model › New models…** or **File › Import › New models from drawing…** (or **New models from drawing…** in the Place drawing window).
+A sheet with several sections can become several models at once. Choose **New models from drawing…** in the ▾ menu of **Model › Drawing**, or **File › Import › New models from drawing…** (or **New models from drawing…** in the Place drawing window).
 
 1. Pick a drawing of the project or add a file (PDF, DWG, DXF or an image).
 2. With **Draw frame**, drag a rectangle around each section, on any page. Each frame is listed with a name taken from the texts inside it (a title such as "Section 2", else a name like "A–A", else the largest text); change the name as you like, or leave it empty for the default name.
 3. Select a frame and calibrate it as a placed drawing is calibrated. Once one frame is calibrated by its axes, each frame drawn after it **reuses its scale**, so one known value on each axis is enough (choose another frame, or none, under **Reuse scale from**). A DWG or DXF drawing starts with its own coordinates.
-4. Click **Create models**: one model per frame, named after it, with the drawing placed under it, cropped to the frame. The models start without geometry: make it with **Pick lines…** or draw it over the drawing.
+4. Click **Create N models** (**Create model** for one frame): one model per frame, named after it, with the drawing placed under it, cropped to the frame. The models start without geometry: make it with **Pick lines…** or draw it over the drawing.
 
 The models are added like imported ones: remove one in the explorer if it is not wanted.
 
@@ -90,7 +90,7 @@ Every change is a step of **Undo** and **Redo**.
 
 ## On the canvas
 
-A drawing is drawn above the soil colors and below the grid, the boundaries and the points of the model, at its opacity (half transparent when placed). A higher opacity shows the drawing more clearly, a lower one the soil colors.
+A drawing is drawn above the soil colors and below the grid, the boundaries and the points of the model, at its opacity: 80 % when a DWG or DXF drawing is placed (thin lines need it), 50 % for a PDF or an image. A higher opacity shows the drawing more clearly, a lower one the soil colors.
 
 A drawing is **locked** when it is placed: clicks go through it to the model's objects, so you can trace over it. Right-click the drawing where no object of the model is to **Unlock drawing**, **Recalibrate…**, **Hide drawing** or **Remove drawing**. An unlocked drawing is selected by a click where no object of the model is, shows its frame, and moves with a drag (one undo step); lock it again when it is in place. **Lock all › Drawings** in the canvas menu locks every drawing of the model.
 

@@ -238,18 +238,30 @@ function SensitivityBody({
           </div>
         )}
 
+        {data.length === 0 && !running && points.length === 0 && selected && (
+          // Before the first run: where the chart will be, and how to get it.
+          <div
+            className="h-[240px] rounded flex items-center justify-center text-[11px] text-center px-4"
+            style={{ border: "1px dashed var(--color-vsc-border)", color: "var(--color-vsc-text-muted)" }}
+            data-testid="sensitivity-empty"
+          >
+            Run to plot the FOS against {selected.label}.
+          </div>
+        )}
+
         {points.length > 0 && (
-          <table className="w-full text-[11px] tabular-nums">
+          // Two narrow columns side by side, easy to read across.
+          <table className="w-auto min-w-[200px] text-[11px] tabular-nums">
             <thead>
               <tr style={{ color: "var(--color-vsc-text-muted)" }}>
-                <th className="text-left font-normal">{label}</th>
+                <th className="text-left font-normal pr-8">{label}</th>
                 <th className="text-right font-normal">FOS</th>
               </tr>
             </thead>
             <tbody>
               {points.map((p, i) => (
                 <tr key={i} title={p.error}>
-                  <td>{round(p.value)}</td>
+                  <td className="pr-8">{round(p.value)}</td>
                   <td className="text-right">{p.fos == null ? "no surface" : p.fos.toFixed(3)}</td>
                 </tr>
               ))}

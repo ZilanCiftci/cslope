@@ -26,6 +26,7 @@ import type { DrawingCommand, DrawingWindowState } from "./window-sync";
 import {
   AssetStrip,
   AxesInputs,
+  CalibrationMessage,
   DrawingInputs,
   EmptyViewer,
   PageStrip,
@@ -35,7 +36,7 @@ import {
   ViewerToolbar,
   type Tool,
 } from "./PlaceDrawingWindow";
-import { fileUnitCode, rememberLocalBytes, useDrawingsTick } from "./place-window-shared";
+import { drawingExtentText, fileUnitCode, rememberLocalBytes, useDrawingsTick } from "./place-window-shared";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -67,7 +68,9 @@ export function NewModelsWindow({
   const vector = !!asset && DRAWING_MIME[asset.mime] === "vector";
   const drawing = vector && assetId ? vectorsFor(assetId, 1) : null;
   const fileUnit = fileUnitCode(drawing);
-  const unitName = vector ? (drawing?.unitName ?? "drawing unit") : asset?.mime === "application/pdf" ? "point" : "pixel";
+  // ("pt": a PDF point, 1/72 in)
+  const unitName = vector ? (drawing?.unitName ?? "drawing unit") : asset?.mime === "application/pdf" ? "pt" : "pixel";
+  const [fitNonce, setFitNonce] = useState(0);
   const frame = frames.find((f) => f.id === selected) ?? null;
   const pageSize = assetId ? pageSizeOf(assetId, page) : null;
 
@@ -196,7 +199,14 @@ export function NewModelsWindow({
       <div className="flex-1 min-h-0 flex">
         {source && source.pageCount > 1 && <PageStrip source={source} assetId={assetId!} page={page} onPage={(n) => setPage(n)} />}
         <div className="flex-1 min-w-0 flex flex-col">
-          <ViewerToolbar tool={tool} setTool={setTool} crop={null} onClearCrop={() => {}} unitName={unitName} pageSize={pageSize} cropLabel="Draw frame" />
+          <ViewerToolbar
+            tool={tool}
+            setTool={setTool}
+            disabled={!source}
+            onFit={() => setFitNonce((n) => n + 1)}
+            extent={pageSize && asset ? drawingExtentText(DRAWING_MIME[asset.mime] ?? "image", pageSize, vector ? drawing?.metersPerUnit || null : null) : null}
+            cropLabel="Draw frame"
+          />
           <div className="flex-1 min-h-0 relative">
             {!assetId ? (
               <EmptyViewer onAdd={() => fileInput.current?.click()} />
@@ -218,6 +228,7 @@ export function NewModelsWindow({
                 form={frame && frame.page === page ? frame.form : emptyForm()}
                 target={target}
                 onPick={pick}
+                fitNonce={fitNonce}
                 frames={frames
                   .filter((f) => f.page === page)
                   .map((f) => ({ crop: f.crop, label: `${frames.indexOf(f) + 1}${f.name ? ` ${f.name}` : ""}`, selected: f.id === selected }))}
@@ -318,19 +329,19 @@ export function NewModelsWindow({
                   {result?.fit.ok ? (
                     <p data-testid="frame-calibration-summary">{result.summary.join(" · ")}</p>
                   ) : (
-                    <p style={{ color: "var(--color-vsc-warning, #c78a00)" }}>{result && !result.fit.ok ? result.fit.error : ""}</p>
+                    result && <CalibrationMessage result={result} />
                   )}
                 </div>
               </section>
             )}
             <p className="text-[10px]" style={muted}>
-              The models start without geometry: in each, use Pick lines from drawing… to make its boundaries of the drawing&apos;s
-              lines, or draw them over the drawing.
+              The models start without geometry: in each, use Pick lines… (Model › Drawing, or under the drawing in the Drawings
+              panel) to make its boundaries of the drawing&apos;s lines, or draw them over the drawing.
             </p>
           </div>
           <div className="p-3 border-t flex flex-col gap-2" style={{ borderColor: "var(--color-vsc-border)" }}>
             {!made.ok && frames.length > 0 && (
-              <p className="text-[11px]" style={{ color: "var(--color-vsc-warning, #c78a00)" }} data-testid="create-models-message">
+              <p className="text-[11px]" data-testid="create-models-message">
                 {made.error}
               </p>
             )}

@@ -17,6 +17,7 @@ import { placementLabel } from "./placement";
 import { openPlaceDrawing } from "./window-sync";
 import { onDrawingsChanged, peekSource, vectorsFor } from "./drawing-cache";
 import { startLinePick, useLinePick } from "./line-pick-store";
+import { PICK_LINES_HIDDEN } from "./pick-lines-target";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -77,7 +78,8 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
   const kind = peekSource(b.assetId)?.kind;
   const drawing = kind === "vector" ? vectorsFor(b.assetId, b.page ?? 1) : null;
   const label = placementLabel(b, projectAsset(b.assetId)?.originalName);
-  const iconButton = "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active)";
+  const iconButton =
+    "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active) disabled:opacity-35 disabled:pointer-events-none";
   const commitName = () => {
     if (editing !== null) {
       const name = editing.trim();
@@ -142,7 +144,7 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
           {locked ? <Lock size={12} aria-hidden /> : <LockOpen size={12} aria-hidden />}
         </button>
       </div>
-      <div className="flex items-center gap-1.5 mt-1">
+      <div className="flex items-center gap-1.5 mt-1" style={{ opacity: b.visible ? 1 : 0.55 }} title={b.visible ? undefined : "The drawing is hidden"}>
         <span style={muted}>Opacity</span>
         <input
           type="range"
@@ -202,7 +204,11 @@ function DrawingRow({ placement: b, first, last }: { placement: BackgroundImage;
             className="btn text-[11px] px-2 py-0.5"
             aria-pressed={picking}
             disabled={!b.visible}
-            title="Pick lines of the drawing on the canvas and use them as the exterior boundary, material boundaries or water lines"
+            title={
+              b.visible
+                ? "Pick lines of the drawing on the canvas and use them as the exterior boundary, material boundaries or water lines"
+                : PICK_LINES_HIDDEN
+            }
             onClick={() => (picking ? useLinePick.getState().stop() : startLinePick(b.id))}
           >
             {picking ? "Done picking" : "Pick lines…"}

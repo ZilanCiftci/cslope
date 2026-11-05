@@ -18,7 +18,7 @@ order: 3
 | <Kbd>Delete</Kbd> / <Kbd>Backspace</Kbd> | Delete the selected point (edit mode, where a point can be removed and the object is not locked) or the selected annotations (result mode) |
 | Arrow keys | Edit mode: move the selected point by one snap step, with <Kbd>Shift</Kbd> by ten. Result mode: move the selected annotations; with <Kbd>Shift</Kbd> in smaller steps |
 | <Kbd>F5</Kbd> or <Kbd>Ctrl</Kbd>+<Kbd>Enter</Kbd> | Run the analysis (not while typing in a field) |
-| <Kbd>Esc</Kbd> | Close a menu or a dialog window (a value typed in a field is kept); on the canvas, clear the selection |
+| <Kbd>Esc</Kbd> | Close a menu or a dialog window (a value typed in a field is kept); on the canvas, clear the selection or stop picking lines |
 
 ## Mouse, edit mode
 
@@ -31,10 +31,11 @@ order: 3
 | Drag a handle of the selected object | Move it (snaps to the grid and to nearby points) |
 | Drag a load or a custom surface (selected) | Move it whole |
 | Double-click a point of the selected object | Type its exact coordinates |
-| Right-click an edge | **Add point**, **Lock** / **Unlock** |
-| Right-click a point | **Delete point**, **Lock** / **Unlock** |
+| Right-click an edge | **Add point**, **Lock** / **Unlock** the object (for example **Lock exterior boundary**) |
+| Right-click a point | **Delete point**, **Lock** / **Unlock** the object |
 | Right-click empty canvas | **Assign material…**, **Lock all**, **Unlock all** |
 | Double-click a region | Choose its material |
+| Click a line of a drawing, while picking lines | Pick it; <Kbd>Shift</Kbd>+click adds a line or removes a picked one; drag a window to pick the lines inside it |
 | <Kbd>Ctrl</Kbd>+wheel | Zoom at the cursor |
 | Wheel, or middle-button drag | Pan |
 

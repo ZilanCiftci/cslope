@@ -67,6 +67,9 @@ interface OptionsSectionProps {
 
 export function OptionsSection({ plain = false }: OptionsSectionProps) {
   const options = useAppStore((s) => s.options);
+  // Water in the crack needs a crack: a depth, the automatic depth or a base angle.
+  const crackSet =
+    options.tensionCrackDepth! > 0 || options.tensionCrackAuto === true || options.tensionCrackAngle! > 0;
   const setOptions = useAppStore((s) => s.setOptions);
   const orientation = useAppStore((s) => s.orientation);
   const setOrientation = useAppStore((s) => s.setOrientation);
@@ -593,18 +596,18 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
               min={0}
               max={100}
               step={10}
-              disabled={
-                !(options.tensionCrackDepth! > 0) &&
-                !options.tensionCrackAuto &&
-                !(options.tensionCrackAngle! > 0)
-              }
+              disabled={!crackSet}
               onValueChange={(v) =>
                 v >= 0 &&
                 v <= 100 &&
                 setOptions({ tensionCrackWater: v / 100 })
               }
               aria-label="Water in crack"
-              title="Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
+              title={
+                crackSet
+                  ? "Part of the crack depth filled with water; its hydrostatic thrust pushes the sliding mass."
+                  : "Set a tension crack first: a crack depth, the automatic depth or a crack at base angle."
+              }
             />
           </label>
         </div>

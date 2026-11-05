@@ -229,7 +229,7 @@ export function StatusBar({
           </span>
         )}
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
-        <span style={{ opacity: 0.6 }}>
+        <span style={{ color: "var(--color-vsc-text-muted)" }}>
           {APP_VERSION ? `cSlope v${APP_VERSION}` : "cSlope"}
         </span>
       </div>

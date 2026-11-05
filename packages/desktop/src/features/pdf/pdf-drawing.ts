@@ -90,6 +90,7 @@ import {
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
+  COLOR_BAR_PLATE_PAD,
   type DualColor,
 } from "../rendering/style-spec";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
@@ -1618,12 +1619,17 @@ function drawColorBarAnnotation(
   colorScale: FosColorScale,
   scale: number,
 ) {
-  const { barW, barH, labelPt, titleExtraTop } = layoutColorBarPdf(
+  const { barW, barH, labelPt, titleExtraTop, w, h } = layoutColorBarPdf(
     pdf,
     colorScale,
     scale,
   );
   const barY = y + titleExtraTop;
+
+  // On a white plate, as the canvas draws it (and the table is).
+  const plate = COLOR_BAR_PLATE_PAD * scale;
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(x - plate, y - plate, w + 2 * plate, h + 2 * plate, "F");
 
   const fosScale = colorScale.range;
   const fosMin = fosScale.min;

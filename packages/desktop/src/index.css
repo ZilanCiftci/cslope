@@ -10,7 +10,7 @@
   --color-vsc-titlebar: #323233;
   --color-vsc-border: #3c3c3c;
   --color-vsc-text: #cccccc;
-  --color-vsc-text-muted: #858585;
+  --color-vsc-text-muted: #8c8c8c;
   --color-vsc-text-bright: #e8e8e8;
   --color-vsc-accent: #0078d4;
   --color-vsc-accent-hover: #1a8adb;
@@ -56,7 +56,8 @@
   /* Canvas-specific */
   --color-canvas-bg: #1e1e1e;
   --color-canvas-grid: #2a2a2a;
-  --color-canvas-grid-text: #555;
+  /* The rulers' and grid labels: 4.5:1 or more on the canvas. */
+  --color-canvas-grid-text: #a0a0a0;
   --color-canvas-axis: #444;
   --color-canvas-poly-stroke: #c0c0c0;
   --color-canvas-stroke-active: #ffffff;
@@ -132,7 +133,7 @@
   --color-vsc-titlebar: #dddddd;
   --color-vsc-border: #d4d4d4;
   --color-vsc-text: #333333;
-  --color-vsc-text-muted: #717171;
+  --color-vsc-text-muted: #6a6a6a;
   --color-vsc-text-bright: #1e1e1e;
   --color-vsc-accent: #0078d4;
   --color-vsc-accent-hover: #005a9e;
@@ -174,7 +175,7 @@
   /* Canvas-specific */
   --color-canvas-bg: #ffffff;
   --color-canvas-grid: #e8e8e8;
-  --color-canvas-grid-text: #aaa;
+  --color-canvas-grid-text: #666666;
   --color-canvas-axis: #ccc;
   --color-canvas-poly-stroke: #000000;
   --color-canvas-stroke-active: #333333;

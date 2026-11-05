@@ -66,6 +66,8 @@ describe("Sensitivity window", () => {
     expect(input("From").value).toBe("8");
     expect(input("To").value).toBe("12");
     expect(input("Number of values").value).toBe("9");
+    // Before the first run, the chart's place says how to fill it.
+    expect(screen.getByTestId("sensitivity-empty")).toHaveTextContent("Run to plot the FOS against Parameter H.");
   });
 
   it("resets the range when another variable is chosen (±5 around zero)", () => {
