@@ -12,6 +12,8 @@ export default defineConfig([
     "release",
     "coverage",
     ".nyc_output",
+    // The DWG reader's generated WebAssembly glue (packages/dwg-rs/tools/build-dwg-wasm.ts).
+    "src/dwg-wasm",
   ]),
   {
     files: ["**/*.{ts,tsx}"],

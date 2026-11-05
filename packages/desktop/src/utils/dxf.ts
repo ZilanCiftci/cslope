@@ -1,6 +1,8 @@
 /**
  * DXF import: polylines and lines from an ASCII DXF drawing, turned into
- * a slope model's geometry.
+ * a slope model's geometry. The DWG import (src/features/project/
+ * importDwg.ts) reads the same structure (`RawDrawing`) from a DWG file and
+ * shares everything after the parsing (`finishDrawing`, `dxfToGeometry`).
  *
  * - The closed polyline with the largest area is the model boundary.
  * - Polylines on a layer whose name suggests water (water, piezo, gw,
@@ -20,6 +22,25 @@ export interface DxfPolyline {
   closed: boolean;
 }
 
+export interface DxfSegment {
+  layer: string;
+  a: Pt;
+  b: Pt;
+}
+
+/** A drawing as read from the file, before units and chaining. */
+export interface RawDrawing {
+  polylines: DxfPolyline[];
+  /** LINE entities, chained into polylines by `finishDrawing`. */
+  segments: DxfSegment[];
+  /** Entities that were skipped (ARC, SPLINE, INSERT, …) by type. */
+  skipped: Record<string, number>;
+  /** $INSUNITS (0 when the file does not say). */
+  insunits: number;
+  /** Further notices for the user (what the reader left out or recovered). */
+  notes?: string[];
+}
+
 export interface DxfDrawing {
   polylines: DxfPolyline[];
   /** Entities that were skipped (ARC, SPLINE, INSERT, …) by type. */
@@ -28,6 +49,8 @@ export interface DxfDrawing {
   unitScale: number;
   /** How the units were interpreted, for the user (if not plain metres). */
   unitNote?: string;
+  /** Further notices for the user, from the reader. */
+  notes?: string[];
 }
 
 const UNIT_SCALES: Record<number, number> = {
@@ -41,6 +64,11 @@ const UNIT_SCALES: Record<number, number> = {
 
 /** Parse the ENTITIES of an ASCII DXF file. */
 export function parseDxf(text: string): DxfDrawing {
+  return finishDrawing(readDxf(text));
+}
+
+/** The polylines, lines and units of an ASCII DXF file. */
+function readDxf(text: string): RawDrawing {
   const lines = text.split(/\r\n|\r|\n/);
   const pairs: [number, string][] = [];
   for (let i = 0; i + 1 < lines.length; i += 2) {
@@ -51,9 +79,9 @@ export function parseDxf(text: string): DxfDrawing {
     pairs.push([code, lines[i + 1].trim()]);
   }
 
-  let unitScale = 1;
+  let insunits = 0;
   const polylines: DxfPolyline[] = [];
-  const segments: { layer: string; a: Pt; b: Pt }[] = [];
+  const segments: DxfSegment[] = [];
   const skipped: Record<string, number> = {};
 
   let section = "";
@@ -72,8 +100,7 @@ export function parseDxf(text: string): DxfDrawing {
       continue;
     }
     if (section === "HEADER" && code === 9 && value === "$INSUNITS") {
-      const units = Number.parseInt(pairs[i + 1]?.[1] ?? "", 10);
-      unitScale = UNIT_SCALES[units] ?? 1;
+      insunits = Number.parseInt(pairs[i + 1]?.[1] ?? "", 10) || 0;
       i += 2;
       continue;
     }
@@ -138,7 +165,20 @@ export function parseDxf(text: string): DxfDrawing {
     }
   }
 
-  polylines.push(...chainSegments(segments));
+  return { polylines, segments, skipped, insunits };
+}
+
+/**
+ * A drawing in meters: lines chained into polylines, the units of
+ * $INSUNITS applied (see below), repeated points dropped, and polylines
+ * drawn back to their start closed.
+ */
+export function finishDrawing(raw: RawDrawing): DxfDrawing {
+  const { skipped } = raw;
+  let unitScale = UNIT_SCALES[raw.insunits] ?? 1;
+  // Copies: the raw drawing is left as it was.
+  const polylines: DxfPolyline[] = raw.polylines.map((p) => ({ ...p, points: [...p.points] }));
+  polylines.push(...chainSegments(raw.segments));
 
   // Templates often set $INSUNITS (e.g. mm in acadiso) for drawings made
   // in metres: a slope that would come out smaller than a metre is taken
@@ -171,6 +211,7 @@ export function parseDxf(text: string): DxfDrawing {
     skipped,
     unitScale,
     unitNote,
+    notes: raw.notes,
   };
 }
 
@@ -188,7 +229,7 @@ function dedupe(points: Pt[]): Pt[] {
 }
 
 /** Chain LINE segments of a layer end to end into polylines. */
-function chainSegments(segments: { layer: string; a: Pt; b: Pt }[]): DxfPolyline[] {
+function chainSegments(segments: DxfSegment[]): DxfPolyline[] {
   const out: DxfPolyline[] = [];
   const left = [...segments];
   while (left.length > 0) {

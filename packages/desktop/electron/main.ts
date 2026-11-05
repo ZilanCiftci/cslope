@@ -1515,7 +1515,9 @@ ipcMain.on("menu:about", () => {
     title: "About cSlope",
     message: `cSlope v${version}`,
     detail:
-      "Slope stability analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com",
+      "Slope stability analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com\n\n" +
+      "DWG import uses acadrust (MPL-2.0, https://github.com/hakanaktt/acadrust). " +
+      "Third-party licenses: THIRD-PARTY-NOTICES.txt in the app's resources folder.",
   };
   // Modal to the main window so it cannot open behind it.
   if (win) dialog.showMessageBox(win, options);

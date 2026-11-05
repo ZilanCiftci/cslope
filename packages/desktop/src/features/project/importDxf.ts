@@ -1,7 +1,7 @@
 import { inferOrientationFromCoordinates } from "@cslope/engine";
 import { useAppStore } from "../../store/app-store";
 import { importedGeometryLocks } from "../../store/canvas-selection";
-import { dxfToGeometry, parseDxf } from "../../utils/dxf";
+import { dxfToGeometry, parseDxf, type DxfDrawing } from "../../utils/dxf";
 
 /**
  * Import a DXF drawing as a new model: outline, material boundaries and
@@ -9,10 +9,17 @@ import { dxfToGeometry, parseDxf } from "../../utils/dxf";
  * explanation when the drawing cannot be used.
  */
 export function importDxf(text: string, fileName: string): string {
-  const drawing = parseDxf(text);
+  return importDrawing(parseDxf(text), fileName.replace(/\.dxf$/i, "") || "DXF import");
+}
+
+/**
+ * Add a parsed drawing (from a DXF or a DWG file) as a new model named
+ * `name`. Returns the summary for the user; throws when the drawing has no
+ * outline.
+ */
+export function importDrawing(drawing: DxfDrawing, name: string): string {
   const geometry = dxfToGeometry(drawing);
   const store = useAppStore.getState();
-  const name = fileName.replace(/\.dxf$/i, "") || "DXF import";
   store.addModel(name);
   const s = useAppStore.getState();
   s.setCoordinates(geometry.coordinates);
@@ -35,6 +42,7 @@ export function importDxf(text: string, fileName: string): string {
   ];
   let message = parts.join(", ") + ". Assign materials to the regions before running.";
   if (drawing.unitNote) message += ` ${drawing.unitNote}`;
+  for (const note of drawing.notes ?? []) message += ` ${note}`;
   const skipped = Object.entries(drawing.skipped);
   if (skipped.length > 0) {
     message += ` Not imported: ${skipped.map(([t, n]) => `${n} ${t}`).join(", ")} (only polylines and lines are read).`;

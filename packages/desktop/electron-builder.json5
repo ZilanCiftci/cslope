@@ -13,6 +13,9 @@
   // loads only electron and Node built-ins at runtime, so the packages
   // listed as dependencies (80 MB, already inside the bundle) stay out.
   files: ["dist", "dist-electron", "!node_modules", "!**/LICENSES.chromium.html"],
+  // Licenses of the third-party code the app includes (acadrust, MPL-2.0, in
+  // the DWG reader), in the installed app's resources folder.
+  extraResources: [{ from: "THIRD-PARTY-NOTICES.txt", to: "THIRD-PARTY-NOTICES.txt" }],
   icon: "build/icon.png",
   // Only keep English locale files
   electronLanguages: ["en", "en-US"],

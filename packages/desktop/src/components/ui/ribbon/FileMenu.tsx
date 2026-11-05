@@ -12,6 +12,7 @@ import {
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import { importDxf } from "../../../features/project/importDxf";
+import { importDwg } from "../../../features/project/importDwg";
 import { importGsz } from "../../../features/project/importGsz";
 import { exportGsz } from "../../../features/project/exportGsz";
 import { importStix } from "../../../features/project/importStix";
@@ -85,7 +86,7 @@ export function FileMenu({
     input.click();
   };
 
-  /** Import a project file of another program (a ZIP archive) with `run`. */
+  /** Import a binary file (a DWG drawing, or a project file of another program) with `run`. */
   const importBinary = (extension: string, run: (bytes: Uint8Array, name: string) => Promise<string | null>) => {
     const input = document.createElement("input");
     input.type = "file";
@@ -110,6 +111,7 @@ export function FileMenu({
     };
     input.click();
   };
+  const handleImportDwg = () => importBinary(".dwg", importDwg);
   const handleImportGsz = () => importBinary(".gsz", importGsz);
   const handleImportStix = () => importBinary(".stix", importStix);
   const handleImportSli = () => importBinary(".sli,.slim,.slmd", importSli);
@@ -198,6 +200,7 @@ export function FileMenu({
                   label="Import"
                   items={[
                     { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
+                    { label: "DWG file…", title: "Import a DWG drawing (AutoCAD Release 11 or later)", onClick: handleImportDwg },
                     { label: ".gsz file…", title: "Import a .gsz project file", onClick: handleImportGsz },
                     { label: ".stix file…", title: "Import a .stix project file", onClick: handleImportStix },
                     { label: ".sli/.slim/.slmd file…", title: "Import a .sli, .slim or .slmd model file", onClick: handleImportSli },
