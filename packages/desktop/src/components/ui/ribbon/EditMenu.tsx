@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useStore } from "zustand";
 import {
@@ -26,11 +26,63 @@ import {
   RibbonButton,
   RibbonSep,
   RibbonSmallButton,
+  RibbonSplitButton,
   RibbonStack,
 } from "./RibbonParts";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import type { CanvasObjectRef, CanvasObjectType } from "../../../store/types";
 import { openNewModelsFromDrawing, openPlaceDrawing } from "../../../features/drawings/window-sync";
+import { onProjectAssetsChanged, projectAsset } from "../../../features/drawings/asset-registry";
+import { pickLinesTarget } from "../../../features/drawings/pick-lines-target";
+import { startLinePick } from "../../../features/drawings/line-pick-store";
+
+/**
+ * The Drawing group: one split button. Its click places a drawing; its
+ * menu also makes new models from a drawing and picks lines of the
+ * topmost shown DWG, DXF or PDF drawing of the model.
+ */
+function DrawingGroup() {
+  const backgrounds = useAppStore((s) => s.backgrounds);
+  const [, setTick] = useState(0);
+  useEffect(() => onProjectAssetsChanged(() => setTick((t) => t + 1)), []);
+  const pick = pickLinesTarget(backgrounds, (id) => projectAsset(id)?.mime);
+  return (
+    <RibbonGroup label="Drawing">
+      <RibbonSplitButton
+        icon={<DrawingIcon {...LARGE_ICON} />}
+        label="Drawing"
+        tooltip="Place drawing… (a section drawing under the model: PNG, JPEG, TIFF, PDF, DWG or DXF)"
+        onClick={() => openPlaceDrawing()}
+        menuLabel="More drawing commands"
+        items={[
+          {
+            label: "Place drawing…",
+            title: "Place a section drawing under the model: PNG, JPEG, TIFF, PDF, DWG or DXF",
+            onClick: () => openPlaceDrawing(),
+          },
+          {
+            label: "New models from drawing…",
+            title: "Frame each section of a drawing and make a model of each, the drawing placed under it",
+            onClick: () => openNewModelsFromDrawing(),
+          },
+          {
+            label: "Pick lines…",
+            title: "Pick lines of the drawing on the canvas and use them as the exterior boundary, material boundaries or water lines",
+            disabled: "reason" in pick,
+            disabledTitle: "reason" in pick ? pick.reason : undefined,
+            onClick: () => {
+              if (!("id" in pick)) return;
+              // Lines are picked on the edit canvas.
+              const st = useAppStore.getState();
+              if (st.mode !== "edit") st.setMode("edit");
+              startLinePick(pick.id);
+            },
+          },
+        ]}
+      />
+    </RibbonGroup>
+  );
+}
 
 /**
  * A window of the Model tab is a table of objects on the canvas: opening it
@@ -167,22 +219,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
         panelHost &&
         createPortal(
           <div className="h-full flex items-stretch gap-0" role="menu">
-            <RibbonGroup label="Drawing">
-              <RibbonButton
-                icon={<DrawingIcon {...LARGE_ICON} />}
-                label="Drawing"
-                tooltip="Place drawing… (a section drawing under the model: PNG, JPEG, TIFF, PDF, DWG or DXF)"
-                onClick={() => openPlaceDrawing()}
-              />
-              <RibbonStack>
-                <RibbonSmallButton
-                  icon={<DrawingIcon {...SMALL_ICON} />}
-                  label="New models…"
-                  title="New models from drawing… (a frame around each section of a drawing, one model each)"
-                  onClick={() => openNewModelsFromDrawing()}
-                />
-              </RibbonStack>
-            </RibbonGroup>
+            <DrawingGroup />
 
             <RibbonSep />
 

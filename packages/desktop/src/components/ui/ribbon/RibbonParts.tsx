@@ -107,21 +107,27 @@ export function RibbonButton({
   );
 }
 
-// ── RibbonMenuButton ──
+// ── Ribbon menus ──
 
 /**
- * A small ribbon button that opens a menu of commands below it (File ›
- * Import, File › Export). Closes on a choice, Escape or a click elsewhere.
+ * The stacking level of a ribbon popup: over the canvas and its rulers
+ * (the canvas is an isolated stacking context, see EditCanvas), under
+ * dialogs.
  */
-export function RibbonMenuButton({
-  icon,
-  label,
-  items,
-}: {
-  icon: React.ReactNode;
+export const RIBBON_POPUP_Z = "z-[100]";
+
+/** A command of a ribbon menu; a disabled one says why in its tooltip. */
+export interface RibbonMenuItem {
   label: string;
-  items: { label: string; title?: string; onClick: () => void }[];
-}) {
+  title?: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** Tooltip while disabled: why the command cannot be used. */
+  disabledTitle?: string;
+}
+
+/** Open state of a ribbon menu: closes on Escape or a click outside `ref`. */
+function useRibbonMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -139,6 +145,77 @@ export function RibbonMenuButton({
       window.removeEventListener("keydown", onKey);
     };
   }, [open]);
+  return { open, setOpen, ref };
+}
+
+/** The list of a ribbon menu, below its button. */
+function RibbonMenuList({
+  label,
+  items,
+  top,
+  onChoose,
+}: {
+  label: string;
+  items: RibbonMenuItem[];
+  /** Tailwind top offset. */
+  top: string;
+  onChoose: () => void;
+}) {
+  return (
+    <div
+      className={`absolute ${top} left-0 rounded py-1 ${RIBBON_POPUP_Z}`}
+      style={{
+        background: "var(--color-vsc-panel)",
+        border: "1px solid var(--color-vsc-border)",
+        minWidth: 140,
+        boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+      }}
+      role="menu"
+      aria-label={label}
+    >
+      {items.map((it) => {
+        const explain = it.disabled && it.disabledTitle;
+        return (
+          <button
+            key={it.label}
+            title={explain ? it.disabledTitle : (it.title ?? it.label)}
+            onClick={() => {
+              if (it.disabled) return;
+              onChoose();
+              it.onClick();
+            }}
+            className={`w-full text-left px-3 py-1.5 text-[11px] whitespace-nowrap ${it.disabled ? "cursor-default" : `cursor-pointer ${HOVER}`}`}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "var(--color-vsc-text)",
+              opacity: it.disabled ? 0.45 : 1,
+            }}
+            role="menuitem"
+            aria-disabled={it.disabled || undefined}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * A small ribbon button that opens a menu of commands below it (File ›
+ * Import, File › Export). Closes on a choice, Escape or a click elsewhere.
+ */
+export function RibbonMenuButton({
+  icon,
+  label,
+  items,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  items: RibbonMenuItem[];
+}) {
+  const { open, setOpen, ref } = useRibbonMenu();
   return (
     <div className="relative" ref={ref}>
       <button
@@ -163,35 +240,65 @@ export function RibbonMenuButton({
         <span className="text-[11px] leading-none">{label}</span>
         <Chevron />
       </button>
-      {open && (
-        <div
-          className="absolute top-[1.6rem] left-0 rounded py-1 z-20"
-          style={{
-            background: "var(--color-vsc-panel)",
-            border: "1px solid var(--color-vsc-border)",
-            minWidth: 140,
-            boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
-          }}
-          role="menu"
-          aria-label={label}
-        >
-          {items.map((it) => (
-            <button
-              key={it.label}
-              title={it.title ?? it.label}
-              onClick={() => {
-                setOpen(false);
-                it.onClick();
-              }}
-              className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
-              style={{ background: "transparent", border: "none", color: "var(--color-vsc-text)" }}
-              role="menuitem"
-            >
-              {it.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open && <RibbonMenuList label={label} items={items} top="top-[1.6rem]" onChoose={() => setOpen(false)} />}
+    </div>
+  );
+}
+
+/**
+ * A large split button: a click on the button runs its main command, the
+ * chevron below the label opens a menu of related commands (Model ›
+ * Drawing). Closes on a choice, Escape or a click elsewhere.
+ */
+export function RibbonSplitButton({
+  icon,
+  label,
+  tooltip,
+  onClick,
+  menuLabel,
+  items,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  /** Tooltip of the main command. */
+  tooltip?: string;
+  onClick: () => void;
+  /** Tooltip and name of the menu. */
+  menuLabel: string;
+  items: RibbonMenuItem[];
+}) {
+  const { open, setOpen, ref } = useRibbonMenu();
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        title={tooltip ?? label}
+        onClick={() => {
+          setOpen(false);
+          onClick();
+        }}
+        className={`min-w-[58px] h-[50px] pl-2 pr-4 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer whitespace-nowrap ${HOVER}`}
+        style={{
+          color: "var(--color-vsc-text)",
+          background: open ? "var(--color-vsc-list-active)" : "transparent",
+        }}
+        role="menuitem"
+        data-size="large"
+      >
+        <span className="flex items-center justify-center">{icon}</span>
+        <span className="text-[11px] leading-none">{label}</span>
+      </button>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`absolute bottom-[3px] right-0 w-4 h-4 rounded-xs flex items-center justify-center cursor-pointer ${HOVER}`}
+        style={{ background: "transparent", border: "none", padding: 0 }}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={menuLabel}
+        title={menuLabel}
+      >
+        <Chevron />
+      </button>
+      {open && <RibbonMenuList label={menuLabel} items={items} top="top-[3.25rem]" onChoose={() => setOpen(false)} />}
     </div>
   );
 }

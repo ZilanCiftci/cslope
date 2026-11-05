@@ -43,6 +43,7 @@ import {
   RibbonSep,
   RibbonSmallButton,
   RibbonStack,
+  RIBBON_POPUP_Z,
 } from "./RibbonParts";
 import {
   defaultReferenceCircle,
@@ -230,30 +231,37 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     });
   };
 
+  // The menus close with the tab (they are not open when it is shown again).
+  if (!isOpen && (exportMenuOpen || displayMenuOpen)) {
+    setExportMenuOpen(false);
+    setDisplayMenuOpen(false);
+  }
+
+  // ... and on Escape or a click outside them, as the other ribbon menus.
   useEffect(() => {
     if (!exportMenuOpen && !displayMenuOpen) return;
 
     const onDocumentPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        exportMenuOpen &&
-        exportMenuRef.current &&
-        !exportMenuRef.current.contains(target)
-      ) {
+      if (exportMenuOpen && !exportMenuRef.current?.contains(target)) {
         setExportMenuOpen(false);
       }
-      if (
-        displayMenuOpen &&
-        displayMenuRef.current &&
-        !displayMenuRef.current.contains(target)
-      ) {
+      if (displayMenuOpen && !displayMenuRef.current?.contains(target)) {
         setDisplayMenuOpen(false);
       }
     };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setExportMenuOpen(false);
+      setDisplayMenuOpen(false);
+    };
 
     document.addEventListener("mousedown", onDocumentPointerDown);
-    return () =>
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
       document.removeEventListener("mousedown", onDocumentPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [exportMenuOpen, displayMenuOpen]);
 
   const openResultsPlot = () => {
@@ -343,7 +351,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   />
                   {displayMenuOpen && (
                     <div
-                      className="absolute top-[1.6rem] left-0 rounded py-1 z-20"
+                      className={`absolute top-[1.6rem] left-0 rounded py-1 ${RIBBON_POPUP_Z}`}
                       style={{
                         background: "var(--color-vsc-panel)",
                         border: "1px solid var(--color-vsc-border)",
@@ -658,7 +666,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
 
                 {exportMenuOpen && hasResult && (
                   <div
-                    className={`absolute top-[3.25rem] ${exportMenuToLeft ? "right-0" : "left-0"} rounded py-1 z-20`}
+                    className={`absolute top-[3.25rem] ${exportMenuToLeft ? "right-0" : "left-0"} rounded py-1 ${RIBBON_POPUP_Z}`}
                     style={{
                       background: "var(--color-vsc-panel)",
                       border: "1px solid var(--color-vsc-border)",

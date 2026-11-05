@@ -391,6 +391,19 @@ describe("ResultsMenu", () => {
     expect(model.resultViewSettings?.pdfSummaryPages).toBe(false);
   });
 
+  it("closes the export menu on Escape and with its tab: it is not open when the tab is shown again", async () => {
+    const { host, onActivate, rerender } = renderMenu();
+    await userEvent.click(screen.getByTitle("More export options"));
+    expect(screen.getByRole("button", { name: "Export as PDF" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("button", { name: "Export as PDF" })).toBeNull();
+    await userEvent.click(screen.getByTitle("More export options"));
+    rerender(<ResultsMenu isOpen={false} onActivate={onActivate} panelHost={host} />);
+    rerender(<ResultsMenu isOpen onActivate={onActivate} panelHost={host} />);
+    expect(screen.queryByRole("button", { name: "Export as PDF" })).toBeNull();
+    expect(screen.getByTitle("More export options")).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("exports slice data as Excel and CSV files named after the model", async () => {
     renderMenu();
     const name = store().models.find((m) => m.id === store().activeModelId)!.name;

@@ -973,8 +973,10 @@ export function ResultCanvas() {
     setCanvasToolbar,
   ]);
 
+  // isolate: the canvas's layers (its rulers at z-index 60, its menus)
+  // stay under the ribbon's menus and the dialogs.
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full isolate">
       <div
         ref={containerRef}
         className="relative w-full h-full overflow-hidden"
