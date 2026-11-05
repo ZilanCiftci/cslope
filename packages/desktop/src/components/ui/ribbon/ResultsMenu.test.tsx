@@ -24,6 +24,7 @@ vi.mock("../../../utils/download", async (importOriginal) => ({
 
 import { ResultsMenu } from "./ResultsMenu";
 import { useAppStore } from "../../../store/app-store";
+import { materialTableBox } from "../../../features/annotations/colorBarPlacement";
 import {
   PNG_PAPER_LAYOUT_WIDTH_PX,
   PNG_SCALE,
@@ -238,7 +239,12 @@ describe("ResultsMenu", () => {
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
-    expect([bar.x, bar.y, bar.anchor]).toEqual([0.94, 0.35, "top-right"]);
+    // Right below the material table.
+    const table = annotations.find((a) => a.type === "material-table")!;
+    const box = materialTableBox(table, store().materials, store().piezometricLine, store().resultViewSettings.paperFrame);
+    expect([bar.x, bar.anchor]).toEqual([0.94, "top-right"]);
+    expect(bar.y).toBeGreaterThan(box.y + box.h);
+    expect(bar.y).toBeLessThan(box.y + box.h + 0.02);
     expect(screen.getByTitle("Remove color bar")).toHaveAttribute("aria-pressed", "true");
     // A second click removes the one there instead of adding another.
     await userEvent.click(screen.getByTitle("Remove color bar"));
