@@ -1,5 +1,9 @@
 # cSlope
 
+## UI and UX
+
+Follow docs/design-rules.md for every change to the app's screens (dialogs, panels, lists, canvas, wording). It is short; read it before adding or changing a dialog or a control.
+
 ## After major changes to the engine or the verification problems
 
 The website's verification data is generated locally and committed, not built on Vercel. After a change that can move results (solver, search, slices, materials, or the problems in packages/engine/src/verification), regenerate it and commit the result:

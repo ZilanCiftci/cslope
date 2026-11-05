@@ -44,7 +44,8 @@ type MetricKey =
   | "sliceWeight"
   | "cohesionStrength"
   | "resistingForce"
-  | "pullingForce";
+  | "pullingForce"
+  | "normalEffective";
 
 interface PlotPoint {
   sliceNumber: number;
@@ -59,6 +60,8 @@ interface PlotPoint {
   cohesionStrength: number;
   resistingForce: number;
   pullingForce: number;
+  /** The effective normal force on the base, N′ (negative: the slice is in tension, see the result's notes). */
+  normalEffective: number;
   /** The slice's outline in model coordinates (marked on the canvas while hovered). */
   outline: [number, number][];
 }
@@ -81,6 +84,7 @@ const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string }> = [
   { key: "cohesionStrength", label: "Cohesion strength", unit: "kN" },
   { key: "resistingForce", label: "Resisting force", unit: "kN" },
   { key: "pullingForce", label: "Pulling force", unit: "kN" },
+  { key: "normalEffective", label: "Effective normal force (N′)", unit: "kN" },
 ];
 
 function isSameSurface(a: SlipSurfaceResult, b: SlipSurfaceResult): boolean {
@@ -266,6 +270,7 @@ export function ResultsPlotDialogApp() {
           cohesionStrength,
           resistingForce,
           pullingForce,
+          normalEffective,
           outline: [
             [toModelX(slice.xLeft), slice.y0Top],
             [toModelX(slice.xRight), slice.y1Top],
