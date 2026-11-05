@@ -462,7 +462,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 )}
                 <RibbonSmallButton
                   icon={<SettingsIcon {...SMALL_ICON} />}
-                  label="Settings"
+                  label="Sheet settings"
                   onClick={openViewSettings}
                 />
               </RibbonStack>
@@ -616,7 +616,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <span className="flex items-center justify-center">
                     <PdfIcon {...LARGE_ICON} />
                   </span>
-                  <span className="text-[11px] leading-none">PDF</span>
+                  <span className="text-[11px] leading-none">Export</span>
                 </button>
 
                 <button

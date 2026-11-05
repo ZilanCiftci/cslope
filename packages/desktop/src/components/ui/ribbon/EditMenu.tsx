@@ -161,7 +161,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonStack>
                 <RibbonSmallButton
                   icon={<UdlIcon {...SMALL_ICON} />}
-                  label="UDL"
+                  label="Distributed loads"
                   onClick={() => {
                     setActiveSection("Loads");
                     window.cslope.openUdlDialog();
@@ -231,7 +231,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 <RibbonSmallButton
                   icon={<CustomPlanesIcon {...SMALL_ICON} />}
-                  label="Custom planes"
+                  label="Custom surfaces"
                   onClick={() => {
                     setActiveSection("Custom Search Planes");
                     window.cslope.openCustomSearchPlanesDialog();

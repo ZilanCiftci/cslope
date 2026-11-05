@@ -68,12 +68,12 @@ describe("Model ribbon", () => {
     ["Exterior", "openGeometryDialog", "Exterior Boundary"],
     ["Interior", "openInteriorBoundariesDialog", "Interior Boundaries"],
     ["Assign", "openMaterialAssignmentDialog", "Material Assignment"],
-    ["UDL", "openUdlDialog", "Loads"],
+    ["Distributed loads", "openUdlDialog", "Loads"],
     ["Line loads", "openLineLoadsDialog", "Loads"],
     ["Reinforcement", "openReinforcementDialog", "Loads"],
     ["Piezometric lines", "openPiezoDialog", "Piezometric Lines"],
     ["Search limits", "openSearchLimitsDialog", "Search Limits"],
-    ["Custom planes", "openCustomSearchPlanesDialog", "Custom Search Planes"],
+    ["Custom surfaces", "openCustomSearchPlanesDialog", "Custom Search Planes"],
     ["Options", "openOptionsDialog", "Options"],
   ])("%s opens its window and the matching side panel section", async (label, call, section) => {
     render(<MenuBar />);
@@ -255,7 +255,7 @@ describe("Compact ribbon", () => {
     await userEvent.click(tab("Results"));
     expect(screen.getByRole("menuitem", { name: "Results plot" })).toHaveAttribute("data-size", "large");
     expect(screen.getByRole("menuitem", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByTitle("Settings")).toHaveAttribute("data-size", "small");
+    expect(screen.getByTitle("Sheet settings")).toHaveAttribute("data-size", "small");
   });
 
   it("marks a pressed toggle with aria-pressed", async () => {

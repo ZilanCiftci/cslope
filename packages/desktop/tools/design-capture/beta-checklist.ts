@@ -335,9 +335,9 @@ async function openDialog(label: string, hash: string, api: string): Promise<Pag
 const materialsDialog = () => openDialog("Materials", "materials-dialog", "openMaterialsDialog");
 const piezoDialog = () => openDialog("Piezometric lines", "piezo-dialog", "openPiezoDialog");
 const optionsDialog = () => openDialog("Options", "options-dialog", "openOptionsDialog");
-const udlDialog = () => openDialog("UDL", "udl-dialog", "openUdlDialog");
+const udlDialog = () => openDialog("Distributed loads", "udl-dialog", "openUdlDialog");
 const lineLoadsDialog = () => openDialog("Line loads", "line-loads-dialog", "openLineLoadsDialog");
-const customPlanesDialog = () => openDialog("Custom planes", "custom-search-planes-dialog", "openCustomSearchPlanesDialog");
+const customPlanesDialog = () => openDialog("Custom surfaces", "custom-search-planes-dialog", "openCustomSearchPlanesDialog");
 
 async function selectMaterial(d: Page, name: string) {
   const input = d.locator(`input[aria-label="Material name"][value="${name}"]`).first();

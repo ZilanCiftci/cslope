@@ -105,7 +105,7 @@ describe("ResultsMenu", () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
     await userEvent.click(screen.getByTitle("Results plot"));
-    await userEvent.click(screen.getByTitle("Settings"));
+    await userEvent.click(screen.getByTitle("Sheet settings"));
     expect(alert).toHaveBeenCalledTimes(2);
     expect(alert.mock.calls[0][0]).toMatch(/desktop app/);
   });
@@ -360,18 +360,18 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     const summary = screen.getByRole("checkbox", { name: "Analysis summary pages" });
     const title = screen.getByRole("checkbox", { name: "Title line above the drawing" });
-    // Defaults: summary pages included, no title line in the margin.
+    // Defaults: summary pages included, the title line in the margin.
     expect(summary).toBeChecked();
-    expect(title).not.toBeChecked();
+    expect(title).toBeChecked();
     await userEvent.click(summary);
     await userEvent.click(title);
     expect(rvs().pdfSummaryPages).toBe(false);
-    expect(rvs().pdfTitleLine).toBe(true);
+    expect(rvs().pdfTitleLine).toBe(false);
     // The menu stays open for the export, which gets the choices.
     await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
     const arg = mocks.exportVectorPdf.mock.calls[0][0];
     expect(arg.resultViewSettings.pdfSummaryPages).toBe(false);
-    expect(arg.resultViewSettings.pdfTitleLine).toBe(true);
+    expect(arg.resultViewSettings.pdfTitleLine).toBe(false);
     // Saved with the model in the project file.
     const model = store().models.find((m) => m.id === store().activeModelId)!;
     expect(model.resultViewSettings?.pdfSummaryPages).toBe(false);

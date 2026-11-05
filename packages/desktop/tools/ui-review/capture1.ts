@@ -64,8 +64,8 @@ for (const t of ["File", "Model", "Results", "Help"]) await step("tab " + t, asy
 
 const modelButtons: [string, number, string][] = [
   ["Exterior", 0, "geometry"], ["Interior", 0, "interior"], ["Materials", 0, "materials"], ["Assign", 0, "assign"],
-  ["UDL", 0, "udl"], ["Line loads", 0, "lineloads"], ["Reinforcement", 0, "reinforcement"], ["Piezometric lines", 0, "piezo"],
-  ["Parameters", 0, "parameters"], ["Search limits", 0, "searchlimits"], ["Custom planes", 0, "customplanes"], ["Options", 0, "options"],
+  ["Distributed loads", 0, "udl"], ["Line loads", 0, "lineloads"], ["Reinforcement", 0, "reinforcement"], ["Piezometric lines", 0, "piezo"],
+  ["Parameters", 0, "parameters"], ["Search limits", 0, "searchlimits"], ["Custom surfaces", 0, "customplanes"], ["Options", 0, "options"],
 ];
 for (const [text, nth, name] of modelButtons) {
   await step("dialog " + name, async () => {
@@ -84,7 +84,7 @@ await page.waitForFunction(() => ["done", "error"].includes((window as any).__CS
 await S((s) => s.setMode("result"));
 await page.waitForTimeout(800);
 await step("results main", async () => { await tab("Results"); await shot(page, "20-results-tab"); });
-for (const [text, name] of [["Results plot", "resultsplot"], ["Settings", "viewsettings"]] as const) {
+for (const [text, name] of [["Results plot", "resultsplot"], ["Sheet settings", "viewsettings"]] as const) {
   await step("dialog " + name, async () => {
     await tab("Results"); const before = others().length; await clickRibbon(text);
     const w = await waitNewWindow(before);

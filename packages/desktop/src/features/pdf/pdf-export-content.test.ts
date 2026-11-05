@@ -227,10 +227,8 @@ describe("exportVectorPdf — full model", () => {
     expect(texts).toContain(`Page 2 of ${doc.getNumberOfPages()}`);
     expect(texts.some((t) => t.startsWith("Summary page"))).toBe(false);
     expect(texts.some((t) => t.startsWith("cSlope 9.9.9"))).toBe(true);
-    // No title line in the margin unless asked for: the drawing's text
-    // annotations carry the title.
-    expect(texts).not.toContain(TITLE_RESULT);
-    expect(texts).not.toContain("Model B");
+    // The title line in the margin by default: page 1 carries the result.
+    expect(texts).toContain(TITLE_RESULT);
     // Every summary line lies inside the page.
     const [w, h] = [doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight()];
     for (const t of recordedTexts(doc)) {
@@ -251,8 +249,9 @@ describe("exportVectorPdf — full model", () => {
     expect(texts.some((t) => t.includes("model Full model"))).toBe(false);
   });
 
-  it("writes the title line above the drawing when it is turned on", () => {
-    const { doc } = exportDoc(withSummary({ pdfTitleLine: true }));
+  it("writes the title line above the drawing by default, and leaves it out when turned off", () => {
+    expect(pageTexts(exportDoc(withSummary({ pdfTitleLine: false })).doc)).not.toContain(TITLE_RESULT);
+    const { doc } = exportDoc(withSummary());
     const texts = pageTexts(doc);
     // Page 1 names the model and the result above the drawing frame.
     expect(texts).toContain(TITLE_RESULT);
@@ -264,7 +263,7 @@ describe("exportVectorPdf — full model", () => {
 
   it("leaves the summary pages out when they are turned off", () => {
     const included = exportDoc(withSummary()).doc.getNumberOfPages();
-    const { alert, error, doc } = exportDoc(withSummary({ pdfSummaryPages: false }));
+    const { alert, error, doc } = exportDoc(withSummary({ pdfSummaryPages: false, pdfTitleLine: false }));
     expect(alert).not.toHaveBeenCalled();
     expect(error).not.toHaveBeenCalled();
     expect(included).toBeGreaterThanOrEqual(2);
