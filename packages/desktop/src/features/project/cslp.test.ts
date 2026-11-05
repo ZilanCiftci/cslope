@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "../../store/app-store";
 import { parseProjectFile, PROJECT_FILE_VERSION, serializeProject, type ProjectFile } from "../../store/persistence";
-import { dosDateTime, openZip, readZip, writeZip } from "../../utils/zip";
+import { dosDateTime, openZip, readZip, writeZip, writeZipDeflated } from "../../utils/zip";
 import {
   buildProjectArchive,
   CSLP_FORMAT_VERSION,
@@ -22,7 +22,7 @@ import {
   type CslpResult,
   type ProjectAsset,
 } from "./cslp";
-import { analysisInputHash } from "./input-hash";
+import { analysisInputHash, sha256Hex } from "./input-hash";
 import type { BackgroundImage } from "../../store/types";
 import { MAX_PROJECT_FILE_BYTES } from "./file-limits";
 
@@ -482,6 +482,41 @@ describe("attachments and backgrounds", () => {
     expect(opened.file.models[0].backgrounds).toEqual([first]);
     expect(opened.file.models[1].backgrounds).toEqual([second]);
     expect([...(await opened.readAsset("sheet"))]).toEqual([...PDF]);
+  });
+
+  it("stores every attachment, and reads them within limits of their own: a project with large deflated drawings saves again and again", async () => {
+    // A file of an earlier version: two TIFF drawings, deflated, together
+    // more than the JSON entries may unpack to (limits scaled down: 64 kB
+    // for the JSON entries, 1 MB each and 2 MB in all for the drawings).
+    const limits = { entries: { entryBytes: MB, totalBytes: 64 * 1024 }, assets: { entryBytes: MB, totalBytes: 2 * MB } };
+    const tiff = (fill: number) => new Uint8Array(600 * 1024).fill(fill);
+    const tiffs = { a: tiff(1), b: tiff(2) };
+    const file = project();
+    const placed = (assetId: string) => ({ ...background, id: `drawing-${assetId}`, assetId });
+    const withTwo = { ...file, models: [{ ...file.models[0], backgrounds: [placed("a"), placed("b")] }, file.models[1]] };
+    const index = await Promise.all(
+      Object.entries(tiffs).map(async ([id, data]) => ({ id, path: `assets/${id}.tif`, mime: "image/tiff", bytes: data.length, sha256: await sha256Hex(data), originalName: `${id}.tif`, addedAt: "" })),
+    );
+    const old = await writeZipDeflated([
+      ...Object.entries(layout(withTwo, { "assets/index.json": index })).map(([name, value]) => ({ name, data: JSON.stringify(value) })),
+      ...Object.entries(tiffs).map(([id, data]) => ({ name: `assets/${id}.tif`, data })),
+    ]);
+    expect(openZip(old).entries().find((e) => e.name === "assets/a.tif")?.method).toBe(8);
+
+    let bytes = old;
+    for (let save = 0; save < 3; save++) {
+      const read = await readProject(bytes, limits);
+      expect(read.assets.map((a) => a.id)).toEqual(["a", "b"]);
+      // shown (read), then saved: each read again from what is held
+      expect(await read.assets[0].data()).toEqual(tiffs.a);
+      bytes = await writeProjectArchive(read.file, { assets: read.assets, modified: MODIFIED });
+      expect(openZip(bytes).entries().filter((e) => e.name.startsWith("assets/") && e.name.endsWith(".tif")).map((e) => e.method)).toEqual([0, 0]);
+      expect(await entry(bytes, "assets/b.tif")).toEqual(tiffs.b);
+    }
+
+    // A drawing that cannot be read is named in the error.
+    const broken: ProjectAsset = { id: "a", mime: "image/tiff", originalName: "a.tif", addedAt: "", data: () => Promise.reject(new Error("gone")) };
+    await expect(writeProjectArchive(withTwo, { assets: [broken] })).rejects.toThrow(/drawing a\.tif cannot be read \(gone\)/);
   });
 
   it("keeps the locks of the drawings a model has, and drops the others", async () => {

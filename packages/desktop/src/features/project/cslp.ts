@@ -37,8 +37,8 @@ import {
 import type { AnalysisResult, AppState, ModelEntry } from "../../store/types";
 import { APP_VERSION, ENGINE_BUILD } from "../../utils/app-version";
 import { canonicalJson } from "../../utils/canonical-json";
-import { isZip, openZip, writeZipDeflated, type ZipArchive, type ZipInput } from "../../utils/zip";
-import { MAX_PROJECT_FILE_BYTES } from "./file-limits";
+import { isZip, openZip, writeZipDeflated, ZIP_LIMITS, type ZipArchive, type ZipInput, type ZipLimits } from "../../utils/zip";
+import { MAX_DRAWING_BYTES, MAX_PROJECT_FILE_BYTES } from "./file-limits";
 import { analysisInputHash, sha256Hex } from "./input-hash";
 import { adoptProjectAssets, openedProjectAssets, type ProjectAsset } from "../drawings/asset-registry";
 import { isLegacyEntry, normalizeBackgrounds } from "../drawings/placement";
@@ -225,8 +225,20 @@ function extensionOf(mime: string): string {
   return known[mime.toLowerCase()] ?? "bin";
 }
 
-/** Types compressed already: stored as they are. */
-const STORED_MIME = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "application/zip", "image/vnd.dwg"]);
+/**
+ * What an archive may unpack to, read: the JSON entries within the ZIP
+ * limits; the attachments within limits of their own (a drawing's size
+ * each, the project file's size in all), so that the drawings read never
+ * use up what the JSON entries may unpack to, and the reverse.
+ */
+export interface ProjectZipLimits {
+  entries: ZipLimits;
+  assets: ZipLimits;
+}
+export const PROJECT_ZIP_LIMITS: ProjectZipLimits = {
+  entries: ZIP_LIMITS,
+  assets: { entryBytes: MAX_DRAWING_BYTES, totalBytes: MAX_PROJECT_FILE_BYTES },
+};
 
 const json = (name: string, value: unknown): ZipInput => ({ name, data: canonicalJson(value) });
 
@@ -296,10 +308,20 @@ export async function writeProjectArchive(input: ProjectFile, options: WriteProj
     const files: ZipInput[] = [];
     for (const id of [...referenced].sort()) {
       const asset = available.get(id)!;
-      const data = await asset.data();
+      let data: Uint8Array;
+      try {
+        data = await asset.data();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        throw new Error(`The drawing ${asset.originalName || id} cannot be read (${msg}); remove it from the models that place it to save the project.`, { cause: err });
+      }
       const path = `assets/${id}.${extensionOf(asset.mime)}`;
       index.push({ id, path, mime: asset.mime, bytes: data.length, sha256: await sha256Hex(data), originalName: asset.originalName, addedAt: asset.addedAt });
-      files.push({ name: path, data, method: STORED_MIME.has(asset.mime.toLowerCase()) ? "store" : "deflate" });
+      // Stored as they are, whatever the type: most drawings are compressed
+      // already, and a stored entry is read without unpacking (a view of
+      // the file's bytes), so large drawings never run into what deflated
+      // entries may unpack to when the project is opened and saved again.
+      files.push({ name: path, data, method: "store" });
     }
     entries.push(json(ASSET_INDEX, index), ...files);
   }
@@ -331,17 +353,26 @@ export interface ReadProject {
  * version (told apart by the content), with the archive's attachments.
  * Changes nothing: the caller that loads the project adopts its assets.
  */
-export async function readProject(bytes: Uint8Array): Promise<ReadProject> {
-  const opened = await openProject(bytes);
-  const assets = opened.assets.map((a) => ({
-    id: a.id,
-    mime: a.mime,
-    originalName: a.originalName,
-    addedAt: a.addedAt,
-    sha256: a.sha256,
-    bytes: a.bytes,
-    data: () => opened.readAsset(a.id),
-  }));
+export async function readProject(bytes: Uint8Array, limits: ProjectZipLimits = PROJECT_ZIP_LIMITS): Promise<ReadProject> {
+  const opened = await openProject(bytes, limits);
+  const assets = opened.assets.map((a) => {
+    // An attachment read once is kept (a stored one is a view of the
+    // file's bytes, held anyway): a later save never depends on reading it again.
+    let held: Promise<Uint8Array> | undefined;
+    return {
+      id: a.id,
+      mime: a.mime,
+      originalName: a.originalName,
+      addedAt: a.addedAt,
+      sha256: a.sha256,
+      bytes: a.bytes,
+      data: () =>
+        (held ??= opened.readAsset(a.id).catch((err: unknown) => {
+          held = undefined;
+          throw err;
+        })),
+    };
+  });
   return { file: opened.file, assets };
 }
 
@@ -351,11 +382,11 @@ export async function readProjectBytes(bytes: Uint8Array): Promise<ProjectFile> 
 }
 
 /** Open a project file (a .cslp archive, or a JSON project of an earlier version) and what else it holds. */
-export async function openProject(bytes: Uint8Array): Promise<OpenedProject> {
+export async function openProject(bytes: Uint8Array, limits: ProjectZipLimits = PROJECT_ZIP_LIMITS): Promise<OpenedProject> {
   if (bytes.length > MAX_PROJECT_FILE_BYTES) {
     throw new Error("The file is too large to be a cSlope project.");
   }
-  if (isZip(bytes)) return openProjectArchive(bytes);
+  if (isZip(bytes)) return openProjectArchive(bytes, limits);
   // TextDecoder drops a byte order mark.
   const text = decoder.decode(bytes);
   if (!/^\s*\{/.test(text)) {
@@ -391,10 +422,13 @@ async function readJsonEntry(archive: ZipArchive, name: string): Promise<unknown
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 
 /** Open a .cslp archive. */
-export async function openProjectArchive(bytes: Uint8Array): Promise<OpenedProject> {
+export async function openProjectArchive(bytes: Uint8Array, limits: ProjectZipLimits = PROJECT_ZIP_LIMITS): Promise<OpenedProject> {
   let archive: ZipArchive;
+  let assetArchive: ZipArchive;
   try {
-    archive = openZip(bytes);
+    archive = openZip(bytes, limits.entries);
+    // (the same archive, its attachments read within their own limits)
+    assetArchive = openZip(bytes, limits.assets);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`The file is not a readable cSlope project: ${msg}`, { cause: err });
@@ -417,7 +451,7 @@ export async function openProjectArchive(bytes: Uint8Array): Promise<OpenedProje
     const results = archive.has(RESULTS) ? await readJsonEntry(archive, RESULTS) : null;
     return withoutArchive(parseProjectData({ ...joinResults(project, results), created: manifest.created }), "cslp-3file", manifest);
   }
-  return openLayout(archive, manifest);
+  return openLayout(archive, assetArchive, manifest);
 }
 
 /** The manifest validated; refuses a file this version must not read. */
@@ -450,7 +484,7 @@ function readManifest(raw: unknown): CslpManifest {
 }
 
 /** The layout of this version: project.json naming the models, each in its folder. */
-async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<OpenedProject> {
+async function openLayout(archive: ZipArchive, assetArchive: ZipArchive, manifest: CslpManifest): Promise<OpenedProject> {
   if (!archive.has(PROJECT)) {
     throw new Error("The project file is damaged (the archive has no project.json).");
   }
@@ -521,7 +555,7 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
     for (const item of Array.isArray(raw) ? raw : []) {
       const assetId = isLegacyEntry(item) ? (item as { assetId?: unknown }).assetId : undefined;
       const entry = typeof assetId === "string" && !sizes.has(assetId) ? assets.find((a) => a.id === assetId) : undefined;
-      if (entry) sizes.set(entry.id, await archive.read(entry.path).then(imageSize, () => null));
+      if (entry) sizes.set(entry.id, await assetArchive.read(entry.path).then(imageSize, () => null));
     }
   }
   for (const model of file.models) {
@@ -550,7 +584,7 @@ async function openLayout(archive: ZipArchive, manifest: CslpManifest): Promise<
     readAsset: async (id) => {
       const entry = assets.find((a) => a.id === id);
       if (!entry) throw new Error(`The project has no attachment ${id}.`);
-      const data = await archive.read(entry.path);
+      const data = await assetArchive.read(entry.path);
       if ((await sha256Hex(data)) !== entry.sha256) {
         throw new Error(`The project file is damaged (the attachment ${entry.originalName || entry.path} does not match its hash).`);
       }
