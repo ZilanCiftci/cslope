@@ -11,6 +11,8 @@ import {
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { CHART } from "../../components/ui/chart-colors";
+import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
@@ -98,8 +100,32 @@ function SensitivityBody({
     <ToolWindowFrame
       title={TITLE}
       description={DESCRIPTION}
-      footer={
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
+      footer={([false, true] as const).map((swedish) => (
+        <button
+          key={String(swedish)}
+          onClick={() =>
+            downloadFile(
+              safeFileName(`${model.name || "cslope"} sensitivity`, "csv"),
+              "\uFEFF" + sensitivityCsv(label, points, swedish),
+              "text/csv;charset=utf-8",
+            )
+          }
+          disabled={points.length === 0 || running}
+          className="btn"
+          title={
+            swedish
+              ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
+              : "CSV with commas and decimal points"
+          }
+        >
+          {swedish ? "CSV (decimal comma)" : "Export CSV"}
+        </button>
+      ))}
+      primary={
+        <>
+          <span className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
+            {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave a FOS` : ""}
+          </span>
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
@@ -116,37 +142,12 @@ function SensitivityBody({
                 })
               }
               disabled={!selected || from === to}
-              className="btn btn-primary min-w-[64px]"
+              className="btn btn-primary"
             >
               Run
             </button>
           )}
-          <span className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
-            {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave a FOS` : ""}
-          </span>
-          <span className="flex-1" />
-          {([false, true] as const).map((swedish) => (
-            <button
-              key={String(swedish)}
-              onClick={() =>
-                downloadFile(
-                  safeFileName(`${model.name || "cslope"} sensitivity`, "csv"),
-                  "\uFEFF" + sensitivityCsv(label, points, swedish),
-                  "text/csv;charset=utf-8",
-                )
-              }
-              disabled={points.length === 0 || running}
-              className="btn"
-              title={
-                swedish
-                  ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
-                  : "CSV with commas and decimal points"
-              }
-            >
-              {swedish ? "CSV (decimal comma)" : "Export CSV"}
-            </button>
-          ))}
-        </div>
+        </>
       }
     >
       <div className="flex flex-col gap-2 text-[12px]">
@@ -168,11 +169,11 @@ function SensitivityBody({
             </label>
             <div className="grid grid-cols-3 gap-2">
               <label className="flex flex-col gap-0.5">
-                <Label>From</Label>
+                <Label>{withUnit("From", selected?.unit)}</Label>
                 <DraftNumberInput value={from} onValueChange={setFrom} aria-label="From" />
               </label>
               <label className="flex flex-col gap-0.5">
-                <Label>To</Label>
+                <Label>{withUnit("To", selected?.unit)}</Label>
                 <DraftNumberInput value={to} onValueChange={setTo} aria-label="To" />
               </label>
               <label className="flex flex-col gap-0.5">
@@ -197,7 +198,7 @@ function SensitivityBody({
         {data.length > 0 && (
           <div aria-label="FOS against the varied value" ref={chartRef}>
             <LineChart width={chartWidth} height={240} data={data} margin={{ top: 10, right: 16, left: 0, bottom: 14 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,130,140,0.35)" />
+                <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                 <XAxis
                   type="number"
                   dataKey="value"
@@ -224,16 +225,15 @@ function SensitivityBody({
                   <ReferenceLine x={runValue} stroke="var(--color-vsc-text-muted)" strokeDasharray="2 3" />
                 )}
                 <Tooltip
-                  contentStyle={{
-                    background: "var(--color-vsc-input-bg)",
-                    border: "1px solid var(--color-vsc-border)",
-                    borderRadius: 6,
-                    fontSize: 11,
-                  }}
-                  formatter={(v) => [Number(v).toFixed(3), "FOS"]}
-                  labelFormatter={(v) => `${label} = ${round(Number(v))}`}
+                  content={(p) => (
+                    <ChartTooltip
+                      {...p}
+                      formatValue={(v) => Number(v).toFixed(3)}
+                      formatLabel={(v) => `${label} = ${round(Number(v))}`}
+                    />
+                  )}
                 />
-                <Line type="monotone" dataKey="fos" stroke="#26a69a" strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="fos" name="FOS" stroke={CHART.series} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
             </LineChart>
           </div>
         )}
@@ -276,6 +276,11 @@ function SensitivityBody({
       </div>
     </ToolWindowFrame>
   );
+}
+
+/** A field label with the variable's unit: "From (kPa)". */
+function withUnit(text: string, unit: string | undefined): string {
+  return unit ? `${text} (${unit})` : text;
 }
 
 function round(v: number): number {

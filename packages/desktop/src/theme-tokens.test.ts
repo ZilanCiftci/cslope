@@ -82,3 +82,18 @@ describe("theme contrast", () => {
     });
   }
 });
+
+describe("chart series contrast", () => {
+  // Lines and bars in the result windows' charts are graphics, not text:
+  // 3:1 or more on the panel they are drawn on (WCAG non-text contrast).
+  const series = ["--color-chart-1", "--color-chart-2", "--color-chart-3", "--color-chart-4"];
+  for (const theme of ["dark", "light"] as const) {
+    it.each(series)(`${theme}: %s on the panel is 3:1 or more`, (token) => {
+      const tokens = themeTokens(theme);
+      const fg = tokens.get(token);
+      const bg = tokens.get("--color-vsc-panel");
+      expect(fg && bg).toBeTruthy();
+      expect(contrast(fg!, bg!)).toBeGreaterThanOrEqual(3);
+    });
+  }
+});

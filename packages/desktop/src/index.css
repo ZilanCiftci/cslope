@@ -133,6 +133,29 @@
   --color-canvas-reinforcement-text: #d9b3f0;
   --color-canvas-pile-text: #d7b9ad;
 
+  /* Charts in the result windows (Results plot, Sensitivity, Probabilistic):
+     series lines and bars (3:1 on the panel; the text is never in these). */
+  --color-chart-1: #4fd1c5;
+  --color-chart-2: #e06c75;
+  --color-chart-3: #61afef;
+  --color-chart-4: #98c379;
+  --color-chart-grid: rgba(176,190,197,0.3);
+
+  /* The drawing windows (Place drawing, New models) and Pick lines. The
+     page is printed paper, white in both themes, with dark line work; the
+     marks on it are the same in both themes. */
+  --color-canvas-page: #ffffff;
+  --color-canvas-page-ink: #2b2f33;
+  --color-canvas-crop-mask: rgba(0,0,0,0.35);
+  --color-canvas-frame: #7a8590;
+  --color-canvas-crosshair-strong: #e5484d;
+  --color-canvas-axis-x: #d9480f;
+  --color-canvas-axis-y: #2b8a3e;
+  --color-canvas-axis-scale: #0a63c9;
+  --color-canvas-mark-text: #ffffff;
+  --color-canvas-pick: #f59e0b;
+  --color-canvas-pick-halo: rgba(0,0,0,0.45);
+
   color-scheme: dark;
 }
 
@@ -245,6 +268,25 @@
   --color-canvas-fe-label: rgba(160, 30, 30, 0.95);
   --color-canvas-reinforcement-text: #8e44ad;
   --color-canvas-pile-text: #5d4037;
+
+  --color-chart-1: #00897b;
+  --color-chart-2: #d32f2f;
+  --color-chart-3: #1e6fd9;
+  --color-chart-4: #388e3c;
+  --color-chart-grid: rgba(120,144,156,0.35);
+
+  /* The drawing windows: the same as in the dark theme (marks on paper). */
+  --color-canvas-page: #ffffff;
+  --color-canvas-page-ink: #2b2f33;
+  --color-canvas-crop-mask: rgba(0,0,0,0.35);
+  --color-canvas-frame: #7a8590;
+  --color-canvas-crosshair-strong: #e5484d;
+  --color-canvas-axis-x: #d9480f;
+  --color-canvas-axis-y: #2b8a3e;
+  --color-canvas-axis-scale: #0a63c9;
+  --color-canvas-mark-text: #ffffff;
+  --color-canvas-pick: #f59e0b;
+  --color-canvas-pick-halo: rgba(0,0,0,0.45);
 
   color-scheme: light;
 }

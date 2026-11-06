@@ -121,7 +121,11 @@ describe("Probabilistic analysis window", () => {
 
   it("runs Monte Carlo with samples, seed and distribution", () => {
     renderWindow();
-    fireEvent.click(screen.getByLabelText("Monte Carlo"));
+    const methods = within(screen.getByRole("group", { name: "Method" }));
+    expect(methods.getByRole("button", { name: "Taylor series" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(methods.getByRole("button", { name: "Monte Carlo" }));
+    expect(methods.getByRole("button", { name: "Monte Carlo" })).toHaveAttribute("aria-pressed", "true");
+    expect(methods.getByRole("button", { name: "Taylor series" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByLabelText("Distribution 1")).not.toBeDisabled();
     fireEvent.change(screen.getByLabelText("Distribution 1"), { target: { value: "lognormal" } });
     const samples = screen.getByLabelText("Samples");
@@ -134,6 +138,14 @@ describe("Probabilistic analysis window", () => {
     const [, variables, , options] = run.mock.calls[0] as unknown as [unknown, { distribution: string }[], unknown, unknown];
     expect(variables[0].distribution).toBe("lognormal");
     expect(options).toEqual({ method: "monte-carlo", samples: 500, seed: 7 });
+  });
+
+  it("says how many analyses the Taylor series runs and where the results will be", () => {
+    renderWindow();
+    expect(screen.getByRole("checkbox", { name: /\(3 analyses\)/ })).toBeChecked();
+    expect(screen.getByTestId("reliability-empty")).toHaveTextContent("Run to compute β and Pf.");
+    act(() => useReliabilityStore.setState({ result: taylorResult(), labels: ["Clay: c (kPa)"] }));
+    expect(screen.queryByTestId("reliability-empty")).toBeNull();
   });
 
   it("can skip the new search per value in the Taylor series", () => {
