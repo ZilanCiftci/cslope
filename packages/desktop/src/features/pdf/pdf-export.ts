@@ -389,6 +389,8 @@ export function exportVectorPdf(data: PdfExportData): void {
         materialBoundaries,
         regionMaterials,
         soilIndex >= 0,
+        "all",
+        rvs.layerStyles?.soilColor?.opacity,
       );
     }
 
@@ -498,42 +500,75 @@ export function exportVectorPdf(data: PdfExportData): void {
         waterLines: piezometricLine.lines,
         criticalSurface: result.criticalSurface,
         showFosLabel: rvs.showFosLabel,
+        fosLabelStyle: rvs.layerStyles?.fosLabel,
         customSurfaces,
         customLabelBoxes,
         bounds: { left: innerFrame.x, top: innerFrame.y, right: innerFrame.x + innerFrame.w, bottom: innerFrame.y + innerFrame.h },
       });
-      if (result.criticalSurface?.reinforcementForces?.length) {
-        const cs = result.criticalSurface;
-        drawReinforcementForcesPdf(
-          pdf,
-          tf,
-          cs.reinforcementForces!,
-          forceLabelContext(tf.worldToPdf, {
-            reinforcements,
-            piles,
-            surface: surfacePoints(cs),
-            numberSize: 2.8,
-            model: coordinates,
-            water: piezometricLine.lines.map((l) => l.coordinates),
-            boundaries: materialBoundaries.map((b) => b.coordinates),
-            loads: [
-              ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
-              ...loadLabels,
-            ],
-            markers:
-              analysisLimits.enabled && !customPlanesOnly
-                ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
-                : [],
-            numberScene,
-            // A margin inside the plot frame, as on the canvas.
-            bounds: {
-              left: innerFrame.x + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-              top: innerFrame.y + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-              right: innerFrame.x + innerFrame.w - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-              bottom: innerFrame.y + innerFrame.h - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
-            },
-          }),
-        );
+      if (result.criticalSurface?.reinforcementForces?.length) {
+
+        const cs = result.criticalSurface;
+
+        drawReinforcementForcesPdf(
+
+          pdf,
+
+          tf,
+
+          cs.reinforcementForces!,
+
+          forceLabelContext(tf.worldToPdf, {
+
+            reinforcements,
+
+            piles,
+
+            surface: surfacePoints(cs),
+
+            numberSize: 2.8,
+
+            model: coordinates,
+
+            water: piezometricLine.lines.map((l) => l.coordinates),
+
+            boundaries: materialBoundaries.map((b) => b.coordinates),
+
+            loads: [
+
+              ...loadObstacleBoxes(tf.worldToPdf, coordinates, udls, lineLoads, ARROW_HEIGHT_PX * tf.mmPerPx),
+
+              ...loadLabels,
+
+            ],
+
+            markers:
+
+              analysisLimits.enabled && !customPlanesOnly
+
+                ? limitMarkerObstacles(analysisLimits, coordinates, tf.worldToPdf, tf.mmPerPx, 2 * tf.mmPerPx)
+
+                : [],
+
+            numberScene,
+
+            // A margin inside the plot frame, as on the canvas.
+
+            bounds: {
+
+              left: innerFrame.x + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+
+              top: innerFrame.y + FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+
+              right: innerFrame.x + innerFrame.w - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+
+              bottom: innerFrame.y + innerFrame.h - FORCE_LABEL_MARGIN_PX * tf.mmPerPx,
+
+            },
+
+          }),
+
+        );
+
       }
       unclip();
     };
@@ -572,7 +607,7 @@ export function exportVectorPdf(data: PdfExportData): void {
           });
           if (step.withFosLabel) drawFosLabels();
         } else if (step.layer === "soilColor") {
-          if (coordinates.length >= 3) drawMaterialRegions(pdf, tf, coordinates, materials, materialBoundaries, regionMaterials, true, "fills");
+          if (coordinates.length >= 3) drawMaterialRegions(pdf, tf, coordinates, materials, materialBoundaries, regionMaterials, true, "fills", rvs.layerStyles?.soilColor?.opacity);
         } else if (step.layer === "surfaces") {
           drawSlipSurfaces(pdf, tf, result, rvs);
         } else if (step.layer === "customSurfaces") {
@@ -592,14 +627,22 @@ export function exportVectorPdf(data: PdfExportData): void {
       if (i === lastModelStep) finishModel();
     });
 
-    drawRulerFrame(
-      pdf,
-      tf,
-      viewScale,
-      innerFrame,
-      rvs.gridSpacing,
-      clampMinorTicks(rvs.minorTicks ?? 0),
-    );
+    drawRulerFrame(
+
+      pdf,
+
+      tf,
+
+      viewScale,
+
+      innerFrame,
+
+      rvs.gridSpacing,
+
+      clampMinorTicks(rvs.minorTicks ?? 0),
+
+    );
+
 
     // Both are the user's choice (the PDF button's menu): the title line is
     // off by default, as the drawing's text annotations carry the title.

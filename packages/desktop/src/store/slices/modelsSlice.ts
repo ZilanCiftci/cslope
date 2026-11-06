@@ -114,6 +114,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   assigningMaterialId: null,
   selectedRegionKey: null,
   selectedAnnotationIds: [],
+  selectedResultLayer: null,
 });
 
 /** The locks as a model entry keeps them: absent when nothing is locked. */

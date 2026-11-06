@@ -35,6 +35,19 @@ export const DISPLAY_LAYER_KEYS = [
 
 export type DisplayLayerKey = (typeof DISPLAY_LAYER_KEYS)[number];
 
+/** A display layer's name (as the ribbon's button; the heading of its properties). */
+export const DISPLAY_LAYER_NAMES: Record<DisplayLayerKey, string> = {
+  soilColor: "Soil colors",
+  femMesh: "FE mesh",
+  femPlasticZone: "Plastic zone",
+  surfaces: "Surfaces",
+  customSurfaces: "Custom surfaces",
+  criticalSurface: "Critical surface",
+  slices: "Slices",
+  center: "Center",
+  fosLabel: "FOS label",
+};
+
 /** The prefix of a drawing's layer key. */
 export const DRAWING_LAYER_PREFIX = "drawing:";
 

@@ -33,6 +33,8 @@ import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/reference";
 import { ReferenceProperties } from "./ReferenceProperties";
 import { LayersList } from "./LayersList";
+import { LayerProperties } from "./LayerProperties";
+import { DISPLAY_LAYER_NAMES, displayLayerShown } from "./layers";
 import { openSearchLimits } from "../analysis/open-search-limits";
 import { isNoSlipSurfaceError } from "../analysis/analysis-error";
 import { modelViewLock } from "../view/viewLock";
@@ -157,6 +159,8 @@ export function ResultSidebar() {
   const updateAnnotation = useAppStore((s) => s.updateAnnotation);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
   const selectedResultObject = useAppStore((s) => s.selectedResultObject);
+  const selectedResultLayer = useAppStore((s) => s.selectedResultLayer);
+  const backgrounds = useAppStore((s) => s.backgrounds);
   const projectInfo = useAppStore((s) => s.projectInfo);
   const parameters = useAppStore((s) => s.parameters);
   // Text as the sheet shows it: #Title, {{expressions}} and \n resolved.
@@ -496,6 +500,11 @@ export function ResultSidebar() {
   }, [selectedMaterialTableAnnotations]);
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
+  // A display layer selected in Layers, while it is drawn: its properties.
+  const selectedLayer =
+    selectedResultLayer && displayLayerShown(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds })
+      ? selectedResultLayer
+      : null;
 
   // Results › Sheet settings: open Properties, bring the paper's fields
   // into view and put the cursor in the first one.
@@ -519,7 +528,7 @@ export function ResultSidebar() {
   // below the panel's edge.
   const selectionTitle = selectionSectionTitle(selectedAnnotations, paperFrameSelected);
   const selectionSectionRef = useRef<HTMLDivElement>(null);
-  const selectionKey = paperFrameSelected ? "paper-frame" : selectedAnnotationIds.join("\n");
+  const selectionKey = paperFrameSelected ? "paper-frame" : selectedLayer ? `layer:${selectedLayer}` : selectedAnnotationIds.join("\n");
   useEffect(() => {
     if (!selectionKey) return;
     selectionSectionRef.current?.scrollIntoView?.({ block: "nearest" });
@@ -714,12 +723,14 @@ export function ResultSidebar() {
 
       <div ref={selectionSectionRef} data-testid="selection-section">
       <Section
-        // Named after what is selected: its fields are below.
-        title={selectionTitle}
+        // Named after what is selected (a display layer: its name): its fields are below.
+        title={selectedLayer ? DISPLAY_LAYER_NAMES[selectedLayer] : selectionTitle}
         open={openSections.properties}
         onToggle={() => toggleSection("properties")}
       >
-        {selectedAnnotations.length === 0 && !paperFrameSelected && (
+        {selectedLayer && <LayerProperties layer={selectedLayer} />}
+
+        {selectedAnnotations.length === 0 && !paperFrameSelected && !selectedLayer && (
           <p
             className="text-[11px]"
             style={{ color: "var(--color-vsc-text-muted)" }}

@@ -7,6 +7,7 @@ import type {
   SlopeDefinition,
 } from "@cslope/engine";
 import type { FosSchemeId } from "../utils/fos-color";
+import type { DisplayLayerKey } from "../features/results/layers";
 
 // Export analysis types so UI components can consume them from a single module
 export type { AnalysisResult } from "@cslope/engine";
@@ -482,6 +483,31 @@ export interface ResultViewSettings {
    * on its own and must carry the factor of safety); false turns it off.
    */
   pdfTitleLine?: boolean;
+  /**
+   * How the display layers are drawn (Properties › Layers, a display
+   * layer's properties): each field an override of the drawing's own
+   * value; absent: as always drawn (the theme's ink, the line widths of
+   * features/rendering/style-spec.ts). Colors are "#rrggbb".
+   */
+  layerStyles?: ResultLayerStyles;
+}
+
+/** The styles of the result sheet's display layers (ResultViewSettings.layerStyles). */
+export interface ResultLayerStyles {
+  /** Opacity of the soil colors, 0 to 1. */
+  soilColor?: { opacity?: number };
+  femMesh?: { color?: string; width?: number; opacity?: number };
+  /** Opacity: of the most strained elements (the rest in proportion). */
+  femPlasticZone?: { color?: string; opacity?: number };
+  surfaces?: { width?: number; opacity?: number };
+  /** The custom surfaces' lines and their FOS labels (fontSize, px). */
+  customSurfaces?: { color?: string; width?: number; fontSize?: number };
+  criticalSurface?: { color?: string; width?: number };
+  slices?: { color?: string; width?: number };
+  /** size: the radius of the center dot (px); radiusLines: the lines to the entry and exit. */
+  center?: { color?: string; size?: number; radiusLines?: boolean };
+  /** fontSize in px at paper zoom 1; decimals of the factor of safety. */
+  fosLabel?: { fontSize?: number; fontFamily?: string; color?: string; bold?: boolean; decimals?: number };
 }
 
 /** The first form of a background's placement (read from older files, converted on read). */
@@ -936,6 +962,13 @@ export interface ResultViewSlice {
   resultViewSettings: ResultViewSettings;
   selectedAnnotationIds: string[];
   selectedResultObject: "paper-frame" | null;
+  /**
+   * The display layer selected in Properties › Layers (its properties
+   * show in the sidebar); null: none. Selecting an annotation or the
+   * sheet clears it, and the other way round.
+   */
+  selectedResultLayer: DisplayLayerKey | null;
+  setSelectedResultLayer: (key: DisplayLayerKey | null) => void;
   setResultViewSettings: (patch: Partial<ResultViewSettings>) => void;
   addAnnotation: (type: PaperAnnotation["type"]) => void;
   /** Adds a reference annotation (model coordinates) and selects it; returns its id. */

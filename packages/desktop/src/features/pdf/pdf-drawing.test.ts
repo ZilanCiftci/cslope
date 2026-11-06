@@ -1062,3 +1062,63 @@ describe("drawAnnotations", () => {
     expect(rec.balanced()).toBe(true);
   });
 });
+
+describe("display layer styles in the PDF", () => {
+  const STYLES: ResultViewSettings["layerStyles"] = {
+    criticalSurface: { color: "#cc0000", width: 3 },
+    center: { color: "#00cc00", size: 6, radiusLines: false },
+    slices: { color: "#0066cc", width: 1.1 },
+    fosLabel: { color: "#6600cc", decimals: 1, fontSize: 24, fontFamily: "serif", bold: false },
+  };
+
+  it("draws the critical surface, center, slices and FOS label as styled, scaled as on the canvas", () => {
+    const rec = recorder();
+    drawCriticalSurface(
+      rec.pdf,
+      tf,
+      result({ criticalSlices: [slice(8, 12), slice(12, 16)] }),
+      rvs({ showSlices: true, showCentreMarker: true, showFosLabel: true, layerStyles: STYLES }),
+      COORDS,
+    );
+    expect(rec.balanced()).toBe(true);
+    // Twice the canvas default (1.5 px): twice the PDF default (0.38 mm).
+    expect(rec.of("setLineWidth").some((c) => Math.abs((c.args[0] as number) - 0.76) < 1e-9)).toBe(true);
+    expect(rec.of("setDrawColor").some((c) => c.args.join() === "204,0,0")).toBe(true);
+    // The center: a dot twice the default (0.8 mm), no radius lines.
+    expect(rec.of("circle")[0].args[2]).toBeCloseTo(1.6, 9);
+    expect(rec.of("setFillColor").some((c) => c.args.join() === "0,204,0")).toBe(true);
+    const [cx, cy] = tf.worldToPdf(CIRCLE.cx, CIRCLE.cy);
+    expect(rec.of("line").some((c) => c.args[0] === cx && c.args[1] === cy)).toBe(false);
+    // Slices in their color only.
+    expect(rec.linesIn([0, 102, 204]).length).toBeGreaterThan(0);
+    // The label: one decimal, its color, twice the size, in the serif font.
+    expect(rec.texts()).toEqual(["1.2"]);
+    expect(rec.of("setTextColor").at(-1)!.args).toEqual([102, 0, 204]);
+    expect(rec.pdf.getFontSize()).toBe(20);
+    expect(rec.pdf.getFont().fontName).toBe("times");
+  });
+
+  it("draws the soil colors with their opacity, and the other surfaces with their width", () => {
+    const rec = recorder();
+    drawMaterialRegions(rec.pdf, tf, COORDS, [{ ...DEFAULT_MATERIAL }], [], [], true, "fills", 0.4);
+    expect(rec.of("setGState")).toHaveLength(1);
+    expect(rec.balanced()).toBe(true);
+    const none = recorder();
+    drawMaterialRegions(none.pdf, tf, COORDS, [{ ...DEFAULT_MATERIAL }], [], [], true, "fills");
+    expect(none.of("setGState")).toHaveLength(0);
+
+    const two = surface({ fos: 1.6, cy: 16 });
+    const surf = recorder();
+    drawSlipSurfaces(surf.pdf, tf, result({ allSurfaces: [surface(), two] }), rvs({ surfaceDisplay: "all", layerStyles: { surfaces: { width: 2 } } }));
+    expect(surf.of("setLineWidth").map((c) => c.args[0])).toEqual([expect.closeTo(0.3, 9)]);
+  });
+
+  it("draws the custom surfaces in their color and width", () => {
+    const custom = surface({ fos: 1.5, cy: 17 });
+    const res = result({ customSurfaces: [{ kind: "circle", index: 0, surface: custom }] });
+    const rec = recorder();
+    drawCustomSurfaceLines(rec.pdf, tf, res, rvs({ showCustomSurfaces: true, layerStyles: { customSurfaces: { color: "#6600cc", width: 2 } } }));
+    expect(rec.of("setDrawColor")[0].args).toEqual([102, 0, 204]);
+    expect(rec.of("setLineWidth")[0].args[0]).toBeCloseTo(0.5, 9);
+  });
+});
