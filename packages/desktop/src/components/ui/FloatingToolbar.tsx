@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { ChevronDown } from "lucide-react";
 import type { AnalysisRunState, CanvasToolbarState } from "../../store/types";
 import { EditModeIcon, ResultsModeIcon } from "../icons/ModeIcons";
 import {
@@ -147,7 +148,7 @@ export function FloatingToolbar({
 
   const runColor =
     runState === "running"
-      ? "var(--color-vsc-error, #f44747)"
+      ? "var(--color-vsc-error)"
       : "var(--color-vsc-success)";
 
   const zoomPresets = [25, 50, 75, 100, 125, 150, 200, 300, 400, 600, 800];
@@ -193,7 +194,9 @@ export function FloatingToolbar({
             label="Results"
             showLabel={!compact}
             active={mode === "result"}
-            disabled={!hasResult}
+            // The result view of a failed run is open without a result: the
+            // mode the user is in never reads as unavailable.
+            disabled={!hasResult && mode !== "result"}
             onClick={() => {
               if (hasResult) setMode("result");
             }}
@@ -238,22 +241,28 @@ export function FloatingToolbar({
           <button
             onClick={() => setRunMenuOpen((v) => !v)}
             disabled={runState === "running"}
-            className="h-6 w-4 rounded-xs flex items-center justify-center text-[10px] hover:bg-[var(--color-vsc-list-active)] disabled:opacity-40"
+            className="h-6 w-4 rounded-xs flex items-center justify-center hover:enabled:bg-[var(--color-vsc-list-active)]"
             style={{
-              color: "var(--color-vsc-text-muted)",
+              color: runState === "running"
+                ? "var(--color-vsc-field-disabled-text)"
+                : "var(--color-vsc-text-muted)",
             }}
             title="More run options"
+            aria-label="More run options"
+            aria-haspopup="menu"
+            aria-expanded={runMenuOpen}
           >
-            ▾
+            <ChevronDown size={12} strokeWidth={1.75} aria-hidden="true" />
           </button>
 
           {/* Dropdown menu */}
           {runMenuOpen && (
             <div
-              className="absolute bottom-full mb-1 rounded-xs shadow-md overflow-hidden min-w-[140px] py-0.5"
+              className="absolute bottom-full mb-1 rounded-xs overflow-hidden min-w-[140px] py-0.5"
               style={{
                 background: "var(--color-vsc-input-bg)",
                 border: "1px solid var(--color-vsc-border)",
+                boxShadow: "var(--color-vsc-shadow-float)",
               }}
             >
               <DropdownItem
@@ -268,7 +277,7 @@ export function FloatingToolbar({
                 style={{ borderTop: "1px solid var(--color-vsc-border)" }}
               />
               <DropdownItem
-                label="Clear results"
+                label="Clear results of this model"
                 disabled={!hasResult}
                 onClick={() => {
                   setRunMenuOpen(false);
@@ -276,7 +285,7 @@ export function FloatingToolbar({
                 }}
               />
               <DropdownItem
-                label="Clear all results"
+                label="Clear results of all models"
                 onClick={() => {
                   setRunMenuOpen(false);
                   onResetAll();
@@ -326,6 +335,8 @@ export function FloatingToolbar({
                 canvasToolbar?.onSetZoomPercent(Number(e.target.value))
               }
               disabled={!canvasToolbar}
+              aria-label="Zoom"
+              title="Zoom"
             >
               {zoomPresets.map((v) => (
                 <option key={v} value={v}>
@@ -404,20 +415,26 @@ function ToolbarButton({
   return (
     <button
       title={shortcut ? `${label} (${shortcut})` : label}
+      // Disabled for the keyboard and assistive technology too, not only
+      // drawn faded.
+      disabled={disabled}
       onClick={disabled ? undefined : onClick}
       aria-pressed={active === undefined ? undefined : active}
       className={`h-6 rounded-xs flex items-center justify-center gap-1 border ${
         active
           ? "bg-[var(--color-vsc-selected-bg)]"
-          : "hover:bg-[var(--color-vsc-list-active)]"
+          : "hover:enabled:bg-[var(--color-vsc-list-active)]"
       }`}
       style={{
         padding: showLabel ? "0 6px" : "0 3px",
         borderColor: active
           ? "color-mix(in srgb, var(--color-vsc-accent) 55%, transparent)"
           : "transparent",
-        color: active ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
-        opacity: disabled ? 0.35 : 1,
+        color: disabled
+          ? "var(--color-vsc-field-disabled-text)"
+          : active
+            ? "var(--color-vsc-text-bright)"
+            : "var(--color-vsc-text)",
         pointerEvents: disabled ? "none" : "auto",
       }}
     >
@@ -442,7 +459,7 @@ function DropdownItem({
       disabled={disabled}
       className="w-full text-left px-3 py-1 text-[12px]"
       style={{
-        color: disabled ? "var(--color-vsc-badge)" : "var(--color-vsc-text)",
+        color: disabled ? "var(--color-vsc-field-disabled-text)" : "var(--color-vsc-text)",
         pointerEvents: disabled ? "none" : "auto",
       }}
       onMouseEnter={(e) => {

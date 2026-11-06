@@ -606,7 +606,7 @@ export interface DrawCanvasParams {
    */
   selection?: CanvasSelection | null;
   /** The object under the pointer (edit view), drawn with a faint highlight. */
-  hoverObject?: { object: CanvasObjectRef; point: CanvasPointKey | null } | null;
+  hoverObject?: { object: CanvasObjectRef; point: CanvasPointKey | null; locked?: boolean } | null;
   /** The locked objects of the edit view. */
   locks?: ModelLocks;
   /**
@@ -1833,6 +1833,7 @@ export function drawCanvas(
     ctx.textBaseline = "alphabetic";
     ctx.textAlign = "left";
   }
+  let drawHeadLabels: (() => void) | null = null;
   // Imported head and reference lines: unlike the water lines and the
   // drawdown line (blue, long dashes), head lines are teal and dash-dotted
   // with a label at their right end; reference lines are faint and dotted.
@@ -1865,24 +1866,37 @@ export function drawCanvas(
       });
       ctx.setLineDash([]);
     });
-    ctx.fillStyle = HEAD_LABEL_COLOR;
-    ctx.font = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
-    // Below the line, clear of the "before drawdown" label above its line.
-    ctx.textAlign = "right";
-    ctx.textBaseline = "top";
-    // Labels of lines ending close together are put below one another.
+    const headFont = `${9 * paperZoom}px 'Segoe UI', sans-serif`;
+    ctx.font = headFont;
+    // Labels of lines ending close together are put below one another, a
+    // whole plate (as fillTextOnPlate draws it) and a gap apart.
+    const plateH = 9 * 1.15 * paperZoom;
+    const platePad = LABEL_PLATE_PAD_PX * paperZoom;
     const labels = waternet.headLines.flatMap((head, i) => {
       if (head.points.length < 2) return [];
       const pts = head.points.map(([x, y]) => worldToCanvas(x, y, w, h));
       const [lx, ly] = pts.reduce((a, b) => (b[0] > a[0] ? b : a));
       const text = `head line ${i + 1}`;
-      return [{ text, right: lx - 2 * paperZoom, top: ly + 2 * paperZoom, width: ctx.measureText(text).width, height: 10 * paperZoom }];
+      return [{ text, right: lx - 2 * paperZoom, top: ly + 2 * paperZoom, width: ctx.measureText(text).width + platePad, height: plateH }];
     });
-    const tops = staggerLabelTops(labels);
-    // A plate keeps the ground line and the soil fill from striking through them.
-    labels.forEach((l, i) => fillTextOnPlate(ctx, l.text, l.right, tops[i], LINE_LABEL_HALO, LABEL_PLATE_PAD_PX * paperZoom));
-    ctx.textBaseline = "alphabetic";
-    ctx.textAlign = "left";
+    const tops = staggerLabelTops(labels, 1.5 * paperZoom);
+    // The point labels (a selected line's coordinates) keep off them.
+    labels.forEach((l, i) =>
+      pointSymbols.push({ left: l.right - l.width - platePad, top: tops[i], right: l.right + platePad, bottom: tops[i] + plateH }),
+    );
+    // Drawn after the water lines, so a (selected, thick) water line does
+    // not strike through them.
+    drawHeadLabels = () => {
+      ctx.fillStyle = HEAD_LABEL_COLOR;
+      ctx.font = headFont;
+      // Below the line, clear of the "before drawdown" label above its line.
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      // A plate keeps the ground line and the soil fill from striking through them.
+      labels.forEach((l, i) => fillTextOnPlate(ctx, l.text, l.right, tops[i], LINE_LABEL_HALO, platePad));
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+    };
   }
   if (piezometricLine.lines.length > 0) {
     const multiLine = piezometricLine.lines.length > 1;
@@ -2040,6 +2054,8 @@ export function drawCanvas(
     }
   }
 
+  drawHeadLabels?.();
+
   // ── Tension crack depth (edit mode) ─────────────────────
   // A crack of fixed depth shows as a vertical dimension from the ground
   // down to the crack's depth (where editCrackMarker puts it), labelled
@@ -2137,10 +2153,11 @@ export function drawCanvas(
 
   // ── Selection outline and hover highlight (edit view) ───
   // The selected object's lines in the selection colour; the object under
-  // the pointer with a faint, wide halo of it (under the handles).
+  // the pointer with a faint, wide halo of it (under the handles); a locked
+  // one in the locked grey, so it does not look selected.
   if (mode !== "result") {
     if (selObject?.type === "exterior") strokeObject(selObject, SELECTED_BOUNDARY_COLOR, 2, 0.9);
-    if (hoverObject) strokeObject(hoverObject.object, SELECTED_BOUNDARY_COLOR, 8, 0.3);
+    if (hoverObject) strokeObject(hoverObject.object, hoverObject.locked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR, 8, 0.3);
     // A selected drawing: its crop frame, dashed (grey when locked).
     if (selObject?.type === "background") {
       strokeObject(selObject, selLocked ? LOCKED_HANDLE_COLOR : SELECTED_BOUNDARY_COLOR, 1.75, 1, [7, 4]);

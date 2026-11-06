@@ -135,7 +135,7 @@ describe("App — VS Code dark layout", () => {
 
   it("renders the status bar with mode and point count", () => {
     render(<App />);
-    expect(screen.getByText("EDIT")).toBeInTheDocument();
+    expect(within(screen.getByTestId("status-bar")).getByText("Edit")).toBeInTheDocument();
     const pointCount = useAppStore.getState().coordinates.length;
     expect(
       screen.getByText(new RegExp(`Points: ${pointCount}`)),
@@ -200,8 +200,8 @@ describe("App — VS Code dark layout", () => {
     const statusBar = within(screen.getByTestId("status-bar"));
     expect(statusBar.getByText("1.234")).toBeInTheDocument();
     expect(statusBar.getByText(/\(Bishop\)/)).toBeInTheDocument();
-    // Status bar shows RESULT mode
-    expect(screen.getByText("RESULT")).toBeInTheDocument();
+    // Status bar shows the Result mode
+    expect(statusBar.getByText("Result")).toBeInTheDocument();
   });
 
   it("disables run-all menu when analysis is running", () => {
