@@ -48,7 +48,7 @@ A `.cslp` file is a ZIP archive of JSON files, one folder per model:
 | `project.json` | the order of the models, the active model, the unit system (SI) |
 | `models/<id>/model.json` | one model: everything but its result |
 | `models/<id>/result.json` | the model's last analysis result, when there is one, with a hash of the input it was computed for and the engine version that computed it |
-| `models/<id>/backgrounds.json` | the [drawings](/docs/drawings) placed under the model, when there are any: which attachment, its page and crop, the calibration and the transform to model coordinates, opacity and visibility |
+| `models/<id>/backgrounds.json` | the [drawings](/docs/drawings) placed under the model, when there are any: which attachment, its page and crop, the calibration and the transform to model coordinates, opacity, visibility and display options (shown in results, inverted in the dark theme) |
 | `assets/index.json`, `assets/` | the project's attachments (the drawing files: PNG, JPEG, TIFF, PDF), when there are any; each file once, however many models place it |
 | `thumbnail.png` | a small picture of the active model's result sheet, when one was on screen |
 

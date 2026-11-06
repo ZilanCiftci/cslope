@@ -41,6 +41,7 @@ import { drawingSnapAt } from "../features/drawings/canvas-snap";
 import { SnapMarkerView } from "../features/drawings/SnapMarkerView";
 import { AxisOverlay } from "../features/canvas/AxisOverlay";
 import { setPaperDrawSource } from "../features/export/paper-png";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../constants";
 export function ResultCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const crosshairCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -240,6 +241,7 @@ export function ResultCanvas() {
         resultViewSettings.paperFrame.zoom ?? 1,
         resultViewSettings.paperFrame.offsetX ?? 0,
         resultViewSettings.paperFrame.offsetY ?? 0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
       );
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -361,6 +363,7 @@ export function ResultCanvas() {
     () => ({
       w: canvasSize.width,
       h: canvasSize.height,
+      paperBottomReserve: SCREEN_PAPER_BOTTOM_RESERVE_PX,
       mode,
       result,
       resultViewSettings,
@@ -555,6 +558,7 @@ export function ResultCanvas() {
         1,
         0,
         0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
       );
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;

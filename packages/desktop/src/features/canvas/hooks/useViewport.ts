@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, type RefObject } from "react";
 import { useAppStore } from "../../../store/app-store";
 import { computePaperFrame, computeInnerFrame } from "../../view/paper";
 import { computeViewLockFit } from "../../view/fit";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 export function useViewport(
   canvasRef: RefObject<HTMLCanvasElement | null>,
@@ -104,6 +105,7 @@ export function useViewport(
           state.resultViewSettings.paperFrame.zoom ?? 1,
           state.resultViewSettings.paperFrame.offsetX ?? 0,
           state.resultViewSettings.paperFrame.offsetY ?? 0,
+          SCREEN_PAPER_BOTTOM_RESERVE_PX,
         );
         const inner = computeInnerFrame(pf);
         const fit = computeViewLockFit(inner, vl, w, h);
