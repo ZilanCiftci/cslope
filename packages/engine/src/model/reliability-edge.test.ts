@@ -131,10 +131,10 @@ describe("reliability: Monte Carlo sampling", () => {
   });
 
   it("throws when (almost) every sample fails", () => {
-    // Negative strength everywhere: every FOS is negative and discarded.
+    // Negative strength everywhere: every F is negative and discarded.
     expect(() =>
       analyseReliability(clay, options, [{ ...SU, sd: 1, min: -1e6, max: -1 }], { method: "monte-carlo", samples: 10 }),
-    ).toThrow(/Too few Monte Carlo samples/);
+    ).toThrow(/^Too few Monte Carlo samples gave an F: 0 of 10 \(at least 2 are needed\)\. Narrow the distributions/);
   });
 
   it("lognormal samples are positive; with mean ≤ 0 the variable is sampled as normal", () => {

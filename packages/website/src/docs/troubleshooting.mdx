@@ -85,6 +85,12 @@ The Taylor series analyzes each variable at its mean ± σ, and a strength or un
 
 The model has no valid slip surface with every variable at its mean: run the analysis itself first and solve that ([Sensitivity and probability](/docs/sensitivity)).
 
+## A Monte Carlo analysis does not run
+
+> Too few Monte Carlo samples gave an F: … of … (at least 2 are needed). Narrow the distributions, or set their minimum and maximum to values that give a valid slip surface.
+
+Most of the sampled values gave no valid slip surface (or a negative F), so there is no distribution of F to report. This happens when a variable is spread so wide that most samples make the slope fail outright or leave no valid surface: lower σ, or set the variable's minimum and maximum to the range the parameter can really take ([Sensitivity and probability](/docs/sensitivity)).
+
 ## An imported model cannot be edited on the canvas
 
 A model imported from another program or from a DXF or DWG drawing starts with its exterior and material boundaries locked, so that a stray drag does not move them. The status bar shows *Geometry is locked (imported) · Unlock*, and the pointer over a locked point *Locked · right-click to unlock*. Click **Unlock** in the status bar, or right-click the boundary and choose **Unlock** ([Editing on the canvas](/docs/interface#editing-on-the-canvas)). The tables in the boundary windows can be edited while the geometry is locked.

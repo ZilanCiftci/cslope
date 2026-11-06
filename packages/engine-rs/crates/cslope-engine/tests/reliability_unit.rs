@@ -279,7 +279,11 @@ fn monte_carlo_truncation_clamping_and_failures() {
         json!({ "method": "monte-carlo", "samples": 10 }),
     )
     .unwrap_err();
-    assert!(e.contains("Too few Monte Carlo samples"));
+    assert!(
+        e.starts_with("Too few Monte Carlo samples gave an F: 0 of 10 (at least 2 are needed)."),
+        "{e}"
+    );
+    assert!(!e.contains("FOS"), "{e}");
 }
 
 #[test]

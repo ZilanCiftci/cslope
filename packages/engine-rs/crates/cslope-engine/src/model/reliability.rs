@@ -866,7 +866,12 @@ impl ReliabilitySteps {
             }
         }
         if samples.len() < 2 {
-            return Err(EngineError::new("Too few Monte Carlo samples gave a FOS."));
+            // "F" as the app says it (D-14), with the count and what to do.
+            return Err(EngineError::new(format!(
+                "Too few Monte Carlo samples gave an F: {} of {} (at least 2 are needed). Narrow the distributions, or set their minimum and maximum to values that give a valid slip surface.",
+                samples.len(),
+                samples.len() + failed
+            )));
         }
         let len = samples.len() as f64;
         let mut total = 0.0;
