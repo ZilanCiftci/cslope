@@ -14,12 +14,12 @@ import {
  * --color-canvas-* token of index.css, with the print colour as the
  * fallback (no stylesheet, as in the tests).
  *
- * The soil fills are the user's colours in both themes; lines drawn over
- * them keep the print colours where they read against the fill (see
- * draw.ts).
+ * The soil fills are the user's colours in both themes; in the dark theme
+ * the lines that cross them keep the theme's colour and get a thin halo
+ * of the sheet's colour, so they read over a light fill (see draw.ts).
  */
 export interface CanvasInk {
-  /** The critical surface, its radius lines, centre and FOS label; slice lines over the sheet. */
+  /** The critical surface, its radius lines, centre and FOS label; the slice lines in the dark theme. */
   critical: string;
   /** Distributed loads (outline, hatch, arrows, label) and their hover colour. */
   udl: string;
@@ -31,7 +31,7 @@ export interface CanvasInk {
   lineLoadHover: string;
   /** Imported reference lines (drawn faintly). */
   referenceLine: string;
-  /** Water lines (and the line before drawdown, the ponded-water arrows) and imported head lines, over the sheet. */
+  /** Water lines (and the line before drawdown, the ponded-water arrows) and imported head lines. */
   waterLine: string;
   headLine: string;
   /** Text annotations without a colour of their own. */
@@ -79,7 +79,7 @@ export const PRINT_INK: Readonly<CanvasInk> = {
   headLine: "#00897b",
   annotationText: ANNOTATION_DEFAULT_TEXT_COLOR,
   colorBar: "#000000",
-  tableBg: "rgba(255,255,255,0.92)",
+  tableBg: "#ffffff",
   tableHeaderBg: "#f0f0f0",
   tableRowAlt: "rgba(0,0,0,0.03)",
   tableRule: "#000000",
@@ -147,4 +147,9 @@ export function themeInk(): CanvasInk {
     if (v) ink[key] = v;
   }
   return ink;
+}
+
+/** Whether the app shows the dark theme (the export draws with the light one; see paper-png.ts). */
+export function isDarkTheme(): boolean {
+  return typeof document !== "undefined" && document.documentElement.dataset.theme === "dark";
 }

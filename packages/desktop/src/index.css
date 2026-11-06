@@ -97,8 +97,8 @@
   --color-canvas-water-label: #b4ccff;
   --color-canvas-head-label: #6ee0d2;
   /* Ink of the drawing: the critical surface, its radius lines and FOS
-     label, slice lines over the sheet (over a soil fill the print colour
-     where it reads better). */
+     label, the slice lines; one colour over the sheet and the soil fills,
+     on a thin halo of the sheet's colour (draw.ts). */
   --color-canvas-ink: #eef0f2;
   --color-canvas-grid-line: rgba(255,255,255,0.07);
   --color-canvas-udl: #ffa198;
@@ -108,8 +108,8 @@
   --color-canvas-line-load-hover: #c6dcff;
   --color-canvas-reference-line: #b3c1c9;
   --color-canvas-drawing-ink: #c9d1d9;
-  /* Water and head lines over the sheet (over a light soil fill they keep
-     their print colours). */
+  /* Water and head lines, over the sheet and the soil fills alike (on the
+     same halo as the ink). */
   --color-canvas-water-line: #7ea8ff;
   --color-canvas-head-line: #4fd1c5;
   --color-canvas-annotation-text: #eef0f2;
@@ -250,7 +250,7 @@
   --color-canvas-head-line: #00897b;
   --color-canvas-annotation-text: #000000;
   --color-canvas-color-bar: #000000;
-  --color-canvas-table-bg: rgba(255,255,255,0.92);
+  --color-canvas-table-bg: #ffffff;
   --color-canvas-table-header-bg: #f0f0f0;
   --color-canvas-table-row-alt: rgba(0,0,0,0.03);
   --color-canvas-table-rule: #000000;

@@ -15,7 +15,7 @@ import {
 } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { waterLineFitPoints } from "../view/extents";
-import { MODEL_SHORT_LABELS } from "../rendering/style-spec";
+import { COLOR_BAR_MIN_TEXT_PX, MATERIAL_TABLE_MIN_TEXT_PX, MODEL_SHORT_LABELS } from "../rendering/style-spec";
 import { PRINT_INK, type CanvasInk } from "./ink";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
@@ -30,6 +30,7 @@ import { fosTickLabel } from "../../utils/fos-color";
 import { colorBarRange, type ScaleFilter } from "../annotations/colorScale";
 import { mainPiezoLine } from "../../utils/piezo";
 import { suctionAngle } from "@cslope/engine";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../constants";
 
 export { computePaperFrame } from "../view/paper";
 
@@ -203,15 +204,26 @@ export function buildMaterialTableData(
 /** The rules of the material table (thin, as on paper). */
 const TABLE_RULE_PX = 0.6;
 
+/**
+ * The scale a material table is drawn at on the canvas: the sheet's, or
+ * larger where its text would be smaller than MATERIAL_TABLE_MIN_TEXT_PX.
+ */
+export function tableScale(sheetScale: number, fontSize: number): number {
+  return fontSize > 0 && fontSize * sheetScale < MATERIAL_TABLE_MIN_TEXT_PX ? MATERIAL_TABLE_MIN_TEXT_PX / fontSize : sheetScale;
+}
+
 /** The layout of a material table on the canvas (see layoutMaterialTable). */
 function layoutTable(
   ctx: CanvasRenderingContext2D,
   columnKeys: MaterialTableRenderColumnKey[],
   header: string[],
   rows: string[][],
-  scale: number,
+  sheetScale: number,
   fontSize: number,
 ) {
+  // Never smaller on the canvas than MATERIAL_TABLE_MIN_TEXT_PX: the whole
+  // table is drawn larger then (its rows, columns and swatches with it).
+  const scale = tableScale(sheetScale, fontSize);
   const size = fontSize * scale;
   const headerFont = `bold ${size}px sans-serif`;
   const bodyFont = `${size}px sans-serif`;
@@ -430,7 +442,7 @@ export function getAnnotationBoundsPx(
     const barH = 200 * annoScale;
     const numTicks = 5;
     const labelPad = 5 * annoScale;
-    const labelFontSize = Math.max(10, 11 * annoScale);
+    const labelFontSize = Math.max(COLOR_BAR_MIN_TEXT_PX, 11 * annoScale);
 
     ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
     let maxLabelW = 0;
@@ -687,6 +699,7 @@ export function extendBoundsWithResultFitExtras(params: {
     rvs.paperFrame.zoom ?? 1,
     rvs.paperFrame.offsetX ?? 0,
     rvs.paperFrame.offsetY ?? 0,
+    SCREEN_PAPER_BOTTOM_RESERVE_PX,
   );
   // Same bounds as drawing and hit-testing use, which honour each
   // annotation's anchor corner (the previous measurement here always

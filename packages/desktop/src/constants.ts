@@ -14,6 +14,19 @@ export const DEFAULT_MODEL_NAME = "Untitled";
 /** Pixel margin around the paper frame on canvas and in PDF export. */
 export const PAPER_FRAME_MARGIN_PX = 20;
 
+/** The floating toolbar over the canvas: its distance from the canvas's bottom edge and its height (px). */
+export const FLOATING_TOOLBAR_BOTTOM_PX = 40;
+export const FLOATING_TOOLBAR_HEIGHT_PX = 32;
+
+/**
+ * The band at the bottom of the result canvas kept free of the sheet (px,
+ * below the sheet's margin): the floating toolbar and 8 px above it, so at
+ * paper zoom 1 (Fit) the toolbar never covers the sheet's x axis. Only on
+ * screen: the exports lay the sheet out without it.
+ */
+export const SCREEN_PAPER_BOTTOM_RESERVE_PX =
+  FLOATING_TOOLBAR_BOTTOM_PX + FLOATING_TOOLBAR_HEIGHT_PX + 8 - PAPER_FRAME_MARGIN_PX;
+
 /** Raw grid step divisor used in grid-step snapping (canvas + PDF). */
 export const GRID_RAW_STEP_PX = 50;
 

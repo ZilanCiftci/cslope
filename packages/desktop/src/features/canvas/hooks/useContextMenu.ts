@@ -23,6 +23,7 @@ import {
   isObjectLocked,
   sameObject,
 } from "../../../store/canvas-selection";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -89,6 +90,7 @@ export function useContextMenu(params: ContextMenuParams) {
           useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
           useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
           useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
+          SCREEN_PAPER_BOTTOM_RESERVE_PX,
         );
         const state = useAppStore.getState();
         // In the order they are drawn (Properties › Layers): the topmost is hit first.

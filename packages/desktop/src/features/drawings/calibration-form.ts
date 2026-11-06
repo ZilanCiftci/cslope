@@ -344,6 +344,7 @@ export function buildPlacement(args: {
   if (args.page !== undefined) placement.page = args.page;
   if (args.crop) placement.crop = args.crop;
   if (existing?.showInResults) placement.showInResults = true;
+  if (existing?.invertInDark === false) placement.invertInDark = false;
   const hidden = existing ? existing.hiddenLayers : args.hiddenLayers;
   if (hidden && hidden.length > 0) placement.hiddenLayers = [...hidden];
   return placement;

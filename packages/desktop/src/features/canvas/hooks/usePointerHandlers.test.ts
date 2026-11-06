@@ -7,6 +7,7 @@ import type { BackgroundImage, CanvasObjectRef, CanvasPointKey } from "../../../
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 import { VIEW_SCALE_MAX } from "../constants";
 import type { PointHit } from "../types";
 
@@ -710,7 +711,7 @@ describe("annotations in the result view", () => {
     { id: "a", type: "text" as const, x: 0.2, y: 0.2, text: "A" },
     { id: "b", type: "text" as const, x: 0.6, y: 0.6, text: "B" },
   ];
-  const pf = () => computePaperFrame(W, H, "A4", true, 1, 0, 0);
+  const pf = () => computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
   const at = (fx: number, fy: number): [number, number] => [pf().x + fx * pf().w, pf().y + fy * pf().h];
 
   beforeEach(() => {
@@ -985,7 +986,7 @@ describe("reference annotations in the result view", () => {
   it("grabs a colour bar drawn over a reference line, not the line", () => {
     // The colour bar's anchor on the polyline's vertex (12, 4).
     const [sx, sy] = toScreen(12, 4);
-    const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0);
+    const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     const bar = { id: "bar", type: "color-bar" as const, x: (sx - pf.x) / pf.w, y: (sy - pf.y) / pf.h };
     useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, bar] } });
     const { deps, h, down, move } = setup({ mode: "result" });

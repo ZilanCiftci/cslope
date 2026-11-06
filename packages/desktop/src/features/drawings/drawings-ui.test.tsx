@@ -65,8 +65,16 @@ describe("drawings in the models tree", () => {
     fireEvent.change(screen.getByLabelText("Opacity of Section A"), { target: { value: "80" } });
     expect(s().backgrounds.find((b) => b.id === "A")?.opacity).toBe(0.8);
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show in results" }));
     expect(s().backgrounds.find((b) => b.id === "A")?.showInResults).toBe(true);
+
+    // An image or PDF drawing is inverted in the dark theme unless switched off (one undo step each).
+    const invert = screen.getByRole("checkbox", { name: "Invert in dark theme" });
+    expect(invert).toBeChecked();
+    fireEvent.click(invert);
+    expect(s().backgrounds.find((b) => b.id === "A")?.invertInDark).toBe(false);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Invert in dark theme" }));
+    expect(s().backgrounds.find((b) => b.id === "A")?.invertInDark).toBeUndefined();
 
     // Alt+Up on the row draws it over the one above (the settings have no order buttons).
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
