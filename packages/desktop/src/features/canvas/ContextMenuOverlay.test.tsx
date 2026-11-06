@@ -32,7 +32,7 @@ describe("ContextMenuOverlay", () => {
     expect(screen.getByRole("menu").style.left).toBe("40px");
     expect(delBtn).toBeDisabled();
     // Disabled looks the same in every menu, a dangerous item too: muted, not faded.
-    expect(delBtn.style.color).toBe("var(--color-vsc-text-muted)");
+    expect(delBtn.style.color).toBe("var(--color-vsc-field-disabled-text)");
     expect(delBtn.style.opacity).toBe("");
     fireEvent.click(addBtn);
     fireEvent.click(delBtn);
