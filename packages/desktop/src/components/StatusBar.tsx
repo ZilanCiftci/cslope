@@ -10,8 +10,6 @@ interface Props {
   result: AnalysisResult | null;
   /** The FOS is on design values (partial factors applied). */
   designValues?: boolean;
-  /** The error of a failed run (shown while `runState` is "error"). */
-  errorMessage?: string | null;
   /** What the run is doing (the finite element analysis's stage), shown while it runs. */
   runStage?: string | null;
   /** When the run started (ms since the epoch): its elapsed time is shown while it runs. */
@@ -93,7 +91,6 @@ export function StatusBar({
   runState,
   result,
   designValues = false,
-  errorMessage = null,
   runStage = null,
   runStartedAt = null,
   snapToGrid,
@@ -161,16 +158,21 @@ export function StatusBar({
           </>
         )}
         {runState === "error" && (
+          // Only that it failed: the reason is in the banner over the canvas
+          // (with a button to the cause) and the summary in the result view.
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>
             <span
               role="status"
               data-testid="status-run-error"
-              className="truncate"
-              title={errorMessage ?? undefined}
-              style={{ color: "var(--color-vsc-error)", fontWeight: 600 }}
+              className="flex items-center gap-1 whitespace-nowrap"
             >
-              Analysis failed{errorMessage ? `: ${errorMessage}` : ""}
+              <span
+                className="w-1.5 h-1.5 rounded-full"
+                style={{ background: "var(--color-vsc-error)" }}
+                aria-hidden="true"
+              />
+              Analysis failed
             </span>
           </>
         )}

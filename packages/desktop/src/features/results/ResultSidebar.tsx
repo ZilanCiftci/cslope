@@ -33,11 +33,14 @@ import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/reference";
 import { ReferenceProperties } from "./ReferenceProperties";
 import { LayersList } from "./LayersList";
+import { openSearchLimits } from "../analysis/open-search-limits";
+import { isNoSlipSurfaceError } from "../analysis/analysis-error";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
 import type { FemResultSummary } from "@cslope/engine";
 import type {
+  Annotation,
   MaterialTableColumnKey,
   AnchorPosition,
   PlotAxisMode,
@@ -108,6 +111,26 @@ function commonValue<T>(values: T[]): T | undefined {
   if (values.length === 0) return undefined;
   const first = values[0];
   return values.every((v) => v === first) ? first : undefined;
+}
+
+/** What one kind of annotation is called (as in the ribbon). */
+const ANNOTATION_KIND_NAMES: Record<Annotation["type"], string> = {
+  text: "Text",
+  "material-table": "Material table",
+  "color-bar": "Color bar",
+  plot: "Plot",
+  reference: "Reference line",
+};
+
+/**
+ * The heading of the result sidebar's last section: what is selected
+ * ("Sheet", "Text", "Material table"), or "Selection" for nothing or a mix.
+ */
+function selectionSectionTitle(selected: readonly Annotation[], paperFrameSelected: boolean): string {
+  if (paperFrameSelected) return "Sheet";
+  const kinds = new Set(selected.map((a) => a.type));
+  if (kinds.size !== 1) return "Selection";
+  return ANNOTATION_KIND_NAMES[selected[0].type];
 }
 
 /** "top-left" → "Top left": an annotation anchor in sentence case. */
@@ -489,6 +512,17 @@ export function ResultSidebar() {
     clearPaperPropertiesFocus();
   }, [paperFocusPending, paperFrameSelected, openSections.properties, clearPaperPropertiesFocus]);
 
+  // The last section is named after the selection and comes into view when
+  // something is selected: under an open summary and layer list it began
+  // below the panel's edge.
+  const selectionTitle = selectionSectionTitle(selectedAnnotations, paperFrameSelected);
+  const selectionSectionRef = useRef<HTMLDivElement>(null);
+  const selectionKey = paperFrameSelected ? "paper-frame" : selectedAnnotationIds.join("\n");
+  useEffect(() => {
+    if (!selectionKey) return;
+    selectionSectionRef.current?.scrollIntoView?.({ block: "nearest" });
+  }, [selectionKey]);
+
   const setVisibleColumnsForAll = useCallback(
     (next: string[]) => {
       const normalized = next.filter((value): value is MaterialTableColumnKey =>
@@ -509,13 +543,13 @@ export function ResultSidebar() {
     >
       <PanelHeaderRow
         side={propertiesLocation}
-        label="Properties"
+        label="Results"
         onCollapse={toggleSidebar}
         onMove={() =>
           setPropertiesLocation(propertiesLocation === "left" ? "right" : "left")
         }
       >
-        <div className="px-4 py-1.5">Properties</div>
+        <div className="px-4 py-1.5">Results</div>
       </PanelHeaderRow>
       <div className="flex-1 min-h-0 overflow-y-auto">
       <Section
@@ -643,14 +677,18 @@ export function ResultSidebar() {
             )}
           </div>
         ) : runState === "error" ? (
-          // Without this a failed run only showed "No results yet".
-          <p
-            className="text-[12px] font-medium"
-            role="alert"
-            style={{ color: "var(--color-vsc-error)" }}
-          >
-            Analysis failed: {errorMessage}
-          </p>
+          // The reason is in the banner over the canvas; here only that it
+          // failed, and the way to the cause when it is the search limits.
+          <div className="space-y-1.5" data-testid="summary-run-failed">
+            <p className="text-[12px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+              Analysis failed.
+            </p>
+            {isNoSlipSurfaceError(errorMessage) && (
+              <button type="button" className="btn" onClick={openSearchLimits}>
+                Search limits…
+              </button>
+            )}
+          </div>
         ) : (
           <p
             className="text-[12px]"
@@ -672,9 +710,10 @@ export function ResultSidebar() {
         <LayersList resolveText={resolveText} />
       </Section>
 
+      <div ref={selectionSectionRef} data-testid="selection-section">
       <Section
-        // Names what the fields are of when the sheet itself is selected.
-        title={paperFrameSelected ? "Properties · Sheet" : "Properties"}
+        // Named after what is selected: its fields are below.
+        title={selectionTitle}
         open={openSections.properties}
         onToggle={() => toggleSection("properties")}
       >
@@ -1450,6 +1489,7 @@ export function ResultSidebar() {
           </div>
         )}
       </Section>
+      </div>
       </div>
     </div>
   );

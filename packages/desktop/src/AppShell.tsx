@@ -45,7 +45,6 @@ export function AppShell() {
   const runAnalysis = useAppStore((s) => s.runAnalysis);
   const cancelAnalysis = useAppStore((s) => s.cancelAnalysis);
   const result = useAppStore((s) => s.result);
-  const errorMessage = useAppStore((s) => s.errorMessage);
   const runAll = useAppStore((s) => s.runAll);
   const runStage = useAppStore((s) => s.runStage);
   const runStartedAt = useAppStore((s) => s.runStartedAt);
@@ -190,7 +189,7 @@ export function AppShell() {
     ) : (
       <CollapsedPanelStrip
         side={side}
-        label="Properties"
+        label="Results"
         onOpen={toggleSidebar}
         onMove={moveProperties}
       />
@@ -247,7 +246,6 @@ export function AppShell() {
         runState={runState}
         result={result}
         designValues={designValues}
-        errorMessage={errorMessage}
         runStage={runStage}
         runStartedAt={runStartedAt}
         snapToGrid={snapToGrid}
