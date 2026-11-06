@@ -28,7 +28,6 @@ import {
   Tag,
   Target,
   Type,
-  Variable,
   Waves,
   X,
 } from "lucide-react";
@@ -73,8 +72,8 @@ function annotationIcon(a: Annotation): ReactNode {
     case "plot":
       return <ChartLine {...ICON} />;
     default:
-      // A text with variables (#FOS, #Title, {{ }}): the values of the result.
-      return /#[A-Za-z]|\{\{/.test(a.text ?? "") ? <Variable {...ICON} /> : <Type {...ICON} />;
+      // Every text, with variables (#FOS, {{ }}) or without: one kind of object.
+      return <Type {...ICON} />;
   }
 }
 
@@ -135,7 +134,9 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
     }
     const a = layer.annotation;
     if (a.type === "reference") {
-      const name = `Reference: ${referenceListName(a)}`;
+      // "Reference circle" says it already; a label ("F = 1.2, other program") does not.
+      const own = referenceListName(a);
+      const name = /^reference\b/i.test(own) ? own : `Reference: ${own}`;
       return { layer, name, title: name, icon: annotationIcon(a) };
     }
     if (a.type === "text") {
@@ -165,7 +166,9 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
 
   return (
     <ul
-      className="-mx-3 py-0.5"
+      // Row content on the section's 16 px edge, the first row's text level with the
+      // other sections' first line; the grip hangs in the left gutter.
+      className="-mx-4 -my-1"
       aria-label="Layers, topmost first"
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrop(null);
@@ -196,7 +199,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
             aria-label={name}
             aria-current={selected || undefined}
             aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Delete"
-            className="group relative flex items-center gap-1.5 h-6 pl-1 pr-1 mx-1 rounded-sm text-[12px] select-none cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-(--color-vsc-accent) hover:bg-(--color-vsc-list-hover)"
+            className="group relative flex items-center gap-1.5 h-6 pl-3 pr-0.5 mx-1 rounded-sm text-[12px] select-none cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-(--color-vsc-accent) hover:bg-(--color-vsc-list-hover)"
             style={{
               background: selected ? "var(--color-vsc-selected-bg)" : undefined,
               color: selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
@@ -277,7 +280,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
               />
             )}
             <span
-              className="shrink-0 flex items-center opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 cursor-grab"
+              className="absolute left-0 inset-y-0 w-3 flex items-center justify-center opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 cursor-grab"
               style={{ color: "var(--color-vsc-text-muted)" }}
               aria-hidden
               title="Drag to change the order (or Alt+Up, Alt+Down)"
@@ -291,7 +294,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
             {removable && (
               <button
                 type="button"
-                className="shrink-0 w-[18px] h-[18px] flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 focus:opacity-100 group-focus-visible:opacity-100 hover:bg-(--color-vsc-list-active) cursor-pointer"
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 focus:opacity-100 group-focus-visible:opacity-100 hover:bg-(--color-vsc-list-active) cursor-pointer"
                 style={{ color: "var(--color-vsc-text-muted)", background: undefined, border: "none" }}
                 title={removeTitle}
                 aria-label={`${removeTitle}: ${name}`}

@@ -409,7 +409,7 @@ const sidebarScenes: Scene[] = [
     data: "drawings",
     open: async (ctx) => {
       const row = ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first();
-      await row.locator("[title*='click for its settings']").first().click();
+      await row.locator("xpath=descendant-or-self::*[contains(@title, 'click for its settings')]").first().click();
       return { focus: explorer(ctx) };
     },
   },
@@ -433,7 +433,7 @@ const sidebarScenes: Scene[] = [
       await win.getByRole("button", { name: "Place", exact: true }).click();
       await ctx.wait(1200);
       const row = ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first();
-      await row.locator("[title*='click for its settings']").first().click();
+      await row.locator("xpath=descendant-or-self::*[contains(@title, 'click for its settings')]").first().click();
       await ctx.page.getByRole("button", { name: /^Layers of / }).first().click();
       return { focus: explorer(ctx) };
     },
@@ -1287,7 +1287,7 @@ const dialogs: Scene[] = [
     open: async (ctx) => {
       await ctx.page.getByRole("button", { name: /^Remove .* from the model$/ }).first().click().catch(async () => {
         const row = ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first();
-        await row.locator("[title*='click for its settings']").first().click();
+        await row.locator("xpath=descendant-or-self::*[contains(@title, 'click for its settings')]").first().click();
         await ctx.page.getByRole("button", { name: /^Remove .* from the model$/ }).first().click();
       });
       await ctx.wait(500);
