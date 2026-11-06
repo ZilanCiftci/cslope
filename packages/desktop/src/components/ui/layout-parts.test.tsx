@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Section } from "./Section";
 import { SpreadsheetTable, type SpreadsheetColumn } from "./SpreadsheetTable";
@@ -122,13 +122,17 @@ describe("SpreadsheetTable", () => {
 });
 
 describe("HelpMenu in a browser", () => {
-  it("shows About in an alert", async () => {
-    const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
+  it("shows About as a dialog whose links open in new tabs", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
     const host = document.createElement("div");
     document.body.appendChild(host);
     render(<HelpMenu isOpen onActivate={() => {}} panelHost={host} />);
     await userEvent.click(screen.getByTitle("About"));
-    expect(alert.mock.calls[0][0]).toMatch(/cSlope/);
+    const about = screen.getByRole("dialog", { name: "About cSlope" });
+    await userEvent.click(within(about).getByRole("button", { name: "Source code" }));
+    expect(open.mock.calls[0][0]).toBe("https://github.com/ZilanCiftci/cslope");
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog", { name: "About cSlope" })).toBeNull();
     host.remove();
   });
 });

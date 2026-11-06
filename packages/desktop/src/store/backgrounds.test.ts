@@ -108,6 +108,17 @@ describe("placing a drawing", () => {
     expect(order()).toEqual(["b", "c", "a"]);
   });
 
+  it("moves one to a place in the drawing order (a drop in the models tree)", () => {
+    for (const id of ["a", "b", "c"]) s().addBackground(placement(id));
+    const order = () => [...s().backgrounds].sort((x, y) => x.order - y.order).map((b) => b.id);
+    s().moveBackgroundTo("a", 2);
+    expect(order()).toEqual(["b", "c", "a"]);
+    s().moveBackgroundTo("a", 0);
+    expect(order()).toEqual(["a", "b", "c"]);
+    s().moveBackgroundTo("c", 9);
+    expect(order()).toEqual(["a", "b", "c"]);
+  });
+
   it("locks and unlocks like the model's objects", () => {
     s().addBackground(placement("d1"));
     s().setObjectLocked({ type: "background", id: "d1" }, false);

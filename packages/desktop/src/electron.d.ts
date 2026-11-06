@@ -166,7 +166,8 @@ declare global {
       fitDialogHeight: (height: number) => void;
       // Menu actions
       menuNew: () => void;
-      menuAbout: () => void;
+      /** Help › About: open the third-party licenses or the source code repository. */
+      openAboutLink: (target: "licenses" | "source") => void;
       /** Open the online documentation in the default browser. */
       openDocumentation: (page?: string) => void;
       toggleDevTools: () => void;
