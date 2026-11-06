@@ -539,7 +539,8 @@ describe("Run all", () => {
     // (a failed worker is replaced)
     FakeWorker.instances.at(-1)!.complete(3);
     await run;
-    expect(store().runAll).toEqual({ total: 3, finished: 3, failed: 1, progress: 1, running: false });
+    expect(store().runAll).toEqual({ total: 3, finished: 3, failed: 1, progress: 1, running: false, elapsedMs: expect.any(Number) });
+    expect(store().runAll!.elapsedMs).toBeGreaterThanOrEqual(0);
     // The summary stays until the next run.
     store().runAnalysis();
     expect(store().runAll).toBeNull();
