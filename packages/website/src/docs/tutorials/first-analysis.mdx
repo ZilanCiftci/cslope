@@ -5,13 +5,13 @@ section: Tutorials
 order: 1
 ---
 
-This tutorial uses the example model that every new project starts with: a homogeneous slope, 10 m high, from a published benchmark (ACADS problem 1(a), Giam & Donald 1989). You look at its geometry and material, run the analysis, read the result and export it.
+This tutorial uses the model that every new project starts with: a homogeneous slope, 10 m high, with the geometry and material of the example *T-ACADS Simple*, a published benchmark (ACADS problem 1(a), Giam & Donald 1989). You look at its geometry and material, run the analysis, read the result and export it.
 
 ## 1. Start a new project
 
-Start cSlope, or choose **File › New**. The project contains one model, *T-ACADS Simple*, shown on the canvas in edit mode.
+Start cSlope, or choose **File › New**. The project contains one model, *Model 1*, with the geometry of the example *T-ACADS Simple*, shown on the canvas in edit mode. The model has no title or published result of its own; the example itself, with its published value, is under **Help › Examples**.
 
-<Figure src="/media/tutorials/first-analysis/01-window.png" alt="The cSlope window in edit mode with the Model tab open and the example slope on the canvas" caption="The cSlope window: the Model tab of the ribbon, the Explorer with the model, the canvas and the status bar." />
+<Figure src="/media/tutorials/first-analysis/01-window.png" alt="The cSlope window in edit mode with the Model tab open and the example slope on the canvas" caption="The cSlope window: the Model tab of the ribbon, the Models panel with the model, the canvas and the status bar." />
 
 The slope has its crest at y = 0 and its toe at y = −10, with a 1V:2H face between x = 20 and x = 40. The soil is one Mohr-Coulomb material.
 
@@ -43,7 +43,7 @@ The ranges show as markers on the canvas. Opening the window selects them, so yo
 
 ## 5. Choose the method
 
-Open **Model › Analysis › Options**. The method is **Morgenstern-Price** with a **half-sine** interslice function and 30 slices.
+Open **Model › Analysis › Options**. The **Method** is **Morgenstern-Price**, with **Half-sine** as the **Interslice function** and 30 **Slices**.
 
 <Figure src="/media/tutorials/first-analysis/06-options.png" alt="The Options window" caption="The analysis options." />
 
@@ -55,7 +55,7 @@ Click **▶ Run** on the floating toolbar at the bottom of the canvas. After a m
 
 ## 7. Read the result
 
-The summary on the right shows a **Min FOS** of 0.984, found among some 1600 analyzed surfaces. The referee answer published for this problem is 1.00; the factor of safety from Morgenstern–Price and similar methods is 0.98 to 0.99.
+The summary on the right shows a **Min FOS** of 0.984, found among some 1600 analyzed surfaces. The referee answer published for this problem is 1.00; the factor of safety from Morgenstern-Price and similar methods is 0.98 to 0.99.
 
 Choose **Results › Display**, then **All surfaces** in the surfaces list, to see every analyzed surface colored by its factor of safety:
 
@@ -65,11 +65,11 @@ Switch back to **Critical only**.
 
 ## 8. Compare methods
 
-Click **Edit**, open **Model › Analysis › Options**, choose **Bishop** and run again. For a circle in a homogeneous slope, Bishop's value is very close to Morgenstern–Price's (0.985). **Janbu** gives a lower value; tick *Apply correction factor f0* to apply Janbu's correction.
+Click **Edit**, open **Model › Analysis › Options**, choose **Bishop** and run again. For a circle in a homogeneous slope, Bishop's value is very close to Morgenstern-Price's (0.985). **Janbu** gives a lower value; tick *Apply correction factor f0* to apply Janbu's correction.
 
 ## 9. Export and save
 
-Choose **Results › Export › PDF** to save the result sheet as a PDF. The title on the sheet comes from the model's properties: right-click the model in the Explorer and choose **Model properties** to change it.
+Choose **Results › Export › Export** to save the result sheet as a PDF. The title on the sheet comes from the model's properties, which are empty in a new project: right-click the model in the Models panel and choose **Model properties** to change it.
 
 Save the project with **File › Save**. The file contains the model and its result.
 

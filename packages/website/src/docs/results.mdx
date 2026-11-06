@@ -38,9 +38,9 @@ The notes are folded into one line under the summary (*3 notes*); click it to sh
 | --- | --- |
 | **Critical only** / **All surfaces** / **Filter by FOS** | Show the critical surface, every analyzed surface, or only surfaces up to a factor of safety (*FOS ≤*, default 1.5) |
 | **Custom surfaces** | In the *Surfaces* menu, with custom surfaces: each one dashed, with its own factor of safety label (off by default) |
-| **Show slices** | The slices of the critical surface |
+| **Slices** | The slices of the critical surface |
 | **Show FOS label** | The factor of safety next to the surface |
-| **Show center mark** | The center of the critical circle |
+| **Center** | The center of the critical circle |
 | **Soil colors** | The material colors |
 | **Plastic zone** / **FE mesh** | With a finite element result: the plastic zone (on by default) and the final mesh (off by default) |
 
@@ -54,8 +54,14 @@ With **All surfaces**, each surface is colored by its factor of safety, from red
 
 **Results › Plots › Results plot** opens a window with plots of the analyzed surfaces:
 
-- **Slip surface variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force, pulling force and the effective normal force N′ on the base (negative on a slice the summary's notes flag). Hovering a point marks that slice on the result canvas. Choose the surface in **Slip surface**: the critical one or any other analyzed surface, listed with its factor of safety F ("Critical – F 1.250").
-- **F against λ** (Morgenstern–Price only): the factors of safety from moment (Fm) and force (Ff) equilibrium against λ. F is where they agree within the tolerance.
+- **Slip surface variables**: a quantity along a slip surface (**Y axis**) against the **Slice number** or the **X value** (**X axis**). The quantities are grouped:
+  - *Stresses on the base*: shear strength, mobilized shear stress (τ), effective normal stress (σ′), pore pressure and local F;
+  - *Forces*: effective normal force (N′; negative on a slice the summary's notes flag), mobilized shear force, resisting force, pulling force, cohesion strength, friction strength, pore water force, slice weight (with loads) and surcharge on the slice;
+  - *Strength parameters*: friction angle, cohesion and base cohesion;
+  - *Geometry*: base inclination (α), base length, slice width, slice height and base elevation.
+
+  Hovering a point marks that slice on the result canvas. Choose the surface in **Slip surface**: the critical one or any other analyzed surface, listed with its factor of safety F ("Critical – F 1.250").
+- **F against λ** (Morgenstern-Price only): the factors of safety from moment (Fm) and force (Ff) equilibrium against λ. F is where they agree within the tolerance.
 
 **Export CSV** saves the plot's values: every quantity per slice of the surface shown, or λ, Fm and Ff. The ▾ beside it chooses a decimal point (1.5) or a decimal comma (1,5, with `;` as the separator, for spreadsheets in many European locales); the choice is remembered for the next export, also in the Sensitivity and Probabilistic windows.
 

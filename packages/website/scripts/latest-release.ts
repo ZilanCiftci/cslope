@@ -1,7 +1,7 @@
 /**
  * The latest published release on GitHub, looked up at build time so that
- * the site links only to files that exist: the Windows installer and the
- * verification report are release assets, and there is nothing to link to
+ * the site links only to files that exist: the Windows installer is a
+ * release asset, and there is nothing to link to
  * before the first release.
  *
  * The result is cached for a few minutes, so that the client and the
@@ -31,7 +31,6 @@ export function toLatestRelease(r: GitHubRelease): LatestRelease {
     version: r.tag_name.replace(/^v/, ""),
     url: r.html_url,
     installer: asset(/^cSlope-Windows-.*-Setup\.exe$/),
-    report: asset(/^cSlope-verification-report\.pdf$/),
   };
 }
 

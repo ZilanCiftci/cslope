@@ -1,26 +1,26 @@
-import data from "./generated/verification.json";
-import type { PublishedValue, VerificationData, VerificationProblem, VerificationResult } from "./verification-types";
+/**
+ * Functions over the verification data. The data itself is imported from
+ * verification-data.ts (the whole table, only by the verification page) or
+ * home.ts (the home page's small extract), so that importing these
+ * functions does not pull the table into a page.
+ */
+import type { HomeData, HomeExample, PublishedValue, VerificationData, VerificationProblem } from "./verification-types";
 import { HOME_EXAMPLES } from "./home-examples";
 
-export const VERIFICATION = data as VerificationData;
-
-export interface Example {
-  problem: VerificationProblem;
-  /** The analysis shown (cSlope's result and the other programs' range). */
-  result: VerificationResult;
-  /** The source's value shown next to it, if the problem has one. */
-  published: PublishedValue | null;
-}
-
 /** The home page's examples (home-examples.ts) with their data; missing ones are skipped. */
-export function homeExamples(d: VerificationData = VERIFICATION): Example[] {
+export function homeExamples(d: VerificationData): HomeExample[] {
   return HOME_EXAMPLES.flatMap(({ id, method }) => {
     const problem = d.problems.find((p) => p.id === id);
     const result = problem?.results.find((r) => r.method === method);
     return problem && result && result.computed != null
-      ? [{ problem, result, published: problem.published[0] ?? null }]
+      ? [{ problem: { id: problem.id, title: problem.title }, result, published: problem.published[0] ?? null }]
       : [];
   });
+}
+
+/** What the home page shows of the verification data (generated/home.json). */
+export function homeData(d: VerificationData): HomeData {
+  return { summary: d.summary, examples: homeExamples(d) };
 }
 
 export type PublishedFilter = "all" | "with" | "without";

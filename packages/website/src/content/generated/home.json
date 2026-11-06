@@ -1,0 +1,74 @@
+{
+ "summary": {
+  "problems": 187,
+  "results": 397,
+  "publishedValues": 243,
+  "problemsWithPublished": 148,
+  "literatureProblems": 177,
+  "reliabilityQuantities": 26
+ },
+ "examples": [
+  {
+   "problem": {
+    "id": "V049",
+    "title": "ACADS 1(c), three-layer slope"
+   },
+   "result": {
+    "method": "Spencer",
+    "computed": 1.3721,
+    "programs": {
+     "min": 1.375,
+     "max": 1.375
+    }
+   },
+   "published": {
+    "value": 1.39,
+    "source": "Giam & Donald (1989), ACADS",
+    "computed": null
+   }
+  },
+  {
+   "problem": {
+    "id": "V021d",
+    "title": "Chowdhury & Xu (1995) example 2, Congress Street cut, circle tangent to the base of clay 3"
+   },
+   "result": {
+    "method": "Bishop simplified",
+    "computed": 1.058,
+    "programs": {
+     "min": 1.058,
+     "max": 1.058
+    }
+   },
+   "published": {
+    "value": 1.0639,
+    "source": "Chowdhury & Xu",
+    "method": "Bishop simplified",
+    "analysis": "Bishop simplified",
+    "computed": 1.058
+   }
+  },
+  {
+   "problem": {
+    "id": "V053",
+    "title": "Greco (1996) ex. 5 / Chen & Shao weak-layer slope, reference geometry"
+   },
+   "result": {
+    "method": "Spencer, non-circular",
+    "computed": 1.0061,
+    "programs": {
+     "min": 1.01,
+     "max": 1.01
+    }
+   },
+   "published": {
+    "value": 1.009,
+    "upper": 1.025,
+    "method": "Spencer, non-circular (test problem 3)",
+    "source": "Chen & Shao (1988)",
+    "analysis": "Spencer, non-circular",
+    "computed": 1.0061
+   }
+  }
+ ]
+}

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { VERIFICATION, filterProblems, formatPublished, formatRange, homeExamples, methodFamily } from "./verification";
+import { filterProblems, formatPublished, formatRange, homeData, homeExamples, methodFamily } from "./verification";
+import { VERIFICATION } from "./verification-data";
+import { HOME } from "./home";
 import { HOME_EXAMPLES } from "./home-examples";
 
 describe("home page examples", () => {
   it("are the chosen problems and analyses, each with a result", () => {
-    const examples = homeExamples();
+    const examples = homeExamples(VERIFICATION);
     expect(examples.map((e) => e.problem.id)).toEqual(HOME_EXAMPLES.map((e) => e.id));
     for (const [i, { result }] of examples.entries()) {
       expect(result.method).toBe(HOME_EXAMPLES[i].method);
@@ -18,6 +20,10 @@ describe("home page examples", () => {
     const second = d.problems.find((p) => p.id === HOME_EXAMPLES[1].id)!;
     second.results.find((r) => r.method === HOME_EXAMPLES[1].method)!.computed = null;
     expect(homeExamples(d).map((e) => e.problem.id)).toEqual(HOME_EXAMPLES.slice(2).map((e) => e.id));
+  });
+
+  it("are in generated/home.json as the table gives them (regenerate: bun scripts/generate-home.ts)", () => {
+    expect(HOME).toEqual(homeData(VERIFICATION));
   });
 });
 

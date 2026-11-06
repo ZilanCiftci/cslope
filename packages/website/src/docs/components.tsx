@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { AlertTriangle, Info, Lightbulb } from "lucide-react";
 
 import { MEDIA, media as mediaAt, type Media } from "@/content/media";
+import { cn } from "@/lib/utils";
 
 const knownMedia = (src: string): Media | undefined => {
   try {
@@ -11,7 +12,6 @@ const knownMedia = (src: string): Media | undefined => {
     return undefined;
   }
 };
-import { cn } from "@/lib/utils";
 
 /** A screenshot with a caption: `<Figure media="criticalSurface" caption="…" />` or with src, width and height. */
 export function Figure({
@@ -137,10 +137,36 @@ export function Pre(props: ComponentProps<"pre">) {
   return <pre tabIndex={0} {...props} />;
 }
 
-/** Wide tables scroll sideways inside the article; the keyboard can scroll them too. */
+/** The text of a React node (an MDX table's cells). */
+function textOf(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) return textOf(node.props.children);
+  return "";
+}
+
+/** The header cells of an MDX table, for its name: "Table: Function, Value of f(ξ)". */
+function tableName(children: ReactNode): string {
+  const headers: string[] = [];
+  const visit = (node: ReactNode) =>
+    Children.forEach(node, (child) => {
+      if (!isValidElement<{ children?: ReactNode }>(child)) return;
+      if (child.type === "th") headers.push(textOf(child.props.children).trim());
+      else if (child.type === "thead" || child.type === "tr") visit(child.props.children);
+    });
+  visit(children);
+  const named = headers.filter(Boolean);
+  return named.length ? `Table: ${named.join(", ")}` : "Table";
+}
+
+/**
+ * Wide tables scroll sideways inside the article; the keyboard can scroll
+ * them too. Each is a region named after its columns, so that the regions
+ * of a page have different names.
+ */
 export function Table(props: ComponentProps<"table">) {
   return (
-    <div className="not-prose relative my-6 overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label="Table">
+    <div className="not-prose relative my-6 overflow-x-auto rounded-lg border" tabIndex={0} role="region" aria-label={tableName(props.children)}>
       <table {...props} className="w-full text-left text-sm [&_td]:border-t [&_td]:px-3 [&_td]:py-2 [&_td]:align-top [&_th]:bg-surface [&_th]:px-3 [&_th]:py-2 [&_th]:font-medium" />
     </div>
   );
