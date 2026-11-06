@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { Menu, MenuItem } from "./Menu";
+import { useMenuDismiss } from "./menu-parts";
 import { readCsvDecimal, rememberCsvDecimal, type CsvDecimal } from "../../utils/csv-decimal";
 
 const CHOICES: { value: CsvDecimal; label: string; title: string }[] = [
@@ -16,7 +18,8 @@ const CHOICES: { value: CsvDecimal; label: string; title: string }[] = [
  * Probabilistic analysis, Results plot): the button exports with the
  * decimal separator chosen last; the chevron opens the two choices
  * (decimal point, decimal comma), and choosing one exports with it and
- * remembers it for every window. Closes on Escape or a click elsewhere.
+ * remembers it for every window. The shared `Menu`: closes on Escape or a
+ * press elsewhere.
  */
 export function CsvExportButton({
   onExport,
@@ -31,25 +34,7 @@ export function CsvExportButton({
   const ref = useRef<HTMLDivElement>(null);
   const current = CHOICES.find((c) => c.value === decimal)!;
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      // Close the menu, not the window.
-      e.preventDefault();
-      e.stopPropagation();
-      setOpen(false);
-    };
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey, true);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey, true);
-    };
-  }, [open]);
+  useMenuDismiss(open, [ref], () => setOpen(false));
   if (open && disabled) setOpen(false);
 
   const choose = (value: CsvDecimal) => {
@@ -81,34 +66,25 @@ export function CsvExportButton({
         <ChevronDown size={12} strokeWidth={1.75} aria-hidden />
       </button>
       {open && (
-        <div
-          role="menu"
-          aria-label="CSV decimal separator"
-          className="absolute bottom-full left-0 mb-1 rounded py-1 z-50"
-          style={{
-            background: "var(--color-vsc-panel)",
-            border: "1px solid var(--color-vsc-border)",
-            boxShadow: "var(--color-vsc-shadow-float)",
-            minWidth: 170,
-          }}
+        <Menu
+          label="CSV decimal separator"
+          onClose={() => setOpen(false)}
+          initialFocus="first"
+          minWidth={170}
+          className="absolute bottom-full left-0 mb-1 z-50"
         >
           {CHOICES.map((c) => (
-            <button
+            <MenuItem
               key={c.value}
               role="menuitemradio"
-              aria-checked={c.value === decimal}
+              checked={c.value === decimal}
               title={c.title}
               onClick={() => choose(c.value)}
-              className="w-full flex items-center gap-2 text-left px-3 py-1 text-[12px] whitespace-nowrap cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
-              style={{ color: "var(--color-vsc-text)" }}
             >
-              <span className="w-3 flex items-center justify-center" style={{ color: "var(--color-vsc-text-muted)" }} aria-hidden>
-                {c.value === decimal && <Check size={12} strokeWidth={1.75} />}
-              </span>
               {c.label}
-            </button>
+            </MenuItem>
           ))}
-        </div>
+        </Menu>
       )}
     </div>
   );
