@@ -14,5 +14,11 @@
   { "name": "help wanted", "color": "008672", "description": "Extra attention is wanted" },
   { "name": "duplicate", "color": "cfd3d7", "description": "This issue or pull request already exists" },
   { "name": "wontfix", "color": "ffffff", "description": "This will not be worked on" },
-  { "name": "dependencies", "color": "0366d6", "description": "Dependency updates (Dependabot)" }
+  { "name": "dependencies", "color": "0366d6", "description": "Dependency updates (Dependabot)" },
+  { "name": "engine", "color": "5319e7", "description": "The analysis engine (packages/engine-rs, packages/engine)" },
+  { "name": "size: small", "color": "c2e0c6", "description": "One or two files, a clear fix, no decision needed" },
+  { "name": "size: large", "color": "fef2c0", "description": "Several areas, a design question or a decision" },
+  { "name": "needs-decision", "color": "d876e3", "description": "The maintainer chooses between the options in the comments first" },
+  { "name": "needs-human", "color": "e99695", "description": "An automated fix could not proceed safely; see the comment" },
+  { "name": "sprint: 1", "color": "0e8a16", "description": "Planned for sprint 1" }
 ]

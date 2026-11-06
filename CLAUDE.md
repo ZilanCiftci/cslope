@@ -1,5 +1,17 @@
 # cSlope
 
+## Hard rules
+
+- No client data in the repository, issues, fixtures or screenshots (project files, drawings, PDFs from real projects). Use synthetic models or copies saved with File › Save as anonymized….
+- No names of other programs in tracked files (`bun packages/website/scripts/check-names.ts --repo`).
+- Never skip, disable or loosen a test to get green; never edit a golden verification value to pass.
+- Keep the change to what was asked: no drive-by refactors of untouched code.
+- When unsure, stop and ask; do not guess. Above all for anything that can move analysis results, a default that changes existing models, or the file format.
+
+## How work flows
+
+Bugs and wishes are GitHub issues, built in sprints: see [.claude/workflow.md](.claude/workflow.md) and the skills `triage`, `sprint` and `verify` in `.claude/skills`. Every change passes the `verify` gate before it is pushed. Path-scoped rules for each package are in `.claude/rules`. Decisions and their reasons go in [DECISIONS.md](DECISIONS.md).
+
 ## UI and UX
 
 Follow docs/design-rules.md for every change to the app's screens (dialogs, panels, lists, canvas, wording). It is short; read it before adding or changing a dialog or a control.

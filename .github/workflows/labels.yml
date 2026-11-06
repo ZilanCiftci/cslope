@@ -1,0 +1,24 @@
+name: Labels
+
+# Creates or updates the issue labels from .github/labels.json when the
+# file changes on main (or when run by hand).
+on:
+  push:
+    branches: [main]
+    paths: [.github/labels.json]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash .github/scripts/sync-labels.sh "$GITHUB_REPOSITORY"
