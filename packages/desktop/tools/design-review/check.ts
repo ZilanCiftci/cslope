@@ -13,6 +13,8 @@
  * - literal colors (#hex, rgb()) in .tsx components outside the canvas and
  *   PDF drawing code
  * - dialog windows whose padding, heading or button row differ from the majority
+ * - a scroll bar without visible overflow (content within a rounded pixel
+ *   of the box, #42); a window taller than the screen's available height
  *
  * Writes design-review-out/findings-auto.json: every finding once (scene,
  * rule, element, measured, expected) with the scenes it occurs in, and the
@@ -126,6 +128,16 @@ for (const e of index.scenes) {
     for (const n of v.nodes) {
       add(`axe:${v.id}`, capture, `${n.target} ${n.html.slice(0, 120)}`, `${v.impact ?? ""}: ${v.help}`, "no violation", `axe|${v.id}|${n.target}|${n.html.slice(0, 80)}`);
     }
+  }
+
+  for (const sc of m.overflow.scrollers) {
+    if (sc.scrollBar > 0 && sc.scrollHeight <= sc.clientHeight + 1) {
+      add("scroll-bar-without-overflow", capture, sc.path, `${sc.scrollBar} px scroll bar; content ${sc.scrollHeight} px in a ${sc.height} px box`, "no scroll bar when the content fits", `scroll-bar|${m.url}|${sc.path}|${sc.height}`);
+    }
+  }
+  const w = m.window;
+  if (w.outerHeight && w.screen && w.outerHeight > w.screen.availHeight) {
+    add("taller-than-screen", capture, m.url, `window ${w.outerHeight} px high on a ${w.screen.availHeight} px screen`, "fits the screen's available height", `taller|${m.url}|${w.outerHeight}|${w.screen.availHeight}`);
   }
 
   const L = m.layout;

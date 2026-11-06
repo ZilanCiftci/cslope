@@ -25,15 +25,20 @@ export const DPR = 2;
 
 // ── Launch ─────────────────────────────────────────────────────────────
 
-/** Start the built app with remote debugging (as media-capture does) and return its main window. */
-export async function launchApp(port: number): Promise<{ browser: Browser; page: Page; proc: ChildProcess }> {
+/**
+ * Start the built app with remote debugging (as media-capture does) and
+ * return its main window. `dpr` is the display scale the app runs at
+ * (Chromium's forced device scale factor; the DevTools emulation can't
+ * change it, so a 150 % capture needs its own instance started at 1.5).
+ */
+export async function launchApp(port: number, dpr = DPR): Promise<{ browser: Browser; page: Page; proc: ChildProcess }> {
   const electronPath = createRequire(join(DESKTOP_DIR, "package.json"))("electron") as unknown as string;
   const proc = spawn(
     electronPath,
     [
       DESKTOP_DIR,
       `--remote-debugging-port=${port}`,
-      `--force-device-scale-factor=${DPR}`,
+      `--force-device-scale-factor=${dpr}`,
       // Chromium refuses to run as root with the sandbox on (a container).
       ...(process.env.CSLOPE_CAPTURE_NO_SANDBOX ? ["--no-sandbox"] : []),
     ],
@@ -85,10 +90,14 @@ export async function stopApp(browser: Browser, proc: ChildProcess) {
 
 const sessions = new WeakMap<Page, CDPSession>();
 
-/** Set a page's CSS size and device pixel ratio (one CDP session per page, kept open). */
-export async function setViewport(p: Page, dpr: number, width?: number, height?: number) {
-  const size =
-    width && height ? { width, height } : await p.evaluate(() => ({ width: window.innerWidth, height: window.innerHeight }));
+/**
+ * Set a page's CSS size (one CDP session per page, kept open). `dpr` must be
+ * the scale the app instance runs at (launchApp): the emulated scale factor
+ * doesn't change the pixels a screenshot is drawn at, only what the page
+ * reports, so it is not a way to capture at another scale (#43).
+ */
+export async function setViewport(p: Page, dpr: number, width: number, height: number) {
+  const size = { width, height };
   let cdp = sessions.get(p);
   if (!cdp) {
     cdp = await p.context().newCDPSession(p);
@@ -254,12 +263,19 @@ export interface LayoutMetric {
 }
 
 export interface PageMetrics {
-  window: { width: number; height: number; dpr: number };
+  /** CSS px; `outerHeight` and the screen's available size in DIPs (Electron sizes windows in DIPs). */
+  window: { width: number; height: number; dpr: number; outerHeight: number; screen: { availWidth: number; availHeight: number } };
   focus: Box | null;
   texts: TextMetric[];
   controls: ControlMetric[];
   layout: LayoutMetric;
-  overflow: { scrollers: { path: string; scrollHeight: number; clientHeight: number }[] };
+  /**
+   * Elements that scroll (content taller than the box by more than a
+   * rounded pixel) or show a vertical scroll bar: `scrollBar` is its width
+   * in px, `height` the box's fractional height. A scroll bar with
+   * `scrollHeight` ≤ `clientHeight` + 1 is one without visible overflow (#42).
+   */
+  overflow: { scrollers: { path: string; scrollHeight: number; clientHeight: number; height: number; scrollBar: number }[] };
   axe: { id: string; impact: string | null; help: string; nodes: { target: string; html: string; summary: string }[] }[];
   axeError?: string;
 }
@@ -565,13 +581,24 @@ function collectInPage(focus: Box | null) {
   const scrollers: any[] = [];
   for (const e of Array.from(document.querySelectorAll<HTMLElement>("*"))) {
     const o = getComputedStyle(e).overflowY;
-    if ((o === "auto" || o === "scroll") && e.scrollHeight > e.clientHeight + 1 && visible(e)) {
-      scrollers.push({ path: pathOf(e), scrollHeight: e.scrollHeight, clientHeight: e.clientHeight });
+    if (o !== "auto" && o !== "scroll") continue;
+    // A scroll bar takes the width between the borders that the client box doesn't.
+    const cs = getComputedStyle(e);
+    const scrollBar = e.offsetWidth - e.clientWidth - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0);
+    if ((e.scrollHeight > e.clientHeight + 1 || scrollBar > 0) && visible(e)) {
+      const height = Math.round(e.getBoundingClientRect().height * 100) / 100;
+      scrollers.push({ path: pathOf(e), scrollHeight: e.scrollHeight, clientHeight: e.clientHeight, height, scrollBar: Math.max(0, scrollBar) });
     }
   }
 
   return {
-    window: { width: window.innerWidth, height: window.innerHeight, dpr: window.devicePixelRatio },
+    window: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      dpr: window.devicePixelRatio,
+      outerHeight: window.outerHeight,
+      screen: { availWidth: screen.availWidth, availHeight: screen.availHeight },
+    },
     focus,
     texts,
     controls,

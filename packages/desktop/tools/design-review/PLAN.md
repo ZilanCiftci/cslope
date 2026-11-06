@@ -97,4 +97,12 @@ Resultat hamnar i `design-review-out/` (ignoreras av git): `shots/<scen>-<tema>.
 - `DESIGN_REVIEW_SKIP_BUILD=1` återanvänder senaste bygget i `packages/desktop/dist`.
 - `DESIGN_REVIEW_PORT` sätter felsökningsporten (standard 9341).
 
+**150 %** (scener med `also150`: huvudfönstret i redigerings- och resultatläge, Materials, Options, Place drawing): DevTools-emuleringens skalfaktor ändrar inte vilken skala skärmdumpen ritas i (#43), så 150 %-bilderna tas i en egen app-instans startad med `--force-device-scale-factor=1.5` på en egen virtuell skärm på 1920 × 1080 (1280 × 720 DIP, som en Windows-laptop på 150 %). `run.ts` kör det passet själv efter 100 %-passet; det går också att köra ensamt (det återanvänder senaste bygget):
+
+```
+CSLOPE_CAPTURE_NO_SANDBOX=1 DESIGN_REVIEW_SCALE=1.5 xvfb-run -a -s "-screen 0 1920x1080x24" bun packages/desktop/tools/design-review/run.ts
+```
+
+`DESIGN_REVIEW_NO_150=1` hoppar över det. Passet avbryts om sidan inte rapporterar skala 1,5 på en 1280 × 720-skärm. Varje bild får i `index.json` den uppmätta skalan (`dpr` från sidan, `pngScale` från PNG-filen); avviker någon från passets skala blir det ett fel. Dialogfönstren behåller den storlek appen ger dem, så ett fönster som är högre än skärmen syns, och `check.ts` rapporterar det (`taller-than-screen`), liksom en rullningslist utan något att rulla (`scroll-bar-without-overflow`, #42).
+
 Filerna: `scenes.ts` (inventeringen: varje scen öppnar sin del med riktiga klick), `run.ts` (startar appen, laddar om sidan före varje bild och startar om appen var tionde scen), `lib.ts` (start, fönster, butik och mätningar inklusive axe-core), `check.ts`, `sheets.ts`.
