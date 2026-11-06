@@ -108,14 +108,14 @@ describe("FileMenu in a browser", () => {
   it("does nothing when Save As is cancelled", async () => {
     vi.spyOn(window, "prompt").mockReturnValue(null);
     renderMenu();
-    await userEvent.click(screen.getByTitle("Save as (Ctrl+Shift+S)"));
+    await userEvent.click(screen.getByTitle("Save as… (Ctrl+Shift+S)"));
     expect(mocks.downloadFile).not.toHaveBeenCalled();
   });
 
   it("opens a project file chosen in the file picker", async () => {
     const pickers = capturePickers();
     const { container } = renderMenu();
-    await userEvent.click(screen.getByTitle("Open (Ctrl+O)"));
+    await userEvent.click(screen.getByTitle("Open… (Ctrl+O)"));
     const input = container.querySelector('input[type="file"]') as HTMLInputElement;
     expect(pickers).toContain(input);
     // A saved copy of a project with an extra model.

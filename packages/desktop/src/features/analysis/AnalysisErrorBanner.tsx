@@ -93,7 +93,7 @@ export function AnalysisErrorBanner() {
           onClick={openSearchLimits}
           className="btn shrink-0 self-center"
         >
-          Search limits…
+          Search limits
         </button>
       )}
       <button

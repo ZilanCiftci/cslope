@@ -36,7 +36,7 @@ describe("AnalysisErrorBanner", () => {
     expect(banner).toHaveTextContent("Analysis failed");
     expect(banner).toHaveTextContent("Coordinates must have at least 3 points");
     // Not about the search: no shortcut to the search limits.
-    expect(screen.queryByRole("button", { name: "Search limits…" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Search limits" })).toBeNull();
   });
 
   it("shows in results mode too, as soon as the run fails", () => {
@@ -64,7 +64,7 @@ describe("AnalysisErrorBanner", () => {
     useAppStore.getState().setAnalysisLimits({ enabled: true });
     render(<AnalysisErrorBanner />);
     fail(NO_SURFACE);
-    fireEvent.click(screen.getByRole("button", { name: "Search limits…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search limits" }));
     expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "searchLimits" }, point: null });
   });
 

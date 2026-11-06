@@ -41,7 +41,7 @@ export function ContextMenu({
     disabled?: boolean;
     separator?: boolean;
   }[] = [
-    { label: "Model properties…", action: onProperties },
+    { label: "Model properties", action: onProperties },
     { label: "Rename", action: onRename, disabled: multiSelect },
     { label: "Duplicate", action: onDuplicate, disabled: multiSelect },
     {

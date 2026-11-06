@@ -198,6 +198,7 @@ export function FileMenu({
               <RibbonButton
                 icon={<OpenIcon {...LARGE_ICON} />}
                 label="Open"
+                tooltip="Open…"
                 shortcut="Ctrl+O"
                 onClick={handleOpen}
               />
@@ -240,7 +241,7 @@ export function FileMenu({
               <RibbonStack>
                 <RibbonSmallButton
                   icon={<SaveAsIcon {...SMALL_ICON} />}
-                  label="Save as"
+                  label="Save as…"
                   shortcut="Ctrl+Shift+S"
                   onClick={handleSaveAs}
                 />

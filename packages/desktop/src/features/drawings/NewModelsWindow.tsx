@@ -240,7 +240,7 @@ export function NewModelsWindow({
               </p>
             ) : !source ? (
               <p className="p-4" style={muted}>
-                Opening the drawing…
+                Opening the drawing
               </p>
             ) : (
               <Viewer

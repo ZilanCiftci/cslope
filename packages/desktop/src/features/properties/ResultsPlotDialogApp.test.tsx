@@ -68,7 +68,7 @@ describe("ResultsPlotDialogApp", () => {
   it("waits for state and asks the main window for it", () => {
     render(<ResultsPlotDialogApp />);
     expect(bridge.callNames()).toContain("requestResultsPlotState");
-    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window");
     expect(
       screen.getByText("Run an analysis first to open results plots."),
     ).toBeInTheDocument();
