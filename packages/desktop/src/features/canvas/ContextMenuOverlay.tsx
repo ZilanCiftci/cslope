@@ -1,16 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ContextMenuItem, ContextMenuState } from "./types";
-import { DISABLED_COLOR } from "../../components/ui/disabled-style";
+import { Menu, MenuItem, MenuSeparator } from "../../components/ui/Menu";
 
 interface ContextMenuOverlayProps {
   menu: ContextMenuState | null;
 }
-
-const MENU_STYLE = {
-  background: "var(--color-vsc-input-bg)",
-  border: "1px solid var(--color-vsc-border)",
-  boxShadow: "var(--color-vsc-shadow-float)",
-} as const;
 
 /** The box a menu must stay in: the canvas area the menu is placed in (it clips what sticks out). */
 function boundsOf(el: HTMLElement): DOMRect {
@@ -31,19 +25,17 @@ function SubMenu({ label, items }: { label: string; items: ContextMenuItem[] }) 
     setFlip({ left: r.right > b.right, up: r.bottom > b.bottom });
   }, []);
   return (
-    <div
+    <Menu
       ref={ref}
-      role="menu"
-      aria-label={label}
-      className="absolute py-1 rounded-md shadow-xl min-w-[160px]"
+      label={label}
+      className="absolute"
       style={{
-        ...MENU_STYLE,
         ...(flip.left ? { right: "100%" } : { left: "100%" }),
         ...(flip.up ? { bottom: 0 } : { top: 0 }),
       }}
     >
       <MenuItems items={items} />
-    </div>
+    </Menu>
   );
 }
 
@@ -54,32 +46,17 @@ function MenuItems({ items }: { items: ContextMenuItem[] }) {
     <>
       {items.map((item) => (
         <div key={item.label} className="relative" onMouseEnter={() => setOpen(item.submenu && !item.disabled ? item.label : null)}>
-          {item.separator && <div className="my-1 h-px" style={{ background: "var(--color-vsc-border)" }} />}
-          <button
-            role="menuitem"
-            aria-haspopup={item.submenu ? "menu" : undefined}
+          {item.separator && <MenuSeparator />}
+          <MenuItem
             aria-expanded={item.submenu ? open === item.label : undefined}
-            onClick={item.disabled ? undefined : item.submenu ? () => setOpen(item.label) : item.action}
+            submenu={!!item.submenu}
+            highlighted={open === item.label}
             disabled={item.disabled}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:cursor-default"
-            style={{
-              color: item.disabled ? DISABLED_COLOR : item.danger ? "var(--color-vsc-error)" : "var(--color-vsc-text)",
-              background: open === item.label ? "var(--color-vsc-list-hover)" : undefined,
-            }}
-            onMouseEnter={(e) => {
-              if (!item.disabled) (e.currentTarget as HTMLElement).style.background = "var(--color-vsc-list-hover)";
-            }}
-            onMouseLeave={(e) => {
-              if (open !== item.label) (e.currentTarget as HTMLElement).style.background = "";
-            }}
+            danger={item.danger}
+            onClick={item.submenu ? () => setOpen(item.label) : item.action}
           >
-            <span className="flex-1">{item.label}</span>
-            {item.submenu && (
-              <span aria-hidden style={{ color: "var(--color-vsc-text-muted)" }}>
-                ›
-              </span>
-            )}
-          </button>
+            {item.label}
+          </MenuItem>
           {item.submenu && open === item.label && <SubMenu label={item.label} items={item.submenu} />}
         </div>
       ))}
@@ -87,7 +64,7 @@ function MenuItems({ items }: { items: ContextMenuItem[] }) {
   );
 }
 
-function Menu({ menu }: { menu: ContextMenuState }) {
+function CanvasMenu({ menu }: { menu: ContextMenuState }) {
   const ref = useRef<HTMLDivElement>(null);
   // Placed at the pointer, moved up or left so that it stays in view.
   const [at, setAt] = useState({ left: menu.screenX, top: menu.screenY });
@@ -101,21 +78,20 @@ function Menu({ menu }: { menu: ContextMenuState }) {
     if (left !== menu.screenX || top !== menu.screenY) setAt({ left, top });
   }, [menu.screenX, menu.screenY]);
   return (
-    <div
+    <Menu
       ref={ref}
-      role="menu"
       data-context-menu
-      className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
-      style={{ ...at, ...MENU_STYLE }}
+      className="absolute z-50"
+      style={at}
       onMouseDown={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
     >
       <MenuItems items={menu.items} />
-    </div>
+    </Menu>
   );
 }
 
 export function ContextMenuOverlay({ menu }: ContextMenuOverlayProps) {
   if (!menu) return null;
-  return <Menu key={`${menu.screenX},${menu.screenY},${menu.items.map((i) => i.label).join("|")}`} menu={menu} />;
+  return <CanvasMenu key={`${menu.screenX},${menu.screenY},${menu.items.map((i) => i.label).join("|")}`} menu={menu} />;
 }

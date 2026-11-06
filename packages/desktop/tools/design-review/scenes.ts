@@ -845,8 +845,8 @@ const menus: Scene[] = [
       for (const p of pts) {
         await ctx.page.mouse.dblclick(p.x, p.y);
         await ctx.wait(250);
-        const m = ctx.page.getByText("Assign material", { exact: true });
-        if (await m.count()) return { focus: m.first().locator("..") };
+        const m = ctx.page.getByRole("menu", { name: "Assign material", exact: true });
+        if (await m.count()) return { focus: m.first() };
         await ctx.page.keyboard.press("Escape");
       }
       throw new Error("No material picker opened at any point of the grid");

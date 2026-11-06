@@ -290,9 +290,9 @@ describe("Explorer — context menu", () => {
     await user.keyboard("{/Shift}");
     // All three selected: deleting them all is not offered.
     fireEvent.contextMenu(row("Beta"));
-    expect(screen.getByRole("menuitem", { name: "Delete selected (3)" })).toBeDisabled();
-    expect(screen.getByRole("menuitem", { name: "Rename" })).toBeDisabled();
-    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toBeDisabled();
+    expect(screen.getByRole("menuitem", { name: "Delete selected (3)" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Rename" })).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("menuitem", { name: "Duplicate" })).toHaveAttribute("aria-disabled", "true");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
 
@@ -309,7 +309,11 @@ describe("Explorer — context menu", () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Gamma"));
     expect(row("Gamma")).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("menuitem", { name: "Delete" })).toBeEnabled();
+    expect(screen.getByRole("menuitem", { name: "Delete" })).not.toHaveAttribute("aria-disabled");
+    // Text only, like every menu; Delete set apart by a separator.
+    const menu = screen.getByRole("menu");
+    expect(menu.querySelector("svg")).toBeNull();
+    expect(within(menu).getByRole("separator")).toBeInTheDocument();
     fireEvent.mouseDown(document.body);
     expect(screen.queryByRole("menu")).toBeNull();
   });

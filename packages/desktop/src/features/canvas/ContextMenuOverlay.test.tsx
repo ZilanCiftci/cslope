@@ -30,7 +30,7 @@ describe("ContextMenuOverlay", () => {
     const addBtn = screen.getByRole("menuitem", { name: "Add point" });
     const delBtn = screen.getByRole("menuitem", { name: "Delete point" });
     expect(screen.getByRole("menu").style.left).toBe("40px");
-    expect(delBtn).toBeDisabled();
+    expect(delBtn).toHaveAttribute("aria-disabled", "true");
     // Disabled looks the same in every menu, a dangerous item too: muted, not faded.
     expect(delBtn.style.color).toBe("var(--color-vsc-field-disabled-text)");
     expect(delBtn.style.opacity).toBe("");
@@ -38,12 +38,11 @@ describe("ContextMenuOverlay", () => {
     fireEvent.click(delBtn);
     expect(add).toHaveBeenCalledTimes(1);
     expect(del).not.toHaveBeenCalled();
+    // Hover is the keyboard's highlight: it focuses an enabled item only.
     fireEvent.mouseEnter(addBtn);
-    expect(addBtn.style.background).toBe("var(--color-vsc-list-hover)");
-    fireEvent.mouseLeave(addBtn);
-    expect(addBtn.style.background).toBe("");
+    expect(addBtn).toHaveFocus();
     fireEvent.mouseEnter(delBtn);
-    expect(delBtn.style.background).toBe("");
+    expect(delBtn).not.toHaveFocus();
   });
 });
 
@@ -104,10 +103,8 @@ describe("MaterialPickerMenu", () => {
         onClose={onClose}
       />,
     );
-    const btn = screen.getByRole("button", { name: "Sand" });
-    fireEvent.mouseEnter(btn);
-    expect(btn.style.background).toBe("var(--color-vsc-list-hover)");
-    fireEvent.mouseLeave(btn);
+    expect(screen.getByRole("menu", { name: "Assign material" })).toBeInTheDocument();
+    const btn = screen.getByRole("menuitem", { name: "Sand" });
     fireEvent.click(btn);
     expect(onSelect).toHaveBeenCalledWith([3, 4], "sand");
     expect(onClose).toHaveBeenCalled();
