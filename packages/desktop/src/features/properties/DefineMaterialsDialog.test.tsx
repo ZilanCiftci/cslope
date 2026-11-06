@@ -51,16 +51,40 @@ describe("DefineMaterialsDialog — material list", () => {
 
   it("cannot delete the last material", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
-    const del = screen.getByRole("button", { name: "Delete" });
-    expect(del).toHaveAttribute("aria-disabled", "true");
-    await userEvent.click(del);
-    expect(mats()).toHaveLength(1);
+    // No remove control on the only row.
+    expect(screen.queryByRole("button", { name: `Remove ${mats()[0].name}` })).toBeNull();
+    store().addMaterial();
+    await screen.findByRole("button", { name: `Remove ${mats()[0].name}` });
+  });
+
+  it("lists the materials as read-only rows with + Add material under them", () => {
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    const list = screen.getByRole("grid", { name: "Materials list" });
+    expect(within(list).queryAllByRole("textbox")).toHaveLength(0);
+    expect(within(list).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["#", "Name", "Material model", "Remove"]);
+    expect(screen.getByRole("button", { name: "+ Add material" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull();
+  });
+
+  it("moves the selection with the arrow keys", async () => {
+    store().setMaterials([
+      material("a", "Sand", { kind: "mohr-coulomb", unitWeight: 19, cohesion: 0, frictionAngle: 34 }),
+      material("b", "Clay", { kind: "undrained", unitWeight: 17, undrainedShearStrength: 40 }),
+    ]);
+    render(<DefineMaterialsDialog onClose={() => {}} />);
+    const rows = within(screen.getByRole("grid", { name: "Materials list" })).getAllByRole("row").slice(1);
+    rows[0].focus();
+    await userEvent.keyboard("{ArrowDown}");
+    expect(rows[1]).toHaveAttribute("aria-selected", "true");
+    expect(rows[1]).toHaveFocus();
+    expect(screen.getByLabelText("Su (kPa)")).toHaveValue("40");
   });
 
   it("adds a material, selects it, and deletes the selected one", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     const firstId = mats()[0].id;
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add material" }));
     expect(mats()).toHaveLength(2);
     const newId = mats()[1].id;
     // The new material's fields are shown: edit them.
@@ -68,7 +92,7 @@ describe("DefineMaterialsDialog — material list", () => {
     expect(mats()[1].model).toMatchObject({ cohesion: 7 });
     expect(mats()[0].model).not.toMatchObject({ cohesion: 7 });
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: `Remove ${mats()[1].name}` }));
     expect(mats().map((m) => m.id)).toEqual([firstId]);
     expect(mats().some((m) => m.id === newId)).toBe(false);
   });
@@ -84,8 +108,8 @@ describe("DefineMaterialsDialog — material list", () => {
     });
     // The first material is shown...
     expect(screen.getByLabelText("φ′ (°)")).toHaveValue("34");
-    // ...and Delete removes it.
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    // ...and its "×" removes it; the next one is shown.
+    await userEvent.click(screen.getByRole("button", { name: "Remove Sand" }));
     expect(mats().map((m) => m.id)).toEqual(["b"]);
     expect(screen.getByLabelText("Su (kPa)")).toHaveValue("40");
   });
@@ -397,7 +421,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     const alert = () => screen.queryByRole("alert", { name: "Validation errors" });
     const [first] = mats();
     const listRow = (i: number) =>
-      within(screen.getAllByRole("table")[0]).getAllByRole("row")[i + 1];
+      within(screen.getByRole("grid", { name: "Materials list" })).getAllByRole("row")[i + 1];
     await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
     expect(alert()).toBeNull();
     // Renaming is an edit of the material.

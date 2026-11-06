@@ -23,6 +23,7 @@ import {
   switchModelKind,
 } from "./sections/material-forms";
 import { PopupPanel } from "../../components/ui/PopupPanel";
+import { RecordTable } from "../../components/ui/RecordTable";
 import type { MaterialRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
 import { ImportedDataNotice } from "./ImportedDataNotice";
@@ -150,17 +151,21 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
     if (last) selectMaterial(last.id);
   };
 
-  const handleDelete = () => {
-    if (materials.length <= 1 || !selected) return;
-    // The shown material: selectedId can name a material that was replaced
-    // (e.g. when the Materials window receives the main window's list).
-    removeMaterial(selected.id);
+  /** Remove a material; the selection moves to its neighbor when it was the shown one. */
+  const handleDelete = (id: string) => {
+    if (materials.length <= 1) return;
+    const index = materials.findIndex((m) => m.id === id);
+    const wasShown = id === selected?.id;
+    removeMaterial(id);
     const remaining = useAppStore.getState().materials;
-    if (remaining.length > 0) selectMaterial(remaining[0].id);
+    if (wasShown && remaining.length > 0) selectMaterial(remaining[Math.min(index, remaining.length - 1)].id);
   };
 
   const model = selected ? getModel(selected) : undefined;
   const modelSelectId = useId();
+  const nameInputId = useId();
+  const colorInputId = useId();
+  const selectedIndex = selected ? materials.indexOf(selected) : -1;
   // Materials whose yield stress comes from the earlier stage (tagged in the list).
   const stageIds = useMemo(
     () => new Set(earlierStage ? earlierStageMaterials(materials).map((m) => m.id) : []),
@@ -202,113 +207,62 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
         />
       )}
 
-      {/* Material list table + action buttons */}
-      <div className="flex gap-3">
-        <div
-          className="flex-1 rounded border overflow-hidden"
-          style={{ borderColor: "var(--color-vsc-border)" }}
-        >
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr
-                style={{
-                  background: "var(--color-vsc-surface-tint)",
-                  color: "var(--color-vsc-text-muted)",
-                }}
-              >
-                <th className="text-left px-2 py-1.5 font-semibold">Name</th>
-                <th className="text-left px-2 py-1.5 font-semibold">
-                  Material model
-                </th>
-                <th className="text-center px-2 py-1.5 font-semibold w-12">
-                  Color
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {materials.map((mat) => {
-                const isSelected = mat.id === selected?.id;
-                return (
-                  <tr
-                    key={mat.id}
-                    onClick={() => selectMaterial(mat.id)}
-                    className="cursor-pointer transition-colors"
+      {/* Material list: read-only rows; the selected one is edited below */}
+      <RecordTable
+        mode="records"
+        label="Materials list"
+        rows={materials}
+        getRowKey={(mat) => mat.id}
+        selectedRowIndex={selectedIndex}
+        onRowClick={(mat) => selectMaterial(mat.id)}
+        onRemove={(mat) => handleDelete(mat.id)}
+        removeLabel={(mat) => `Remove ${mat.name || "unnamed material"}`}
+        // A model needs at least one material.
+        canRemove={() => materials.length > 1}
+        addActions={[{ label: "+ Add material", onClick: handleAdd }]}
+        columns={[
+          {
+            header: "#",
+            widthClassName: "w-8",
+            renderCell: (_mat, i) => <span style={{ color: "var(--color-vsc-text-muted)" }}>{i + 1}</span>,
+          },
+          {
+            header: "Name",
+            cellClassName: "max-w-0 w-1/2",
+            renderCell: (mat) => (
+              <span className="flex items-center gap-1.5 min-w-0">
+                <span
+                  aria-hidden
+                  className="inline-block w-2.5 h-2.5 rounded-xs flex-shrink-0"
+                  style={{ background: mat.color, border: "1px solid var(--color-vsc-border)" }}
+                />
+                <span className="truncate">{mat.name || "Unnamed material"}</span>
+              </span>
+            ),
+          },
+          {
+            header: "Material model",
+            renderCell: (mat) => (
+              <>
+                {MATERIAL_MODEL_LABELS[getModel(mat).kind]}
+                {stageIds.has(mat.id) && (
+                  <span
+                    className="ml-1.5 px-1 rounded text-[10px]"
                     style={{
-                      background: isSelected
-                        ? "var(--color-vsc-selected-bg)"
-                        : "transparent",
-                      color: isSelected
-                        ? "var(--color-vsc-text-bright)"
-                        : "var(--color-vsc-text)",
+                      border: "1px solid var(--color-vsc-border)",
+                      color: "var(--color-vsc-text)",
                     }}
-                    onMouseEnter={(e) => {
-                      if (!isSelected)
-                        e.currentTarget.style.background =
-                          "var(--color-vsc-list-hover)";
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isSelected)
-                        e.currentTarget.style.background = "transparent";
-                    }}
+                    title="Its yield stress comes from the imported earlier stage"
+                    data-testid="stage-tag"
                   >
-                    <td className="px-2 py-1">
-                      <input
-                        type="text"
-                        value={mat.name}
-                        onChange={(e) =>
-                          editMaterial(mat.id, { name: e.target.value })
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                        onFocus={() => selectMaterial(mat.id)}
-                        className="w-full"
-                        title="Material name (click to rename)"
-                        aria-label="Material name"
-                      />
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {MATERIAL_MODEL_LABELS[getModel(mat).kind]}
-                      {stageIds.has(mat.id) && (
-                        <span
-                          className="ml-1.5 px-1 rounded text-[10px]"
-                          style={{
-                            border: "1px solid var(--color-vsc-border)",
-                            color: "var(--color-vsc-text)",
-                          }}
-                          title="Its yield stress comes from the imported earlier stage"
-                          data-testid="stage-tag"
-                        >
-                          stage
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-1 text-center">
-                      <input
-                        type="color"
-                        value={mat.color}
-                        onChange={(e) =>
-                          editMaterial(mat.id, { color: e.target.value })
-                        }
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-5 h-5 rounded border cursor-pointer bg-transparent p-0"
-                        style={{ borderColor: "var(--color-vsc-border)" }}
-                        aria-label={`Color for ${mat.name}`}
-                      />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Action buttons */}
-        <div className="flex flex-col gap-1.5">
-          <DialogButton onClick={handleAdd}>Add</DialogButton>
-          <DialogButton onClick={handleDelete} disabled={materials.length <= 1}>
-            Delete
-          </DialogButton>
-        </div>
-      </div>
+                    stage
+                  </span>
+                )}
+              </>
+            ),
+          },
+        ]}
+      />
 
       {/* ── Selected material detail ── */}
       {selected && model && (
@@ -321,6 +275,36 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
             }}
           >
             <WindowSubheading className="truncate">{selected.name || "Unnamed material"}</WindowSubheading>
+            {/* Name and color */}
+            <div className="flex items-end gap-2">
+              <div className="flex-1 min-w-0">
+                <label htmlFor={nameInputId} className="block text-[11px] font-medium mb-1" style={{ color: "var(--color-vsc-text-muted)" }}>
+                  Name
+                </label>
+                <input
+                  id={nameInputId}
+                  type="text"
+                  value={selected.name}
+                  onChange={(e) => editMaterial(selected.id, { name: e.target.value })}
+                  className="w-full"
+                  aria-label="Material name"
+                />
+              </div>
+              <div>
+                <label htmlFor={colorInputId} className="block text-[11px] font-medium mb-1" style={{ color: "var(--color-vsc-text-muted)" }}>
+                  Color
+                </label>
+                <input
+                  id={colorInputId}
+                  type="color"
+                  value={selected.color}
+                  onChange={(e) => editMaterial(selected.id, { color: e.target.value })}
+                  className="block w-[22px] h-[22px] rounded-xs border cursor-pointer bg-transparent p-0"
+                  style={{ borderColor: "var(--color-vsc-border)" }}
+                  aria-label={`Color for ${selected.name}`}
+                />
+              </div>
+            </div>
             {/* Model kind selector */}
             <div>
               <label htmlFor={modelSelectId} className="block text-[11px] font-medium mb-1" style={{ color: "var(--color-vsc-text-muted)" }}>
@@ -429,26 +413,6 @@ export function DefineMaterialsDialog({ onClose, mode = "popup" }: Props) {
 }
 
 // ── Helpers ──
-
-function DialogButton({
-  onClick,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={disabled ? undefined : onClick}
-      className="btn min-w-[64px]"
-      aria-disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-}
 
 /** Renders the appropriate field component for the given model kind. */
 function ModelFields({
