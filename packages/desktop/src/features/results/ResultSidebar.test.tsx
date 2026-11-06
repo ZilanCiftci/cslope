@@ -174,9 +174,29 @@ describe("ResultSidebar summary", () => {
   it("reports a failed run, or that there is no result yet", () => {
     act(() => useAppStore.setState({ result: null, runState: "error", errorMessage: "Bad geometry" }));
     render(<ResultSidebar />);
-    expect(screen.getByRole("alert")).toHaveTextContent("Analysis failed: Bad geometry");
+    // The reason is only in the banner over the canvas.
+    expect(screen.getByText("Analysis failed.")).toBeInTheDocument();
+    expect(screen.queryByText(/Bad geometry/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Search limits…" })).toBeNull();
     act(() => useAppStore.setState({ runState: "idle" }));
     expect(screen.getByText("No results yet.")).toBeInTheDocument();
+  });
+
+  it("leads to the search limits when the failed run found no surface", () => {
+    act(() =>
+      useAppStore.setState((s) => ({
+        result: null,
+        runState: "error",
+        errorMessage: "No valid slip surface was found. Check the search limits, the geometry and the material strengths.",
+        analysisLimits: { ...s.analysisLimits, enabled: true },
+        canvasSelection: null,
+      })),
+    );
+    render(<ResultSidebar />);
+    expect(screen.getByText("Analysis failed.")).toBeInTheDocument();
+    expect(screen.queryByText(/No valid slip surface/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Search limits…" }));
+    expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "searchLimits" }, point: null });
   });
 
   it("collapses a section from its header", () => {
@@ -364,11 +384,53 @@ describe("ResultSidebar paper frame properties", () => {
     act(() => useAppStore.setState({ selectedResultObject: "paper-frame" }));
   });
 
-  it("Sheet settings opens Properties at the paper and puts the cursor in its first field", () => {
+  it("is the Results panel; its last section is named after the selection", () => {
+    act(() => useAppStore.setState({ selectedResultObject: null }));
+    render(<ResultSidebar />);
+    expect(screen.getByLabelText("Collapse results")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Properties" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Selection" })).toBeInTheDocument();
+    select(["t1", "t2"]);
+    expect(screen.getByRole("button", { name: "Text" })).toBeInTheDocument();
+    select(["m"]);
+    expect(screen.getByRole("button", { name: "Material table" })).toBeInTheDocument();
+    select(["c"]);
+    expect(screen.getByRole("button", { name: "Color bar" })).toBeInTheDocument();
+    select(["p"]);
+    expect(screen.getByRole("button", { name: "Plot" })).toBeInTheDocument();
+    select(["t1", "m"]);
+    expect(screen.getByRole("button", { name: "Selection" })).toBeInTheDocument();
+    act(() => useAppStore.setState({ selectedAnnotationIds: [], selectedResultObject: "paper-frame" }));
+    expect(screen.getByRole("button", { name: "Sheet" })).toBeInTheDocument();
+  });
+
+  it("brings the selection's section into view when something is selected", () => {
+    const scroll = vi.fn();
+    const original = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scroll;
+    try {
+      act(() => useAppStore.setState({ selectedResultObject: null }));
+      render(<ResultSidebar />);
+      expect(scroll).not.toHaveBeenCalled();
+      select(["m"]);
+      const section = screen.getByTestId("selection-section");
+      expect(scroll.mock.contexts).toContain(section);
+      expect(scroll).toHaveBeenCalledWith({ block: "nearest" });
+      scroll.mockClear();
+      select([]);
+      expect(scroll).not.toHaveBeenCalled();
+    } finally {
+      // jsdom has none: take ours away again rather than leave undefined.
+      if (original) HTMLElement.prototype.scrollIntoView = original;
+      else delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView;
+    }
+  });
+
+  it("Sheet settings opens the sheet's section and puts the cursor in its first field", () => {
     act(() => useAppStore.setState({ selectedResultObject: null, mode: "edit", sidebarOpen: false }));
     render(<ResultSidebar />);
-    // Properties closed by the user.
-    fireEvent.click(screen.getByRole("button", { name: "Properties" }));
+    // The selection's section closed by the user.
+    fireEvent.click(screen.getByRole("button", { name: "Selection" }));
     expect(screen.queryByText("Select an object on the canvas to edit its properties.")).toBeNull();
     act(() => useAppStore.getState().showPaperProperties());
     const s = useAppStore.getState();
@@ -376,7 +438,7 @@ describe("ResultSidebar paper frame properties", () => {
     expect(screen.getByRole("group", { name: "Paper" })).toBeInTheDocument();
     expect(document.activeElement).toBe(field("Left x (m)"));
     // The section says whose properties these are.
-    expect(screen.getByRole("button", { name: "Properties · Sheet" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sheet" })).toBeInTheDocument();
     // Done once: the request is consumed.
     expect(s.paperPropertiesFocusPending).toBe(false);
   });

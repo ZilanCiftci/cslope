@@ -100,6 +100,26 @@ describe("ResultsMenu", () => {
     expect(screen.getByTitle("More export options")).toBeDisabled();
   });
 
+  it("keeps the display commands enabled before a run, with a hint in their tooltips", async () => {
+    renderMenu({ withResult: false });
+    const display = ["Surfaces", "Slices", "FOS label", "Center", "Soil colors", "Sheet settings"];
+    for (const name of display) {
+      const button = screen.getByRole("button", { name });
+      expect(button, name).toBeEnabled();
+      expect(button.getAttribute("title"), name).toMatch(/\nRun the analysis to see the results\.$/);
+    }
+    // They still set the view.
+    const slices = screen.getByRole("button", { name: "Slices" });
+    const before = useAppStore.getState().resultViewSettings.showSlices;
+    await userEvent.click(slices);
+    expect(useAppStore.getState().resultViewSettings.showSlices).toBe(!before);
+    cleanup();
+    renderMenu();
+    for (const name of display) {
+      expect(screen.getByRole("button", { name }).getAttribute("title"), name).not.toMatch(/Run the analysis/);
+    }
+  });
+
   it("explains that the results plot needs the desktop app in a browser", async () => {
     const alert = vi.spyOn(window, "alert").mockImplementation(() => {});
     renderMenu();
