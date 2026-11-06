@@ -103,7 +103,7 @@ describe("ResultsMenu", () => {
 
   it("keeps the display commands enabled before a run, with a hint in their tooltips", async () => {
     renderMenu({ withResult: false });
-    const display = ["Surfaces", "Slices", "FOS label", "Center", "Soil colors", "Sheet settings"];
+    const display = ["Surfaces", "Slices", "F label", "Center", "Soil colors", "Sheet settings"];
     for (const name of display) {
       const button = screen.getByRole("button", { name });
       expect(button, name).toBeEnabled();
@@ -154,7 +154,7 @@ describe("ResultsMenu", () => {
     renderMenu();
     const before = rvs();
     await userEvent.click(screen.getByTitle("Show slices"));
-    await userEvent.click(screen.getByTitle("Show FOS label"));
+    await userEvent.click(screen.getByTitle("Show F label"));
     await userEvent.click(screen.getByTitle("Show center mark"));
     await userEvent.click(screen.getByTitle("Soil colors"));
     const after = rvs();
@@ -217,9 +217,9 @@ describe("ResultsMenu", () => {
     // The current mode is the pressed one.
     expect(screen.getByRole("button", { name: "All surfaces" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByRole("button", { name: "Critical only" })).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(screen.getByRole("button", { name: "Filter by FOS" }));
+    await userEvent.click(screen.getByRole("button", { name: "Filter by F" }));
     await userEvent.click(screen.getByTitle("Surfaces: Filter"));
-    const max = screen.getByLabelText("Maximum FOS shown");
+    const max = screen.getByLabelText("Maximum F shown");
     await userEvent.clear(max);
     await userEvent.type(max, "1.5");
     expect(rvs().fosFilterMax).toBe(1.5);
@@ -228,7 +228,7 @@ describe("ResultsMenu", () => {
     expect(rvs().fosFilterMax).toBe(1.5);
     // An outside click closes the menu.
     fireEvent.mouseDown(document.body);
-    expect(screen.queryByLabelText("Maximum FOS shown")).toBeNull();
+    expect(screen.queryByLabelText("Maximum F shown")).toBeNull();
   });
 
   it("offers the custom surfaces toggle in the Surfaces menu only with custom surfaces in the result, off by default", async () => {

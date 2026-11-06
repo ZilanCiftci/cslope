@@ -158,7 +158,12 @@ describe("Probabilistic analysis window", () => {
   it("shows progress and cancels a running analysis", () => {
     renderWindow();
     act(() => useReliabilityStore.setState({ running: true, progress: 0.42 }));
-    expect(screen.getByText("42 %")).toBeInTheDocument();
+    // The progress is status text at the left of the button row, before Close and Cancel.
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("42 %");
+    const follows = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(status, screen.getByRole("button", { name: "Close" }))).toBe(true);
+    expect(follows(screen.getByRole("button", { name: "Close" }), screen.getByRole("button", { name: "Cancel" }))).toBe(true);
     expect(screen.queryByRole("button", { name: "Run" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(cancel).toHaveBeenCalled();

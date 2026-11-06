@@ -23,7 +23,7 @@ describe("slice table export", () => {
   it("has a header block, column headers and one row per slice", () => {
     const rows = buildSliceTable(result, { modelName: "Section A" });
     expect(rows[0]).toEqual(["Model", "Section A"]);
-    expect(rows).toContainEqual(["Minimum FOS", 1.2346]);
+    expect(rows).toContainEqual(["Min F", 1.2346]);
     expect(rows).toContainEqual(["Radius (m)", 15]);
     const header = rows.findIndex((r) => r[0] === "Slice");
     const slice = rows[header + 1];

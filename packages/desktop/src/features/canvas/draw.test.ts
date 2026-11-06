@@ -1527,8 +1527,8 @@ describe("drawCanvas — result mode", () => {
     const label = rec.findText(/41\.2 kN\/m$/)!;
     expect(label.state.textAlign).toBe("left");
     expect(label.x).toBeLessThan(toC(12, 6)[0]);
-    // Passive: "FOS" after a drawn ÷.
-    expect(rec.findText("FOS")!.x).toBeGreaterThan(label.x);
+    // Passive: "F" after a drawn ÷.
+    expect(rec.findText("F")!.x).toBeGreaterThan(label.x);
   });
 
   it("puts axis tick labels at round values inside the plot frame, with minor ticks", () => {
@@ -1595,13 +1595,13 @@ describe("drawCanvas — result mode", () => {
     expect(second.y).toBeGreaterThan(first.y);
   });
 
-  it("draws a colour bar with FOS title and a capped top tick", () => {
+  it("draws a colour bar with the F title and a capped top tick", () => {
     const anno: Annotation = { id: "c", type: "color-bar", x: 0.8, y: 0.3 };
     const capped = drawResult({
       result: result({ maxFOS: 10 }),
       resultViewSettings: rvs({ annotations: [anno] }),
     });
-    expect(capped.textStrings()).toContain("FOS");
+    expect(capped.textStrings()).toContain("F");
     expect(capped.textStrings()).toContain("≥ 2.47");
     expect(capped.textStrings()).toContain("1.23");
     // Top of the gradient is the high-FOS colour, bottom the critical colour.
@@ -2023,7 +2023,7 @@ describe("drawCanvas — dark theme ink", () => {
     expect(rec.strokes(UDL_LOAD_COLOR.hex)).toHaveLength(0);
     expect(rec.findText("Plain")!.state.fillStyle).toBe("#eef0f2");
     expect(rec.findText("Own colour")!.state.fillStyle).toBe("#123456");
-    expect(rec.findText("FOS")!.state.fillStyle).toBe("#e6e8eb");
+    expect(rec.findText("F")!.state.fillStyle).toBe("#e6e8eb");
     expect(rec.findText(DEFAULT_MATERIAL.name)!.state.fillStyle).toBe("#e1e4e8");
     expect(rec.fills("#30353b").length).toBeGreaterThan(0);
   });

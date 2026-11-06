@@ -50,3 +50,34 @@ export function axisTicks(lo: number, hi: number, target = 5, integer = false): 
 export function tickLabel(value: number, ticks: AxisTicks): string {
   return value.toFixed(ticks.decimals);
 }
+
+/** A chart axis of a results window (Results plot, Sensitivity, Probabilistic). */
+export interface ChartAxis {
+  /** The axis range: the outer ticks. */
+  domain: [number, number];
+  ticks: number[];
+  /** Decimals of the labels: the step's, at least the axis's own. */
+  decimals: number;
+  label: (value: number) => string;
+}
+
+/**
+ * A results window's axis over `lo` to `hi`: round ticks (axisTicks) and
+ * labels with as many decimals as the step needs, at least `minDecimals`,
+ * so that no two ticks get the same label on a small range (#71). `trim`
+ * drops trailing zeros (the Results plot writes "1.95", not "1.950").
+ */
+export function chartAxis(
+  lo: number,
+  hi: number,
+  { target = 5, minDecimals = 0, trim = false }: { target?: number; minDecimals?: number; trim?: boolean } = {},
+): ChartAxis {
+  const t = axisTicks(lo, hi, target);
+  const decimals = Math.max(t.decimals, minDecimals);
+  const label = (value: number) => {
+    if (!Number.isFinite(value)) return "-";
+    const s = value.toFixed(decimals);
+    return trim && decimals > 0 ? s.replace(/\.?0+$/, "") : s;
+  };
+  return { domain: [t.min, t.max], ticks: t.values, decimals, label };
+}

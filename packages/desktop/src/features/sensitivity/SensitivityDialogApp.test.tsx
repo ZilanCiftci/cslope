@@ -137,7 +137,14 @@ describe("Sensitivity window", () => {
         ],
       }),
     );
-    expect(screen.getByText("2 of 3 values gave an F")).toBeInTheDocument();
+    // The count is status text at the left of the button row (after
+    // Export CSV), not between Close and Run.
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent("2 of 3 values gave an F");
+    const follows = (a: Element, b: Element) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(follows(screen.getByRole("button", { name: "Export CSV" }), status)).toBe(true);
+    expect(follows(status, screen.getByRole("button", { name: "Close" }))).toBe(true);
+    expect(follows(screen.getByRole("button", { name: "Close" }), screen.getByRole("button", { name: "Run" }))).toBe(true);
     expect(screen.getByText("1.235")).toBeInTheDocument();
     expect(screen.getByText("no surface").closest("tr")).toHaveAttribute("title", "No valid surface");
     expect(screen.getByText(/1 value\(s\) gave no result/)).toBeInTheDocument();
