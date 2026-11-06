@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { naturalDialogHeight } from "./dialog-height";
+import { naturalDialogHeight, shouldFitDialog } from "./dialog-height";
 
 /** Fakes the layout jsdom doesn't compute: element boxes by id. */
 function layout(rects: Record<string, { top: number; bottom: number }>, clientHeight: number) {
@@ -28,6 +28,21 @@ describe("naturalDialogHeight", () => {
       <div class="h-screen"><div id="body" class="flex-1 overflow-y-auto"><div id="a"></div></div></div>`;
     layout({ body: { top: 0, bottom: 500 }, a: { top: 0, bottom: 900 } }, 500);
     expect(naturalDialogHeight(document, 500)).toBe(900);
+  });
+
+  it("fits every dialog while it opens; afterwards lists follow, forms keep and analysis windows only grow", () => {
+    for (const mode of ["follow", "open", "grow"] as const) {
+      expect(shouldFitDialog(mode, true, 400, 0)).toBe(true);
+      expect(shouldFitDialog(mode, true, 380, 400)).toBe(true);
+      // Within 2 px: nothing to do.
+      expect(shouldFitDialog(mode, false, 401, 400)).toBe(false);
+    }
+    expect(shouldFitDialog("follow", false, 300, 400)).toBe(true);
+    expect(shouldFitDialog("follow", false, 500, 400)).toBe(true);
+    expect(shouldFitDialog("open", false, 300, 400)).toBe(false);
+    expect(shouldFitDialog("open", false, 500, 400)).toBe(false);
+    expect(shouldFitDialog("grow", false, 300, 400)).toBe(false);
+    expect(shouldFitDialog("grow", false, 700, 400)).toBe(true);
   });
 
   it("returns null for a page without the dialog layout", () => {

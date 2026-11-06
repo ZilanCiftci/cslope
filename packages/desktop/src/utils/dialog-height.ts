@@ -23,3 +23,27 @@ export function naturalDialogHeight(doc: Document, windowHeight: number): number
   const content = bottom - top + body.scrollTop + padding;
   return Math.ceil(windowHeight - body.clientHeight + content);
 }
+
+/**
+ * How a dialog window's height follows its content:
+ * - "follow": fitted when it opens and whenever its content changes size
+ *   (lists whose rows are added or removed);
+ * - "open": fitted only while it opens, then kept (Materials,
+ *   Reinforcement: switching to a longer form scrolls instead of the
+ *   window jumping);
+ * - "grow": fitted while it opens, then only grows (Sensitivity,
+ *   Probabilistic: the results appear below the inputs after a run).
+ * Workspace windows (Results plot, Place drawing) keep their size and are
+ * not fitted at all.
+ */
+export type DialogFit = "follow" | "open" | "grow";
+
+/** How long a dialog counts as opening: its state arrives and lays out. */
+export const DIALOG_OPENING_MS = 1500;
+
+/** Whether to fit the window to `height`, given the height sent last (0: none yet). */
+export function shouldFitDialog(mode: DialogFit, opening: boolean, height: number, sent: number): boolean {
+  if (Math.abs(height - sent) <= 2) return false;
+  if (opening || mode === "follow") return true;
+  return mode === "grow" && height > sent;
+}
