@@ -3,8 +3,6 @@ import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import {
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
@@ -209,7 +207,7 @@ export function UdlDialogApp() {
       ),
       widthClassName: "w-[24%]",
       // The select has a border of its own: kept off the cell's borders.
-      cellClassName: "px-1 py-0.5",
+      cellClassName: "px-1",
       renderCell: (row, i) => (
         <select
           value={row.direction ?? "vertical"}
@@ -220,21 +218,6 @@ export function UdlDialogApp() {
           <option value="vertical">Vertical</option>
           <option value="normal">Normal to ground</option>
         </select>
-      ),
-    },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: (row, i) => (
-        <RowRemoveButton
-          ariaLabel={`Remove load ${i + 1}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeUdl(row.id);
-          }}
-        />
       ),
     },
   ];
@@ -258,7 +241,7 @@ export function UdlDialogApp() {
         </Label>
       ),
       widthClassName: "w-[40%]",
-      cellClassName: "px-1 py-0.5",
+      cellClassName: "px-1",
       renderCell: ({ row, i, entry, name }) => (
         <DraftNumberInput
           value={entry.ratio}
@@ -270,18 +253,6 @@ export function UdlDialogApp() {
           }}
           aria-label={`Excess pore pressure ratio of load ${i + 1} in material "${name}"`}
           title="Part of the load carried as excess pore pressure in this material, 0 (consolidated) to 1 (none of it consolidated)"
-        />
-      ),
-    },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: ({ row, i, entry, name }) => (
-        <RowRemoveButton
-          ariaLabel={`Remove the excess pore pressure of load ${i + 1} in material "${name}"`}
-          onClick={() => removeExcess(row, entry.materialId)}
         />
       ),
     },
@@ -307,14 +278,10 @@ export function UdlDialogApp() {
           selectedRowIndex={canvasSelection?.object.type === "udl" ? udls.findIndex((u) => u.id === (canvasSelection.object as { id: string }).id) : null}
           onRowClick={(row) => selectCanvasObject({ type: "udl", id: row.id })}
           emptyText="No distributed loads."
+          onRemove={(row) => removeUdl(row.id)}
+          removeLabel={(_row, i) => `Remove load ${i + 1}`}
+          addActions={[{ label: "+ Add load", onClick: addUdl }]}
         />
-        <button
-          onClick={addUdl}
-          className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-link)" }}
-        >
-          + Add load
-        </button>
         {excessNotes.length > 0 && (
           <div className="mt-3 space-y-1" data-testid="udl-excess-notes">
             <WindowSubheading>Loads not yet consolidated (imported)</WindowSubheading>
@@ -322,6 +289,8 @@ export function UdlDialogApp() {
               rows={excessNotes}
               columns={excessColumns}
               getRowKey={({ row, entry }) => `${row.id}-${entry.materialId}`}
+              onRemove={({ row, entry }) => removeExcess(row, entry.materialId)}
+              removeLabel={({ i, name }) => `Remove the excess pore pressure of load ${i + 1} in material "${name}"`}
             />
           </div>
         )}

@@ -2,8 +2,6 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import {
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
@@ -77,22 +75,6 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
         />
       ),
     },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: (_row, i) =>
-        coordinates.length > 3 ? (
-          <RowRemoveButton
-            ariaLabel={`Remove point ${i + 1}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              removeCoordinate(i);
-            }}
-          />
-        ) : null,
-    },
   ];
 
   const content = (
@@ -103,17 +85,20 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
         getRowKey={(_row, i) => i}
         selectedRowIndex={selectedPointIndex}
         onRowClick={(_row, i) => setSelectedPoint(i)}
+        onRemove={(_row, i) => removeCoordinate(i)}
+        removeLabel={(_row, i) => `Remove point ${i + 1}`}
+        // The exterior keeps at least three points.
+        canRemove={() => coordinates.length > 3}
+        addActions={[
+          {
+            label: "+ Add point",
+            onClick: () => {
+              const last = coordinates[coordinates.length - 1];
+              addCoordinate([last[0] + 5, last[1]]);
+            },
+          },
+        ]}
       />
-      <button
-        onClick={() => {
-          const last = coordinates[coordinates.length - 1];
-          addCoordinate([last[0] + 5, last[1]]);
-        }}
-        className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-        style={{ color: "var(--color-vsc-link)" }}
-      >
-        + Add point
-      </button>
     </>
   );
 
