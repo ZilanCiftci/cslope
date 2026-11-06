@@ -1020,6 +1020,8 @@ export interface BackgroundsSlice {
   removeBackground: (id: string) => void;
   /** Draw a placement one step later ("up": over the others) or earlier. */
   moveBackground: (id: string, direction: "up" | "down") => void;
+  /** Put a placement at `index` of the drawing order (0: drawn first, under the others); one undo step. */
+  moveBackgroundTo: (id: string, index: number) => void;
 }
 
 export type AppState = LayoutSlice &

@@ -414,6 +414,16 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "models-drawing-hover",
+    title: "Models panel, a drawing row under the pointer (grip and ×)",
+    area: "sidebar",
+    data: "drawings",
+    open: async (ctx) => {
+      await ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first().hover();
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
     id: "models-drawing-hidden-unlocked",
     title: "Models panel, a drawing hidden and unlocked",
     area: "sidebar",

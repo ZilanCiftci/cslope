@@ -74,5 +74,15 @@ export const createBackgroundsSlice: SliceCreator<BackgroundsSlice> = (set, get)
       [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
       commit(sorted.map((b, k) => ({ ...b, order: k })));
     },
+
+    moveBackgroundTo: (id, index) => {
+      const sorted = sortedBackgrounds(get().backgrounds);
+      const i = sorted.findIndex((b) => b.id === id);
+      const j = Math.max(0, Math.min(sorted.length - 1, Math.round(index)));
+      if (i < 0 || i === j) return;
+      const [moved] = sorted.splice(i, 1);
+      sorted.splice(j, 0, moved);
+      commit(sorted.map((b, k) => ({ ...b, order: k })));
+    },
   };
 };
