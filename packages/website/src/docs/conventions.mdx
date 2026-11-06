@@ -1,0 +1,52 @@
+---
+title: Conventions
+description: Coordinates, the sliding direction, and the signs of the base inclination α, the seismic coefficients, the line-load angle, the stresses and λ.
+section: Reference
+order: 5
+---
+
+## Coordinates and units
+
+The model is a cross-section in the x–y plane: **x** to the right, **y** up (an elevation), both in meters. Lengths are in meters, stresses and strengths in kPa, unit weights in kN/m³, angles in degrees, and forces in kN per meter run of the slope. The unit weight of water is 9.81 kN/m³.
+
+## Sliding direction
+
+**Sliding direction** in **Model › Analysis › Options** (*Search*) is **Left to right** (the mass moves toward +x) or **Right to left** (toward −x), or **Both**. The **entry** of a slip surface is its upper end, at the crest, and the **exit** its lower end, at the toe; the entry range belongs on the crest side of the exit range.
+
+The analysis always works with the mass sliding toward +x: a right-to-left model is mirrored in x, analyzed, and its result mirrored back. A model and its mirror image therefore give the same factor of safety, and every sign below that refers to the sliding direction means the same in both directions.
+
+## Slices
+
+Slices are numbered from the entry (crest) to the exit (toe): slice 1 is the leftmost in a left-to-right model and the rightmost in a right-to-left one. The slice table of the [export](/docs/reporting#export) and the results plots against *Slice number* use this order; *x (m)* is the slice's x in model coordinates.
+
+## Base inclination α
+
+**α** is the inclination of a slice base from the horizontal, **positive where the base dips in the sliding direction** (the upper, active part near the crest) and **negative where it rises** (the passive part at the toe). The slice table's column reads *Base angle α (°, + dipping in the sliding direction)*. The same α sets the factor of the [anisotropy of the undrained strength](/docs/materials#anisotropy-of-the-undrained-strength) and of the anisotropic function, and
+
+$$
+m_\alpha = \cos\alpha + \frac{\sin\alpha \tan\varphi'}{F}
+$$
+
+in [Bishop's method](/docs/theory#bishop-simplified). The inclination at which a surface *enters* the slope (in the steep-entry warnings and **Crack at base angle**) is measured the same way: positive descending into the slope.
+
+## Seismic coefficients
+
+- **kh** (*kh (horizontal, + in the sliding direction)*): each slice carries $k_h W$ horizontally, positive in the sliding direction, at its center of gravity.
+- **kv** (*kv (+ downward)*): each slice carries $k_v W$ vertically, positive downward, adding to its weight. Check both signs.
+
+See [Seismic load](/docs/analysis#seismic-load-pseudostatic).
+
+## Loads
+
+- A distributed load **q** acts downward per horizontal meter, or normal to the ground pushing into it (**Normal to ground**).
+- A line load's **Angle (°)** is measured from the downward vertical: 0 is vertical, **positive turns it toward +x**, ±90 is horizontal. This is in model coordinates, not relative to the sliding direction: the same angle points the same way on the canvas whichever direction the model slides. See [Line loads](/docs/loads#line-loads).
+
+## Stresses and pore pressure
+
+Stresses are positive in compression: the effective normal stress $\sigma'_n$ on a slice base, and $\sigma'_1$, $\sigma'_3$ of the Hoek-Brown criterion. The pore pressure **u** is positive below a piezometric line; above it, it is zero, or negative (suction) in a material with φb. The effective normal force on a base is $N' = N - u\,\ell$; a negative $N'$ means tension at the base, and the result warns of it.
+
+## Factor of safety and λ
+
+- **F** is the factor by which the shear strength would have to be divided to bring the sliding mass to limit equilibrium. Below 1.0 the slope is not stable; the summary colors it red below 1.0, amber below 1.5 and green above.
+- With partial factors on, the strength is divided by its factors first and F is the **over-design factor** on the design values: 1.0 or more satisfies the design.
+- In Morgenstern-Price the interslice shear force is $X = \lambda\, f(x)\, E$, with $f(x)$ the interslice function over the surface, x running from 0 at its entry (crest) end to 1 at its exit (toe) end: from left to right in a left-to-right model, from right to left in a right-to-left one. This holds for the **Data points (x, f)** of a specified function too. λ belongs to the analysis with the mass sliding toward +x, so it does not change sign with the sliding direction. The results plot *F against λ* shows $F_m$ and $F_f$ ([Theory](/docs/theory#morgenstern-price)).

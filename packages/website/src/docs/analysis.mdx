@@ -19,7 +19,7 @@ Open **Model › Analysis › Options**. The settings apply to the active model.
 
 - **Bishop**: Bishop simplified (moment equilibrium).
 - **Janbu**: Janbu simplified (force equilibrium). Tick **Apply correction factor f0** to apply Janbu's correction.
-- **Morgenstern-Price**: full equilibrium. Choose the **Interslice function**: **Constant** (Spencer's method), **Half-sine** (default), **Clipped sine**, **Trapezoidal** or **Specified by data points**. For the last one, enter the points in **Data points (x, f)** as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
+- **Morgenstern-Price**: full equilibrium. Choose the **Interslice function**: **Constant** (Spencer's method), **Half-sine** (default), **Clipped sine**, **Trapezoidal** or **Specified by data points**. For the last one, enter the points in **Data points (x, f)** as `x,f; x,f` with x from 0 (the entry end of the surface, at the crest) to 1 (the exit end, at the toe; see [Conventions](/docs/conventions#factor-of-safety-and-λ)), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
 
 The [theory](/docs/theory) page gives the equations. The **Tolerance** is the convergence limit on the factor of safety.
 
@@ -62,7 +62,7 @@ Ticking the box fills in the Swedish set at once. Choose another set from **Pres
 
 Safety class 3 with η = 1 and γQ/γd = 1.3 gives the Swedish set above. Which η and which load factor apply is decided by the governing document (for example 1.4 · γd is used for traffic loads in some Swedish guidance). The factors follow the inputs; entering a factor by hand leaves the inputs and keeps the factors as they are. The summary lists the inputs with the factors.
 
-Which factor applies depends on the material. Undrained models, and Mohr-Coulomb materials with φ = 0, are treated as undrained and take γcu. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns takes γcu, c′ of the columns γc', and tan φ′ of the columns γφ′. A combined material (Mohr-Coulomb with Su, or combined S = f(depth)) takes γcu on Su and γc' and γφ' on its drained strength. Other materials take γc' and γφ'. The [strength from suction](/docs/materials#strength-from-suction) (φb) takes γc', like c′. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Min FOS (design values)*.
+Which factor applies depends on the material. Undrained models, and Mohr-Coulomb materials with φ = 0, are treated as undrained and take γcu. For lime-cement columns each part takes its own factor: the undrained strength of soil and columns takes γcu, c′ of the columns γc', and tan φ′ of the columns γφ′. A combined material (Mohr-Coulomb with Su, or combined S = f(depth)) takes γcu on Su and γc' and γφ' on its drained strength. Other materials take γc' and γφ'. The [strength from suction](/docs/materials#strength-from-suction) (φb) takes γc', like c′. With partial factors the result is an **over-design factor** on the design values: 1.0 or more means the design is satisfied. The summary shows it as *Over-design factor (design values)*.
 
 ## Seismic load (pseudostatic)
 
@@ -142,9 +142,9 @@ The same bounds are also computed with Davis B's strength reduced for the dilati
 
 The result summary lists, under *Finite elements*:
 
-- **FOS, limit analysis (FE)**: the range between the lower bound (a statically admissible stress field) and the upper bound (a kinematically admissible mechanism) of rigid–perfectly plastic soil with associated flow, with the number of elements, the refinements where the gap between the bounds lay and the time. The factor of safety lies between them; unlike strength reduction with non-associated flow, it converges as the mesh is refined.
+- **F, limit analysis (FE)**: the range between the lower bound (a statically admissible stress field) and the upper bound (a kinematically admissible mechanism) of rigid–perfectly plastic soil with associated flow, with the number of elements, the refinements where the gap between the bounds lay and the time. The factor of safety lies between them; unlike strength reduction with non-associated flow, it converges as the mesh is refined.
 - **Davis B (non-associated)**: the same bounds with Davis B's reduced strength for the dilation angle, the associated material that stands for non-associated flow and usually a conservative estimate of it. The associated range above bounds the non-associated soil's factor of safety from above (Radenković 1962); a wide gap between the two means that the flow rule matters for the slope.
-- **FOS, strength reduction (FE)**, or **Strength reduction (comparison)** when the bounds were found: the largest factor on c and tan φ at which the slope is still in equilibrium. With non-associated flow it is the largest factor at which the iteration still finds equilibrium, as other programs compute it; it has no limit as the mesh is refined (it falls on every refinement), so it is computed on the first mesh and depends on its size. Compare it with other programs' results, not as the factor of safety.
+- **F, strength reduction (FE)**, or **Strength reduction (comparison)** when the bounds were found: the largest factor on c and tan φ at which the slope is still in equilibrium. With non-associated flow it is the largest factor at which the iteration still finds equilibrium, as other programs compute it; it has no limit as the mesh is refined (it falls on every refinement), so it is computed on the first mesh and depends on its size. Compare it with other programs' results, not as the factor of safety.
 
 ## Pore pressure
 
@@ -160,11 +160,11 @@ Click **▶ Run** on the floating toolbar. cSlope analyzes the active model in t
 
 The menu next to Run has:
 
-- **Run all**: analyze every model in the project, several at a time.
+- **Run all**: analyze every model in the project, several at a time. While it runs, the status bar shows how many models are finished, for example *Run all 7/20*, with a progress bar; then the outcome, for example *Run all done: 20 models, 2 failed, 41.3 s* (the failed count in red).
 - **Clear results of this model**: clear the result of the active model and return to edit mode.
 - **Clear results of all models**: clear the results of every model.
 
-If the model has a problem, for example an expression that cannot be evaluated, the analysis does not start and a message says why. If the analysis fails, a banner over the canvas says why, with a button to the cause where there is one (**Search limits**); the status bar and the result summary say *Analysis failed*. A very large search stops after a time limit that grows with the number of iterations.
+If the model has a problem, for example an expression that cannot be evaluated, the analysis does not start and a message says why. If the analysis fails, a banner over the canvas says why, with a button to the cause where there is one (**Search limits**); the status bar and the result summary say *Analysis failed*. A very large search stops after a time limit that grows with the number of iterations: 60 seconds up to 1500 trial surfaces (iterations plus refined iterations), and in proportion above that, with more time for a finite element analysis. The message is then *Analysis timed out after … seconds.*
 
 <Callout type="note">
   Changing anything that affects the analysis clears the model's result, so a result always belongs to the model as it is.
