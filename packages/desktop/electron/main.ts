@@ -798,7 +798,7 @@ ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
     child.on("will-resize", () => userSizedDialogs.add(child));
   }
   const target = Math.round(Math.min(dialogOpenHeight.get(child)!, Math.max(240, height)));
-  if (Math.abs(target - current) < 2) return;
+  if (target === current) return;
   dialogFittedHeight.set(child, target);
   const frame = child.getSize()[1] - current;
   const [minWidth, minHeight] = child.getMinimumSize();

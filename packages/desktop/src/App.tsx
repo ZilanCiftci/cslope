@@ -411,12 +411,15 @@ function App() {
       fit();
     });
     tree.observe(document.body, { childList: true, subtree: true });
+    // Once resized, measure again: a rounded pixel can still overflow.
+    window.addEventListener("resize", fit);
     watchBody();
     fit();
     return () => {
       clearTimeout(timer);
       sizes.disconnect();
       tree.disconnect();
+      window.removeEventListener("resize", fit);
     };
   }, [
     isAnyDialogWindow,

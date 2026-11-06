@@ -20,7 +20,9 @@ export function naturalDialogHeight(doc: Document, windowHeight: number): number
   }
   if (bottom <= top) return null;
   const padding = parseFloat(getComputedStyle(body).paddingBottom) || 0;
-  const content = bottom - top + body.scrollTop + padding;
+  let content = bottom - top + body.scrollTop + padding;
+  // Overflowing, even by a rounded pixel: at least what it scrolls.
+  if (body.scrollHeight > body.clientHeight) content = Math.max(content, body.scrollHeight);
   return Math.ceil(windowHeight - body.clientHeight + content);
 }
 
@@ -43,7 +45,8 @@ export const DIALOG_OPENING_MS = 1500;
 
 /** Whether to fit the window to `height`, given the height sent last (0: none yet). */
 export function shouldFitDialog(mode: DialogFit, opening: boolean, height: number, sent: number): boolean {
-  if (Math.abs(height - sent) <= 2) return false;
+  // (a little taller than fitted always fits: else a scroll bar for a pixel or two)
+  if (height <= sent && sent - height <= 2) return false;
   if (opening || mode === "follow") return true;
   return mode === "grow" && height > sent;
 }

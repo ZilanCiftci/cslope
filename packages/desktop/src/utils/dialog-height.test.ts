@@ -35,7 +35,7 @@ describe("naturalDialogHeight", () => {
       expect(shouldFitDialog(mode, true, 400, 0)).toBe(true);
       expect(shouldFitDialog(mode, true, 380, 400)).toBe(true);
       // Within 2 px: nothing to do.
-      expect(shouldFitDialog(mode, false, 401, 400)).toBe(false);
+      expect(shouldFitDialog(mode, false, 399, 400)).toBe(false);
     }
     expect(shouldFitDialog("follow", false, 300, 400)).toBe(true);
     expect(shouldFitDialog("follow", false, 500, 400)).toBe(true);
