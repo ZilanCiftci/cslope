@@ -47,6 +47,9 @@ export function Explorer() {
   const activeHasResult = useAppStore((s) => !!s.result);
   const activeFailed = useAppStore((s) => s.runState === "error");
   const activeDrawingCount = useAppStore((s) => s.backgrounds.length);
+  // A drawing (of the active model) is selected: it is the tree's selection,
+  // and no model row is shown selected (the active one stays semibold).
+  const drawingSelected = useAppStore((s) => s.canvasSelection?.object.type === "background");
   // Models whose drawings are folded away (all are open at first).
   const [foldedIds, setFoldedIds] = useState<ReadonlySet<string>>(() => new Set());
   const toggleFolded = useCallback((id: string) => {
@@ -81,6 +84,11 @@ export function Explorer() {
       setSelectedModelIds([activeModelId]);
       setSelectionAnchorId(activeModelId);
     }
+  }
+  // Selecting a drawing ends a selection of several models.
+  if (drawingSelected && (selectedModelIds.length !== 1 || selectedModelIds[0] !== activeModelId)) {
+    setSelectedModelIds([activeModelId]);
+    setSelectionAnchorId(activeModelId);
   }
   const [draggedModelId, setDraggedModelId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<{
@@ -138,6 +146,9 @@ export function Explorer() {
       }
 
       switchModel(model.id);
+      // A click on a model row selects the model, not a drawing of it.
+      const st = useAppStore.getState();
+      if (st.canvasSelection?.object.type === "background") st.clearCanvasSelection();
       // The models[] entry of the active model can lag behind its edits.
       if (useAppStore.getState().result) {
         setMode("result");
@@ -312,7 +323,7 @@ export function Explorer() {
         <div className="flex-1 overflow-y-auto py-1" role="tree" aria-label="Models" aria-multiselectable="true">
           {models.map((model) => {
             const isActive = model.id === activeModelId;
-            const isSelected = effectiveSelectedModelIds.includes(model.id);
+            const isSelected = !drawingSelected && effectiveSelectedModelIds.includes(model.id);
             const isEditing = model.id === editingId;
             const drawingCount = isActive ? activeDrawingCount : (model.backgrounds?.length ?? 0);
             const folded = foldedIds.has(model.id);
