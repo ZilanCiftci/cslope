@@ -15,6 +15,9 @@ import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "path";
 
+/** Font files, which are never inlined (see build.assetsInlineLimit). */
+const FONT_FILE = /\.(woff2?|ttf|otf|eot)$/i;
+
 /**
  * Packages that reach the site only as stylesheets and fonts, which the
  * licence plugin (it follows JavaScript modules) does not see.
@@ -62,7 +65,13 @@ function shareImage(origin: string): Plugin {
 export default defineConfig(async ({ mode, isSsrBuild }) => ({
   // The client manifest tells scripts/prerender.ts which stylesheets the
   // lazily loaded docs need, so that pre-rendered docs pages link them.
-  build: { manifest: !isSsrBuild },
+  build: {
+    manifest: !isSsrBuild,
+    // Fonts are always emitted as files: the policy allows fonts from the
+    // site only (font-src 'self'), so a font inlined as a data: URL (Vite
+    // inlines assets under 4 kB, such as KaTeX_Size3) would be blocked (#63).
+    assetsInlineLimit: (file: string) => (FONT_FILE.test(file) ? false : undefined),
+  },
   // The year in the footer, fixed at build time so that a pre-rendered page
   // hydrates without a mismatch after New Year.
   define: {
