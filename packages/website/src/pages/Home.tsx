@@ -17,13 +17,14 @@ import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/Section";
 import { Screenshot } from "@/components/Screenshot";
 import { MEDIA, homeExampleImage } from "@/content/media";
-import { VERIFICATION, formatPublished, formatRange, homeExamples } from "@/content/verification";
+import { HOME } from "@/content/home";
+import { formatPublished, formatRange } from "@/content/verification";
 import { usePageMeta } from "@/lib/page-meta";
 import { SITE } from "@/site";
 
 
 function Hero() {
-  const s = VERIFICATION.summary;
+  const s = HOME.summary;
   return (
     <section className="relative overflow-hidden border-b">
       <div
@@ -68,7 +69,7 @@ function Hero() {
 }
 
 function KeyFigures() {
-  const s = VERIFICATION.summary;
+  const s = HOME.summary;
   const figures = [
     { value: String(s.problems), label: "published verification problems" },
     { value: String(s.publishedValues), label: "values published by the sources" },
@@ -164,9 +165,14 @@ function ExampleImage({ src, alt, width, height }: { src: string; alt: string; w
   );
 }
 
+/** A value's column name, shown only where the examples table stacks (below sm). */
+function ExampleLabel({ children }: { children: string }) {
+  return <span className="block font-sans text-xs text-muted-foreground sm:hidden">{children}</span>;
+}
+
 function Verification() {
-  const examples = homeExamples();
-  const s = VERIFICATION.summary;
+  const examples = HOME.examples;
+  const s = HOME.summary;
   return (
     <Section id="verification" surface>
       <div className="grid gap-12 lg:grid-cols-[1fr_1.3fr] lg:items-start">
@@ -194,7 +200,8 @@ function Verification() {
           role="region"
           aria-label="Examples of published and computed factors of safety"
         >
-          <table className="w-full text-left text-sm">
+          {/* Below sm each example stacks: the problem, then its three values side by side, each named. */}
+          <table className="w-full text-left text-sm max-sm:block max-sm:[&_tbody]:block max-sm:[&_thead]:hidden">
             <caption className="sr-only">Examples of published and computed factors of safety</caption>
             <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -214,9 +221,9 @@ function Verification() {
             </thead>
             <tbody className="divide-y">
               {examples.map(({ problem, result, published }) => (
-                <tr key={problem.id}>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col items-start gap-2">
+                <tr key={problem.id} className="max-sm:grid max-sm:grid-cols-3">
+                  <td className="px-4 py-3 max-sm:col-span-3 max-sm:pb-1">
+                    <div className="flex flex-col items-start gap-2 max-sm:flex-row max-sm:items-center max-sm:gap-3">
                       <ExampleImage {...homeExampleImage(problem.id, problem.title)} />
                       <div>
                         <div className="font-medium">{problem.title}</div>
@@ -224,14 +231,19 @@ function Verification() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right align-middle">
+                  <td className="px-4 py-3 text-right align-middle max-sm:pt-1 max-sm:text-left max-sm:align-top">
+                    <ExampleLabel>Published</ExampleLabel>
                     <div className="font-mono tabular">{published ? formatPublished(published) : "–"}</div>
                     {published && <div className="text-xs text-muted-foreground">{published.source}</div>}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono tabular whitespace-nowrap text-muted-foreground">
+                  <td className="px-4 py-3 text-right font-mono tabular whitespace-nowrap text-muted-foreground max-sm:pt-1 max-sm:text-left">
+                    <ExampleLabel>Other programs</ExampleLabel>
                     {formatRange(result.programs)}
                   </td>
-                  <td className="px-4 py-3 text-right font-mono tabular">{result.computed?.toFixed(3)}</td>
+                  <td className="px-4 py-3 text-right font-mono tabular max-sm:pt-1">
+                    <ExampleLabel>cSlope</ExampleLabel>
+                    {result.computed?.toFixed(3)}
+                  </td>
                 </tr>
               ))}
             </tbody>

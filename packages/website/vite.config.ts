@@ -10,6 +10,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import { siteOrigin } from "./scripts/site-origin";
 import { latestRelease } from "./scripts/latest-release";
+import { frontmatterPlugin } from "./scripts/frontmatter";
 import license from "rollup-plugin-license";
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -80,6 +81,9 @@ export default defineConfig(async ({ mode, isSsrBuild }) => ({
     __LATEST_RELEASE__: JSON.stringify(mode === "test" ? null : await latestRelease()),
   },
   plugins: [
+    // A documentation page's frontmatter alone (page.mdx?frontmatter), for
+    // the docs registry, which loads each page's content only when opened.
+    frontmatterPlugin(),
     // Documentation pages: Markdown with JSX, frontmatter exported as `frontmatter`.
     {
       enforce: "pre" as const,

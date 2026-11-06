@@ -74,10 +74,10 @@ Tick **3D effects (SGI Vägledning 8)** under **Design** to add the factor of sa
 
 $$F_P = F_{2D} + \frac{2 \int c_u\, r\, dA}{L\, M_E}, \qquad F_{3D} = F_{2D} + k \cdot 0.75\,(F_P - F_{2D})$$
 
-with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's center) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,krit,min} / F_{2D,överstark,min}$ for finite (eq. 2-4).
+with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's center) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,\text{krit},\min} / F_{2D,\text{överstark},\min}$ for finite (eq. 2-4).
 
 - **Stage length L (m)**: the length of the excavation open at a time.
-- **Adjacent F2D**: $F_{2D,överstark,min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
+- **Adjacent F2D**: $F_{2D,\text{överstark},\min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
 - **Not in the end faces**: materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.
 
 The result is the smallest $F_{3D}$ over the circular surfaces of the search, which is generally on a shallower surface than the critical 2D one. The end faces take the undrained strength without anisotropy (its direct value), for a combined clay its Su, as design values when partial factors are on. The guidance applies to total stress analysis of normally to lightly overconsolidated clay; a 3D factor more than 25 % above the critical 2D factor is to be judged with care, and the result shows a warning then.

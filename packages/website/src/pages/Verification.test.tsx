@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { Verification } from "./Verification";
 import { REPORT } from "@/content/report";
-import { VERIFICATION } from "@/content/verification";
+import { VERIFICATION } from "@/content/verification-data";
 
 const renderPage = () =>
   render(

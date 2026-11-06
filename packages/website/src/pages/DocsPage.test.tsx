@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { DocsPage } from "./DocsPage";
 import { DOCS, docPath } from "@/docs/registry";
@@ -15,12 +15,22 @@ function renderAt(path: string) {
 }
 
 describe("DocsPage", () => {
-  it("renders every doc with its title", () => {
+  it("renders every doc with its title and its content", async () => {
     for (const d of DOCS) {
       const { unmount } = renderAt(docPath(d));
       expect(screen.getByRole("heading", { level: 1, name: d.title })).toBeInTheDocument();
+      // The content loads lazily, after the title.
+      await waitFor(() => expect(screen.queryByText("Loading the documentation")).toBeNull());
+      expect(document.querySelector("article")!.textContent!.length).toBeGreaterThan(d.title.length + d.description.length);
       unmount();
     }
+    // The first test compiles every page.
+  }, 60_000);
+
+  it("lists the page's headings once its content is loaded", async () => {
+    renderAt("/docs/theory");
+    const contents = await screen.findByRole("navigation", { name: "On this page" });
+    expect(contents.querySelectorAll("a").length).toBeGreaterThan(1);
   });
 
   it("links to the next doc and to the source on GitHub", () => {
