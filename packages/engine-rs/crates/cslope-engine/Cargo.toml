@@ -8,6 +8,9 @@ description = "Slope stability engine (limit equilibrium and finite elements)"
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+schemars.workspace = true
+serde_ignored.workspace = true
+serde_path_to_error.workspace = true
 clarabel = { version = "=0.11.1", default-features = false, features = ["serde"] }
 rayon = { version = "1", optional = true }
 

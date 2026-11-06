@@ -10,9 +10,11 @@ pub mod loads;
 pub mod material;
 pub mod material_models;
 pub mod reinforcement;
+pub mod schema;
 pub mod sgi3d;
 pub mod slope_definition;
 pub mod strength;
+pub mod validate_definition;
 pub mod validation;
 
 pub use analysis::*;

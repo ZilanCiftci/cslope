@@ -173,13 +173,10 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
     }
 
     // Water table
-    if let Some(WaterTableDefinition {
-        mode,
-        value,
-        follow_boundary,
-    }) = &def.water_table
-    {
-        let follow_boundary = *follow_boundary;
+    if let Some(wt) = &def.water_table {
+        let (mode, value) = (&wt.mode, &wt.value);
+        // (`freeWater` when given, else the deprecated `followBoundary`, D-24)
+        let follow_boundary = wt.follows_boundary();
         match (mode, value) {
             (WaterTableMode::Height, WaterTableValue::Level(v)) => {
                 slope.set_water_table(&WaterTableInput::Height {
@@ -228,11 +225,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
     // Per-material water tables
     if let Some(tables) = def.water_tables.as_ref().filter(|t| !t.is_empty()) {
         for wt in tables {
-            slope.set_water_table_by_id(
-                &wt.id,
-                &wt.coordinates,
-                wt.follow_boundary.unwrap_or(true),
-            )?;
+            slope.set_water_table_by_id(&wt.id, &wt.coordinates, wt.follows_boundary())?;
         }
         for m in &def.materials {
             if let (Some(mat), Some(id)) = (by_name(&materials_by_name, &m.name), &m.water_table_id)
@@ -420,6 +413,7 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
                 mode: WaterTableMode::Custom,
                 value: WaterTableValue::Points(rd.water_before.clone()),
                 follow_boundary: Some(false),
+                free_water: None,
             }),
             water_tables: Some(Vec::new()),
             materials: def

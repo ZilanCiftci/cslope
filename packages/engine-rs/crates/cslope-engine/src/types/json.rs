@@ -464,6 +464,52 @@ impl<T: Serialize> Serialize for OrOther<T> {
     }
 }
 
+// ── JSON schemas (types/schema.rs) ─────────────────────────────
+//
+// The schema is stricter than these readers (issue #55): a number is a JSON
+// number, a string option one of its values.
+
+impl schemars::JsonSchema for JsNum {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "number".into()
+    }
+    fn inline_schema() -> bool {
+        true
+    }
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::json_schema!({ "type": "number" })
+    }
+}
+
+impl schemars::JsonSchema for JsJson {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "AnyValue".into()
+    }
+    fn inline_schema() -> bool {
+        true
+    }
+    fn json_schema(_: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        schemars::Schema::from(true)
+    }
+}
+
+/// The schema of `T`: another value is the engine's leniency, not part of
+/// the contract.
+impl<T: schemars::JsonSchema> schemars::JsonSchema for OrOther<T> {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        T::schema_name()
+    }
+    fn schema_id() -> std::borrow::Cow<'static, str> {
+        T::schema_id()
+    }
+    fn inline_schema() -> bool {
+        T::inline_schema()
+    }
+    fn json_schema(g: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        T::json_schema(g)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

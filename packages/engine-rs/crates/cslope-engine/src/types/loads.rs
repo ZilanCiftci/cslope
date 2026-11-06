@@ -31,7 +31,7 @@ pub struct UdlParams {
 }
 
 /// Excess pore pressure under a load in one material (see `UdlParams::excess_pore_pressure`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct UdlExcessPorePressure {
     /// Material name.
     pub material: String,
@@ -41,7 +41,9 @@ pub struct UdlExcessPorePressure {
 }
 
 /// Direction of a distributed load (see `UdlParams::direction`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum UdlDirection {
     #[default]

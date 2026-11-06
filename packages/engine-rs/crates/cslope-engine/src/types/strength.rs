@@ -28,7 +28,7 @@ use std::sync::Arc;
 // ── Result type ────────────────────────────────────────────────
 
 /// Effective shear-strength parameters resolved for one slice.
-#[derive(Debug, Clone, PartialEq, Default, Serialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ResolvedStrength {
     /// Effective cohesion for this slice (kPa).
@@ -100,7 +100,7 @@ impl ResolvedStrength {
 // ── Context supplied by the slice builder ──────────────────────
 
 /// Geometric context available at the time of slice creation.
-#[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StrengthContext {
     /// Y-coordinate of the slice base (elevation).
@@ -339,7 +339,7 @@ fn resolve_undrained(model: &UndrainedModel, context: &StrengthContext) -> Resol
 }
 
 /// Design shear strength at one point (see `design_strength`).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DesignStrength {
     /// Cohesion of the drained (or only) branch (kPa).

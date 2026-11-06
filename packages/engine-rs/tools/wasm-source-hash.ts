@@ -2,8 +2,9 @@
 // sha256 of every file the build reads from the repository, so that
 // check-wasm-fresh.ts can tell, without Rust, whether the committed build
 // is older than the sources. Hashed: the workspace Cargo.toml, Cargo.lock,
-// rust-toolchain.toml, and per crate its Cargo.toml and src/ (not tests/,
-// benches/ or target/). Line endings are normalised (a Windows checkout
+// rust-toolchain.toml, per crate its Cargo.toml and src/ (not tests/,
+// benches/ or target/), and the JSON schemas the engine carries
+// (packages/engine/schema, as ../engine/schema). Line endings are normalised (a Windows checkout
 // with autocrlf hashes the same), paths are relative with forward slashes.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
@@ -30,6 +31,10 @@ export function sourceFiles(root = ENGINE_RS): string[] {
     if (!statSync(crate).isDirectory()) continue;
     files.push(join(crate, "Cargo.toml"));
     walk(join(crate, "src"), files);
+  }
+  const schemas = join(root, "../engine/schema");
+  for (const name of readdirSync(schemas)) {
+    if (name.endsWith(".json")) files.push(join(schemas, name));
   }
   return files.map((f) => relative(root, f).split(sep).join("/")).sort();
 }

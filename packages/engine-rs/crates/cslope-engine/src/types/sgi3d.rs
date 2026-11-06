@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sgi3dOptions {
     /// Length of the critical stretch L (m), the stage of the excavation open at a time.
@@ -32,7 +32,7 @@ pub struct Sgi3dOptions {
 }
 
 /// One analysed surface with its 3D factor, its circle in model space.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sgi3dSurface {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -62,7 +62,7 @@ pub struct Sgi3dSurface {
 }
 
 /// Eq. 2-3 (infinitely overstrong adjacent stability) or 2-4 (finite).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum Sgi3dEquation {
     #[serde(rename = "2-3")]
     Eq2_3,
@@ -71,7 +71,7 @@ pub enum Sgi3dEquation {
 }
 
 /// The options a 3D result was computed with (`Sgi3dResult.options`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sgi3dResultOptions {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -85,7 +85,7 @@ pub struct Sgi3dResultOptions {
     pub exclude_materials: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sgi3dResult {
     /// The smallest F_3D over the analysed circular surfaces.
@@ -103,7 +103,7 @@ pub struct Sgi3dResult {
 }
 
 /// The analysis option: 3D effects after the 2D analysis (AnalysisOptions.sgi3d).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Sgi3dSettings {
     pub enabled: bool,
