@@ -6,7 +6,8 @@
  * an uncaught exception, a failed request, an accessibility violation
  * (axe-core) or a request for data it does not need (the verification
  * table or the changelog outside their pages). It also checks that a
- * phone shows the verification results without scrolling sideways.
+ * phone shows the verification results without scrolling sideways, and
+ * that the formulas carry MathML for screen readers.
  *
  * Usage: bun run build && bun scripts/smoke.ts   (bun run smoke)
  * CHROMIUM_PATH points Playwright at an installed Chromium instead of its
@@ -118,6 +119,25 @@ async function checkPhone(browser: Browser, base: string): Promise<string[]> {
   return problems;
 }
 
+/**
+ * The formulas reach screen readers: KaTeX hides its visual HTML from them
+ * (aria-hidden), so a formula must carry a MathML copy that is in the
+ * accessibility tree (#80).
+ */
+async function checkFormulas(page: Page, base: string): Promise<string[]> {
+  const path = "/docs/theory";
+  await page.goto(base + path, { waitUntil: "networkidle" });
+  const formulas = await page.locator(".katex").count();
+  if (!formulas) return [`${path}: no formulas found`];
+  // getByRole skips what is hidden from the accessibility tree (aria-hidden, display: none).
+  const math = page.getByRole("math");
+  const exposed = await math.count();
+  if (!exposed) return [`${path}: none of its ${formulas} formulas has MathML in the accessibility tree`];
+  if (exposed < formulas) return [`${path}: only ${exposed} of its ${formulas} formulas have MathML in the accessibility tree`];
+  if (!(await math.first().textContent())?.trim()) return [`${path}: the first formula's MathML is empty`];
+  return [];
+}
+
 /** A page opened from another, without reloading: a lazily loaded page loads and renders. */
 async function checkNavigation(page: Page, base: string): Promise<string[]> {
   const problems: string[] = [];
@@ -153,6 +173,7 @@ async function main() {
     }
     const context = await browser.newContext();
     report("navigation", await checkNavigation(await context.newPage(), server.url));
+    report("formulas", await checkFormulas(await context.newPage(), server.url));
     await context.close();
     report("phone", await checkPhone(browser, server.url));
   } finally {

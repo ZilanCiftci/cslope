@@ -92,7 +92,9 @@ export default defineConfig(async ({ mode, isSsrBuild }) => ({
         mdExtensions: [],
         include: /\.mdx$/,
         remarkPlugins: [remarkGfm, remarkFrontmatter, remarkMdxFrontmatter, remarkMath],
-        rehypePlugins: [rehypeSlug, [rehypeKatex, { output: "html" }]],
+        // Formulas as HTML for the eye and a hidden MathML copy that screen
+        // readers read (the HTML is aria-hidden), #80.
+        rehypePlugins: [rehypeSlug, [rehypeKatex, { output: "htmlAndMathml" }]],
       }),
     },
     tailwindcss(),
