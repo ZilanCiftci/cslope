@@ -87,7 +87,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
 
       {runState === "done" && result && (
         <div className="space-y-1 text-[12px]">
-          <Row label={designValues ? "Min FOS (design values)" : "Min FOS"}>
+          <Row label={designValues ? "Over-design factor (design values)" : "Min F"}>
             <span
               className="font-bold tabular-nums"
               style={{

@@ -98,6 +98,12 @@ const fake = vi.hoisted(() => {
     setContentSize = vi.fn((_w: number, h: number) => {
       this.contentHeight = h;
     });
+    getBounds = () => ({
+      x: this.options?.x ?? 0,
+      y: this.options?.y ?? 0,
+      width: this.options?.width ?? 0,
+      height: this.contentHeight + 30,
+    });
     getMinimumSize = () => [this.options?.minWidth ?? 0, this.minHeight];
     setMinimumSize = vi.fn((_w: number, h: number) => {
       this.minHeight = h;
@@ -185,6 +191,12 @@ const fake = vi.hoisted(() => {
       setPermissionCheckHandler: vi.fn(),
     },
   };
+  /** One display; its work area is set per test (a large screen by default). */
+  const screen = {
+    workArea: { x: 0, y: 0, width: 1920, height: 1040 },
+    getDisplayNearestPoint: vi.fn(() => ({ workArea: { ...screen.workArea } })),
+    getCursorScreenPoint: vi.fn(() => ({ x: 0, y: 0 })),
+  };
   const Menu = { setApplicationMenu: vi.fn() };
   const shell = { openExternal: vi.fn(async () => {}), openPath: vi.fn<(file: string) => Promise<string>>(async () => "") };
   // Preload side, for the channel contract test.
@@ -206,6 +218,7 @@ const fake = vi.hoisted(() => {
     state.handle.clear();
     state.appListeners.clear();
     FakeBrowserWindow.instances = [];
+    screen.workArea = { x: 0, y: 0, width: 1920, height: 1040 };
     app.isPackaged = false;
     for (const group of [ipcMain, app, dialog, Menu, shell]) {
       for (const fn of Object.values(group)) {
@@ -237,6 +250,7 @@ const fake = vi.hoisted(() => {
     app,
     dialog,
     session,
+    screen,
     Menu,
     shell,
     ipcRenderer,
@@ -253,6 +267,7 @@ vi.mock("electron", () => {
     dialog: fake.dialog,
     ipcMain: fake.ipcMain,
     session: fake.session,
+    screen: fake.screen,
     shell: fake.shell,
     ipcRenderer: fake.ipcRenderer,
     contextBridge: fake.contextBridge,
@@ -745,6 +760,45 @@ describe("dialog window size", () => {
     for (const t of lists) expect(widths[t], t).toBe(520);
     for (const t of ["Materials", "Reinforcement", "Parameters"]) expect(widths[t], t).toBe(760);
     for (const t of ["Sensitivity analysis", "Probabilistic analysis"]) expect(widths[t], t).toBe(620);
+  });
+});
+
+describe("dialog window size on a small screen (#48)", () => {
+  // 1920 × 1080 at 150 %: 1280 × 720 DIP less a 48 DIP taskbar.
+  const SMALL = { x: 0, y: 0, width: 1280, height: 672 };
+
+  it("caps every dialog to the work area, with its minimum size, and centers it there", async () => {
+    await loadMain();
+    fake.screen.workArea = SMALL;
+    for (const [channel, title] of DIALOGS) {
+      const dlg = openDialog(channel);
+      const o = dlg.options;
+      expect(o.height, title).toBeLessThanOrEqual(SMALL.height);
+      expect(o.y, title).toBeGreaterThanOrEqual(0);
+      expect(o.y + o.height, title).toBeLessThanOrEqual(SMALL.height);
+      expect(o.x + o.width, title).toBeLessThanOrEqual(SMALL.width);
+      if (o.minHeight !== undefined) expect(o.minHeight, title).toBeLessThanOrEqual(o.height);
+    }
+  });
+
+  it("caps the drawing window, its minimum size too", async () => {
+    await loadMain();
+    fake.screen.workArea = { x: 0, y: 0, width: 1024, height: 560 };
+    const dlg = openDialog("window:openPlaceDrawingDialog");
+    expect(dlg.options.width).toBeLessThanOrEqual(1024);
+    expect(dlg.options.height).toBeLessThanOrEqual(560);
+    expect(dlg.options.minWidth).toBeLessThanOrEqual(dlg.options.width);
+    expect(dlg.options.minHeight).toBeLessThanOrEqual(dlg.options.height);
+  });
+
+  it("never fits a dialog past the work area of the display it is on", async () => {
+    await loadMain();
+    const dlg = openDialog("window:openOptionsDialog");
+    expect(dlg.contentHeight).toBe(760);
+    // Moved to a smaller screen, its content grows.
+    fake.screen.workArea = SMALL;
+    send("window:fitDialogHeight", dlg.webContents, 5000);
+    expect(dlg.contentHeight + 30).toBeLessThanOrEqual(SMALL.height);
   });
 });
 

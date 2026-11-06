@@ -15,6 +15,8 @@
  * - dialog windows whose padding, heading or button row differ from the majority
  * - a scroll bar without visible overflow (content within a rounded pixel
  *   of the box, #42); a window taller than the screen's available height
+ *   or the work area the app sized it to, or asked for more than that (a
+ *   window the system would clamp, its bottom row hidden, #48)
  *
  * Writes design-review-out/findings-auto.json: every finding once (scene,
  * rule, element, measured, expected) with the scenes it occurs in, and the
@@ -136,8 +138,14 @@ for (const e of index.scenes) {
     }
   }
   const w = m.window;
-  if (w.outerHeight && w.screen && w.outerHeight > w.screen.availHeight) {
-    add("taller-than-screen", capture, m.url, `window ${w.outerHeight} px high on a ${w.screen.availHeight} px screen`, "fits the screen's available height", `taller|${m.url}|${w.outerHeight}|${w.screen.availHeight}`);
+  // The height available: the screen's, or the (simulated) work area the app sized the window to.
+  const avail = Math.min(w.screen?.availHeight ?? Infinity, w.size?.workArea.height ?? Infinity);
+  const asked = w.size?.opened.height;
+  if (w.outerHeight && w.outerHeight > avail) {
+    add("taller-than-screen", capture, m.url, `window ${w.outerHeight} px high on a ${avail} px screen`, "fits the screen's available height", `taller|${m.url}|${w.outerHeight}|${avail}`);
+  } else if (asked !== undefined && asked > avail) {
+    // Clamped by the system to the screen: the window is as high as the screen, its bottom behind the taskbar.
+    add("taller-than-screen", capture, m.url, `window asked for ${asked} px on a ${avail} px screen (opened ${w.outerHeight} px)`, "asks for no more than the screen's available height", `taller-asked|${m.url}|${asked}|${avail}`);
   }
 
   const L = m.layout;

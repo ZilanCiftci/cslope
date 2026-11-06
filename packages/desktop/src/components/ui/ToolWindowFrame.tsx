@@ -4,13 +4,15 @@ import type { ReactNode } from "react";
  * The layout of a tool window (Sensitivity, Probabilistic analysis): a
  * heading with one muted sentence under it, one scrolling body and the
  * `.dialog-buttons` row as in the other dialog windows: secondary actions
- * at the left, then Close and the primary action (last) at the right.
+ * and the status text at the left, then Close and the primary action
+ * (last) at the right.
  */
 export function ToolWindowFrame({
   title,
   description,
   waiting,
   footer,
+  status,
   primary,
   children,
 }: {
@@ -20,7 +22,9 @@ export function ToolWindowFrame({
   waiting?: boolean;
   /** Secondary actions (export), at the left of the button row. */
   footer?: ReactNode;
-  /** The primary action (Run) and its status, just left of Close. */
+  /** Status text (progress, a result count), at the left after the secondary actions. */
+  status?: ReactNode;
+  /** The primary action (Run, or Cancel while running), last, after Close. */
   primary?: ReactNode;
   children?: ReactNode;
 }) {
@@ -54,6 +58,11 @@ export function ToolWindowFrame({
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
         {footer}
+        {!waiting && status && (
+          <span role="status" className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
+            {status}
+          </span>
+        )}
         <span className="flex-1" />
         <button onClick={() => window.close()} className="btn">
           Close

@@ -64,13 +64,13 @@ export const ANNOTATION_TAGS: readonly AnnotationTag[] = [
   },
   {
     tag: "FOS",
-    description: "Minimum factor of safety (N/A without a result)",
+    description: "F of the critical surface (N/A without a result)",
     value: fos,
     missing: "N/A",
   },
   {
     tag: "MinFOS",
-    description: "Minimum factor of safety, same as #FOS",
+    description: "F of the critical surface, same as #FOS",
     value: fos,
     missing: "N/A",
   },

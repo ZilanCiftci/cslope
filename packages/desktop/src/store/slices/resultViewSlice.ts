@@ -4,6 +4,7 @@ import type { SliceCreator } from "../helpers";
 import type { CustomSearchPlane, ModelEntry, ReferenceAnnotation, ResultViewSlice } from "../types";
 import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
 import { NEW_MATERIAL_TABLE_FONT_SIZE } from "../../features/annotations/materialTableLayout";
+import { screenSheetScale } from "../../features/view/screen-paper";
 import {
   colorBarDefaultPosition,
   RIGHT_INSIDE_FRAME,
@@ -74,11 +75,11 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
   setResultViewSettings: (patch) =>
     set((s) => syncActiveModel(s, { ...s.resultViewSettings, ...patch })),
 
-  addAnnotation: (type) => {
+  addAnnotation: (type, options) => {
     const state = get();
     // The color bar right below the material table as it is drawn (its
-    // height for these materials, columns, text size and paper), at the
-    // right edge of the plot frame.
+    // height for these materials, columns, text size and paper, and on
+    // screen its least text size), at the right edge of the plot frame.
     const bar =
       type === "color-bar"
         ? colorBarDefaultPosition(
@@ -86,6 +87,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
             state.materials,
             state.piezometricLine,
             state.resultViewSettings.paperFrame,
+            undefined,
+            options?.sheetScale ?? screenSheetScale(state.resultViewSettings.paperFrame),
           )
         : null;
     // Text and plots start in the middle, or by the ones there, so a new

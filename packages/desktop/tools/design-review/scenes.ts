@@ -19,7 +19,7 @@ import type { Locator, Page } from "playwright";
 
 export type Area = "main-edit" | "main-result" | "sidebar" | "menus" | "windows" | "dialogs" | "canvas";
 export type Theme = "light" | "dark";
-export type DataSet = "example" | "example1" | "nonhomog" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty";
+export type DataSet = "example" | "example1" | "nonhomog" | "dam" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty";
 
 export interface Box {
   x: number;
@@ -533,7 +533,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "result-layer-properties",
-    title: "Result sidebar, a display layer (FOS label) selected in Layers: its properties",
+    title: "Result sidebar, a display layer (F label) selected in Layers: its properties",
     area: "sidebar",
     result: true,
     open: async (ctx) => {
@@ -543,7 +543,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "main-result-layer-styles",
-    title: "Result view with styled display layers (FOS label, critical surface, slices, center, soil at 50 %)",
+    title: "Result view with styled display layers (F label, critical surface, slices, center, soil at 50 %)",
     area: "main-result",
     result: true,
     open: async (ctx) => {
@@ -604,6 +604,19 @@ const sidebarScenes: Scene[] = [
       await ctx.store(`(s) => { if (!s.resultViewSettings.annotations.some((a) => a.type === "material-table")) s.addAnnotation("material-table"); }`);
       await selectAnnotation(ctx, "material-table");
       return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-color-bar",
+    title: "Result view: Results › Color bar added below the material table (at the window's zoom)",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "all", showSlices: false })`);
+      await ctx.tab("Results");
+      await ctx.click("Color bar");
+      await ctx.store(`(s) => s.setSelectedAnnotations([])`);
+      await ctx.page.waitForTimeout(500);
     },
   },
   {
@@ -692,7 +705,7 @@ const menus: Scene[] = [
   { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) }; } },
   {
     id: "menu-results-surfaces-filter",
-    title: "Results › Surfaces ▾ menu, Filter by FOS (with the FOS field)",
+    title: "Results › Surfaces ▾ menu, Filter by F (with the F field)",
     area: "menus",
     result: true,
     open: async (ctx) => {
@@ -1135,7 +1148,33 @@ const windows: Scene[] = [
       return { page: win };
     },
   },
+  {
+    id: "win-results-plot-lambda-dam",
+    title: "Results plot window, F against λ of the dam (Fm and Ff within 0.002: the y labels)",
+    area: "windows",
+    data: "dam",
+    result: true,
+    open: async (ctx) => {
+      const win = await resultsWindow(ctx, "Results plot", "results-plot-dialog");
+      await win.locator('select:has(option[value="lambdaFmFf"])').selectOption("lambdaFmFf");
+      await win.waitForTimeout(800);
+      return { page: win };
+    },
+  },
   { id: "win-sensitivity", title: "Sensitivity analysis window", area: "windows", result: true, open: async (ctx) => ({ page: await resultsWindow(ctx, "Sensitivity", "sensitivity-dialog") }) },
+  {
+    id: "win-sensitivity-run",
+    title: "Sensitivity analysis window after a run (the count at the left of the button row)",
+    area: "windows",
+    result: true,
+    open: async (ctx) => {
+      const win = await resultsWindow(ctx, "Sensitivity", "sensitivity-dialog");
+      await win.getByRole("button", { name: "Run", exact: true }).click();
+      await win.getByRole("status").filter({ hasText: "values gave an F" }).waitFor({ timeout: 120_000 });
+      await win.waitForTimeout(800);
+      return { page: win };
+    },
+  },
   { id: "win-probabilistic", title: "Probabilistic analysis window", area: "windows", result: true, open: async (ctx) => ({ page: await resultsWindow(ctx, "Probabilistic", "reliability-dialog") }) },
   {
     id: "win-place-drawing-empty",

@@ -37,3 +37,18 @@ export function vercelCsp(vercelJson: string): string | undefined {
   const all = config.headers?.find((h) => h.source === "/(.*)");
   return all?.headers.find((h) => h.key.toLowerCase() === "content-security-policy")?.value;
 }
+
+/**
+ * The fonts a stylesheet embeds as data: URLs (the start of each URL). The
+ * policy allows fonts from the site only, so the browser blocks them.
+ */
+export function inlinedFonts(css: string): string[] {
+  return [...css.matchAll(/url\(\s*["']?(data:(?:font\/|application\/(?:x-)?font)[^)"']{0,40})/gi)].map((m) => m[1]);
+}
+
+/** Whether a policy lets fonts load from data: URLs (font-src, else default-src). */
+export function allowsDataFonts(csp: string): boolean {
+  const directives = csp.split(";").map((d) => d.trim().split(/\s+/));
+  const sources = directives.find((d) => d[0] === "font-src") ?? directives.find((d) => d[0] === "default-src") ?? [];
+  return sources.includes("data:");
+}

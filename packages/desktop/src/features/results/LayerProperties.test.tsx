@@ -55,10 +55,10 @@ describe("display layer properties", () => {
   it("selects with Enter; selecting an annotation or clicking empty canvas clears it", () => {
     render(<ResultSidebar />);
     fireEvent.keyDown(row("fosLabel"), { key: "Enter" });
-    expect(screen.getByRole("group", { name: "FOS label properties" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "F label properties" })).toBeInTheDocument();
     fireEvent.click(row("t1"));
     expect(useAppStore.getState().selectedResultLayer).toBeNull();
-    expect(screen.queryByRole("group", { name: "FOS label properties" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "F label properties" })).toBeNull();
     fireEvent.keyDown(row("center"), { key: " " });
     expect(useAppStore.getState().selectedResultLayer).toBe("center");
     // (an empty canvas click clears the selected sheet object)
@@ -70,7 +70,7 @@ describe("display layer properties", () => {
   it("changes the FOS label's color, size, decimals, font and bold, each one undo step", () => {
     render(<ResultSidebar />);
     fireEvent.click(row("fosLabel"));
-    const group = screen.getByRole("group", { name: "FOS label properties" });
+    const group = screen.getByRole("group", { name: "F label properties" });
     fireEvent.click(within(group).getByRole("button", { name: "Color #cc0000" }));
     expect(rvs().layerStyles).toEqual({ fosLabel: { color: "#cc0000" } });
     expect(history().pastStates).toHaveLength(1);

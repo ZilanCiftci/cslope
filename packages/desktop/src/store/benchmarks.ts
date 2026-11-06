@@ -51,7 +51,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
     type: "text",
     x: 0.11,
     y: 0.18,
-    text: "Calculated FOS: #FOS",
+    text: "Calculated F: #FOS",
     fontSize: 14,
   },
   {
@@ -125,7 +125,7 @@ const TACADS_SIMPLE: ModelEntry = {
   name: "T-ACADS Simple",
   projectInfo: {
     title: "T-ACADS Simple",
-    subtitle: "Published FOS result: 1.00",
+    subtitle: "Published F: 1.00",
     client: "",
     projectNumber: "",
     revision: "1",
@@ -206,7 +206,7 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
   name: "T-ACADS Non-Homogeneous",
   projectInfo: {
     title: "T-ACADS Non-Homogeneous",
-    subtitle: "Published FOS result: 1.39",
+    subtitle: "Published F: 1.39",
     client: "",
     projectNumber: "",
     revision: "0",
@@ -335,7 +335,7 @@ const ARAI_TAGYO: ModelEntry = {
   name: "Arai & Tagyo (1985)",
   projectInfo: {
     title: "Arai & Tagyo (1985)",
-    subtitle: "Published FOS: 1.118 (software manual), 1.138 (Arai & Tagyo)",
+    subtitle: "Published F: 1.118 (software manual), 1.138 (Arai & Tagyo)",
     client: "",
     projectNumber: "",
     revision: "0",
@@ -439,7 +439,7 @@ const ARAI_TAGYO_LAYERED: ModelEntry = {
   name: "Arai & Tagyo (1985), weak layer",
   projectInfo: {
     title: "Arai & Tagyo (1985), weak layer",
-    subtitle: "Published FOS: 0.414 (non-circular, Spencer); 0.39–0.44 in the literature",
+    subtitle: "Published F: 0.414 (non-circular, Spencer); 0.39–0.44 in the literature",
     client: "",
     projectNumber: "",
     revision: "0",
@@ -533,7 +533,7 @@ const TALBINGO_DAM_RTL: ModelEntry = {
   name: "Talbingo Dam",
   projectInfo: {
     title: "Talbingo Dam",
-    subtitle: "Published FOS result: 1.95",
+    subtitle: "Published F: 1.95",
     client: "",
     projectNumber: "",
     revision: "0",
@@ -788,7 +788,7 @@ const TALBINGO_SINGLE_CIRCLE: ModelEntry = {
   projectInfo: {
     ...TALBINGO_DAM_RTL.projectInfo!,
     title: "Talbingo Dam (Single Circle)",
-    subtitle: "Published FOS result: 2.29",
+    subtitle: "Published F: 2.29",
   },
   customSearchPlanes: [
     { id: "csp-talbingo-1", cx: 100.3, cy: 291.0, radius: 278.8 },

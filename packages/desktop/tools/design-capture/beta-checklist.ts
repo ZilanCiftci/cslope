@@ -278,7 +278,7 @@ async function openProject(path: string, via: "menu" | "key" = "key") {
 /** The status bar's factor of safety, as shown (three decimals), or null. */
 async function shownF(): Promise<string | null> {
   const t = await main.evaluate(() => document.body.innerText);
-  return t.match(/FOS:\s*([0-9]+\.[0-9]{3})/)?.[1] ?? null;
+  return t.match(/\bF:\s*([0-9]+\.[0-9]{3})/)?.[1] ?? null;
 }
 
 /** Press Run and wait for the result; returns the F the status bar shows. */

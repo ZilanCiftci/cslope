@@ -5,7 +5,7 @@ import type {
   PiezometricLineState,
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
-import { buildMaterialTableData } from "../canvas/helpers";
+import { buildMaterialTableData, tableScale } from "../canvas/helpers";
 import { ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
 import { getPaperDimensions } from "../view/paper";
 import { anchoredTopLeft } from "./anchorPosition";
@@ -69,7 +69,10 @@ function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape
 /**
  * The box of a material table on the paper, in fractions of the paper's
  * width (x, w) and height (y, h): layoutMaterialTable, as the canvas and the
- * PDF lay it out.
+ * PDF lay it out. Without `sheetScale`, at its paper size (the PDF); with
+ * the sheet's scale on screen (px per annotation px), as the canvas draws
+ * it there: no smaller than MATERIAL_TABLE_MIN_TEXT_PX (tableScale), so
+ * larger on the paper when the sheet is small.
  */
 export function materialTableBox(
   table: Annotation,
@@ -77,21 +80,26 @@ export function materialTableBox(
   piezometricLine: PiezometricLineState | undefined,
   paper: Pick<PaperFrameSettings, "paperSize" | "landscape">,
   measure: TextMeasure = measureSansText,
+  sheetScale?: number,
 ): { x: number; y: number; w: number; h: number } {
   const fontSize = table.fontSize ?? MATERIAL_TABLE_FONT_SIZE;
   const { columnKeys, header, rows } = buildMaterialTableData(table, materials, piezometricLine);
-  // At scale 1: the layout scales linearly with the sheet.
+  // In sheet px at the scale the table is drawn at, then back to the
+  // sheet's own scale (where the paper fractions are measured).
+  const sheet = sheetScale !== undefined && sheetScale > 0 ? sheetScale : 1;
+  const scale = sheetScale !== undefined && sheetScale > 0 ? tableScale(sheetScale, fontSize) : 1;
+  const size = fontSize * scale;
   const layout = layoutMaterialTable(
     columnKeys,
     header,
     rows,
-    { header: (t) => measure(t, fontSize, true), body: (t) => measure(t, fontSize, false) },
-    1,
+    { header: (t) => measure(t, size, true), body: (t) => measure(t, size, false) },
+    scale,
     fontSize,
   );
   const frac = paperFractions(paper);
-  const w = frac.w(layout.totalW);
-  const h = frac.h(layout.totalH);
+  const w = frac.w(layout.totalW / sheet);
+  const h = frac.h(layout.totalH / sheet);
   const { x, y } = anchoredTopLeft(table.x ?? 0, table.y ?? 0, w, h, table.anchor);
   return { x, y, w, h };
 }
@@ -107,6 +115,8 @@ export function colorBarHeight(paper: Pick<PaperFrameSettings, "paperSize" | "la
  * material table, at the right edge of the plot frame. When the bar would
  * run past the bottom of the frame there, it goes to the left of the
  * table at the top instead; without a table, where it always went.
+ * `sheetScale` is the sheet's scale on screen (see materialTableBox): the
+ * table as it is drawn there, which on a small sheet is larger than on paper.
  */
 export function colorBarDefaultPosition(
   annotations: Annotation[],
@@ -114,10 +124,11 @@ export function colorBarDefaultPosition(
   piezometricLine: PiezometricLineState | undefined,
   paper: Pick<PaperFrameSettings, "paperSize" | "landscape">,
   measure: TextMeasure = measureSansText,
+  sheetScale?: number,
 ): { x: number; y: number } {
   const tables = annotations.filter((a) => a.type === "material-table");
   if (tables.length === 0) return { x: RIGHT_INSIDE_FRAME, y: COLOR_BAR_DEFAULT_Y };
-  const boxes = tables.map((t) => materialTableBox(t, materials, piezometricLine, paper, measure));
+  const boxes = tables.map((t) => materialTableBox(t, materials, piezometricLine, paper, measure, sheetScale));
   const bottom = Math.max(...boxes.map((b) => b.y + b.h));
   const y = Math.round((bottom + GAP) * 1000) / 1000;
   const frameBottom = 1 - PLOT_MARGINS.B - FRAME_INSET;
