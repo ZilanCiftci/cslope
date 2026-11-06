@@ -11,6 +11,23 @@ The shared contract for the main session, its agents and the skills `triage`, `s
 5. **Merge.** Auto-merge (squash) when CI is green and the branch is up to date with main; one PR at a time.
 6. **Report.** What was fixed, what moved, what waits on a decision.
 
+## Issues written by Claude
+
+An issue Claude or an agent writes (from a review, a sprint, a finding while working) is held to the same template as a user's, and more: whoever picks it up must be able to act without asking. It has these sections, in this order:
+
+1. **Summary**: one or two sentences, what is wrong or wanted and where in the app (menu path, window, panel).
+2. **Steps to reproduce** (bugs): numbered, from a fresh start or a named example model; the cSlope version or commit (`main` at `<sha>`) and the OS.
+3. **What happens / what should happen**: both, concretely (the exact text, the size in px, the value).
+4. **Evidence**: screenshots (light and dark when it is about looks), cropped to the problem, marked if needed; log output or test output in a code block; for a wrong result, both values and their source. No client data.
+5. **Cause** (when known): files and lines (`path:line`), and why.
+6. **Proposed fix**: the change, the files it touches, alternatives with their consequence when there is a choice (then also `needs-decision`).
+7. **Done when**: the acceptance checks, as a checklist (a test that fails today and passes after; a screenshot in both themes; docs updated).
+8. **Links**: the PR, decision (DECISIONS.md), design rule or earlier issue it comes from.
+
+Screenshots: images can't be uploaded through the API, so they are committed to the `issue-assets` branch (an orphan branch holding only images, one folder per issue: `issue-<n>/`) and linked with their raw URL (`https://raw.githubusercontent.com/ZilanCiftci/cslope/issue-assets/issue-<n>/<file>.png`). Only synthetic models and the built-in examples, never a client's project.
+
+Labels as in [Labels](#labels): one type, a size, `needs-decision` when section 6 holds a choice.
+
 ## Autonomy policy (beta)
 
 While cSlope is in beta, fixes merge on their own: a PR that passes the `verify` gate and CI merges by auto-merge without a human review. The maintainer reviews the result in the app after the sprint. **This is revisited before the first non-beta release** (then: PRs wait for the maintainer's approval).

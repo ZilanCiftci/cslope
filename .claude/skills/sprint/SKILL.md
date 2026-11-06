@@ -12,6 +12,7 @@ Read [.claude/workflow.md](../../workflow.md) first (labels, autonomy policy, ca
 - The sprint's issues: open issues labeled `sprint: <n>` (GitHub MCP `list_issues` with the label).
 - Leave out issues labeled `needs-decision`, `needs-repro` or `needs-human`; list them in the report instead.
 - Read each issue fully, comments included. Reproduce a bug before planning its fix when the issue allows it.
+- An issue too thin to act on (no steps, no evidence, no "done when") is completed first, to the standard of "Issues written by Claude" in .claude/workflow.md, or left out with a comment saying what is missing.
 
 ## 2. Group
 
