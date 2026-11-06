@@ -32,22 +32,33 @@ const EXPORT_CSS_OVERRIDES: Record<string, string> = {
   "--color-canvas-paper-shadow": "rgba(0,0,0,0)",
 };
 
-/** Draws with the light theme and white paper, whatever the app's theme. */
-function withExportTheme<T>(draw: () => T): T {
+/** The dark theme's paper as the result view shows it, without the shadow. */
+const DARK_EXPORT_CSS_OVERRIDES: Record<string, string> = {
+  "--color-canvas-paper-shadow": "rgba(0,0,0,0)",
+};
+
+/**
+ * Draws with the light theme and white paper, whatever the app's theme;
+ * with `theme` "dark", with the dark theme and its paper (the website's
+ * dark-theme images). Returns what `draw` returns and the paper's colour.
+ */
+function withExportTheme<T>(theme: "light" | "dark", draw: (paper: string) => T): T {
   const root = document.documentElement;
-  const theme = root.dataset.theme;
-  const previous = Object.keys(EXPORT_CSS_OVERRIDES).map((k) => [k, root.style.getPropertyValue(k)] as const);
-  root.dataset.theme = "light";
-  for (const [k, v] of Object.entries(EXPORT_CSS_OVERRIDES)) root.style.setProperty(k, v);
+  const appTheme = root.dataset.theme;
+  const overrides = theme === "dark" ? DARK_EXPORT_CSS_OVERRIDES : EXPORT_CSS_OVERRIDES;
+  const previous = Object.keys(overrides).map((k) => [k, root.style.getPropertyValue(k)] as const);
+  root.dataset.theme = theme;
+  for (const [k, v] of Object.entries(overrides)) root.style.setProperty(k, v);
   try {
-    return draw();
+    const paper = getComputedStyle(root).getPropertyValue("--color-canvas-paper").trim() || EXPORT_CSS_OVERRIDES["--color-canvas-paper"];
+    return draw(paper);
   } finally {
     for (const [k, v] of previous) {
       if (v) root.style.setProperty(k, v);
       else root.style.removeProperty(k);
     }
-    if (theme === undefined) delete root.dataset.theme;
-    else root.dataset.theme = theme;
+    if (appTheme === undefined) delete root.dataset.theme;
+    else root.dataset.theme = appTheme;
   }
 }
 
@@ -60,9 +71,10 @@ function withExportTheme<T>(draw: () => T): T {
  * the selection or the hover highlight, so the view needs no redraw first.
  * Null without a result view or without a result (the canvas has no paper
  * then). `scale` replaces PNG_SCALE (the project file's thumbnail is drawn
- * at a fraction of it).
+ * at a fraction of it). `theme` "dark" draws the dark theme's paper instead
+ * (used by the website's media capture only).
  */
-export function paperPngDataUrl(options: { scale?: number } = {}): string | null {
+export function paperPngDataUrl(options: { scale?: number; theme?: "light" | "dark" } = {}): string | null {
   const args = drawSource?.();
   if (!args?.result || args.w <= 0 || args.h <= 0) return null;
   const pngScale = options.scale ?? PNG_SCALE;
@@ -126,7 +138,10 @@ export function paperPngDataUrl(options: { scale?: number } = {}): string | null
   const fullCtx = full.getContext("2d");
   if (!fullCtx) return null;
   fullCtx.setTransform(pngScale, 0, 0, pngScale, 0, 0);
-  withExportTheme(() => drawCanvas(fullCtx, params));
+  const paper = withExportTheme(options.theme ?? "light", (paperColor) => {
+    drawCanvas(fullCtx, params);
+    return paperColor;
+  });
 
   // The paper alone, its edge pixels inside it.
   const sx = Math.ceil(frame.x * pngScale);
@@ -138,7 +153,7 @@ export function paperPngDataUrl(options: { scale?: number } = {}): string | null
   out.height = sh;
   const ctx = out.getContext("2d");
   if (!ctx) return null;
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = paper;
   ctx.fillRect(0, 0, sw, sh);
   ctx.drawImage(full, sx, sy, sw, sh, 0, 0, sw, sh);
   return out.toDataURL("image/png");

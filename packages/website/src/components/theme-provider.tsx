@@ -104,3 +104,11 @@ export const useTheme = () => {
   if (context === undefined) throw new Error("useTheme must be used within a ThemeProvider");
   return context;
 };
+
+/**
+ * The chosen theme and the one in effect; outside a provider (a component
+ * rendered alone in a test) those the server renders with.
+ */
+export function useThemeOrDefault(): Pick<ThemeProviderState, "theme" | "resolved"> {
+  return useContext(ThemeProviderContext) ?? { theme: "system", resolved: "light" };
+}

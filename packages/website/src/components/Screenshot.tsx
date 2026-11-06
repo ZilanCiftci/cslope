@@ -1,23 +1,23 @@
+import { Picture } from "@/components/Picture";
+import { useFullSizeHref } from "@/lib/full-size";
+import type { Media } from "@/content/media";
 import { cn } from "@/lib/utils";
 
 /**
- * A screenshot from the app (public/media/...), framed. Width and height
- * are the image's own, so the page does not jump while it loads.
+ * A screenshot from the app (public/media/...), framed, in the theme of
+ * the site. A click opens it at full size.
  */
 export function Screenshot({
-  src,
-  alt,
-  width,
-  height,
+  media,
+  sizes,
   caption,
   priority = false,
   aspect,
   className,
 }: {
-  src: string;
-  alt: string;
-  width: number;
-  height: number;
+  media: Media;
+  /** The width the image is shown at, for the choice of its variant. */
+  sizes: string;
   caption?: string;
   /** Load at once (above the fold) instead of lazily. */
   priority?: boolean;
@@ -28,18 +28,18 @@ export function Screenshot({
   aspect?: string;
   className?: string;
 }) {
+  const href = useFullSizeHref(media);
   return (
     <figure className={cn("overflow-hidden rounded-lg border bg-card shadow-sm", className)}>
-      <img
-        src={src}
-        alt={alt}
-        width={width}
-        height={height}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        className={aspect ? "block w-full bg-white object-contain" : "block h-auto w-full"}
-        style={aspect ? { aspectRatio: aspect } : undefined}
-      />
+      <a href={href} target="_blank" rel="noopener" className="block cursor-zoom-in" title="Open at full size">
+        <Picture
+          media={media}
+          sizes={sizes}
+          priority={priority}
+          className={aspect ? "block w-full bg-card object-contain" : "block h-auto w-full"}
+          style={aspect ? { aspectRatio: aspect } : undefined}
+        />
+      </a>
       {caption && <figcaption className="border-t px-4 py-3 text-sm text-muted-foreground">{caption}</figcaption>}
     </figure>
   );

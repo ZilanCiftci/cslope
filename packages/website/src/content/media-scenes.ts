@@ -17,13 +17,23 @@ interface TutorialScene {
   fitHeight?: boolean;
 }
 
+/**
+ * What a tutorial starts from, as its text says: an example (Help ›
+ * Examples) by name, or a new project (File › New: "Model 1", with
+ * T-ACADS Simple's geometry and no title).
+ */
+type TutorialStart = { benchmark: string } | { newProject: true };
+
+const FILE_NEW: TutorialStart = { newProject: true };
+const example = (benchmark: string): TutorialStart => ({ benchmark });
+
 /** The scenes of one tutorial: images in media/tutorials/<name>/<id>.png. */
-function tutorial(name: string, benchmark: string, common: SceneSetup, list: TutorialScene[]): Scene[] {
+function tutorial(name: string, start: TutorialStart, common: SceneSetup, list: TutorialScene[]): Scene[] {
   return list.map((t) => ({
     id: `tut-${name}-${t.id}`,
     title: t.title,
     description: t.title,
-    benchmark,
+    ...start,
     setup: { ...common, ...t.setup },
     output: {
       type: "png",
@@ -45,6 +55,17 @@ const MATERIAL_TABLE_LEFT: [string, ...unknown[]] = [
   "updateAnnotation",
   "anno-benchmark-material-table",
   { x: 0.11, y: 0.25, anchor: "top-left" },
+];
+
+/**
+ * The weak-layer example's subtitle is long and runs under the material
+ * table at the top right; this moves the table below the text, without
+ * the material model column (Mohr-Coulomb for all three), above the toe.
+ */
+const MATERIAL_TABLE_NARROW: [string, ...unknown[]] = [
+  "updateAnnotation",
+  "anno-benchmark-material-table",
+  { y: 0.2, tableColumns: ["unitWeight", "cohesion", "frictionAngle"] },
 ];
 
 /**
@@ -82,7 +103,7 @@ export const scenes: Scene[] = [
     description: "Edit canvas showing slope geometry with coordinate points",
     benchmark: "T-ACADS Simple",
     setup: { mode: "edit" },
-    output: { type: "png", filename: "edit-geometry.png", crop: "canvas" },
+    output: { type: "png", filename: "edit-geometry.png", crop: "canvas", rulers: true },
   },
 
   {
@@ -163,9 +184,9 @@ export const scenes: Scene[] = [
   {
     id: "result-all-surfaces",
     title: "All Failure Surfaces",
-    description:
-      "Result view with all analyzed failure surfaces color-coded by FOS",
-    benchmark: "T-ACADS Simple",
+    description: "Result view with all analyzed slip surfaces colored by F and a color bar",
+    // Used in "Your first analysis", which starts with File › New.
+    newProject: true,
     setup: {
       mode: "result",
       runAnalysis: true,
@@ -176,6 +197,9 @@ export const scenes: Scene[] = [
         showCentreMarker: false,
         surfaceDisplay: "all",
       },
+      // The color bar the docs recommend with all surfaces (it is placed
+      // below the material table).
+      afterAnalysis: [["addAnnotation", "color-bar"]],
     },
     output: {
       type: "png",
@@ -198,6 +222,9 @@ export const scenes: Scene[] = [
         showSoilColor: true,
         showFosLabel: true,
       },
+      // Under the title and its two lines, clear of the subtitle and of the
+      // F label at the circle's center.
+      actions: [MATERIAL_TABLE_LEFT],
     },
     output: {
       type: "png",
@@ -220,7 +247,10 @@ export const scenes: Scene[] = [
         showSoilColor: true,
         showFosLabel: true,
         surfaceDisplay: "critical",
+        // The upstream face, where the critical surface lies.
+        viewLock: { bottomLeft: [130, 50], topRight: [330, 185] },
       },
+      actions: [MATERIAL_TABLE_LEFT],
     },
     output: { type: "png", filename: "result-dam.png", crop: "canvas" },
   },
@@ -241,13 +271,14 @@ export const scenes: Scene[] = [
         showCentreMarker: false,
         surfaceDisplay: "critical",
       },
+      afterAnalysis: [MATERIAL_TABLE_NARROW],
     },
     output: { type: "png", filename: "result-showcase.png", crop: "canvas" },
   },
 
   // ── Tutorial: Your first analysis ─────────────────────────────
 
-  ...tutorial("first-analysis", "T-ACADS Simple", { onlyModel: true }, [
+  ...tutorial("first-analysis", FILE_NEW, { onlyModel: true }, [
     {
       id: "01-window",
       title: "The cSlope window in edit mode",
@@ -298,7 +329,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Slope with a water table ────────────────────────
 
-  ...tutorial("water-table", "Arai & Tagyo (1985)", { onlyModel: true }, [
+  ...tutorial("water-table", example("Arai & Tagyo (1985)"), { onlyModel: true }, [
     { id: "01-model", title: "Slope with a water table", setup: { mode: "edit" }, crop: "canvas" },
     {
       id: "02-piezo",
@@ -321,7 +352,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Layered slope ───────────────────────────────────
 
-  ...tutorial("layered", "T-ACADS Non-Homogeneous", { onlyModel: true }, [
+  ...tutorial("layered", example("T-ACADS Non-Homogeneous"), { onlyModel: true }, [
     { id: "01-model", title: "Layered slope", setup: { mode: "edit" }, crop: "canvas" },
     {
       id: "02-interior",
@@ -349,7 +380,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Embankment dam ──────────────────────────────────
 
-  ...tutorial("dam", "Talbingo Dam", { onlyModel: true }, [
+  ...tutorial("dam", example("Talbingo Dam"), { onlyModel: true }, [
     { id: "01-model", title: "Zoned embankment dam", setup: { mode: "edit" }, crop: "canvas" },
     {
       id: "02-materials",
@@ -371,7 +402,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Soil nails ──────────────────────────────────────
 
-  ...tutorial("soil-nails", "T-ACADS Simple", { onlyModel: true, actions: [
+  ...tutorial("soil-nails", FILE_NEW, { onlyModel: true, actions: [
         ["addReinforcement", "nail"],
         ["updateReinforcement", "$last:reinforcements", { x1: 24, y1: -2, x2: 14.341, y2: -4.588 }],
         ["addReinforcement", "nail"],
@@ -392,7 +423,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Reporting ───────────────────────────────────────
 
-  ...tutorial("reporting", "T-ACADS Simple", { onlyModel: true, runAnalysis: true }, [
+  ...tutorial("reporting", FILE_NEW, { onlyModel: true, runAnalysis: true }, [
     {
       id: "01-paper",
       title: "The paper selected, with its properties",
@@ -417,7 +448,7 @@ export const scenes: Scene[] = [
 
   ...tutorial(
     "partial-factors",
-    "T-ACADS Simple",
+    FILE_NEW,
     { onlyModel: true, actions: [["setOptions", { partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 } }]] },
     [
       {
@@ -435,7 +466,7 @@ export const scenes: Scene[] = [
 
   ...tutorial(
     "block-search",
-    "Arai & Tagyo (1985), weak layer",
+    example("Arai & Tagyo (1985), weak layer"),
     {
       onlyModel: true,
       actions: [
@@ -458,7 +489,7 @@ export const scenes: Scene[] = [
       {
         id: "03-result",
         title: "Block search result",
-        setup: { runAnalysis: true, resultView: { surfaceDisplay: "all", showSlices: false } },
+        setup: { runAnalysis: true, resultView: { surfaceDisplay: "all", showSlices: false }, afterAnalysis: [MATERIAL_TABLE_NARROW] },
         crop: "canvas",
       },
     ],
@@ -466,7 +497,7 @@ export const scenes: Scene[] = [
 
   // ── Tutorial: Sensitivity and probability ─────────────────────
 
-  ...tutorial("probabilistic", "T-ACADS Simple", { onlyModel: true, runAnalysis: true }, [
+  ...tutorial("probabilistic", FILE_NEW, { onlyModel: true, runAnalysis: true }, [
     {
       id: "01-sensitivity",
       title: "Sensitivity analysis",

@@ -169,7 +169,13 @@ export function Features() {
                 </Link>
               )}
             </div>
-            {a.media && <Screenshot {...a.media} caption={a.caption} />}
+            {a.media && (
+              <Screenshot
+                media={a.media}
+                sizes="(min-width: 1152px) 540px, (min-width: 1024px) calc(50vw - 64px), calc(100vw - 32px)"
+                caption={a.caption}
+              />
+            )}
           </div>
         </Section>
       ))}
