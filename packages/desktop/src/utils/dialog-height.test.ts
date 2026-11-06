@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import { naturalDialogHeight, shouldFitDialog } from "./dialog-height";
 
 /** Fakes the layout jsdom doesn't compute: element boxes by id. */
-function layout(rects: Record<string, { top: number; bottom: number }>, clientHeight: number) {
+function layout(
+  rects: Record<string, { top: number; bottom: number }>,
+  clientHeight: number,
+  scrollHeight = clientHeight,
+) {
   for (const [id, r] of Object.entries(rects)) {
     const el = document.getElementById(id)!;
-    el.getBoundingClientRect = () => ({ top: r.top, bottom: r.bottom }) as DOMRect;
+    el.getBoundingClientRect = () => ({ top: r.top, bottom: r.bottom, height: r.bottom - r.top }) as DOMRect;
   }
-  Object.defineProperty(document.getElementById("body")!, "clientHeight", { value: clientHeight });
+  const body = document.getElementById("body")!;
+  Object.defineProperty(body, "clientHeight", { value: clientHeight, configurable: true });
+  Object.defineProperty(body, "scrollHeight", { value: scrollHeight, configurable: true });
 }
 
 describe("naturalDialogHeight", () => {
@@ -21,6 +27,26 @@ describe("naturalDialogHeight", () => {
     // 760 px window: the body runs from 40 to 700 but its content ends at 300.
     layout({ body: { top: 40, bottom: 700 }, a: { top: 40, bottom: 200 }, b: { top: 200, bottom: 300 } }, 660);
     expect(naturalDialogHeight(document, 760)).toBe(760 - 660 + 260);
+  });
+
+  it("counts the body's fractional height, not its rounded clientHeight", () => {
+    document.body.innerHTML = `
+      <div class="h-screen flex flex-col">
+        <h1>Title</h1>
+        <div id="body" class="flex-1 overflow-y-auto"><div id="a"></div></div>
+        <button>Close</button>
+      </div>`;
+    // Sensitivity (#42): a 760 px window whose body starts at 56.5 and is
+    // 648.5 high (clientHeight and scrollHeight round to 649), with 360 px of
+    // content. The frame is 111.5 px, so the window needs 472, not 471.
+    layout({ body: { top: 56.5, bottom: 705 }, a: { top: 56.5, bottom: 416.5 } }, 649, 649);
+    expect(naturalDialogHeight(document, 760)).toBe(472);
+    // Fitted to 471 (body 359.5 for 360 of content): measured again, 472.
+    layout({ body: { top: 56.5, bottom: 416 }, a: { top: 56.5, bottom: 416.5 } }, 360, 360);
+    expect(naturalDialogHeight(document, 471)).toBe(472);
+    // And at 472 it stays.
+    layout({ body: { top: 56.5, bottom: 416.5 }, a: { top: 56.5, bottom: 416.5 } }, 360, 360);
+    expect(naturalDialogHeight(document, 472)).toBe(472);
   });
 
   it("grows past the window when the content scrolls", () => {

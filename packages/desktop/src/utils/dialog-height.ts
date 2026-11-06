@@ -13,7 +13,9 @@ export const DIALOG_BODY_SELECTOR = ".h-screen > .flex-1.overflow-y-auto";
 export function naturalDialogHeight(doc: Document, windowHeight: number): number | null {
   const body = doc.querySelector<HTMLElement>(DIALOG_BODY_SELECTOR);
   if (!body) return null;
-  const top = body.getBoundingClientRect().top;
+  // The body's real height: its clientHeight is rounded, and a body that
+  // starts at a fractional y (header text line heights) is half a pixel off.
+  const { top, height } = body.getBoundingClientRect();
   let bottom = top;
   for (const child of Array.from(body.children)) {
     bottom = Math.max(bottom, child.getBoundingClientRect().bottom);
@@ -21,9 +23,11 @@ export function naturalDialogHeight(doc: Document, windowHeight: number): number
   if (bottom <= top) return null;
   const padding = parseFloat(getComputedStyle(body).paddingBottom) || 0;
   let content = bottom - top + body.scrollTop + padding;
-  // Overflowing, even by a rounded pixel: at least what it scrolls.
-  if (body.scrollHeight > body.clientHeight) content = Math.max(content, body.scrollHeight);
-  return Math.ceil(windowHeight - body.clientHeight + content);
+  // Overflowing by a pixel or more: at least what it scrolls. (scrollHeight
+  // is rounded and never less than the rounded body height, so compare it
+  // with that; a fraction of a pixel is in the children's boxes above.)
+  if (body.scrollHeight > Math.ceil(height)) content = Math.max(content, body.scrollHeight);
+  return Math.ceil(windowHeight - height + content);
 }
 
 /**
