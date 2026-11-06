@@ -11,6 +11,7 @@ import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
 import { useToolWindowState } from "../../utils/tool-window-sync";
+import { chartAxis } from "../annotations/plotAxis";
 import {
   defaultSd,
   histogram,
@@ -102,6 +103,12 @@ function ReliabilityBody({
     });
 
   const bars = result?.samples ? histogram(result.samples, 30).map((b) => ({ mid: (b.from + b.to) / 2, count: b.count })) : [];
+  // F from round ticks that include the 1.0 line, labeled with the
+  // decimals their step needs (a narrow distribution needs more, #71).
+  const fAxis =
+    bars.length > 0
+      ? chartAxis(Math.min(1, ...bars.map((b) => b.mid)), Math.max(1, ...bars.map((b) => b.mid)), { minDecimals: 2 })
+      : null;
 
   return (
     <ToolWindowFrame
@@ -341,9 +348,11 @@ function ReliabilityBody({
                   <XAxis
                     type="number"
                     dataKey="mid"
-                    domain={["dataMin", "dataMax"]}
+                    domain={fAxis?.domain ?? ["dataMin", "dataMax"]}
+                    ticks={fAxis?.ticks}
+                    interval={0}
                     tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
-                    tickFormatter={(v) => Number(v).toFixed(2)}
+                    tickFormatter={(v) => (fAxis ? fAxis.label(Number(v)) : Number(v).toFixed(2))}
                     label={{ value: "F", position: "insideBottom", offset: -8, fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                   />
                   <YAxis tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }} width={40} />

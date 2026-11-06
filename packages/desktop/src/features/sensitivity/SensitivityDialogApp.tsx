@@ -18,6 +18,7 @@ import { useWidth } from "../../utils/use-width";
 import { downloadFile, safeFileName } from "../../utils/download";
 import { isElectron } from "../../utils/is-electron";
 import { useToolWindowState } from "../../utils/tool-window-sync";
+import { chartAxis } from "../annotations/plotAxis";
 import { listVariables, sensitivityCsv, sensitivityValues } from "./sensitivity";
 import type { SensitivityCommand, SensitivityWindowState } from "./window-sync";
 
@@ -96,6 +97,12 @@ function SensitivityBody({
     .filter((p) => p.fos != null)
     .map((p) => ({ value: p.value, fos: p.fos! }));
   const failed = points.filter((p) => p.fos == null);
+  // F from round ticks that include the 1.0 line, labeled with the
+  // decimals their step needs (a small range near 1.0 needs more, #71).
+  const fAxis =
+    data.length > 0
+      ? chartAxis(Math.min(1, ...data.map((d) => d.fos)), Math.max(1, ...data.map((d) => d.fos)), { minDecimals: 2 })
+      : null;
 
   return (
     <ToolWindowFrame
@@ -200,9 +207,11 @@ function SensitivityBody({
                   label={{ value: label, position: "insideBottom", offset: -8, fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                 />
                 <YAxis
-                  domain={["auto", "auto"]}
+                  domain={fAxis?.domain ?? ["auto", "auto"]}
+                  ticks={fAxis?.ticks}
+                  interval={0}
                   tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
-                  tickFormatter={(v) => Number(v).toFixed(2)}
+                  tickFormatter={(v) => (fAxis ? fAxis.label(Number(v)) : Number(v).toFixed(2))}
                   width={44}
                 />
                 <ReferenceLine
