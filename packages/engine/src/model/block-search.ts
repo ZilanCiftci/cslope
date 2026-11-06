@@ -1,26 +1,9 @@
 /**
  * Block search: non-circular trial surfaces through block search objects.
  *
- * Each surface passes through one point of every object, the points
- * ordered by x as the base of the sliding block. From the two ends of the
- * base straight segments rise to the ground: the upslope (active) one at
- * the active angle, the downslope (passive) one at the passive angle. By
- * default these are the Coulomb wedge angles 45° + φ/2 and 45° − φ/2 of
- * the soil the segment cuts (Wright 1988, fig. 6; the block surfaces of
- * Edris & Wright 1987), otherwise drawn from the user's ranges, as
- * commercial block searches do. An object of one point is a fixed point,
- * of two a line (points uniform along it), of three or more a window
- * (points uniform within the polygon).
- *
- * `iterations` surfaces are drawn, then `refinedIterations` more around the
- * best ones in neighbourhoods that shrink level by level (each new point
- * within a fraction of its object's size of the old one). The draws are
- * seeded, so a search is repeatable. Only admissible surfaces are
- * analysed: entry and exit within the search limits, at least the minimum
- * failure distance apart, below the ground, inside the model and concave
- * (the rule of every non-circular surface in cSlope).
- *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/model/block_search.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import type { SearchPlane, Slope } from "./slope";
 import type { Evaluate, PlaneSteps } from "./steps";

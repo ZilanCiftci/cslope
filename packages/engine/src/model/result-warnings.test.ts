@@ -3,45 +3,12 @@ import type { Slice } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { VERIFICATION_CASES, runVerification } from "../verification/cases";
 import { buildSlope } from "./build-slope";
-import { polygonizeRegionsDetailed } from "./geometry-ops";
 import { analysisWarnings, entryInclination, M_ALPHA_WARNING_LIMIT } from "./result-warnings";
 import type { Slope } from "./slope";
 import { analyseSlope, solvedEffectiveNormals } from "./solvers";
 
 const mc = (unitWeight: number, cohesion: number, frictionAngle: number) =>
   ({ kind: "mohr-coulomb", unitWeight, cohesion, frictionAngle }) as const;
-
-describe("boundary end snapping", () => {
-  const ring: [number, number][] = [[0, -10], [0, 10], [10, 10], [30, 0], [40, 0], [40, -10]];
-  const split = (lines: [number, number][][]) =>
-    polygonizeRegionsDetailed(ring.map((p) => p[0]), ring.map((p) => p[1]), lines);
-
-  it("puts an end short of another boundary (a T-junction) on it", () => {
-    // A layer across the slope and a vertical boundary stopping 2 cm above
-    // it (tolerance 1e-3 × 40 m = 4 cm): three regions.
-    const r = split([[[0, -3], [40, -5]], [[20, -4 + 0.02], [20, 5]]]);
-    expect(r.danglingBoundaries).toEqual([]);
-    expect(r.faces).toHaveLength(3);
-  });
-
-  it("closes a lens drawn with a small gap", () => {
-    const r = split([[[10, -2], [20, -6], [30, -2], [10.01, -2]]]);
-    expect(r.danglingBoundaries).toEqual([]);
-    expect(r.faces).toHaveLength(2);
-  });
-
-  it("reports an end farther away than the tolerance, and only that line", () => {
-    const r = split([[[0, -3], [40, -5]], [[20, -4 + 0.5], [20, 5]]]);
-    expect(r.danglingBoundaries).toEqual([1]);
-    expect(r.faces).toHaveLength(2);
-  });
-
-  it("does not report a boundary that runs past the outline", () => {
-    const r = split([[[-1, 2], [41, -3]]]);
-    expect(r.danglingBoundaries).toEqual([]);
-    expect(r.faces).toHaveLength(2);
-  });
-});
 
 describe("analysisWarnings on the critical surface", () => {
   /** A slope stub with one analysed surface of the given slices. */

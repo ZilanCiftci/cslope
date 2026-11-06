@@ -4,7 +4,7 @@
  * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
 import type { SearchPlane, Slope } from "./slope";
-import { testCall, wasm } from "../facade/internal";
+import { wasm } from "../facade/internal";
 import { facadeSlope, h } from "../facade/wire";
 import type { PlanesWire } from "../facade/slice-codec";
 
@@ -51,40 +51,6 @@ export function isPlaneWithinExternalBoundary(slope: Slope, plane: Pick<SearchPl
  */
 export function generatePlanes(slope: Slope, lc: Pt, rc: Pt, numCircles = 5): SearchPlane[] {
   return facadeSlope(slope)._planes(wasm().generate_planes(h(slope), lc, rc, numCircles) as PlanesWire);
-}
-
-export function generateRefinedPlanes(slope: Slope, rankedPlanes: SearchPlane[], refinedIterations: number): SearchPlane[] {
-  const s = facadeSlope(slope);
-  return s._planes(testCall("model/search::generateRefinedPlanes", [{ $slope: s._h }, s._planesOut(rankedPlanes), refinedIterations]));
-}
-
-/**
- * One level of the local pattern search that follows the grid search and
- * generateRefinedPlanes.  Entry, exit and sagitta (chord-to-arc distance)
- * of the best surfaces so far are moved by steps that halve with each
- * level, so repeated levels converge on the minimum between grid points
- * instead of stopping at the grid resolution.
- */
-export function generateLocalPlanes(
-  slope: Slope,
-  evaluatedPlanes: SearchPlane[],
-  budget: number,
-  level: number,
-  existingKeys?: Set<string>,
-  numSeeds = 4,
-): SearchPlane[] {
-  const s = facadeSlope(slope);
-  const r = testCall<{ planes: PlanesWire; keys: string[] }>("model/search::generateLocalPlanes", [
-    { $slope: s._h },
-    s._planesOut(evaluatedPlanes),
-    budget,
-    level,
-    existingKeys ? [...existingKeys] : undefined,
-    numSeeds,
-  ]);
-  // (TypeScript adds the new planes' keys to the set it is given)
-  if (existingKeys) for (const k of r.keys) existingKeys.add(k);
-  return s._planes(r.planes);
 }
 
 /**

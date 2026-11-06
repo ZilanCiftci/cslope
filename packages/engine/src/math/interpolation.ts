@@ -3,16 +3,7 @@
  *
  * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-import { list, testCall, wasm } from "../facade/internal";
-
-// ── 2D Spatial Interpolation ───────────────────────────────────
-
-/** A 2D data point with arbitrary numeric values. */
-export interface SpatialDataPoint {
-  x: number;
-  y: number;
-  values: number[];
-}
+import { list, wasm } from "../facade/internal";
 
 /**
  * Get the y-coordinate on a polyline at a specific x-coordinate.
@@ -62,36 +53,4 @@ export function getYAtXStrict(line: [number[], number[]], x: number): number {
  */
 export function getLineBetweenPoints(line: [number[], number[]], x1: number, x2: number): [number[], number[]] {
   return wasm().get_line_between_points(line[0], line[1], x1, x2);
-}
-
-/**
- * Inverse Distance Weighting (IDW) interpolation in 2D.
- *
- * Interpolates `values` at query point `(qx, qy)` from a set of
- * data points using the formula:
- *   v = Σ(wi * vi) / Σ(wi),  where wi = 1 / dist(q, pi)^p
- *
- * If the query point coincides with (or is very close to) a data point,
- * that data point's values are returned directly to avoid division by zero.
- *
- * @param points  Array of spatial data points.
- * @param qx      Query x-coordinate.
- * @param qy      Query y-coordinate.
- * @param power   Distance exponent (default: 2).
- * @param eps     Distance threshold below which a point is considered
- *                coincident (default: 1e-10).
- * @returns Interpolated values array (same length as `points[0].values`).
- *          Returns an array of zeros if `points` is empty.
- */
-export function interpolateIDW(points: SpatialDataPoint[], qx: number, qy: number, power?: number, eps?: number): number[] {
-  return testCall("math/interpolation::interpolateIDW", [points, qx, qy, power, eps]);
-}
-
-/**
- * Nearest-neighbour interpolation in 2D.
- *
- * Returns the values of the data point closest to `(qx, qy)`.
- */
-export function interpolateNearest(points: SpatialDataPoint[], qx: number, qy: number): number[] {
-  return testCall("math/interpolation::interpolateNearest", [points, qx, qy]);
 }

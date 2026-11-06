@@ -62,10 +62,15 @@ types, data and docs and calls the engine), and the steps below apply to
    (`errors::IntoJsResult`): RangeError for `EngineError::range`, Error
    otherwise, the message unchanged. An engine type without serde gets a DTO
    in the wasm crate (`MaterialParamsDto`), not serde in the engine.
-2. **Internal functions** the tests import (not in `src/index.ts`): an arm in
-   `crates/cslope-wasm/src/testing.rs` (`"<ts path>::<tsName>" => …`, args as
-   a tuple, every parameter present) and the name in `TEST_FUNCTIONS`.
-   Only the testing build has them.
+2. **Internal functions** (not in `src/index.ts`) are tested in Rust
+   (crates/cslope-engine/tests or a module test), not through the facade.
+   Only one a TypeScript test of the facade itself needs gets an arm in the
+   testing dispatcher (`crates/cslope-wasm/src/api/fem_testing.rs` for
+   `fem/` names, through `testing.rs`; args read from the argument array,
+   every parameter present) and its name in `FEM_TEST_FUNCTIONS`. Only the
+   testing build has them. (After the port the internal functions' TS
+   wrappers, their TS tests and the dispatch entries were removed, issue
+   #51.)
 3. **Objects with state** (a `Slope`, an FE result) live in a
    `registry::Registry` in a `thread_local!` and cross as a `u32` handle; the
    shim keeps the handle with the engine epoch (`engineEpoch()`) and frees it

@@ -6,7 +6,7 @@
 import type { Slice } from "../types/geometry";
 import type { SearchPlane, Slope } from "./slope";
 import { type AsyncEvaluate, type PlaneSteps, runStepsAsync } from "./steps";
-import { testCall, wasm } from "../facade/internal";
+import { wasm } from "../facade/internal";
 import { type PlanesWire, encodeSlices } from "../facade/slice-codec";
 import { engineSteps, facadeSlope, h, onSlices, writeBackPlanes } from "../facade/wire";
 
@@ -28,17 +28,6 @@ export function setMorgensternPriceSolver(solver: "iterative" | "march"): void {
 /** The Morgenstern-Price solver set (a parallel evaluator must use the same). */
 export function getMorgensternPriceSolver(): "iterative" | "march" {
   return wasm().get_morgenstern_price_solver() as "iterative" | "march";
-}
-
-export function getSlicePropertyArrays(
-  slices: Slice[],
-  x0: number,
-  x1: number,
-  intersliceFunction: Slope["intersliceFunction"],
-  intersliceDataPoints: Slope["intersliceDataPoints"],
-): unknown {
-  // (the slices' materials do not enter the arrays)
-  return testCall("model/solvers::getSlicePropertyArrays", [encodeSlices(slices as never, () => null), x0, x1, intersliceFunction, intersliceDataPoints]);
 }
 
 /**

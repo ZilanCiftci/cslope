@@ -902,6 +902,32 @@ fn design_strength_per_part() {
     );
 }
 
+// model/combined-depth.test.ts: "takes the drained partial factors on c′ and
+// tan φ′ and γcu on Su" (moved here from the TypeScript tests)
+#[test]
+fn design_strength_of_a_combined_s_f_depth() {
+    let model = m(
+        json!({ "kind": "s-f-depth", "unitWeight": 16, "suRef": 10, "depthRef": 0, "rate": 1.5,
+        "depthReference": "layer-top", "drainedCohesion": 1, "drainedCohesionRate": 0.15, "drainedFrictionAngle": 30 }),
+    );
+    let c = StrengthContext {
+        y_layer_top: Some(0.0),
+        ..ctx(-4.0, 10.0, 1.0, 0.0)
+    };
+    let f = PartialFactors {
+        cu: 1.5,
+        cohesion: 1.3,
+        tan_phi: 1.3,
+        variable_load: 1.0,
+        basis: None,
+    };
+    let d = design_strength(Some("s-f-depth"), &rs(&model, c), Some(&f));
+    assert!(!d.undrained);
+    close_to(d.cohesion, 1.6 / 1.3, 12);
+    close_to(d.tan_phi, tan(PI / 6.0) / 1.3, 12);
+    close_to(d.cohesion_undrained, 16.0 / 1.5, 12);
+}
+
 // ── suction-strength.test.ts ───────────────────────────────────
 
 fn sctx_suction(suction: Option<f64>) -> StrengthContext {

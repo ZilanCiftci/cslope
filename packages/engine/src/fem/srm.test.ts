@@ -1,34 +1,15 @@
+/**
+ * Strength reduction on verification problems. Davis B and the strength
+ * reduction with reinforcement are tested in Rust:
+ * packages/engine-rs/crates/cslope-engine/tests/fem_model_unit.rs.
+ */
 import { describe, it, expect } from "vitest";
 import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { buildFeModel } from "./model";
-import { davisB, strengthReduction } from "./srm";
+import { strengthReduction } from "./srm";
 import { PROBLEMS } from "../verification/problems";
-
-const deg = Math.PI / 180;
-
-describe("davisB", () => {
-  it("reproduces the Davis B factors of Sysala et al. (2021, table 1)", () => {
-    // Single material: FS_B solves q_B(FS_B) = FS_associated = 1.52 (φ' = 45°).
-    const solve = (psi: number) => {
-      let a = 1, b = 1.52;
-      for (let k = 0; k < 60; k++) {
-        const m = (a + b) / 2;
-        if (davisB(m, 45 * deg, psi * deg) < 1.52) a = m; else b = m;
-      }
-      return (a + b) / 2;
-    };
-    expect(solve(15)).toBeCloseTo(1.356, 2);
-    expect(solve(0)).toBeCloseTo(1.145, 2);
-  });
-
-  it("is F for associated flow and F / cos φ_F for ψ = 0", () => {
-    expect(davisB(1.3, 30 * deg, 30 * deg)).toBeCloseTo(1.3, 12);
-    const phiF = Math.atan(Math.tan(30 * deg) / 1.3);
-    expect(davisB(1.3, 30 * deg, 0)).toBeCloseTo(1.3 / Math.cos(phiF), 12);
-  });
-});
 
 describe("strengthReduction", () => {
   it("finds Griffiths & Lane's homogeneous slope near 1.4 on a coarse mesh", () => {
@@ -80,24 +61,6 @@ describe("strengthReduction with non-associated flow", () => {
     expect(eq.factorOfSafety).toBeLessThanOrEqual(vp.factorOfSafety + 0.01);
     expect(eq.factorOfSafety).toBeGreaterThan(vp.factorOfSafety - 0.05);
   }, 300000);
-});
-
-describe("strengthReduction with reinforcement", () => {
-  const def = (reinforced: boolean) =>
-    ({
-      coordinates: [[0, 0], [0, 10], [10, 10], [15, 4], [30, 4], [30, 0]],
-      materials: [{ name: "Clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 25 } }],
-      reinforcements: reinforced
-        ? [5, 6.5, 8].map((y) => ({ x1: 15 - ((y - 4) * 5) / 6, y1: y, x2: 2, y2: y, tensileCapacity: 60, application: "passive" }))
-        : [],
-    }) as unknown as SlopeDefinition;
-  it("raises the factor of safety, with Newton and with the viscoplastic iteration", () => {
-    for (const solver of ["newton", "viscoplastic"] as const) {
-      const plain = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def(false))), { elementSize: 1.5 }), { solver, fTolerance: 0.02 });
-      const reinf = strengthReduction(buildFeModel(buildSlope(toCanonicalSlopeDefinition(def(true))), { elementSize: 1.5 }), { solver, fTolerance: 0.02 });
-      expect(reinf.factorOfSafety).toBeGreaterThan(plain.factorOfSafety + 0.01);
-    }
-  }, 240000);
 });
 
 describe("viscoplastic iteration beyond the apex", () => {

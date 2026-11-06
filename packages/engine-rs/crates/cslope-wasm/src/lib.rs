@@ -27,8 +27,6 @@ pub mod panic;
 pub mod registry;
 #[cfg(feature = "testing")]
 pub mod testing;
-#[cfg(feature = "testing")]
-pub mod testing_le;
 
 use wasm_bindgen::prelude::*;
 

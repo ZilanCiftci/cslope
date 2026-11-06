@@ -44,7 +44,7 @@ describe("FE facade", () => {
   it("calls only internal functions the testing build has", () => {
     const known = new Set(testingEngine().__test_functions());
     const used = Object.values(sources).flatMap((s) => [...s.matchAll(/testCall(?:<[^>]*>)?\("([^"]+)"/g)].map((m) => m[1]));
-    expect(used.length).toBeGreaterThan(40);
+    expect(used.length).toBeGreaterThanOrEqual(9); // the pattern finds every call (the rest are tested in Rust, #51)
     for (const name of used) expect(known.has(name), name).toBe(true);
   });
 
