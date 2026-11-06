@@ -5,7 +5,7 @@
  * polyline's points as "x, y; x, y").
  */
 
-import { useState } from "react";
+import { cloneElement, isValidElement, useId, useState } from "react";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { formatPolyline, parsePolyline } from "../../utils/polyline";
 import type { Annotation, ReferenceAnnotation, ReferenceDash } from "../../store/types";
@@ -26,13 +26,29 @@ function commonValue<T>(values: T[]): T | undefined {
 
 const labelStyle = { color: "var(--color-vsc-text-muted)" };
 
-function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+/**
+ * A label over its control, tied to it (the label names the control). With
+ * `group`, the children are several controls (the color swatches): the
+ * label names the group.
+ */
+function Field({ label, children, className, group }: { label: string; children: React.ReactNode; className?: string; group?: boolean }) {
+  const id = useId();
+  if (group) {
+    return (
+      <div className={className} role="group" aria-labelledby={id}>
+        <span id={id} className="text-[10px] block mb-0.5" style={labelStyle}>
+          {label}
+        </span>
+        {children}
+      </div>
+    );
+  }
   return (
     <div className={className}>
-      <label className="text-[10px] block mb-0.5" style={labelStyle}>
+      <label htmlFor={id} className="text-[10px] block mb-0.5" style={labelStyle}>
         {label}
       </label>
-      {children}
+      {isValidElement<{ id?: string }>(children) ? cloneElement(children, { id }) : children}
     </div>
   );
 }
@@ -125,11 +141,12 @@ export function ReferenceProperties({
         </p>
       )}
 
-      <Field label="Color">
-        <div className="flex flex-wrap gap-1 items-center">
+      <Field label="Color" group>
+        {/* One row: the swatches shrink (up to 20 px) to fit the sidebar's width. */}
+        <div className="flex gap-1 items-center">
           <button
             onClick={() => apply({ color: undefined })}
-            className="h-5 px-1.5 rounded-sm cursor-pointer text-[10px]"
+            className="h-5 px-1.5 shrink-0 rounded-sm cursor-pointer text-[10px]"
             aria-pressed={colorValue === ""}
             title="The theme's reference color"
             style={{
@@ -144,7 +161,7 @@ export function ReferenceProperties({
             <button
               key={c}
               onClick={() => apply({ color: c })}
-              className="w-5 h-5 rounded-sm cursor-pointer"
+              className="flex-1 min-w-0 max-w-5 aspect-square rounded-sm cursor-pointer"
               aria-label={`Color ${c}`}
               aria-pressed={colorValue === c}
               style={{
@@ -207,13 +224,14 @@ export function ReferenceProperties({
 }
 
 /** Text input for the points that keeps the user's text while typing (as the custom planes dialog). */
-function PointsInput({ points, onChange }: { points: [number, number][]; onChange: (points: [number, number][]) => void }) {
+function PointsInput({ id, points, onChange }: { id?: string; points: [number, number][]; onChange: (points: [number, number][]) => void }) {
   const [draft, setDraft] = useState<string | null>(null);
   const text = draft ?? formatPolyline(points);
   const parsed = parsePolyline(text);
   const invalid = parsed === null || parsed.length < 2;
   return (
     <textarea
+      id={id}
       value={text}
       onChange={(e) => {
         setDraft(e.target.value);

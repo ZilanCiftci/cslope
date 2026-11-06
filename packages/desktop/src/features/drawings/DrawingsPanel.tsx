@@ -20,6 +20,7 @@ import {
   PencilRuler,
   Trash2,
 } from "lucide-react";
+import { FoldChevron, SECTION_HEADING_ROW, SECTION_HEADING_TEXT } from "../../components/ui/Section";
 import { useAppStore } from "../../store/app-store";
 import { isObjectLocked, sameObject } from "../../store/canvas-selection";
 import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
@@ -104,9 +105,13 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
     }
   };
   return (
-    <div role="treeitem" aria-label={label} aria-selected={selected}>
+    <div role="none">
       <div
-        className="group flex items-center gap-1.5 pl-[43px] pr-1 py-[2px] mx-1 rounded-sm text-[12px] cursor-pointer select-none"
+        role="treeitem"
+        aria-label={label}
+        aria-selected={selected}
+        aria-level={2}
+        className="group flex items-center gap-1.5 h-6 pl-[43px] pr-1 mx-1 rounded-sm text-[12px] cursor-pointer select-none"
         style={{
           background: selected ? "var(--color-vsc-selected-bg)" : undefined,
           color: selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
@@ -129,7 +134,7 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
         {editing !== null ? (
           <input
             autoFocus
-            className="flex-1 min-w-0 text-[11px] py-0"
+            className="flex-1 min-w-0 h-[22px] text-[11px] py-0"
             value={editing}
             aria-label="Drawing name"
             onClick={(e) => e.stopPropagation()}
@@ -144,7 +149,8 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
             }}
           />
         ) : (
-          <span className="flex-1 min-w-0 truncate" style={{ opacity: b.visible ? 1 : 0.55 }}>
+          // A hidden drawing's name in the muted color; the eye-off icon tells why.
+          <span className="flex-1 min-w-0 truncate" style={b.visible ? undefined : muted}>
             {label}
           </span>
         )}
@@ -208,7 +214,7 @@ function DrawingSettings({
       style={{ border: "1px solid var(--color-vsc-border)", background: "var(--color-vsc-panel, transparent)" }}
       data-testid="drawing-settings"
     >
-      <div className="flex items-center gap-1.5" style={{ opacity: b.visible ? 1 : 0.55 }} title={b.visible ? undefined : "The drawing is hidden"}>
+      <div className="flex items-center gap-1.5" style={b.visible ? undefined : muted} title={b.visible ? undefined : "The drawing is hidden"}>
         <span style={muted}>Opacity</span>
         <input
           type="range"
@@ -241,31 +247,21 @@ function DrawingSettings({
         />
         <span className="w-8 text-right tabular-nums">{Math.round(b.opacity * 100)}%</span>
       </div>
-      <div className="flex items-center gap-1 mt-1">
-        <label className="flex items-center gap-1 flex-1 min-w-0" title="Also draw it in the result view and the PDF export">
-          <input type="checkbox" checked={b.showInResults === true} onChange={(e) => st().updateBackground(b.id, { showInResults: e.target.checked || undefined })} />
-          <span className="truncate">Show in results</span>
-        </label>
-        <button className={iconButton} disabled={first} onClick={() => st().moveBackground(b.id, "up")} aria-label={`Move ${label} up`} title="Draw over the drawing above it">
-          <ChevronUp size={13} aria-hidden />
-        </button>
-        <button className={iconButton} disabled={last} onClick={() => st().moveBackground(b.id, "down")} aria-label={`Move ${label} down`} title="Draw under the drawing below it">
-          <ChevronDown size={13} aria-hidden />
-        </button>
-        <button className={iconButton} onClick={() => st().removeBackground(b.id)} aria-label={`Remove ${label} from the model`} title="Remove from the model (the file stays in Attachments while another model uses it)">
-          <Trash2 size={12} aria-hidden />
-        </button>
-      </div>
+      {/* The checkbox on a line of its own, so its label is never cut. */}
+      <label className="flex items-center gap-1 mt-1 min-w-0" title="Also draw it in the result view and the PDF export">
+        <input type="checkbox" checked={b.showInResults === true} onChange={(e) => st().updateBackground(b.id, { showInResults: e.target.checked || undefined })} />
+        <span className="truncate">Show in results</span>
+      </label>
       <div className="flex items-center flex-wrap gap-1 mt-1">
-        <button className="btn text-[11px] px-2 py-0.5" onClick={() => openPlaceDrawing(b.id)}>
+        <button className="btn text-[11px]" onClick={() => openPlaceDrawing(b.id)}>
           Recalibrate…
         </button>
-        <button className="btn text-[11px] px-2 py-0.5" onClick={onRename}>
+        <button className="btn text-[11px]" onClick={onRename}>
           Rename
         </button>
         {(kind === "vector" || kind === "pdf") && (
           <button
-            className="btn text-[11px] px-2 py-0.5"
+            className="btn text-[11px]"
             aria-pressed={picking}
             disabled={!b.visible}
             title={
@@ -278,6 +274,17 @@ function DrawingSettings({
             {picking ? "Done picking" : "Pick lines…"}
           </button>
         )}
+        <span className="ml-auto flex items-center">
+          <button className={iconButton} disabled={first} onClick={() => st().moveBackground(b.id, "up")} aria-label={`Move ${label} up`} title="Draw over the drawing above it">
+            <ChevronUp size={13} strokeWidth={1.75} aria-hidden />
+          </button>
+          <button className={iconButton} disabled={last} onClick={() => st().moveBackground(b.id, "down")} aria-label={`Move ${label} down`} title="Draw under the drawing below it">
+            <ChevronDown size={13} strokeWidth={1.75} aria-hidden />
+          </button>
+          <button className={iconButton} onClick={() => st().removeBackground(b.id)} aria-label={`Remove ${label} from the model`} title="Remove from the model (the file stays in Attachments while another model uses it)">
+            <Trash2 size={12} strokeWidth={1.75} aria-hidden />
+          </button>
+        </span>
       </div>
       {drawing && drawing.layers.length > 0 && (
         <LayerList
@@ -304,7 +311,7 @@ const sizeText = (bytes: number | undefined) =>
 /**
  * The project's attached files (the drawings' files), each with the models
  * that place it; one no model uses is left out when the project is saved.
- * "Add…" opens the Place drawing window; "Place…" on a file places it in
+ * "+ Add drawing…" under the list opens the Place drawing window; "Place…" on a file places it in
  * the active model.
  */
 export function AttachmentsPanel() {
@@ -317,25 +324,25 @@ export function AttachmentsPanel() {
   const usedBy = (assetId: string) =>
     models.filter((m) => (m.id === activeModelId ? activeBackgrounds : (m.backgrounds ?? [])).some((b) => b.assetId === assetId)).map((m) => m.name);
   return (
-    <div className="border-t" style={{ borderColor: "var(--color-vsc-border)" }} data-testid="attachments-panel">
-      <div className="flex items-center">
-        <button
-          className="flex items-center gap-1.5 px-4 py-1.5 cursor-pointer flex-1 text-left text-[10px] font-bold uppercase tracking-[0.08em] select-none"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-label="Toggle attachments list"
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>
-            <path d="M2 3l3 3.5L8 3z" />
-          </svg>
-          Attachments
-        </button>
-        <button className="btn text-[11px] mr-2 px-2 py-0.5" onClick={() => openPlaceDrawing()} title="Add a drawing file and place it in the active model">
-          Add…
-        </button>
-      </div>
+    <div data-testid="attachments-panel">
+      {/* The same heading row as Models: 24 px between borders, on the tint. */}
+      <button
+        className={`${SECTION_HEADING_ROW} ${SECTION_HEADING_TEXT} w-full cursor-pointer text-left`}
+        style={{
+          background: "var(--color-vsc-surface-tint)",
+          color: "var(--color-vsc-text-muted)",
+          borderTop: "1px solid var(--color-vsc-border)",
+          borderBottom: "1px solid var(--color-vsc-border)",
+        }}
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-label="Toggle attachments list"
+      >
+        <FoldChevron open={open} />
+        Attachments
+      </button>
       {open && (
-        <ul className="pb-1.5" aria-label="Attached files">
+        <ul className="pt-1" aria-label="Attached files">
           {assets.map((a) => {
             const users = usedBy(a.id);
             return (
@@ -356,7 +363,7 @@ export function AttachmentsPanel() {
                   </div>
                 </div>
                 <button
-                  className="btn text-[11px] px-2 py-0.5 shrink-0 self-center opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  className="btn text-[11px] shrink-0 self-center opacity-0 group-hover:opacity-100 focus:opacity-100"
                   onClick={() => openPlaceDrawing({ assetId: a.id })}
                   aria-label={`Place ${a.originalName} in the active model`}
                   title="Place in the active model"
@@ -367,6 +374,16 @@ export function AttachmentsPanel() {
             );
           })}
         </ul>
+      )}
+      {open && (
+        <button
+          className="mx-4 mt-0.5 mb-1.5 text-[11px] cursor-pointer hover:underline font-medium"
+          style={{ color: "var(--color-vsc-accent)" }}
+          onClick={() => openPlaceDrawing()}
+          title="Add a drawing file and place it in the active model"
+        >
+          + Add drawing…
+        </button>
       )}
     </div>
   );
@@ -392,9 +409,7 @@ function LayerList({
   return (
     <div className="mt-1">
       <button className="flex items-center gap-1 text-[11px]" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Layers of ${label}`}>
-        <svg width="8" height="8" viewBox="0 0 10 10" fill="currentColor" style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)" }} aria-hidden>
-          <path d="M2 3l3 3.5L8 3z" />
-        </svg>
+        <FoldChevron open={open} />
         Layers <span style={muted}>({shown} of {layers.length} shown)</span>
       </button>
       {open && (
