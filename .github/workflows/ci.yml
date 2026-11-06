@@ -22,10 +22,14 @@ permissions:
 env:
   CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
 
+# Time limits: each job stops a few times its usual run time (check about
+# 1 min, desktop 6, engine 2, rust 11 with its cache), and Install after
+# 5 min, so a hung step fails within minutes instead of GitHub's 6 hours.
 jobs:
   # Which parts changed: the engine jobs are skipped when the engine did not.
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       engine: ${{ steps.filter.outputs.engine }}
     steps:
@@ -45,6 +49,7 @@ jobs:
 
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -54,6 +59,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       # A high or critical advisory on a production dependency fails the
       # job (the root package.json's audit script). No advisory is ignored:
       # when one appears, upgrade the dependency (Dependabot opens the pull
@@ -86,6 +92,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       CSLOPE_QUICK_TESTS: "1"
     steps:
@@ -97,6 +104,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Setup Rust
         working-directory: packages/engine-rs
         run: rustup toolchain install
@@ -115,6 +123,7 @@ jobs:
 
   desktop:
     runs-on: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && 'ubuntu-latest' || 'windows-latest' }}
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -124,6 +133,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Test
         run: bun run --filter @cslope/desktop test
 
@@ -134,6 +144,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -143,6 +154,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       # The toolchain of rust-toolchain.toml, with the wasm32 target
       - name: Setup Rust
         working-directory: packages/engine-rs

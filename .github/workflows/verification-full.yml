@@ -15,6 +15,7 @@ permissions:
 jobs:
   verification:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -24,6 +25,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       # The engine's tests run on its testing build (packages/engine/vitest.setup.ts)
       - name: Setup Rust
         working-directory: packages/engine-rs
@@ -45,6 +47,7 @@ jobs:
   # crates as its rust job does when the engine changes.
   audit:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -54,6 +57,7 @@ jobs:
           bun-version-file: package.json
       - name: Install
         run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Audit dependencies
         run: bun run audit
       - name: Setup Rust
