@@ -1,11 +1,13 @@
-import { Box } from "lucide-react";
+import { Box, LoaderCircle } from "lucide-react";
 import type React from "react";
 import { FoldChevron } from "../../components/ui/Section";
 import type { ModelEntry } from "../../store/types";
 
 interface Props {
   model: ModelEntry;
+  /** The model shown on the canvas: its name in semibold. */
   isActive: boolean;
+  /** Selected in the tree (the light blue row); the active model is too, unless one of its drawings is selected. */
   isSelected: boolean;
   isEditing: boolean;
   hasResult: boolean;
@@ -62,7 +64,7 @@ export function ModelRow({
   onToggleDrawings,
 }: Props) {
   const state = isRunning
-    ? { label: "Analyzing", fill: "var(--color-vsc-accent)" }
+    ? { label: "Analyzing", fill: null }
     : hasError
       ? { label: "Analysis failed", fill: "var(--color-vsc-error)" }
       : hasResult
@@ -74,24 +76,18 @@ export function ModelRow({
       // 24 px (a name on two lines grows it); the rename field fits in it.
       className="group relative flex items-center gap-2 min-h-6 py-px pl-1.5 pr-4 cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
       style={{
-        background: isActive
-          ? "var(--color-vsc-selected-bg)"
-          : isSelected
-            ? "var(--color-vsc-list-hover)"
-            : undefined,
-        color:
-          isActive || isSelected
-            ? "var(--color-vsc-text-bright)"
-            : "var(--color-vsc-text)",
+        // Every selected row in light blue; the active model in semibold.
+        background: isSelected ? "var(--color-vsc-selected-bg)" : undefined,
+        color: isActive || isSelected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
         opacity: isDragSource ? 0.5 : 1,
       }}
       onMouseEnter={(e) => {
-        if (!isActive && !isSelected)
+        if (!isSelected)
           (e.currentTarget as HTMLElement).style.background =
             "var(--color-vsc-list-hover)";
       }}
       onMouseLeave={(e) => {
-        if (!isActive && !isSelected)
+        if (!isSelected)
           (e.currentTarget as HTMLElement).style.background = "";
       }}
       onClick={(e) => {
@@ -108,7 +104,8 @@ export function ModelRow({
       onDrop={(e) => onDrop(e, model.id)}
       onDragEnd={onDragEnd}
       role="treeitem"
-      aria-selected={isActive || isSelected}
+      aria-selected={isSelected}
+      aria-current={isActive || undefined}
       aria-level={1}
       aria-expanded={drawingsOpen}
       aria-label={model.name}
@@ -143,20 +140,33 @@ export function ModelRow({
           <FoldChevron open={drawingsOpen} />
         </button>
       )}
-      {/* The run state as a dot before the box: green analysed, blue
-          running, red failed, hollow grey not run. Selection is shown
-          by the row background only. */}
-      <span
-        data-testid={isRunning ? "model-running" : undefined}
-        role="img"
-        aria-label={state.label}
-        title={state.label}
-        className={`w-[7px] h-[7px] rounded-full shrink-0 box-border${isRunning ? " animate-pulse" : ""}`}
-        style={{
-          background: state.fill ?? "transparent",
-          border: state.fill ? undefined : "1px solid var(--color-vsc-text-muted)",
-        }}
-      />
+      {/* The run state as a dot before the box: green analyzed, red
+          failed, hollow grey not run; a running model has a grey spinner
+          (the accent is for selection, not status). Selection is shown by
+          the row background only. */}
+      {isRunning ? (
+        <span
+          data-testid="model-running"
+          role="img"
+          aria-label={state.label}
+          title={state.label}
+          className="w-[10px] h-[10px] -mx-[1.5px] shrink-0 flex items-center justify-center"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          <LoaderCircle size={10} strokeWidth={2.25} className="animate-spin" aria-hidden />
+        </span>
+      ) : (
+        <span
+          role="img"
+          aria-label={state.label}
+          title={state.label}
+          className="w-[7px] h-[7px] rounded-full shrink-0 box-border"
+          style={{
+            background: state.fill ?? "transparent",
+            border: state.fill ? undefined : "1px solid var(--color-vsc-text-muted)",
+          }}
+        />
+      )}
       <Box size={16} strokeWidth={1.75} className="shrink-0" aria-hidden color="var(--color-vsc-text-muted)" />
 
       {isEditing ? (
@@ -177,7 +187,7 @@ export function ModelRow({
       ) : (
         // Up to two lines: long names (the examples, the verification
         // problems) were cut off after about 25 characters.
-        <span className="line-clamp-2 break-words flex-1 min-w-0" title={model.name}>
+        <span className={`line-clamp-2 break-words flex-1 min-w-0${isActive ? " font-semibold" : ""}`} title={model.name}>
           {model.name}
         </span>
       )}
