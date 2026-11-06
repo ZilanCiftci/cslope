@@ -20,8 +20,9 @@
  * hidden layers left out, at its opacity, clipped to its crop.
  *
  * In the dark theme an image or PDF drawing is drawn inverted (unless its
- * "Invert in dark theme" is off): its white page turns as dark as the
- * sheet and its black lines light, as the model's ink; the hue is turned
+ * "Invert in dark theme" is off): its black lines turn light, as the
+ * model's ink, and its white page, black then, is drawn "lighten" so it
+ * leaves the sheet and the fills under it as they are; the hue is turned
  * back, so a red line stays red. The light theme and the exports draw it
  * as it is.
  */
@@ -95,7 +96,12 @@ export function drawUnderlays(
     ctx.globalCompositeOperation = blend;
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    if (invertsInDark(p, dark)) ctx.filter = DARK_INVERT_FILTER;
+    if (invertsInDark(p, dark)) {
+      ctx.filter = DARK_INVERT_FILTER;
+      // The inverted page (black) leaves what is under it as it is; only
+      // the drawing's lines, now light, lighten it.
+      ctx.globalCompositeOperation = "lighten";
+    }
     const r = raster.region;
     ctx.drawImage(raster.image, r.x0, r.y0, r.x1 - r.x0, r.y1 - r.y0);
     ctx.restore();

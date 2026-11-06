@@ -83,6 +83,10 @@ describe("drawing the placed drawings", () => {
       drawUnderlays(ctx, [p], toCanvas, { dark });
       return calls.find((c) => c.name === "drawImage")!.filter;
     };
+    const { ctx, calls } = fakeContext();
+    drawUnderlays(ctx, [placement()], toCanvas, { dark: true });
+    // the inverted (black) page lightens nothing: only the lines show
+    expect(calls.find((c) => c.name === "drawImage")!.op).toBe("lighten");
     expect(filterOf(placement(), true)).toBe(DARK_INVERT_FILTER);
     expect(filterOf(placement({ invertInDark: true }), true)).toBe(DARK_INVERT_FILTER);
     expect(filterOf(placement({ invertInDark: false }), true)).toBe("none");
