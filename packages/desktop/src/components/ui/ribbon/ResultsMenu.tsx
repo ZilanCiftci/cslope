@@ -75,6 +75,9 @@ interface Props {
 export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const result = useAppStore((s) => s.result);
   const hasResult = Boolean(result?.allSurfaces?.length);
+  // The display settings can be set before a run; until there is a result
+  // their tooltips say why nothing changes.
+  const displayTip = (tip: string) => (hasResult ? tip : `${tip}\n${NO_RESULT_HINT}`);
   const addAnnotation = useAppStore((s) => s.addAnnotation);
   const removeAnnotation = useAppStore((s) => s.removeAnnotation);
   // The table and the colour bar are one per paper: their buttons toggle.
@@ -348,7 +351,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   <RibbonSmallButton
                     icon={<SurfacesIcon {...SMALL_ICON} />}
                     label="Surfaces"
-                    title={`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`}
+                    title={displayTip(`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`)}
                     onClick={() => setDisplayMenuOpen((o) => !o)}
                     hasDropdown
                     expanded={displayMenuOpen}
@@ -442,21 +445,21 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<SlicesIcon {...SMALL_ICON} />}
                   label="Slices"
-                  title="Show slices"
+                  title={displayTip("Show slices")}
                   onClick={() => setRvs({ showSlices: !rvs.showSlices })}
                   active={rvs.showSlices}
                 />
                 <RibbonSmallButton
                   icon={<FosLabelIcon {...SMALL_ICON} />}
                   label="FOS label"
-                  title="Show FOS label"
+                  title={displayTip("Show FOS label")}
                   onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
                   active={rvs.showFosLabel}
                 />
                 <RibbonSmallButton
                   icon={<CentreIcon {...SMALL_ICON} />}
                   label="Center"
-                  title="Show center mark"
+                  title={displayTip("Show center mark")}
                   onClick={() =>
                     setRvs({ showCentreMarker: !rvs.showCentreMarker })
                   }
@@ -465,6 +468,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<SoilColorsIcon {...SMALL_ICON} />}
                   label="Soil colors"
+                  title={displayTip("Soil colors")}
                   onClick={() =>
                     setRvs({ showSoilColor: !(rvs.showSoilColor ?? true) })
                   }
@@ -493,6 +497,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<SettingsIcon {...SMALL_ICON} />}
                   label="Sheet settings"
+                  title={displayTip("Sheet settings")}
                   onClick={showSheetSettings}
                 />
               </RibbonStack>
@@ -776,6 +781,9 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     </div>
   );
 }
+
+/** The Display group's hint before a run (its buttons stay enabled). */
+export const NO_RESULT_HINT = "Run the analysis to see the results.";
 
 /** About the export menu's width, to keep it inside the window. */
 const EXPORT_MENU_WIDTH = 220;

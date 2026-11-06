@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { CircleAlert, X } from "lucide-react";
 import { useAppStore } from "../../store/app-store";
 import { useLinePick } from "../drawings/line-pick-store";
-import { isElectron } from "../../utils/is-electron";
 import {
   isNoSlipSurfaceError,
   limitsDirectionMessage,
   limitsDirectionMismatch,
 } from "./analysis-error";
+import { openSearchLimits } from "./open-search-limits";
 
 /**
- * The error of a failed run, over the canvas in both modes (the results
- * sidebar's summary repeats it). Dismissed until the next run or another
- * model. When no surface was found and the search limits are drawn for the
+ * The error of a failed run, over the canvas in both modes: the only place
+ * with the whole sentence (the status bar and the result summary say only
+ * that the run failed). Dismissed until the next run or another model. When no surface was found and the search limits are drawn for the
  * other sliding direction, it says so and offers to switch.
  */
 export function AnalysisErrorBanner() {
@@ -46,13 +46,6 @@ export function AnalysisErrorBanner() {
 
   const noSurface = isNoSlipSurfaceError(errorMessage);
   const drawnFor = noSurface ? limitsDirectionMismatch(limits, orientation) : null;
-
-  const openSearchLimits = () => {
-    // The limits are what the message is about: select them on the canvas.
-    const st = useAppStore.getState();
-    if (st.analysisLimits.enabled) st.selectCanvasObject({ type: "searchLimits" });
-    if (isElectron) window.cslope.openSearchLimitsDialog();
-  };
 
   return (
     <div
