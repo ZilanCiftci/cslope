@@ -477,8 +477,8 @@ describe("reinforcement", () => {
     expect(rec.balanced()).toBe(true);
     // Zero and 0.0 kN/m forces are left out.
     expect(rec.of("triangle")).toHaveLength(2);
-    // The passive marker: "FOS" after a drawn ÷ (a bar and two dots).
-    expect(rec.texts()).toEqual(["30.0 kN/m", "150 kN/m", "FOS"]);
+    // The passive marker: "F" after a drawn ÷ (a bar and two dots).
+    expect(rec.texts()).toEqual(["30.0 kN/m", "150 kN/m", "F"]);
     expect(rec.of("circle")).toHaveLength(2);
     // The leftward arrow runs 1.4 mm above the crossing at (70, 120).
     const shaft = rec.of("line")[0].args as number[];
@@ -1010,7 +1010,7 @@ describe("drawAnnotations", () => {
       result({ criticalSlices: [slice(1, 2), slice(2, 3)] }),
     );
     expect(rec.balanced()).toBe(true);
-    expect(rec.texts()).toEqual(expect.arrayContaining(["A", "B", "FOS", "No slice data"].slice(0, 3)));
+    expect(rec.texts()).toEqual(expect.arrayContaining(["A", "B", "F", "No slice data"].slice(0, 3)));
   });
 
   it("writes the colour bar ticks with '≥' on a capped scale", () => {

@@ -182,7 +182,7 @@ describe("exportVectorPdf — full model", () => {
         "P = 40 kN/m",
         "P1",
         "1",
-        "FOS",
+        "F",
         "BR",
       ]),
     );

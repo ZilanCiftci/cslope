@@ -133,7 +133,7 @@ export function StatusBar({
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>
             <span>
-              FOS:{" "}
+              F:{" "}
               <strong
                 style={{ color: fosStatusColor(result.minFOS, designValues) }}
               >

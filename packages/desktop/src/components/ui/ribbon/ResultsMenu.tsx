@@ -12,7 +12,6 @@ import {
 } from "../../../features/pdf/pdf-export";
 import {
   computeInnerFrame,
-  computePaperFrame,
 } from "../../../features/view/paper";
 import {
   CentreIcon,
@@ -65,7 +64,7 @@ import { APP_VERSION } from "../../../utils/app-version";
 import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
-import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
+import { screenPaper } from "../../../features/view/screen-paper";
 
 interface Props {
   isOpen: boolean;
@@ -102,24 +101,9 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     state: ReturnType<typeof useAppStore.getState>,
   ): { xMin: number; xMax: number; yMin: number; yMax: number } | undefined => {
     if (state.resultViewScale <= 0) return undefined;
-    const canvas = document.querySelector<HTMLCanvasElement>(
-      "[data-testid='slope-canvas']",
-    );
-    if (!canvas) return undefined;
-
-    const rect = canvas.getBoundingClientRect();
-    const { paperSize, landscape, zoom, offsetX, offsetY } =
-      state.resultViewSettings.paperFrame;
-    const pf = computePaperFrame(
-      rect.width,
-      rect.height,
-      paperSize,
-      landscape,
-      zoom ?? 1,
-      offsetX ?? 0,
-      offsetY ?? 0,
-      SCREEN_PAPER_BOTTOM_RESERVE_PX,
-    );
+    const screen = screenPaper(state.resultViewSettings.paperFrame);
+    if (!screen) return undefined;
+    const { rect, pf } = screen;
     const inner = computeInnerFrame(pf);
 
     const vs = state.resultViewScale;
@@ -369,7 +353,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         [
                           { value: "critical", label: "Critical only" },
                           { value: "all", label: "All surfaces" },
-                          { value: "filter", label: "Filter by FOS" },
+                          { value: "filter", label: "Filter by F" },
                         ] as { value: SurfaceDisplayMode; label: string }[]
                       ).map((item) => (
                         // The current mode has a check mark.
@@ -402,7 +386,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       )}
                       {rvs.surfaceDisplay === "filter" && (
                         <MenuField separator>
-                          FOS ≤
+                          F ≤
                           <DraftNumberInput
                             min={0.01}
                             step={0.05}
@@ -410,7 +394,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             onValueChange={(value) => {
                               if (value > 0) setRvs({ fosFilterMax: value });
                             }}
-                            aria-label="Maximum FOS shown"
+                            aria-label="Maximum F shown"
                             className="w-16 tabular-nums"
                           />
                         </MenuField>
@@ -427,8 +411,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 <RibbonSmallButton
                   icon={<FosLabelIcon {...SMALL_ICON} />}
-                  label="FOS label"
-                  title={displayTip("Show FOS label")}
+                  label="F label"
+                  title={displayTip("Show F label")}
                   onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
                   active={rvs.showFosLabel}
                 />

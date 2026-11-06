@@ -108,7 +108,7 @@ const textHeight = (size: number, lines = 1) => (lines * size * 1.2) / 600;
 /**
  * The title block of a benchmark, as the examples' (title, subtitle, FOS
  * and material table at the top of the paper) with the reference values
- * below the calculated FOS in a smaller size. The title is #Title at a
+ * below the calculated F in a smaller size. The title is #Title at a
  * size that fits beside the material table; one too long for that at
  * 16 pt goes on two lines as fixed text.
  */
@@ -126,7 +126,7 @@ function titleBlockAnnotations(title: string, reference: string[]): Annotation[]
     add("title", lines.join("\n"), Math.min(18, Math.floor(TITLE_WIDTH / Math.max(...lines.map((l) => l.length)))), 2);
   }
   add("subtitle", "#Subtitle", SUBTITLE_SIZE);
-  add("fos", "Calculated FOS: #FOS", FOS_SIZE);
+  add("fos", "Calculated F: #FOS", FOS_SIZE);
   // Fixed text, so the PDF prints it as the sheet shows it.
   add("reference", reference.join("\n"), REFERENCE_SIZE, reference.length);
   return [...out, exampleMaterialTable()];

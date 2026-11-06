@@ -30,6 +30,7 @@ import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { resultDefinition } from "./result-definition";
 import { isElectron } from "../../utils/is-electron";
 import { sameSurface } from "../../utils/arc";
+import { chartAxis } from "../annotations/plotAxis";
 
 interface ResultsPlotStatePayload {
   model: ModelEntry;
@@ -414,10 +415,14 @@ export function ResultsPlotDialogApp() {
       };
     }
 
+    // As many decimals as the step needs, at least three.
+    const ticks = buildNiceTicks(min, max, 6);
+    const step = ticks.length > 1 ? ticks[1] - ticks[0] : 1;
+    const digits = Math.max(3, -Math.floor(Math.log10(step) + 1e-9));
     return {
-      ticks: buildNiceTicks(min, max, 6),
+      ticks,
       allowDecimals: true,
-      formatTick: (value: unknown) => formatAxisNumber(Number(value), 3),
+      formatTick: (value: unknown) => formatAxisNumber(Number(value), digits),
     };
   }, [axisMode, plotData]);
 
@@ -471,6 +476,16 @@ export function ResultsPlotDialogApp() {
       span > 1e-9 ? span * 0.08 : Math.max(Math.abs(max) * 0.05, 0.02);
     return [min - margin, max + margin];
   }, [lambdaData]);
+
+  // Round ticks over that range, labeled with the decimals their step
+  // needs: Fm and Ff can differ by less than 0.002 (#71).
+  const lambdaYAxis = useMemo(
+    () =>
+      lambdaYAxisDomain
+        ? chartAxis(lambdaYAxisDomain[0], lambdaYAxisDomain[1], { minDecimals: 3, trim: true })
+        : null,
+    [lambdaYAxisDomain],
+  );
 
   const canShowLambdaPlot = snapshot?.result?.method === "Morgenstern-Price";
 
@@ -796,9 +811,11 @@ export function ResultsPlotDialogApp() {
                   />
                   <YAxis
                     type="number"
-                    domain={lambdaYAxisDomain ?? ["auto", "auto"]}
+                    domain={lambdaYAxis?.domain ?? ["auto", "auto"]}
+                    ticks={lambdaYAxis?.ticks}
+                    interval={0}
                     tickFormatter={(value) =>
-                      formatAxisNumber(Number(value), 3)
+                      lambdaYAxis ? lambdaYAxis.label(Number(value)) : formatAxisNumber(Number(value), 3)
                     }
                     tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
