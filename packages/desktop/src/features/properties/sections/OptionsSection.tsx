@@ -737,9 +737,9 @@ function PartialFactorsFields({
             aria-label="Partial factor preset"
             title="Fill in the factors of a design approach"
           >
-            <option value="">Preset…</option>
+            <option value="">Preset</option>
             <option value="se">Swedish practice (EKS/IEG): 1.5 / 1.3 / 1.3 / 1.3</option>
-            <option value="se-class">Swedish practice from safety class and η…</option>
+            <option value="se-class">Swedish practice from safety class and η</option>
             <option value="ec7">EN 1997-1 DA3, M2: 1.4 / 1.25 / 1.25 / 1.3</option>
           </select>
         )}

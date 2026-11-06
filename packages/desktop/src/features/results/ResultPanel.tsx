@@ -62,7 +62,7 @@ export function ResultPanel({ showTitle = true }: { showTitle?: boolean }) {
             className="text-[12px] font-medium"
             style={{ color: "var(--color-vsc-accent)" }}
           >
-            Analyzing…
+            Analyzing
           </p>
           <div
             className="w-full h-1.5 rounded-full overflow-hidden"

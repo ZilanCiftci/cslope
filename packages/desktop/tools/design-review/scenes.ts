@@ -1239,7 +1239,7 @@ const dialogs: Scene[] = [
     data: "example",
     open: async (ctx) => {
       await ctx.page.getByRole("treeitem").nth(0).click({ button: "right" });
-      await ctx.page.getByRole("menuitem", { name: "Model properties…" }).click();
+      await ctx.page.getByRole("menuitem", { name: "Model properties" }).click();
       return { focus: ctx.page.getByRole("dialog") };
     },
   },
@@ -1253,7 +1253,7 @@ const dialogs: Scene[] = [
       await rows.nth(1).click({ modifiers: ["Control"] });
       await rows.nth(2).click({ modifiers: ["Control"] });
       await rows.nth(2).click({ button: "right" });
-      await ctx.page.getByRole("menuitem", { name: "Model properties…" }).click();
+      await ctx.page.getByRole("menuitem", { name: "Model properties" }).click();
       return { focus: ctx.page.getByRole("dialog") };
     },
   },

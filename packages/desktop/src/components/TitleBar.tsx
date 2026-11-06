@@ -88,7 +88,7 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
           <FavButton title="New project" onClick={handleNew}>
             <NewIcon {...QUICK_ICON} />
           </FavButton>
-          <FavButton title="Open project" onClick={handleOpen}>
+          <FavButton title="Open project…" onClick={handleOpen}>
             <OpenIcon {...QUICK_ICON} />
           </FavButton>
           <FavButton title="Save" onClick={handleSave}>

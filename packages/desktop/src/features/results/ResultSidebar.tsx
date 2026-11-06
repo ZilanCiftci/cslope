@@ -678,7 +678,7 @@ export function ResultSidebar() {
                 className="mt-1.5 border-t pt-1.5 text-[11px]"
                 style={{ borderColor: "var(--color-vsc-border)", color: "var(--color-vsc-accent)" }}
               >
-                Finite elements running{runStage ? ` (${runStage.replace(/^Finite elements: /, "")})` : ""}…
+                Finite elements running{runStage ? ` (${runStage.replace(/^Finite elements: /, "")})` : ""}
               </p>
             )}
             {!result.fem && result.femError && (
@@ -696,7 +696,7 @@ export function ResultSidebar() {
             </p>
             {isNoSlipSurfaceError(errorMessage) && (
               <button type="button" className="btn" onClick={openSearchLimits}>
-                Search limits…
+                Search limits
               </button>
             )}
           </div>

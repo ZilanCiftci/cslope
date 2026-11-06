@@ -398,7 +398,7 @@ async function main() {
     await rig.step("PDF", async () => {
       await catchDownloads(page);
       await ribbonTab(page, "Results");
-      await clickNamed(page, "Export PDF", ["menuitem", "button"]);
+      await clickNamed(page, "Export as PDF", ["menuitem", "button"]);
       const pdf = (await takeDownloads(page, 15_000)).find((f) => f.name.toLowerCase().endsWith(".pdf"));
       if (!pdf) throw new Error("No PDF was produced");
       const path = rig.writeFile("exports/report.pdf", pdf.bytes);
