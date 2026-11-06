@@ -560,6 +560,8 @@ The ~1,540 tests in 98 files are sorted into a manifest `packages/engine/test-ma
 | **rust-ported** (deleted from TS at cutover; already ported under rule 6) | Kernels with mutable typed arrays or classes: `SparseCholesky`, `Anderson`, `returnMapInto`, `emptyState`/`runTrial` internals, mesh internals, HiGHS comparisons | ~6 % |
 | **rewritten** | Tests that build partial internal objects (`{…} as never`, hand-built slices without `baseMaterial`) or pass JS closures (custom `sizeField`, `meshDomain` size callbacks) | ~2 % |
 
+After #51 (2026-11-06) the facade+testing row covers only the nine FE wrappers left in TS (`buildFeModel`, `solveElastic`, a model's field read and free, `strengthReduction`, `zzIndicator`, `dorflerMark`, `refinedSizeField`, `boundGapIndicator`); `getSlicePropertyArrays`, `march`, `davisB` and the other internal-function tests named above are now Rust tests.
+
 The gate is that every test has a mode, and the facade modes pass with no edits to the test files.
 
 **Desktop tests** (51 files using the engine) run unchanged on the product wasm, with init added to `src/test/setup.ts`. `analysis.worker.test.ts` and `worker.test.ts` gain the `engine` module in their request messages.
