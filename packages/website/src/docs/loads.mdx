@@ -7,27 +7,27 @@ order: 4
 
 cSlope has two kinds of external load, both acting on the ground surface: distributed loads, vertical or normal to the ground, and vertical line loads.
 
-## Distributed loads (UDL)
+## Distributed loads
 
 Open **Model › Loads & support › Distributed loads**. Each row is one load:
 
 | Column | Meaning |
 | --- | --- |
-| **q** | Pressure in kPa between x1 and x2 |
-| **x1**, **x2** | The horizontal extent of the load, in meters |
+| **q (kPa)** | Pressure between x1 and x2 |
+| **x1 (m)**, **x2 (m)** | The horizontal extent of the load |
 | **Direction** | **Vertical**: q per horizontal meter. **Normal to ground**: q acts normal to the ground surface, as water or earth pressure against a slope |
 
 A pressure q normal to ground inclined at β carries q per horizontal meter vertically, as a vertical load would, and q·tan β horizontally, pushing into the ground. On level ground the two directions are the same. Water standing against a slope is the typical case: entered as a normal load q = γw·(water level − ground), it acts as [free water](/docs/water) does on the ground, without pore pressure in the soil. The canvas labels such a load "⊥ ground".
 
-**+ Add UDL** adds a load of 10 kPa from x = 0 to 5 m. On the canvas, select a load and drag its ends horizontally, or drag the load itself to move it whole.
+**+ Add load** adds a load of 10 kPa from x = 0 to 5 m. On the canvas, select a load and drag its ends horizontally, or drag the load itself to move it whole.
 
-A distributed load imported from a .stix file can carry a **degree of consolidation** per material: the part of the load not yet consolidated, $(1 - U)\,q$, adds to the pore pressure at the slice bases under it in that material, where they are below the water. The UDL window lists these under the table, for example "UDL 1, not consolidated: Material "Clay" 50 % of q (excess pore pressure below the water)"; **Remove** drops one, and the load is then fully consolidated in that material. The PDF report gives them as the degree of consolidation, "degree of consolidation U = 50 % in Clay (the rest of the load as excess pore pressure)".
+A distributed load imported from a .stix file can carry a **degree of consolidation** per material: the part of the load not yet consolidated, $(1 - U)\,q$, adds to the pore pressure at the slice bases under it in that material, where they are below the water. The **Distributed loads** window lists these in a second table, **Loads not yet consolidated (imported)**: one row per load and material, with **Excess pore pressure (× q, 0–1)**, the part of the load carried as excess pore pressure, which you can edit. The **×** at the end of a row removes it, and the load is then fully consolidated in that material. The PDF report gives them as the degree of consolidation, "degree of consolidation U = 50 % in Clay (the rest of the load as excess pore pressure)".
 
 ## Line loads
 
-Open **Model › Loads & support › Line loads**. Each row is a line load **P** in kN per meter run at position **x**. **+ Add line load** adds a load of 50 kN/m at x = 10 m. A selected line load can also be dragged on the canvas.
+Open **Model › Loads & support › Line loads**. Each row is a line load **P (kN/m)**, per meter run, at position **x (m)**. **+ Add line load** adds a load of 50 kN/m at x = 10 m. A selected line load can also be dragged on the canvas.
 
-**Angle from vertical** inclines the load: 0 is vertical, positive turns it towards +x, ±90 is horizontal (a strut or an anchor force on a wall). Its vertical part acts like a vertical load; its horizontal part acts on the slice under the load, at the ground or at **Load point y** when given (a point on a wall face).
+**Angle (°)** inclines the load from the downward vertical: 0 is vertical, positive turns it toward +x, ±90 is horizontal (a strut or an anchor force on a wall). Its vertical part acts like a vertical load; its horizontal part acts on the slice under the load, at the ground or at **Load point y (m)** when given (a point on a wall face).
 
 **Load point y (m)** is the elevation of the load point, for a load on a wall face; empty (*ground*) puts the load on the ground at x. It is used for an inclined load only: the field is grayed out while the angle is 0, since a vertical load acts the same at any height.
 

@@ -132,7 +132,7 @@ function ProblemTable() {
             ["Bishop", "Bishop simplified"],
             ["Janbu", "Janbu"],
             ["Spencer", "Spencer"],
-            ["Morgenstern-Price", "Morgenstern–Price"],
+            ["Morgenstern-Price", "Morgenstern-Price"],
             ["Finite elements", "Strength reduction (FE, experimental)"],
           ]}
         />
@@ -327,7 +327,7 @@ export function Verification() {
       <Section>
         <SectionHeading
           title="What the table shows"
-          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did."
+          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyzes the surface the source gives, or searches for the critical one where the source did."
         />
         <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
           <li className="rounded-lg border bg-card p-4">

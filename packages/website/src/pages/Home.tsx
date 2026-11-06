@@ -41,7 +41,7 @@ function Hero() {
             Slope stability analysis you can verify
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
-            cSlope is limit equilibrium software for geotechnical engineers. Bishop, Janbu and Morgenstern–Price on
+            cSlope is limit equilibrium software for geotechnical engineers. Bishop, Janbu and Morgenstern-Price on
             circular and non-circular slip surfaces, with water, loads, reinforcement and probabilistic analysis. Every
             release is checked against {s.problems} published problems.
           </p>
@@ -94,7 +94,7 @@ const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <BarChart3 className="h-5 w-5" />,
     title: "Three methods, one model",
-    text: "Bishop simplified, Janbu with the f₀ correction and Morgenstern–Price with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
+    text: "Bishop simplified, Janbu with the f₀ correction and Morgenstern-Price with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
   },
   {
     icon: <Spline className="h-5 w-5" />,
@@ -312,7 +312,7 @@ function DownloadBand() {
         <div className="max-w-xl">
           <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Try it on your next section</h2>
           <p className="mt-3 text-muted-foreground">
-            Install cSlope on Windows and open one of the example models from Help &gt; Examples to see a
+            Install cSlope on Windows and open one of the example models from Help › Examples to see a
             complete analysis in a minute.
           </p>
         </div>

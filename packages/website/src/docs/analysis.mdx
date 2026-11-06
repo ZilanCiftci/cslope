@@ -19,7 +19,7 @@ Open **Model › Analysis › Options**. The settings apply to the active model.
 
 - **Bishop**: Bishop simplified (moment equilibrium).
 - **Janbu**: Janbu simplified (force equilibrium). Tick **Apply correction factor f0** to apply Janbu's correction.
-- **Morgenstern-Price**: full equilibrium. Choose the **Interslice function**: `constant` (Spencer's method), `half-sine` (default), `clipped-sine`, `trapezoidal` or `data-point-specified`. For the last one, enter the points as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
+- **Morgenstern-Price**: full equilibrium. Choose the **Interslice function**: **Constant** (Spencer's method), **Half-sine** (default), **Clipped sine**, **Trapezoidal** or **Specified by data points**. For the last one, enter the points in **Data points (x, f)** as `x,f; x,f` with x from 0 (left end of the surface) to 1 (right end), for example `0,0; 0.2,0.6; 0.5,1; 0.8,0.6; 1,0`.
 
 The [theory](/docs/theory) page gives the equations. The **Tolerance** is the convergence limit on the factor of safety.
 
@@ -77,8 +77,8 @@ $$F_P = F_{2D} + \frac{2 \int c_u\, r\, dA}{L\, M_E}, \qquad F_{3D} = F_{2D} + k
 with $M_E$ the surface's driving moment, the integral over the end face's cohesive soil ($r$ the distance to the circle's center) and $k = 1$ for infinitely overstrong adjacent stability (eq. 2-3) or $k = 1 - F_{2D,\text{krit},\min} / F_{2D,\text{överstark},\min}$ for finite (eq. 2-4).
 
 - **Stage length L (m)**: the length of the excavation open at a time.
-- **Adjacent F2D**: $F_{2D,\text{överstark},\min}$ of the stretches beside the stage; leave it blank for infinitely overstrong adjacent stability.
-- **Not in the end faces**: materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.
+- **Adjacent F (2D, empty = no limit)**: $F_{2D,\text{överstark},\min}$ of the stretches beside the stage; leave it empty for infinitely overstrong adjacent stability.
+- **Materials excluded from the end faces**: materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.
 
 The result is the smallest $F_{3D}$ over the circular surfaces of the search, which is generally on a shallower surface than the critical 2D one. The end faces take the undrained strength without anisotropy (its direct value), for a combined clay its Su, as design values when partial factors are on. The guidance applies to total stress analysis of normally to lightly overconsolidated clay; a 3D factor more than 25 % above the critical 2D factor is to be judged with care, and the result shows a warning then.
 
