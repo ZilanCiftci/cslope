@@ -26,6 +26,20 @@ Read the hard rules in [CLAUDE.md](../../../CLAUDE.md). A change is rejected out
 - `packages/engine-rs/**` or `packages/engine/**` → section 4 (and section 2 for the app's use of the engine)
 - user-visible text or behavior → the docs in `packages/website/src/docs` and, for a release, `CHANGELOG.md`
 
+### Which tests first
+
+Run the tests of what changed before the whole suite:
+
+| Changed | Run first |
+|---|---|
+| `desktop/src/store/**` | `src/store` and the feature that uses the changed slice |
+| `desktop/src/features/<x>/**` | `src/features/<x>` |
+| `desktop/src/components/ui/**` | `src/components` and the features that import the component |
+| `desktop/electron/**` | `electron` |
+| `desktop/src/features/canvas/draw.ts`, `features/pdf/**`, `features/rendering/**` | `src/features/canvas`, `src/features/pdf`, `src/features/results` |
+| `engine-rs/src/**` | `cargo test --release` (the verification checks are in it), then `bun run --filter @cslope/engine test` |
+| `website/src/**` | `bun run test` and `bun run build` in packages/website |
+
 ## 2. Desktop app (`packages/desktop`)
 
 ```
@@ -71,7 +85,30 @@ bun packages/website/scripts/check-names.ts --repo
 git diff --check            # whitespace; the repository is LF
 ```
 
-## 6. Verdict
+## 6. Evidence
+
+No claim without fresh evidence from this run:
+
+| Claim | Evidence |
+|---|---|
+| "Tests pass" | The test runner's summary line from this run (files and tests passed, 0 failed) |
+| "Types are fine" | `tsc` finished with no output, after the last edit |
+| "It looks right" | Screenshots in both themes taken after the last edit, looked at |
+| "Results did not move" | The verification log's summary row, or the engine tests against the golden values |
+| "CI is green" | The check runs on the PR's current head commit, not an earlier one |
+| "Fixed" (a bug) | A test that failed before the change and passes after it |
+
+## 7. When CI is red
+
+Sort the failure first:
+
+- **Fix and push:** formatting, lint, a type error, a stale snapshot of UI text the change meant to alter, a stale committed WASM. Reproduce locally, fix, run this gate, push.
+- **Re-run once:** a runner or network failure before any test ran (checkout, install, download), or a timeout in a test that passes alone. Never more than once; a second failure is real.
+- **Stop and report:** a failing assertion in code the change did not mean to alter, a verification result that moved, a crash. Find the root cause; if it is outside the change, label `needs-human` and say what fails and why.
+
+Never skip, disable or loosen a test, and never push an empty commit to start CI again.
+
+## 8. Verdict
 
 - All required steps green: commit (the trailers from the session's instructions), push, open the PR with `Fixes #<n>` for each issue it closes, and enable auto-merge.
 - A step is red and cannot be fixed within the change: stop, do not push. Label the issue `needs-human` and comment which step failed, with its output.

@@ -10,7 +10,7 @@
 
 ## How work flows
 
-Bugs and wishes are GitHub issues, built in sprints: see [.claude/workflow.md](.claude/workflow.md) and the skills `triage`, `sprint` and `verify` in `.claude/skills`. Every change passes the `verify` gate before it is pushed. Path-scoped rules for each package are in `.claude/rules`. Decisions and their reasons go in [DECISIONS.md](DECISIONS.md).
+Bugs and wishes are GitHub issues, built in sprints: see [.claude/workflow.md](.claude/workflow.md) and the skills `triage`, `sprint`, `review` and `verify` in `.claude/skills` (sprint groups are built by the `sprint-worker` agent in `.claude/agents`). Every change passes the `verify` gate before it is pushed. Path-scoped rules for each package are in `.claude/rules`. Decisions and their reasons go in [DECISIONS.md](DECISIONS.md).
 
 ## UI and UX
 

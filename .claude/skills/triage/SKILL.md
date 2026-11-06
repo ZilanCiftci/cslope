@@ -15,6 +15,8 @@ List the open issues (GitHub MCP tools: `list_issues`, `issue_read`), with label
 
 ## 2. Label each issue that has `needs-triage` or lacks a type
 
+Use only labels that exist in [.github/labels.json](../../../.github/labels.json); never invent one. Each issue gets **exactly one** type label.
+
 - **Type**, one of: `bug`, `wrong-result`, `import-export`, `enhancement`, `docs`. Area labels where they fit: `ui`, `engine`, `fe-experimental`, `verification`.
 - **Size**: `size: small` (one or two files, clear fix, no decision) or `size: large` (several areas, a design question or a decision).
 - `needs-decision` when the maintainer must choose between options first; write the options in a comment (2–3, each with its consequence, the recommended one first).
@@ -22,12 +24,16 @@ List the open issues (GitHub MCP tools: `list_issues`, `issue_read`), with label
 - `confidential-data` when an attachment holds client data: comment once asking the reporter to remove it (and tell the maintainer).
 - Remove `needs-triage` when done.
 
-## 3. Duplicates and already fixed
+## 3. Waiting on the reporter
+
+An issue labeled `needs-repro` with no answer for 7 days gets one reminder comment; after 7 more days without an answer, close it as not planned with a comment that it can be reopened with the missing information. Never close an issue the maintainer opened this way.
+
+## 4. Duplicates and already fixed
 
 - Search open and closed issues for the same problem (title and body keywords). A duplicate gets `duplicate`, a comment linking the original, and is closed.
 - For each open issue, look for a merged PR that fixed it (`Fixes #n` in the PR, or the change in `git log origin/main`). Verify in the code on main, then comment with the PR link and close it.
 
-## 4. Propose the next sprint
+## 5. Propose the next sprint
 
 Write to the maintainer (in the session, not on GitHub), in Swedish:
 
@@ -37,6 +43,6 @@ Write to the maintainer (in the session, not on GitHub), in Swedish:
 
 Do not add sprint labels yourself unless the maintainer asked for it.
 
-## 5. Report
+## 6. Report
 
 One summary: labeled N, closed N (duplicates, fixed), asked for information N, waiting on a decision N, proposed for the sprint N.

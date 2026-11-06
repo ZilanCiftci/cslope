@@ -7,7 +7,7 @@ The shared contract for the main session, its agents and the skills `triage`, `s
 1. **Issue.** Every bug, wrong result or wish is a GitHub issue, from the templates in `.github/ISSUE_TEMPLATE`. The maintainer may write in Swedish; titles are English.
 2. **Triage** (`triage` skill): type and size labels, duplicates and already-fixed issues closed, missing information asked for, decisions written as options.
 3. **Sprint.** The maintainer chooses the issues of a sprint; they get the label `sprint: <n>`. A sprint runs when the maintainer says so ("kör sprint 3"), not on a calendar.
-4. **Build** (`sprint` skill): groups that edit separate files, one background agent per group, the `verify` gate, one PR per group with `Fixes #n`.
+4. **Build** (`sprint` skill): groups that edit separate files, one `sprint-worker` agent per group (`.claude/agents`), the `verify` gate, a `review` pass, one PR per group with `Fixes #n`.
 5. **Merge.** Auto-merge (squash) when CI is green and the branch is up to date with main; one PR at a time.
 6. **Report.** What was fixed, what moved, what waits on a decision.
 
