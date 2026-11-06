@@ -1,0 +1,95 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [0.0, 0.0],
+      [0.0, 12.0],
+      [16.0, 12.0],
+      [32.0, 4.0],
+      [44.0, 4.0],
+      [44.0, 0.0]
+    ],
+    "materials": [
+      {
+        "name": "Sand",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 19.0,
+          "cohesion": 3.0,
+          "frictionAngle": 34.0,
+          "unitWeightSat": 20.0
+        }
+      },
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 20.0,
+          "cohesion": 12.0,
+          "frictionAngle": 24.0,
+          "unitWeightSat": 20.0
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [0.0, 6.0],
+          [28.0, 6.0]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [8.0, 9.0],
+        "materialName": "Sand"
+      },
+      {
+        "point": [20.0, 2.0],
+        "materialName": "Clay"
+      }
+    ],
+    "udls": [
+      {
+        "magnitude": 10.0,
+        "x1": 6.0,
+        "x2": 14.0
+      }
+    ],
+    "analysisLimits": {
+      "entryLeftX": 2.0,
+      "entryRightX": 18.0,
+      "exitLeftX": 28.0,
+      "exitRightX": 42.0
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0.0,
+    "tensionCrackDepth": 0.0,
+    "seismicHorizontal": 0.0,
+    "seismicVertical": 0.0,
+    "bothDirections": false,
+    "partialFactors": {
+      "cu": 1.5,
+      "cohesion": 1.3,
+      "tanPhi": 1.3,
+      "variableLoad": 1.183,
+      "basis": {
+        "safetyClass": 2,
+        "etaCu": 1.0,
+        "etaDrained": 1.0,
+        "variableLoadBase": 1.3
+      }
+    }
+  }
+}

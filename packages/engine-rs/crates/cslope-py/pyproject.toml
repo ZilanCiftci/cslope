@@ -26,6 +26,10 @@ classifiers = [
 numpy = ["numpy>=1.21"]
 test = ["pytest>=7"]
 
+[project.scripts]
+# The command: cslope analyse | validate | schema | info.
+cslope = "cslope.cli:main"
+
 [project.urls]
 Source = "https://github.com/ZilanCiftci/cslope"
 

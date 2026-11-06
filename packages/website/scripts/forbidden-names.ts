@@ -95,4 +95,4 @@ export function findForbiddenNames(file: string, text: string): NameHit[] {
 }
 
 /** Files whose text should be searched (not images or fonts). */
-export const TEXT_FILE = /\.(html?|m?[jt]sx?|css|json|md|mdx|txt|xml|svg|webmanifest)$/i;
+export const TEXT_FILE = /\.(html?|m?[jt]sx?|css|json|md|mdx|txt|xml|svg|webmanifest|py|pyi)$/i;

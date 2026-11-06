@@ -1,0 +1,75 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [0.0, -12.0],
+      [0.0, 0.0],
+      [8.0, 0.0],
+      [20.0, -4.0],
+      [34.0, -4.0],
+      [34.0, -12.0]
+    ],
+    "materials": [
+      {
+        "name": "Crust",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 18.0,
+          "cohesion": 2.0,
+          "frictionAngle": 32.0
+        }
+      },
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 16.5,
+          "undrainedShearStrength": 18.0,
+          "unitWeightSat": 16.5
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [0.0, -1.5],
+          [12.5, -1.5]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [3.0, -0.5],
+        "materialName": "Crust"
+      },
+      {
+        "point": [15.0, -8.0],
+        "materialName": "Clay"
+      }
+    ],
+    "udls": [
+      {
+        "magnitude": 20.0,
+        "x1": 4.0,
+        "x2": 8.0
+      }
+    ]
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0.0,
+    "tensionCrackDepth": 0.0,
+    "seismicHorizontal": 0.0,
+    "seismicVertical": 0.0,
+    "bothDirections": false
+  }
+}
