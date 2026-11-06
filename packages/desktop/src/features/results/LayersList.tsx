@@ -12,27 +12,23 @@
  * drawing's takes it out of the results ("Show in results").
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { EyeOff, GripVertical, Target, X } from "lucide-react";
 import {
-  Blend,
-  ChartLine,
-  CircleDashed,
-  Columns3,
-  Crosshair,
-  EyeOff,
-  FileImage,
-  GripVertical,
-  Grid3x3,
-  PaintBucket,
-  Palette,
-  Rainbow,
-  Spline,
-  Table,
-  Tag,
-  Target,
-  Type,
-  Waves,
-  X,
-} from "lucide-react";
+  CentreIcon,
+  ColorBarIcon,
+  CustomPlanesIcon,
+  DrawingIcon,
+  FeMeshIcon,
+  FosLabelIcon,
+  MaterialTableIcon,
+  PlasticZoneIcon,
+  PlotIcon,
+  ReferenceLineIcon,
+  SlicesIcon,
+  SoilColorsIcon,
+  SurfacesIcon,
+  TextIcon,
+} from "../../components/icons/ribbon";
 import { useAppStore } from "../../store/app-store";
 import type { Annotation, ResultViewSettings } from "../../store/types";
 import { referenceListName } from "../annotations/reference";
@@ -40,20 +36,21 @@ import { projectAsset } from "../drawings/asset-registry";
 import { placementLabel } from "../drawings/placement";
 import { DISPLAY_LAYER_NAMES, movedLayerOrder, resultLayers, type DisplayLayerKey, type LayerSource, type ResultLayer } from "./layers";
 
-const ICON = { size: 13, strokeWidth: 1.75, "aria-hidden": true } as const;
+// The ribbon's icon of each thing (the button that adds or shows it), at list size.
+const ICON = { size: 14, strokeWidth: 1.75, "aria-hidden": true } as const;
 
 /** A display layer's icon and what turns it off (its name: DISPLAY_LAYER_NAMES). */
 const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; off?: Partial<ResultViewSettings> }> = {
-  soilColor: { icon: <PaintBucket {...ICON} />, off: { showSoilColor: false } },
-  femMesh: { icon: <Grid3x3 {...ICON} />, off: { showFemMesh: false } },
-  femPlasticZone: { icon: <Blend {...ICON} />, off: { showFemPlasticZone: false } },
-  surfaces: { icon: <Rainbow {...ICON} />, off: { surfaceDisplay: "critical" } },
-  customSurfaces: { icon: <Waves {...ICON} />, off: { showCustomSurfaces: false } },
-  // Always drawn: no button.
+  soilColor: { icon: <SoilColorsIcon {...ICON} />, off: { showSoilColor: false } },
+  femMesh: { icon: <FeMeshIcon {...ICON} />, off: { showFemMesh: false } },
+  femPlasticZone: { icon: <PlasticZoneIcon {...ICON} />, off: { showFemPlasticZone: false } },
+  surfaces: { icon: <SurfacesIcon {...ICON} />, off: { surfaceDisplay: "critical" } },
+  customSurfaces: { icon: <CustomPlanesIcon {...ICON} />, off: { showCustomSurfaces: false } },
+  // Always drawn: no button (and no ribbon icon).
   criticalSurface: { icon: <Target {...ICON} /> },
-  slices: { icon: <Columns3 {...ICON} />, off: { showSlices: false } },
-  center: { icon: <Crosshair {...ICON} />, off: { showCentreMarker: false } },
-  fosLabel: { icon: <Tag {...ICON} />, off: { showFosLabel: false } },
+  slices: { icon: <SlicesIcon {...ICON} />, off: { showSlices: false } },
+  center: { icon: <CentreIcon {...ICON} />, off: { showCentreMarker: false } },
+  fosLabel: { icon: <FosLabelIcon {...ICON} />, off: { showFosLabel: false } },
 };
 
 /** What the button of a display layer says it does. */
@@ -66,16 +63,16 @@ function offTitle(key: DisplayLayerKey): string {
 function annotationIcon(a: Annotation): ReactNode {
   switch (a.type) {
     case "reference":
-      return a.shape === "circle" ? <CircleDashed {...ICON} /> : <Spline {...ICON} />;
+      return <ReferenceLineIcon {...ICON} />;
     case "material-table":
-      return <Table {...ICON} />;
+      return <MaterialTableIcon {...ICON} />;
     case "color-bar":
-      return <Palette {...ICON} />;
+      return <ColorBarIcon {...ICON} />;
     case "plot":
-      return <ChartLine {...ICON} />;
+      return <PlotIcon {...ICON} />;
     default:
       // Every text, with variables (#FOS, {{ }}) or without: one kind of object.
-      return <Type {...ICON} />;
+      return <TextIcon {...ICON} />;
   }
 }
 
@@ -135,7 +132,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
     }
     if (layer.kind === "drawing") {
       const name = placementLabel(layer.drawing, projectAsset(layer.drawing.assetId)?.originalName);
-      return { layer, name, title: `Drawing: ${name}`, icon: <FileImage {...ICON} /> };
+      return { layer, name, title: `Drawing: ${name}`, icon: <DrawingIcon {...ICON} /> };
     }
     const a = layer.annotation;
     if (a.type === "reference") {
