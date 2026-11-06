@@ -39,7 +39,7 @@ The window says what to do next, and refuses points that are too close together 
 
 A DWG or DXF drawing is shown as lines, not as a picture: the lines, polylines (with their arcs), arcs, circles, ellipses, splines and texts of its model space, in a neutral ink color that suits the light and the dark theme, at the drawing's opacity. Block references are drawn in place (with their scale and rotation, nested blocks too), and so are dimensions. The layouts (paper space) are not shown: only the model space is; the Place drawing window says how many entities it left out. Hatches, images and 3D objects are not shown either.
 
-A drawing's **Layers** are listed in its settings under the model in the **Models** panel: clear a layer's box to hide its lines and texts (**Show all** and **Hide all** set every layer). A hidden layer is not snapped to and its lines cannot be picked. Layers that are off or frozen in the file start hidden. Each change is an undo step.
+A drawing's **Layers** are listed in its settings under the model in the **Models** panel: click the eye at the end of a layer's row to hide its lines and texts (**Show all** and **Hide all** set every layer). A hidden layer is not snapped to and its lines cannot be picked. Layers that are off or frozen in the file start hidden. Each change is an undo step.
 
 DWG files from AutoCAD Release 11 (1990) to the current version are read; DXF files must be ASCII (binary DXF is not read).
 
@@ -75,21 +75,21 @@ The models are added like imported ones: remove one in the explorer if it is not
 
 ## The drawings of a model
 
-In the **Models** panel, the drawings a model places are listed under it, the topmost first (the arrow before the model folds them away). Each row has an eye to show or hide the drawing and a padlock to lock or unlock it. Click a drawing to select it (its model becomes the active one) and open its settings below the row, where you can:
+In the **Models** panel, the drawings a model places are listed under it, the topmost first (the arrow before the model folds them away). Each row has an eye to show or hide the drawing and a padlock to lock or unlock it. When drawings overlap, drag a row by its grip (shown when the pointer is over the row) to change the order they are drawn in, or press <Kbd>Alt</Kbd>+<Kbd>↑</Kbd> / <Kbd>Alt</Kbd>+<Kbd>↓</Kbd> on the selected row; a drawing stays under its own model. The **×** at the end of the row (or <Kbd>Delete</Kbd>) removes the drawing from the model. The file stays in **Attachments** while another model places it; a file that no model places is left out when the project is saved.
+
+Click a drawing to select it (its model becomes the active one) and open its settings below the row, where you can:
 
 - set its **Opacity**,
 - turn on **Show in results**, to draw it in the result view and the PDF export too,
 - turn off **Invert in dark theme** (an image or a PDF), to draw it with its own colors in the dark theme,
-- move it up or down when drawings overlap,
 - **Rename** it (or double-click its name),
-- **Recalibrate…**: the window opens again with the drawing's page, crop and calibration, to change them,
-- remove it from the model (the bin). The file stays in **Attachments** while another model places it; a file that no model places is left out when the project is saved.
+- **Recalibrate…**: the window opens again with the drawing's page, crop and calibration, to change them.
 
 Every change is a step of **Undo** and **Redo**.
 
 ## Attachments
 
-The **Attachments** section at the bottom of the **Models** panel lists the drawing files of the project, each with its size and the models that place it. **+ Add drawing…** under the list opens the Place drawing window for a new file; **Place…** on a file (shown when the pointer is over it) opens the window with that file, to place it in the active model as well. A file that no model places is marked *not used* and is left out when the project is saved.
+The **Attachments** section at the bottom of the **Models** panel lists the drawing files of the project, each with its size and the models that place it (*No files.* when there are none). **+ Add drawing…** under the list opens the Place drawing window for a new file; **Place…** on a file (shown when the pointer is over it) opens the window with that file, to place it in the active model as well. A file that no model places is marked *not used* and is left out when the project is saved.
 
 ## On the canvas
 

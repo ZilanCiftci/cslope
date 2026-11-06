@@ -29,6 +29,8 @@ The **Explorer** (the list of models) is on the left; in result mode the **resul
 
 A button with a small ▾ below its label has a menu: click the button for its main command, the ▾ for the others. Hover over a button to see its shortcut, if it has one. After an analysis the ribbon shows the **Results** tab; back in edit mode it shows the **Model** tab again.
 
+*Help › About* shows the version of cSlope and its release date, with links to this documentation, the licenses of the third-party software cSlope includes, and the source code.
+
 ## Dialog windows
 
 Each button on the **Model** tab opens its own window. The windows are not modal: they stay open next to the main window, and a change in a window shows on the canvas at once (and the other way round). Clicking the button of a window that is already open brings it to the front. <Kbd>Esc</Kbd> closes a window; a value typed in a field is kept.
@@ -67,14 +69,14 @@ The toolbar on the canvas holds the mode buttons, **▶ Run** (with *Run all*, *
 
 A project holds one or more **models**, listed in the Explorer under *Models*. Each model is a complete analysis with its own geometry, materials, options and result.
 
-- Click a model to make it active; its row is highlighted. A model that has a result opens in result mode.
-- The dot before each model shows its run state: green analyzed, blue running, red failed, hollow gray not analyzed.
+- Click a model to make it active; its name is shown in semibold and its row is highlighted, as every selected row. A model that has a result opens in result mode.
+- The dot before each model shows its run state: green analyzed, red failed, hollow gray not analyzed; a gray spinner while it runs.
 - Double-click a model to rename it.
 - Drag models to reorder them.
 - <Kbd>Ctrl</Kbd>+click or <Kbd>Shift</Kbd>+click to select several models; right-click them for *Delete selected*.
 - Right-click for *Model properties…*, *Rename*, *Duplicate* and *Delete*.
 
-Under each model, the drawings it places are listed, each with its visibility and lock; click one to open its settings (opacity, *Show in results*, *Invert in dark theme* for an image or PDF, *Recalibrate…*, *Rename* and, for a DWG, DXF or PDF drawing, *Pick lines…*). Below the models, **Attachments** lists the project's drawing files and the models that use each. See [Drawings](/docs/drawings#the-drawings-of-a-model).
+Under each model, the drawings it places are listed, each with its visibility and lock; click one to open its settings (opacity, *Show in results*, *Invert in dark theme* for an image or PDF, *Recalibrate…*, *Rename* and, for a DWG, DXF or PDF drawing, *Pick lines…*). Drag a drawing by its grip, or press <Kbd>Alt</Kbd>+<Kbd>↑</Kbd> / <Kbd>Alt</Kbd>+<Kbd>↓</Kbd>, to change the drawing order; the **×** on its row removes it. Below the models, **Attachments** lists the project's drawing files and the models that use each. See [Drawings](/docs/drawings#the-drawings-of-a-model).
 
 *Duplicate* is the way to try a variant of a model, for example with a different water level, and compare the results. *File › Import* also adds models: one from a DXF file, and one per analysis from a .gsz, .stix, .sli, .slim or .slmd file. A window then lists what was imported and what did not carry over, with a **Copy** button; the notes stay with each model under *Model properties…*. An import cannot be undone: delete the imported models to remove them. *File › Export* writes the active model as a .gsz, .stix or .slim file; its window lists what the format does not carry.
 

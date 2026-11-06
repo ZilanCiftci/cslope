@@ -76,7 +76,9 @@ describe("drawings in the models tree", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Invert in dark theme" }));
     expect(s().backgrounds.find((b) => b.id === "A")?.invertInDark).toBeUndefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Move Section A up" }));
+    // Alt+Up on the row draws it over the one above (the settings have no order buttons).
+    expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
+    fireEvent.keyDown(screen.getByRole("treeitem", { name: "Section A" }), { key: "ArrowUp", altKey: true });
     expect([...s().backgrounds].sort((a, b) => a.order - b.order).map((b) => b.id)).toEqual(["B", "A"]);
 
     fireEvent.doubleClick(screen.getByText("Section A"));
@@ -136,10 +138,13 @@ describe("Attachments", () => {
     expect(screen.getByRole("listitem", { name: "sheet.pdf" })).toHaveTextContent(`in ${model}`);
   });
 
-  it("is not shown without attachments", () => {
+  it("says so without attachments and still offers to add a drawing", () => {
     adoptProjectAssets([]);
     render(<AttachmentsPanel />);
-    expect(screen.queryByTestId("attachments-panel")).toBeNull();
+    expect(screen.getByTestId("attachments-panel")).toHaveTextContent("No files.");
+    expect(screen.queryByRole("list", { name: "Attached files" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "+ Add drawing…" }));
+    expect(drawingWindowState().edit).toBeNull();
   });
 
   it("places a file of the project in the active model", () => {

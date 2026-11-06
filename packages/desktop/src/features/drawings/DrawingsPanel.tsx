@@ -1,26 +1,16 @@
 /**
  * The drawings in the Models panel. Under each model, the drawings placed
- * in it (topmost first), each with its visibility and lock; a click selects
- * one (making its model the active one) and opens its settings below it:
- * opacity, "Show in results", "Invert in dark theme" (an image or PDF),
- * order, Recalibrate…, Rename, Pick lines…,
- * Remove and a DWG or DXF drawing's layers. Below the models, Attachments
- * lists the project's files and the models that use each. Every change is
- * an undo step of the model (an opacity drag is one step).
+ * in it (topmost first), each with its visibility and lock, and on hover a
+ * grip (drag to change the drawing order, or Alt+Up and Alt+Down) and an
+ * "×" that removes it from the model. A click selects one (making its
+ * model the active one) and opens its settings below it: opacity, "Show in
+ * results", "Invert in dark theme" (an image or PDF), Recalibrate…, Rename, Pick lines… and a DWG or DXF drawing's
+ * layers. Below the models, Attachments lists the project's files and the
+ * models that use each ("No files." without any). Every change is an undo
+ * step of the model (an opacity drag is one step).
  */
-import { useEffect, useState, useSyncExternalStore } from "react";
-import {
-  ChevronDown,
-  ChevronUp,
-  Eye,
-  EyeOff,
-  FileImage,
-  FileText,
-  Lock,
-  LockOpen,
-  PencilRuler,
-  Trash2,
-} from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { Eye, EyeOff, FileImage, FileText, GripVertical, Lock, LockOpen, PencilRuler, X } from "lucide-react";
 import { FoldChevron, SECTION_HEADING_ROW, SECTION_HEADING_TEXT } from "../../components/ui/Section";
 import { useAppStore } from "../../store/app-store";
 import { isObjectLocked, sameObject } from "../../store/canvas-selection";
@@ -55,6 +45,12 @@ function KindIcon({ mime, size = 13 }: { mime: string | undefined; size?: number
 const iconButton =
   "w-6 h-6 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active) disabled:opacity-35 disabled:pointer-events-none shrink-0";
 
+/** A text link of the panels ("+ Add drawing…", "Show all"). */
+const textLink = "text-[11px] font-medium cursor-pointer hover:underline disabled:cursor-default disabled:no-underline";
+/** A text link's color: the link color, or the disabled text color. */
+const linkColor = (disabled = false) =>
+  ({ color: disabled ? "var(--color-vsc-field-disabled-text)" : "var(--color-vsc-link)" }) as const;
+
 /** Make `modelId` the active model (a drawing of another model was clicked). */
 function activate(modelId: string): void {
   const st = useAppStore.getState();
@@ -69,21 +65,115 @@ function useModelDrawings(modelId: string): BackgroundImage[] {
 
 /**
  * The drawings of a model, as rows under it in the models tree. The
- * settings of the selected one open below its row.
+ * settings of the selected one open below its row. A row is dragged by its
+ * grip, or moved with Alt+Up and Alt+Down, to change the drawing order
+ * within its model; Delete or its "×" removes it from the model.
  */
 export function ModelDrawings({ modelId }: { modelId: string }) {
   const drawings = useModelDrawings(modelId);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [drop, setDrop] = useState<{ id: string; after: boolean } | null>(null);
+  const rowRefs = useRef(new Map<string, HTMLElement>());
+  // The row to focus after a change of the list (a moved or removed row's).
+  const pendingFocus = useRef<string | null>(null);
+  useEffect(() => {
+    if (pendingFocus.current === null) return;
+    rowRefs.current.get(pendingFocus.current)?.focus();
+    pendingFocus.current = null;
+  });
   if (drawings.length === 0) return null;
+  const n = drawings.length;
+  /** Move `id` to `displayIndex` of the list (topmost first, after the move). */
+  const moveTo = (id: string, displayIndex: number) => {
+    const from = drawings.findIndex((d) => d.id === id);
+    const to = Math.max(0, Math.min(n - 1, displayIndex));
+    if (from < 0 || from === to) return;
+    activate(modelId);
+    useAppStore.getState().moveBackgroundTo(id, n - 1 - to);
+  };
+  const endDrag = () => {
+    setDragId(null);
+    setDrop(null);
+  };
   return (
-    <div role="group" aria-label="Drawings of the model">
+    <div
+      role="group"
+      aria-label="Drawings of the model"
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDrop(null);
+      }}
+    >
       {drawings.map((b, i) => (
-        <DrawingRow key={b.id} modelId={modelId} placement={b} first={i === 0} last={i === drawings.length - 1} />
+        <DrawingRow
+          key={b.id}
+          modelId={modelId}
+          placement={b}
+          rowRef={(el) => {
+            if (el) rowRefs.current.set(b.id, el);
+            else rowRefs.current.delete(b.id);
+          }}
+          dragging={dragId === b.id}
+          dragActive={dragId !== null}
+          dropLine={drop?.id === b.id && dragId !== null && dragId !== b.id ? (drop.after ? "after" : "before") : null}
+          onDragStart={() => setDragId(b.id)}
+          onDragOver={(after) => {
+            if (drop?.id !== b.id || drop.after !== after) setDrop({ id: b.id, after });
+          }}
+          onDrop={() => {
+            if (dragId !== null && dragId !== b.id) {
+              const from = drawings.findIndex((d) => d.id === dragId);
+              let to = i + (drop?.id === b.id && drop.after ? 1 : 0);
+              if (from < to) to -= 1;
+              pendingFocus.current = dragId;
+              moveTo(dragId, to);
+            }
+            endDrag();
+          }}
+          onDragEnd={endDrag}
+          onMove={(step) => {
+            pendingFocus.current = b.id;
+            moveTo(b.id, i + step);
+          }}
+          onRemoved={() => {
+            const next = drawings[i + 1] ?? drawings[i - 1];
+            if (next) pendingFocus.current = next.id;
+          }}
+        />
       ))}
     </div>
   );
 }
 
-function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; placement: BackgroundImage; first: boolean; last: boolean }) {
+function DrawingRow({
+  modelId,
+  placement: b,
+  rowRef,
+  dragging,
+  dragActive,
+  dropLine,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onMove,
+  onRemoved,
+}: {
+  modelId: string;
+  placement: BackgroundImage;
+  rowRef: (el: HTMLElement | null) => void;
+  dragging: boolean;
+  /** A drawing of this model is being dragged. */
+  dragActive: boolean;
+  dropLine: "before" | "after" | null;
+  onDragStart: () => void;
+  onDragOver: (after: boolean) => void;
+  onDrop: () => void;
+  onDragEnd: () => void;
+  /** Move one step in the list: -1 up (over the others), 1 down. */
+  onMove: (step: -1 | 1) => void;
+  /** Called before the drawing is removed (to focus the next row). */
+  onRemoved: () => void;
+}) {
   const isActiveModel = useAppStore((s) => s.activeModelId === modelId);
   const locked = useAppStore((s) =>
     isObjectLocked(s.activeModelId === modelId ? s.locks : (s.models.find((m) => m.id === modelId)?.locks ?? {}), { type: "background", id: b.id }),
@@ -105,17 +195,25 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
       setEditing(null);
     }
   };
+  const remove = () => {
+    onRemoved();
+    act(() => st().removeBackground(b.id));
+  };
   return (
     <div role="none">
       <div
+        ref={rowRef}
         role="treeitem"
         aria-label={label}
         aria-selected={selected}
         aria-level={2}
-        className="group flex items-center gap-1.5 h-6 pl-[43px] pr-1 mx-1 rounded-sm text-[12px] cursor-pointer select-none"
+        aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown Delete"
+        tabIndex={selected ? 0 : -1}
+        className="group relative flex items-center gap-1.5 h-6 pl-[43px] pr-1 mx-1 rounded-sm text-[12px] cursor-pointer select-none outline-none focus-visible:ring-1 focus-visible:ring-(--color-vsc-accent)"
         style={{
           background: selected ? "var(--color-vsc-selected-bg)" : undefined,
           color: selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
+          opacity: dragging ? 0.5 : 1,
         }}
         onMouseEnter={(e) => {
           if (!selected) (e.currentTarget as HTMLElement).style.background = "var(--color-vsc-list-hover)";
@@ -128,9 +226,60 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
           act(() => (selected ? st().clearCanvasSelection() : st().selectCanvasObject({ type: "background", id: b.id })));
         }}
         onDoubleClick={() => setEditing(label)}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === "Delete" || e.key === "Backspace") {
+            // This drawing only (not the canvas's Delete of the selection).
+            e.preventDefault();
+            e.stopPropagation();
+            remove();
+          } else if (e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+            e.preventDefault();
+            e.stopPropagation();
+            onMove(e.key === "ArrowUp" ? -1 : 1);
+          }
+        }}
+        draggable={editing === null}
+        onDragStart={(e) => {
+          e.dataTransfer.effectAllowed = "move";
+          e.dataTransfer.setData("text/plain", label);
+          onDragStart();
+        }}
+        onDragOver={(e) => {
+          // Only a drawing of the same model: drawings stay under their model.
+          if (!dragActive) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "move";
+          const r = e.currentTarget.getBoundingClientRect();
+          onDragOver(e.clientY > r.top + r.height / 2);
+        }}
+        onDrop={(e) => {
+          if (!dragActive) return;
+          e.preventDefault();
+          e.stopPropagation();
+          onDrop();
+        }}
+        onDragEnd={onDragEnd}
         title={`${label}: click for its settings, double-click to rename`}
         data-testid="drawing-tree-row"
       >
+        {dropLine && (
+          <span
+            aria-hidden
+            data-testid="drawing-drop-indicator"
+            className="pointer-events-none absolute left-1 right-1 h-[2px] rounded-full"
+            style={{ background: "var(--color-vsc-accent)", [dropLine === "after" ? "bottom" : "top"]: -1 }}
+          />
+        )}
+        <span
+          className="absolute left-[26px] inset-y-0 w-3 flex items-center justify-center opacity-0 group-hover:opacity-60 group-focus-visible:opacity-60 cursor-grab"
+          style={muted}
+          aria-hidden
+          title="Drag to change the drawing order (or Alt+Up, Alt+Down)"
+        >
+          <GripVertical size={12} strokeWidth={1.75} />
+        </span>
         <KindIcon mime={mime} />
         {editing !== null ? (
           <input
@@ -179,28 +328,28 @@ function DrawingRow({ modelId, placement: b, first, last }: { modelId: string; p
         >
           {locked ? <Lock size={12} aria-hidden /> : <LockOpen size={12} aria-hidden />}
         </button>
+        {/* Shown on hover (and on the focused row); Delete does the same. */}
+        <button
+          className={`${iconButton} opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 focus:opacity-100`}
+          style={muted}
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            remove();
+          }}
+          aria-label={`Remove ${label} from the model`}
+          title="Remove from the model (the file stays in Attachments while another model uses it)"
+        >
+          <X size={13} strokeWidth={1.75} aria-hidden />
+        </button>
       </div>
-      {selected && isActiveModel && (
-        <DrawingSettings placement={b} label={label} first={first} last={last} onRename={() => setEditing(label)} />
-      )}
+      {selected && isActiveModel && <DrawingSettings placement={b} label={label} onRename={() => setEditing(label)} />}
     </div>
   );
 }
 
 /** The selected drawing's settings, below its row (the active model's). */
-function DrawingSettings({
-  placement: b,
-  label,
-  first,
-  last,
-  onRename,
-}: {
-  placement: BackgroundImage;
-  label: string;
-  first: boolean;
-  last: boolean;
-  onRename: () => void;
-}) {
+function DrawingSettings({ placement: b, label, onRename }: { placement: BackgroundImage; label: string; onRename: () => void }) {
   const st = () => useAppStore.getState();
   const [drag, setDrag] = useState<number | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
@@ -285,17 +434,6 @@ function DrawingSettings({
             {picking ? "Done picking" : "Pick lines…"}
           </button>
         )}
-        <span className="ml-auto flex items-center">
-          <button className={iconButton} disabled={first} onClick={() => st().moveBackground(b.id, "up")} aria-label={`Move ${label} up`} title="Draw over the drawing above it">
-            <ChevronUp size={13} strokeWidth={1.75} aria-hidden />
-          </button>
-          <button className={iconButton} disabled={last} onClick={() => st().moveBackground(b.id, "down")} aria-label={`Move ${label} down`} title="Draw under the drawing below it">
-            <ChevronDown size={13} strokeWidth={1.75} aria-hidden />
-          </button>
-          <button className={iconButton} onClick={() => st().removeBackground(b.id)} aria-label={`Remove ${label} from the model`} title="Remove from the model (the file stays in Attachments while another model uses it)">
-            <Trash2 size={12} strokeWidth={1.75} aria-hidden />
-          </button>
-        </span>
       </div>
       {drawing && drawing.layers.length > 0 && (
         <LayerList
@@ -322,8 +460,8 @@ const sizeText = (bytes: number | undefined) =>
 /**
  * The project's attached files (the drawings' files), each with the models
  * that place it; one no model uses is left out when the project is saved.
- * "+ Add drawing…" under the list opens the Place drawing window; "Place…" on a file places it in
- * the active model.
+ * Without files it says "No files.". "+ Add drawing…" under the list opens
+ * the Place drawing window; "Place…" on a file places it in the active model.
  */
 export function AttachmentsPanel() {
   const assets = useProjectAssets().filter((a) => DRAWING_MIME[a.mime] !== undefined);
@@ -331,7 +469,6 @@ export function AttachmentsPanel() {
   const activeModelId = useAppStore((s) => s.activeModelId);
   const activeBackgrounds = useAppStore((s) => s.backgrounds);
   const [open, setOpen] = useState(true);
-  if (assets.length === 0) return null;
   const usedBy = (assetId: string) =>
     models.filter((m) => (m.id === activeModelId ? activeBackgrounds : (m.backgrounds ?? [])).some((b) => b.assetId === assetId)).map((m) => m.name);
   return (
@@ -352,7 +489,12 @@ export function AttachmentsPanel() {
         <FoldChevron open={open} />
         Attachments
       </button>
-      {open && (
+      {open && assets.length === 0 && (
+        <p className="px-4 pt-1.5 text-[11px]" style={muted}>
+          No files.
+        </p>
+      )}
+      {open && assets.length > 0 && (
         <ul className="pt-1" aria-label="Attached files">
           {assets.map((a) => {
             const users = usedBy(a.id);
@@ -388,8 +530,8 @@ export function AttachmentsPanel() {
       )}
       {open && (
         <button
-          className="mx-4 mt-0.5 mb-1.5 text-[11px] cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-accent)" }}
+          className={`${textLink} mx-4 mt-0.5 mb-1.5`}
+          style={linkColor()}
           onClick={() => openPlaceDrawing()}
           title="Add a drawing file and place it in the active model"
         >
@@ -419,31 +561,50 @@ function LayerList({
   const shown = layers.filter((l) => !hidden.includes(l)).length;
   return (
     <div className="mt-1">
-      <button className="flex items-center gap-1 text-[11px]" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Layers of ${label}`}>
-        <FoldChevron open={open} />
-        Layers <span style={muted}>({shown} of {layers.length} shown)</span>
-      </button>
-      {open && (
-        <div className="mt-1 pl-3 flex flex-col gap-0.5 max-h-[180px] overflow-y-auto" role="group" aria-label={`Layers of ${label}`}>
-          <div className="flex gap-2 text-[10px]">
-            <button className="underline" onClick={() => onChange([])} disabled={hidden.length === 0}>
+      {/* The heading; with the list open, Show all and Hide all as text links
+          (on the heading's line where the panel is wide enough, else below it). */}
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 min-w-0">
+        <button className="flex items-center gap-1 text-[11px] min-w-0" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Layers of ${label}`}>
+          <FoldChevron open={open} />
+          <span className="truncate">
+            Layers <span style={muted}>({shown} of {layers.length} shown)</span>
+          </span>
+        </button>
+        {open && (
+          <span className="ml-auto flex items-center gap-2 shrink-0 pl-4">
+            <button className={textLink} style={linkColor(hidden.length === 0)} onClick={() => onChange([])} disabled={hidden.length === 0}>
               Show all
             </button>
-            <button className="underline" onClick={() => onChange([...layers])} disabled={shown === 0}>
+            <button className={textLink} style={linkColor(shown === 0)} onClick={() => onChange([...layers])} disabled={shown === 0}>
               Hide all
             </button>
-          </div>
-          {layers.map((name) => (
-            <label key={name} className="flex items-center gap-1.5 min-w-0">
-              <input
-                type="checkbox"
-                checked={!hidden.includes(name)}
-                onChange={(e) => onChange(e.target.checked ? hidden.filter((h) => h !== name) : [...hidden, name])}
-              />
-              <span className="truncate">{name || "(no name)"}</span>
-            </label>
-          ))}
-        </div>
+          </span>
+        )}
+      </div>
+      {open && (
+        // One row per layer with its eye, as the drawings' rows in the tree.
+        <ul className="mt-0.5 -mr-1 max-h-[180px] overflow-y-auto" aria-label={`Layers of ${label}`}>
+          {layers.map((name) => {
+            const on = !hidden.includes(name);
+            const shownName = name || "(no name)";
+            return (
+              <li key={name} aria-label={shownName} className="flex items-center gap-1.5 h-6 pl-4 rounded-sm min-w-0 hover:bg-(--color-vsc-list-hover)">
+                <span className="flex-1 min-w-0 truncate" style={on ? undefined : muted} title={shownName}>
+                  {shownName}
+                </span>
+                <button
+                  className={iconButton}
+                  onClick={() => onChange(on ? [...hidden, name] : hidden.filter((h) => h !== name))}
+                  aria-label={on ? `Hide layer ${shownName}` : `Show layer ${shownName}`}
+                  title={on ? "Hide" : "Show"}
+                  aria-pressed={!on}
+                >
+                  {on ? <Eye size={13} aria-hidden /> : <EyeOff size={13} aria-hidden />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

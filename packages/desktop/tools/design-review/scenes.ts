@@ -414,6 +414,16 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "models-drawing-hover",
+    title: "Models panel, a drawing row under the pointer (grip and ×)",
+    area: "sidebar",
+    data: "drawings",
+    open: async (ctx) => {
+      await ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first().hover();
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
     id: "models-drawing-hidden-unlocked",
     title: "Models panel, a drawing hidden and unlocked",
     area: "sidebar",
@@ -1257,16 +1267,15 @@ const dialogs: Scene[] = [
   },
   {
     id: "dlg-about",
-    title: "About cSlope (native message box)",
+    title: "About cSlope (Help › About)",
     area: "dialogs",
     open: async (ctx) => {
       await ctx.tab("Help");
       await ctx.click("About");
-      await ctx.wait(1500);
-      if (!(await ctx.grabScreen())) throw new Error("The About box is a native message box; the X screen could not be grabbed");
-      await ctx.page.keyboard.press("Enter").catch(() => {});
+      const dialog = ctx.page.getByRole("dialog", { name: "About cSlope" });
+      await dialog.waitFor({ timeout: 10_000 });
+      return { focus: dialog };
     },
-    restartAfter: true,
   },
   {
     id: "dlg-confirm-delete-model",

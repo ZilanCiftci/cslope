@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../../utils/is-electron", () => ({ isElectron: true }));
@@ -264,11 +264,20 @@ describe("File ribbon", () => {
 });
 
 describe("Help ribbon", () => {
-  it("shows About through the desktop app", async () => {
+  it("shows About as a dialog in the window, with its links (D-12)", async () => {
     render(<MenuBar />);
     await userEvent.click(tab("Help"));
     await userEvent.click(screen.getByTitle("About"));
-    expect(bridge.callNames()).toContain("menuAbout");
+    const about = screen.getByRole("dialog", { name: "About cSlope" });
+    expect(about).toHaveTextContent(/Version /);
+    await userEvent.click(within(about).getByRole("button", { name: "Documentation" }));
+    expect(bridge.callNames()).toContain("openDocumentation");
+    await userEvent.click(within(about).getByRole("button", { name: "Licenses" }));
+    await userEvent.click(within(about).getByRole("button", { name: "Source code" }));
+    expect(bridge.calls.filter((c) => c.name === "openAboutLink").map((c) => c.args)).toEqual([["licenses"], ["source"]]);
+    // The X and the Close button.
+    await userEvent.click(within(about).getAllByRole("button", { name: "Close" }).at(-1)!);
+    expect(screen.queryByRole("dialog", { name: "About cSlope" })).toBeNull();
   });
 
   it("opens the documentation and lists the keyboard shortcuts", async () => {

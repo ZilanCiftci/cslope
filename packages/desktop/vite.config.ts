@@ -14,6 +14,24 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 /**
+ * The release date of this version from the repository's CHANGELOG.md
+ * ("## [0.1.0-beta.2] - 2026-11-04"), shown in Help › About; empty for a
+ * version that is not dated there (unreleased).
+ */
+function releaseDate(v: string): string {
+  try {
+    const log = readFileSync(path.join(__dirname, "../../CHANGELOG.md"), "utf8");
+    for (const line of log.split("\n")) {
+      const m = /^## \[([^\]]+)\] - (\d{4}-\d{2}-\d{2})/.exec(line);
+      if (m && m[1] === v) return m[2];
+    }
+  } catch {
+    // No changelog beside the package: no date.
+  }
+  return "";
+}
+
+/**
  * The engine the app ships, recorded with every saved result
  * (src/utils/app-version.ts): the engine package's version and the source
  * hash of its wasm build (packages/engine/src/wasm/BUILD-INFO.json).
@@ -74,7 +92,11 @@ function cspMeta(): Plugin {
 
 export default defineConfig({
   worker: { format: "es", plugins: () => [base64Import()] },
-  define: { __APP_VERSION__: JSON.stringify(version), __ENGINE_BUILD__: JSON.stringify(engineBuild()) },
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __APP_RELEASE_DATE__: JSON.stringify(releaseDate(version)),
+    __ENGINE_BUILD__: JSON.stringify(engineBuild()),
+  },
   plugins: [
     base64Import(),
     cspMeta(),
