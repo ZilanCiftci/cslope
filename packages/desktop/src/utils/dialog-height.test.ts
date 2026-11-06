@@ -52,8 +52,21 @@ describe("naturalDialogHeight", () => {
   it("grows past the window when the content scrolls", () => {
     document.body.innerHTML = `
       <div class="h-screen"><div id="body" class="flex-1 overflow-y-auto"><div id="a"></div></div></div>`;
-    layout({ body: { top: 0, bottom: 500 }, a: { top: 0, bottom: 900 } }, 500);
+    layout({ body: { top: 0, bottom: 500 }, a: { top: 0, bottom: 900 } }, 500, 900);
     expect(naturalDialogHeight(document, 500)).toBe(900);
+  });
+
+  it("counts what the body scrolls when it overflows by a pixel or more", () => {
+    document.body.innerHTML = `
+      <div class="h-screen"><div id="body" class="flex-1 overflow-y-auto"><div id="a"></div></div></div>`;
+    // The last child's bottom margin (not in its box) makes the body scroll
+    // 420 px for children that end at 400: the window needs the 420.
+    layout({ body: { top: 0, bottom: 300 }, a: { top: 0, bottom: 400 } }, 300, 420);
+    expect(naturalDialogHeight(document, 300)).toBe(420);
+    // scrollHeight only the rounded body height (a half-pixel body): not an
+    // overflow, the children's boxes decide.
+    layout({ body: { top: 0.5, bottom: 300 }, a: { top: 0.5, bottom: 250.5 } }, 300, 300);
+    expect(naturalDialogHeight(document, 300)).toBe(Math.ceil(300 - 299.5 + 250));
   });
 
   it("fits every dialog while it opens; afterwards lists follow, forms keep and analysis windows only grow", () => {

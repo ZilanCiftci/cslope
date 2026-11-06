@@ -416,6 +416,15 @@ async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, 
 
 /** The 150 % pass in its own app instance and virtual screen (see the top of this file). */
 function run150() {
+  try {
+    execSync("command -v xvfb-run", { stdio: "ignore", shell: "/bin/sh" });
+  } catch {
+    console.log(
+      "\n  150 % pass skipped: it needs xvfb-run (a 1920 × 1080 virtual screen). Set DESIGN_REVIEW_NO_150=1 to skip it quietly,\n" +
+        '  or run it alone where xvfb-run exists: DESIGN_REVIEW_SCALE=1.5 xvfb-run -a -s "-screen 0 1920x1080x24" bun packages/desktop/tools/design-review/run.ts\n',
+    );
+    return;
+  }
   console.log("\n  150 % pass: a second app instance at scale 1.5 on a 1920 × 1080 screen\n");
   execSync(`xvfb-run -a -s "-screen 0 1920x1080x24" bun "${import.meta.filename}"`, {
     cwd: ROOT,
@@ -442,12 +451,13 @@ async function main() {
   const pass = PASS_150 ? "150 % pass" : "Design review";
   console.log(`\n  ${pass}: ${selected.length} scenes × ${THEMES.length} themes\n  Output → ${OUT_DIR}\n`);
 
-  if (PASS_150 && !process.env.DESIGN_REVIEW_SKIP_BUILD) process.env.DESIGN_REVIEW_SKIP_BUILD = "1";
-  if (!process.env.DESIGN_REVIEW_SKIP_BUILD) {
+  // The 150 % pass uses the build the 100 % pass made.
+  const skipBuild = PASS_150 || !!process.env.DESIGN_REVIEW_SKIP_BUILD;
+  if (!skipBuild) {
     console.log("  Building app (VITE_CAPTURE_MODE=1)…");
     execSync("bunx vite build", { cwd: DESKTOP_DIR, stdio: "inherit", env: { ...process.env, VITE_CAPTURE_MODE: "1" } });
   } else if (!existsSync(join(DESKTOP_DIR, "dist", "index.html"))) {
-    throw new Error("DESIGN_REVIEW_SKIP_BUILD is set but there is no build in packages/desktop/dist");
+    throw new Error("No build in packages/desktop/dist (DESIGN_REVIEW_SKIP_BUILD or the 150 % pass needs one)");
   }
   const { data, files } = await prepareData();
 
