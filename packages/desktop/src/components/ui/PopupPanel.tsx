@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { X } from "lucide-react";
 
 // ── Types ──
 
 interface PopupPanelProps {
   /** Title shown in the draggable header bar. */
   title: string;
-  /** Called when the user clicks ✕ or presses Escape. */
+  /** Called when the user clicks the close button or presses Escape. */
   onClose: () => void;
   /** Pixel width of the panel (default 280). */
   width?: number;
@@ -134,11 +135,12 @@ export function PopupPanel({
           onClick={onClose}
           onPointerDown={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
-          className="text-[14px] leading-none hover:opacity-70 cursor-pointer p-1 -mr-1"
-          style={{ color: "var(--color-vsc-text)" }}
+          className="w-6 h-6 -mr-1.5 rounded-xs flex items-center justify-center cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
+          style={{ color: "var(--color-vsc-text-muted)" }}
           title="Close"
+          aria-label="Close"
         >
-          &times;
+          <X size={12} strokeWidth={1.75} aria-hidden />
         </button>
       </div>
 

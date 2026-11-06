@@ -45,7 +45,7 @@ export function importDrawing(drawing: DxfDrawing, name: string): string {
   for (const note of drawing.notes ?? []) message += ` ${note}`;
   const skipped = Object.entries(drawing.skipped);
   if (skipped.length > 0) {
-    message += ` Not imported: ${skipped.map(([t, n]) => `${n} ${t}`).join(", ")} (only polylines and lines are read).`;
+    message += ` Not imported: ${skipped.map(([t, n]) => `${n} ${t.toLowerCase()}`).join(", ")} (only polylines and lines are read).`;
   }
   return message;
 }

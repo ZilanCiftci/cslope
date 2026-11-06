@@ -12,12 +12,14 @@ export interface AnnotationTagContext {
 export interface AnnotationTag {
   /** The name after `#`, as inserted (matching is case-insensitive). */
   tag: string;
-  /** One line for the Insert variable menu, including what it shows without a value. */
+  /** One line for the Insert variable menu, including what it shows without a value (for project information, the group heading says it). */
   description: string;
   /** Its value, or null when the model has none (it then shows `missing`). */
   value: (ctx: AnnotationTagContext) => string | null;
   /** What the tag shows without a value. */
   missing: string;
+  /** Listed under a heading in the Insert variable menu: project information. */
+  group?: "project";
 }
 
 const info = (
@@ -26,7 +28,8 @@ const info = (
   description: string,
 ): AnnotationTag => ({
   tag,
-  description: `${description} (project information; empty if not set)`,
+  description,
+  group: "project",
   value: ({ projectInfo }) => {
     const v = projectInfo[key];
     return typeof v === "string" && v !== "" ? v : null;

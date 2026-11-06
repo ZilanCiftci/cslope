@@ -642,7 +642,7 @@ const menus: Scene[] = [
       return { focus: menu(ctx, "More drawing commands") };
     },
   },
-  { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: menu(ctx) }; } },
+  { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) }; } },
   {
     id: "menu-results-surfaces-filter",
     title: "Results › Surfaces ▾ menu, Filter by FOS (with the FOS field)",
@@ -652,11 +652,11 @@ const menus: Scene[] = [
       await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "filter" })`);
       await ctx.tab("Results");
       await ctx.click("Surfaces");
-      return { focus: menu(ctx) };
+      return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) };
     },
   },
   { id: "menu-results-reference-line", title: "Results › Reference line ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Reference line"); return { focus: menu(ctx, "Reference line") }; } },
-  { id: "menu-results-export", title: "Results › Export ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("More export options"); return { focus: menu(ctx) }; } },
+  { id: "menu-results-export", title: "Results › Export ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("More export options"); return { focus: ctx.page.getByRole("group", { name: "Export options", exact: true }) }; } },
   {
     id: "menu-help-shortcuts",
     title: "Help › Shortcuts (keyboard shortcuts panel)",

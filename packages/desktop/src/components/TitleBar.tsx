@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 import { useAppStore, performUndo, performRedo } from "../store/app-store";
 import { isElectron } from "../utils/is-electron";
 import { useWindowTitle } from "./useWindowTitle";
+import { DISABLED_COLOR } from "./ui/disabled-style";
 import { useProjectActions } from "../features/project/useProjectActions";
 import {
   NewIcon,
@@ -195,10 +196,10 @@ function FavButton({
       title={title}
       aria-label={title}
       onClick={disabled ? undefined : onClick}
-      className={`w-[26px] h-[26px] rounded-xs flex items-center justify-center ${disabled ? "" : "hover:bg-[var(--color-vsc-list-hover)]"}`}
+      aria-disabled={disabled || undefined}
+      className={`w-6 h-6 rounded-xs flex items-center justify-center ${disabled ? "cursor-default" : "hover:bg-[var(--color-vsc-list-hover)]"}`}
       style={{
-        color: "var(--color-vsc-text)",
-        opacity: disabled ? 0.4 : 1,
+        color: disabled ? DISABLED_COLOR : "var(--color-vsc-text)",
       }}
     >
       {children}

@@ -1,6 +1,7 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { DISABLED_COLOR } from "../disabled-style";
 
 /**
  * The compact ribbon: a tab's commands in groups with a caption under
@@ -91,14 +92,14 @@ export function RibbonButton({
       // At least 58 px wide; a longer label widens the button.
       className={`min-w-[58px] h-[50px] px-2 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer whitespace-nowrap ${disabled ? "" : HOVER}`}
       style={{
-        color: active
-          ? "var(--color-vsc-text-bright)"
-          : "var(--color-vsc-text)",
+        color: disabled
+          ? DISABLED_COLOR
+          : active
+            ? "var(--color-vsc-text-bright)"
+            : "var(--color-vsc-text)",
         background: active ? "var(--color-vsc-list-active)" : "transparent",
-        opacity: disabled ? 0.4 : 1,
       }}
-      role="menuitem"
-      aria-disabled={disabled}
+      aria-disabled={disabled || undefined}
       data-size="large"
     >
       <span className="flex items-center justify-center">{icon}</span>
@@ -168,7 +169,7 @@ function RibbonMenuList({
         background: "var(--color-vsc-panel)",
         border: "1px solid var(--color-vsc-border)",
         minWidth: 140,
-        boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+        boxShadow: "var(--color-vsc-shadow-float)",
       }}
       role="menu"
       aria-label={label}
@@ -188,8 +189,7 @@ function RibbonMenuList({
             style={{
               background: "transparent",
               border: "none",
-              color: "var(--color-vsc-text)",
-              opacity: it.disabled ? 0.45 : 1,
+              color: it.disabled ? DISABLED_COLOR : "var(--color-vsc-text)",
             }}
             role="menuitem"
             aria-disabled={it.disabled || undefined}
@@ -226,7 +226,6 @@ export function RibbonMenuButton({
           color: "var(--color-vsc-text)",
           background: open ? "var(--color-vsc-list-active)" : "transparent",
         }}
-        role="menuitem"
         aria-haspopup="menu"
         aria-expanded={open}
         data-size="small"
@@ -281,7 +280,6 @@ export function RibbonSplitButton({
           color: "var(--color-vsc-text)",
           background: open ? "var(--color-vsc-list-active)" : "transparent",
         }}
-        role="menuitem"
         data-size="large"
       >
         <span className="flex items-center justify-center">{icon}</span>
@@ -289,7 +287,9 @@ export function RibbonSplitButton({
       </button>
       <button
         onClick={() => setOpen(!open)}
-        className={`absolute bottom-[3px] right-0 w-4 h-4 rounded-xs flex items-center justify-center cursor-pointer ${HOVER}`}
+        // 16 px wide in the button's right padding, 24 px tall: a target
+        // as tall as an icon button, with the chevron beside the label.
+        className={`absolute bottom-0 right-0 w-4 h-6 rounded-xs flex items-center justify-center cursor-pointer ${HOVER}`}
         style={{ background: "transparent", border: "none", padding: 0 }}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -317,6 +317,7 @@ export function RibbonSmallButton({
   onClick,
   active,
   hasDropdown,
+  expanded,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -326,7 +327,9 @@ export function RibbonSmallButton({
   onClick: () => void;
   /** A toggle's state; leave undefined for a plain button. */
   active?: boolean;
+  /** Opens a popup below it (with a chevron); `expanded` while it is open. */
   hasDropdown?: boolean;
+  expanded?: boolean;
 }) {
   const name = title ?? label;
   return (
@@ -341,7 +344,7 @@ export function RibbonSmallButton({
         borderColor: active ? "var(--color-vsc-accent)" : "transparent",
       }}
       aria-pressed={active}
-      aria-haspopup={hasDropdown ? "menu" : undefined}
+      aria-expanded={hasDropdown ? (expanded ?? false) : undefined}
       data-size="small"
     >
       <span

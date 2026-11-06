@@ -203,7 +203,6 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
             : "var(--color-vsc-text-muted)",
           background: isOpen ? "var(--color-vsc-tab-active)" : "transparent",
         }}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         Model
@@ -218,7 +217,7 @@ export function EditMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-stretch gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="toolbar" aria-label="Model">
             <DrawingGroup />
 
             <RibbonSep />

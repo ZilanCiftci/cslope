@@ -29,7 +29,7 @@ describe("importDxf", () => {
     expect(s.orientation).toBe("rtl");
     expect(s.materialBoundaries).toHaveLength(1);
     expect(s.piezometricLine.lines).toHaveLength(1);
-    expect(message).toContain("1 ARC");
+    expect(message).toContain("Not imported: 1 arc");
     expect(s.analysisLimits.enabled).toBe(false);
     // The import is one step: nothing to undo piece by piece.
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
