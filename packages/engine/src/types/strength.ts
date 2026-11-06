@@ -8,9 +8,8 @@
  *
  * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
  */
-import { testCall, wasm } from "../facade/internal";
-import type { MaterialModel, MaterialModelKind, TableSpline } from "./material-models";
-import type { PartialFactors } from "./analysis";
+import { wasm } from "../facade/internal";
+import type { MaterialModel } from "./material-models";
 import type { HoekBrownParameters } from "./hoek-brown";
 
 // ── Result type ────────────────────────────────────────────────
@@ -96,23 +95,6 @@ export interface StrengthContext {
   effectiveVerticalStress?: number;
 }
 
-/** Design shear strength at one point (see `designStrength`). */
-export interface DesignStrength {
-  /** Cohesion of the drained (or only) branch (kPa). */
-  cohesion: number;
-  /** tan φ of the drained (or only) branch. */
-  tanPhi: number;
-  /** Undrained strength, the other branch of a combined material (kPa). */
-  cohesionUndrained: number;
-  /**
-   * The only strength is undrained (total stress, φ = 0): Su,
-   * S = f(depth/datum), undrained lime-cement columns and any model
-   * entered with φ = 0, the common way to give undrained clay as
-   * Mohr-Coulomb.
-   */
-  undrained: boolean;
-}
-
 /**
  * Whether resolving `model` uses `StrengthContext.yLayerTop`, so callers
  * only search the layer top when it matters.
@@ -158,51 +140,4 @@ export function resolveUnitWeight(model: MaterialModel, fallback: number, x: num
  */
 export function interpolateFunction(points: [number, number][], x: number): number {
   return wasm().interpolate_function(points, x);
-}
-
-// ── internal (testing build) ─────────────────────────────────────
-
-/**
- * Design strength: each characteristic parameter divided by its own
- * partial factor, as EN 1997-1 (2004) 2.4.6.2 and Annex A set them per
- * parameter: γcu on undrained shear strength, γc′ on effective cohesion,
- * γφ′ on tan φ′. A strength summed from parts of both kinds factors each
- * part on its own: lime-cement columns in their drained limit,
- * (1 − a)·cu,soil + a·c′col, give (1 − a)·cu,soil/γcu + a·c′col/γc′ (the
- * composite strength of soil and columns in the Swedish guidance on deep
- * mixing, SGF Report 2:2000 and TK Geo 13, with the Eurocode factor of
- * each part). The undrained branch of a combined material takes γcu.
- * Strength from matric suction (φb) is drained and takes γc′ like c′,
- * also on a Mohr-Coulomb material entered with φ = 0.
- * Without factors (and for high-strength and bedrock) the characteristic
- * values are returned.
- *
- * The one place design strength is formed: the slices, the Rankine crack
- * depth and the Ito & Matsui pile pressure all use it.
- */
-export function designStrength(
-  kind: MaterialModelKind | undefined,
-  st: Pick<ResolvedStrength, "cohesion" | "frictionAngle" | "cohesionUndrained" | "isCombined" | "cohesionUndrainedPart" | "suctionStrength">,
-  f: PartialFactors | null | undefined,
-): DesignStrength {
-  return testCall("types/strength::designStrength", [kind, st, f]);
-}
-
-/**
- * Tangent c (kPa) and φ (°) of a shear-normal function at σ′n: of the
- * segment holding σ′n (the first or last beyond the ends), so that
- * c + σ′n·tan φ is the strength there. Where the tangent's intercept would
- * be negative (a convex part), the secant through the origin (c = 0,
- * tan φ = τ/σ′n); where the curve falls, its value as c with φ = 0.
- */
-export function shearNormalAt(model: { points: readonly [number, number][]; spline?: TableSpline }, sn: number): { cohesion: number; frictionAngle: number } {
-  return testCall("types/strength::shearNormalAt", [model, sn]);
-}
-
-/** SHANSEP undrained strength at the base (see ShansepModel). */
-export function shansepSu(
-  model: Extract<MaterialModel, { kind: "shansep" }>,
-  context: Pick<StrengthContext, "yBottom" | "yGround" | "effectiveVerticalStress">,
-): number {
-  return testCall("types/strength::shansepSu", [model, context]);
 }

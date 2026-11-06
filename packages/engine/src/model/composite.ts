@@ -1,13 +1,13 @@
 /**
  * Composite circular slip surfaces: a circle that reaches impenetrable
- * material (bedrock) follows its top instead of entering it, and,
- * optionally (compositeBase), the base of the model likewise, as commercial programs and the literature treat a circle on
- * a firm base (Duncan & Wright 2014, ch. 6: composite surfaces; the "lera
- * på fast botten" of Swedish practice). The part along the floor is a
- * straight-based polyline, analysed about the circle's centre with the
- * moment arms of its normal forces, as a non-circular surface.
+ * material (bedrock) follows its top instead of entering it, and, optionally
+ * (compositeBase), the base of the model likewise, as commercial programs
+ * and the literature treat a circle on a firm base (Duncan & Wright 2014,
+ * ch. 6: composite surfaces; the "lera på fast botten" of Swedish practice).
  *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/model/composite.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import type { GeometryWithMaterial } from "../types/geometry";
 import { wasm } from "../facade/internal";

@@ -7,8 +7,7 @@ import type { SlopeDefinition } from "../types/slope-definition";
 import { buildSlope } from "./build-slope";
 import { toCanonicalSlopeDefinition } from "./canonical";
 import { analyseSlope } from "./solvers";
-import { generateLocalPlanes, setEntryExitPlanes } from "./search";
-import type { SearchPlane } from "./slope";
+import { setEntryExitPlanes } from "./search";
 
 const undrained = (name: string, su: number) =>
   ({ name, model: { kind: "undrained", unitWeight: 19, undrainedShearStrength: su } }) as const;
@@ -64,25 +63,6 @@ describe("circular search with two basins (toe circle above a stronger layer, de
       expect(gap).toBeGreaterThanOrEqual(-1e-6);
       expect(gap).toBeLessThan(1e-3);
     }
-  });
-
-  it("the local search also starts from the best circle of a second basin", () => {
-    const slope = buildSlope(toCanonicalSlopeDefinition(twoBasins));
-    slope.updateAnalysisOptions({ iterations: 1000 });
-    setEntryExitPlanes(slope);
-    const low = (p: SearchPlane) => p.cy - p.radius;
-    const deep = slope.search.filter((p) => low(p) < 5).slice(0, 6);
-    const toe = slope.search.find((p) => p.tangentTo !== undefined && p.rc[0] <= 40)!;
-    // Six deep circles rank first; the toe circle, 0.5 % higher, is seventh.
-    const planes = [...deep.map((p, i) => ({ ...p, fos: 1 + i * 1e-4 })), { ...toe, fos: 1.005 }];
-    const local = generateLocalPlanes(slope, planes, 10000, 1);
-    const nearToe = local.filter(
-      (p) => Math.abs(p.lc[0] - toe.lc[0]) < 2 && Math.abs(p.rc[0] - toe.rc[0]) < 2 && low(p) > 9,
-    );
-    expect(nearToe.length).toBeGreaterThan(0);
-    // A basin far above the best gets no seed.
-    const far = generateLocalPlanes(slope, [...planes.slice(0, -1), { ...toe, fos: 1.5 }], 10000, 1);
-    expect(far.some((p) => Math.abs(p.lc[0] - toe.lc[0]) < 2 && Math.abs(p.rc[0] - toe.rc[0]) < 2 && low(p) > 9)).toBe(false);
   });
 
   it("an impenetrable layer gives the circle tangent to it, as the model base does", () => {

@@ -1,10 +1,11 @@
 /**
- * Strength from matric suction (φb, extended Mohr-Coulomb): resolution,
- * design values and validation.
+ * Strength from matric suction (φb, extended Mohr-Coulomb): resolution
+ * and validation. (The design values, of the internal designStrength, are
+ * tested in Rust: packages/engine-rs/crates/cslope-engine/tests/types_unit.rs.)
  */
 
 import { describe, it, expect } from "vitest";
-import { designStrength, resolveStrength, suctionStrength, type StrengthContext } from "./strength";
+import { resolveStrength, suctionStrength, type StrengthContext } from "./strength";
 import { suctionAngle, type MaterialModel } from "./material-models";
 import { validateMaterialModel } from "./validation";
 
@@ -17,7 +18,6 @@ const mc = (extra: Partial<Extract<MaterialModel, { kind: "mohr-coulomb" }>> = {
   frictionAngle: 30,
   ...extra,
 });
-const FACTORS = { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3 };
 
 describe("strength from suction", () => {
   it("adds (−u)·tan φb to c′ above the water line", () => {
@@ -68,15 +68,6 @@ describe("strength from suction", () => {
     expect(resolveStrength(m, ctx(40)).cohesion).toBe(25);
   });
 
-  it("takes γc′ as a design value, also on a material entered with φ = 0", () => {
-    const st = resolveStrength(mc({ phiB: 15 }), ctx(20));
-    const d = designStrength("mohr-coulomb", st, FACTORS);
-    expect(d.cohesion).toBeCloseTo((10 + 20 * tan(15)) / 1.3, 12);
-    const st0 = resolveStrength(mc({ frictionAngle: 0, cohesion: 30, phiB: 15 }), ctx(20));
-    const d0 = designStrength("mohr-coulomb", st0, FACTORS);
-    expect(d0.undrained).toBe(true);
-    expect(d0.cohesion).toBeCloseTo(30 / 1.5 + (20 * tan(15)) / 1.3, 12);
-  });
 });
 
 describe("validation of φb and the maximum suction", () => {

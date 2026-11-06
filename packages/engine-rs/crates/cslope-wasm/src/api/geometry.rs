@@ -6,7 +6,7 @@ use crate::errors::{js_error, IntoJsResult};
 use crate::registry::Registry;
 use cslope_engine::model::geometry_ops as g;
 use cslope_engine::model::waternet::{waternet_pore_pressure, Waternet};
-use cslope_engine::types::{GeometryWithMaterial, MaterialId};
+use cslope_engine::types::MaterialId;
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use wasm_bindgen::prelude::*;
@@ -60,47 +60,6 @@ pub fn geometry_bounds(px: &[f64], py: &[f64]) -> Vec<f64> {
         (Some(a), Some(b), Some(c)) => vec![a, b, c],
         _ => Vec::new(),
     }
-}
-
-// ── internal functions (the testing build dispatches them) ──────
-
-/// A `GeometryWithMaterial` with its material as an index (the facade maps
-/// `Material` objects to indices by identity).
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GeometryDto {
-    px: Vec<f64>,
-    py: Vec<f64>,
-    material: u32,
-    #[serde(default)]
-    x_min: Option<f64>,
-    #[serde(default)]
-    x_max: Option<f64>,
-    #[serde(default)]
-    y_max: Option<f64>,
-}
-
-impl From<GeometryDto> for GeometryWithMaterial {
-    fn from(d: GeometryDto) -> Self {
-        GeometryWithMaterial {
-            px: d.px,
-            py: d.py,
-            material: MaterialId(d.material),
-            x_min: d.x_min,
-            x_max: d.x_max,
-            y_max: d.y_max,
-        }
-    }
-}
-
-pub fn material_layer_top_at(
-    geometries: Vec<GeometryDto>,
-    material: u32,
-    x: f64,
-    y: f64,
-) -> Option<f64> {
-    let geos: Vec<GeometryWithMaterial> = geometries.into_iter().map(Into::into).collect();
-    g::material_layer_top_at(&geos, MaterialId(material), x, y)
 }
 
 /// "left" or "right".

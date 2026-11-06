@@ -1,6 +1,8 @@
 //! Ported unit tests: packages/engine/src/model/geometry-ops.test.ts and
 //! geometry-props.test.ts (the parts that test geometry-ops directly),
-//! plus property tests of the region split.
+//! plus property tests of the region split. The cases of the internal
+//! functions are only here (moved from water-table.test.ts,
+//! review-round4.test.ts and result-warnings.test.ts too).
 
 use cslope_engine::model::geometry_ops::*;
 
@@ -306,6 +308,17 @@ fn water_table_clip_cases() {
     .unwrap();
     assert_eq!(out.x, vec![0., 20., 30., 40., 50.]);
     assert_eq!(out.y, vec![-5., -5., -5., -10., -10.]);
+    // keeps both sides of a vertical step in the surface (moved here from
+    // water-table.test.ts)
+    let step = clip_line_to_surface(
+        &[0., 20.],
+        &[5., 5.],
+        &[0., 10., 10., 20.],
+        &[10., 10., 0., 0.],
+    )
+    .unwrap();
+    assert_eq!(step.x, vec![0., 10., 10., 20.]);
+    assert_eq!(step.y, vec![5., 5., 0., 0.]);
     assert!(clip_line_to_surface(&[60., 70.], &[0., 0.], &[0., 50.], &[0., 0.]).is_none());
 }
 
@@ -644,6 +657,46 @@ fn splits_at_a_boundary_ending_on_a_sloping_face() {
         assert!(!r.failed);
         assert_eq!(r.faces.len(), 2);
     }
+}
+
+// review-round4.test.ts, "region split: boundary ends off by a rounding
+// error" (moved here from TypeScript)
+
+/// RING40 and the lines shifted by (dx, dy), split.
+fn split_shifted(lines: &[Vec<Pt>], dx: f64, dy: f64) -> RegionFacesResult {
+    let px: Vec<f64> = RING40.iter().map(|p| p[0] + dx).collect();
+    let py: Vec<f64> = RING40.iter().map(|p| p[1] + dy).collect();
+    let lines: Vec<Vec<Pt>> = lines
+        .iter()
+        .map(|l| l.iter().map(|p| [p[0] + dx, p[1] + dy]).collect())
+        .collect();
+    polygonize_regions_detailed(&px, &py, &lines).unwrap()
+}
+
+#[test]
+fn splits_at_a_boundary_ending_on_another_boundary_a_t_junction() {
+    for k in 1..30 {
+        let x = (40. * k as f64) / 30. + 1e-9;
+        let r = split_shifted(
+            &[
+                vec![[0., -3.], [40., -5.]],
+                vec![[x, -3. - (2. * x) / 40. + 1e-13], [x, 15.]],
+            ],
+            0.,
+            0.,
+        );
+        assert!(!r.failed, "k = {k}");
+        assert!(r.faces.len() >= 3, "k = {k}: {} faces", r.faces.len());
+    }
+}
+
+#[test]
+fn splits_the_same_at_large_map_coordinates() {
+    let lines = [vec![[0., 2.], [20., 5.]]];
+    assert_eq!(
+        split_shifted(&lines, 512345.678, 6543210.987).faces.len(),
+        split_shifted(&lines, 0., 0.).faces.len()
+    );
 }
 
 #[test]

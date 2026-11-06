@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { SlopeDefinition } from "../types/slope-definition";
 import { buildSlope } from "./build-slope";
 import { analyseSlope } from "./solvers";
-import { polygonizeRegionsDetailed } from "./geometry-ops";
 import { isAdmissiblePolyline } from "./surface";
 import { analysisWarnings } from "./result-warnings";
 
@@ -37,20 +36,6 @@ describe("region split", () => {
       materialBoundaries: [{ coordinates: [[0, 5], [17.142857142857142, 4.285714285714286 - 1e-6], [40, -3]], materialName: "Weak" }],
     };
     expect(fos(onFace)).toBeCloseTo(fos(nudged)!, 4);
-  });
-
-  it("keeps every region: the faces cover the slope wherever it lies", () => {
-    const shifted = (dx: number) => {
-      const ring = [[-220, -15], [-220, 19], [-210, 19], [-189, 7], [-184.66515835176665, 6.868245269066714], [-177.86896225530654, 0], [-164, 0], [-164, -15]];
-      const line = [[-220, 7], [-202, 9], [-182.9971442414437, 5.1825478790327], [-174, 0]];
-      const r = polygonizeRegionsDetailed(ring.map((p) => p[0] + dx), ring.map((p) => p[1]), [line.map(([x, y]) => [x + dx, y] as [number, number])]);
-      return r;
-    };
-    for (const dx of [0, 0.5, 220]) {
-      const r = shifted(dx);
-      expect(r.failed).toBe(false);
-      expect(r.faces).toHaveLength(2);
-    }
   });
 
   const def = (gap: number): SlopeDefinition => ({
@@ -104,41 +89,6 @@ describe("region split", () => {
       materialBoundaries: [{ coordinates: [[5, 5]], materialName: "Weak" }, ...d.materialBoundaries!],
     });
     expect(slope.danglingBoundaries).toEqual([1]);
-  });
-});
-
-describe("region split: boundary ends off by a rounding error", () => {
-  const ring: [number, number][] = [[0, -10], [0, 10], [10, 10], [30, 0], [40, 0], [40, -10]];
-  const split = (lines: [number, number][][], dx = 0, dy = 0) =>
-    polygonizeRegionsDetailed(
-      ring.map((p) => p[0] + dx),
-      ring.map((p) => p[1] + dy),
-      lines.map((l) => l.map(([x, y]) => [x + dx, y + dy] as [number, number])),
-    );
-
-  it("splits at a boundary ending on a sloping face (a dangle in plain noding)", () => {
-    // The 1:2 face from (10, 10) to (30, 0); ends a hair inside or on it.
-    for (let k = 1; k < 50; k++) {
-      const t = k / 50 + 1e-7;
-      const end: [number, number] = [10 + 20 * t, 10 - 10 * t - 1e-12];
-      const r = split([[[0, 2], end]]);
-      expect(r.failed).toBe(false);
-      expect(r.faces).toHaveLength(2);
-    }
-  });
-
-  it("splits at a boundary ending on another boundary (a T-junction)", () => {
-    for (let k = 1; k < 30; k++) {
-      const x = (40 * k) / 30 + 1e-9;
-      const r = split([[[0, -3], [40, -5]], [[x, -3 - (2 * x) / 40 + 1e-13], [x, 15]].map((p) => p as [number, number])]);
-      expect(r.failed).toBe(false);
-      expect(r.faces.length).toBeGreaterThanOrEqual(3);
-    }
-  });
-
-  it("splits the same at large map coordinates", () => {
-    const lines: [number, number][][] = [[[0, 2], [20, 5]]];
-    expect(split(lines, 512345.678, 6543210.987).faces).toHaveLength(split(lines).faces.length);
   });
 });
 

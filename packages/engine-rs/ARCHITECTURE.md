@@ -406,9 +406,9 @@ export class Slope {
 
 **Testing build.**
 - `cslope-wasm` has a feature `testing` that adds one export, `__test_call(name: &str, args: JsValue) -> Result<JsValue, JsValue>`.
-- It dispatches about 150 internal functions that tests import: `getSlicePropertyArrays`, `generateRefinedPlanes`, `generateLocalPlanes`, `march`, `davisB`, `zzIndicator`, …
+- It dispatches the few internal functions the facade's own tests still import: the FE model (`buildFeModel`, `solveElastic`, a model's fields), `strengthReduction`, the refinement indicators and `boundGapIndicator` (crates/cslope-wasm/src/api/fem_testing.rs). The other internal functions are tested in Rust only (crates/cslope-engine/tests); their TypeScript wrappers and dispatch entries were removed after the port (issue #51).
 - Handles appear inside `args` as `{ $slope: h }`.
-- Shim modules export wrappers `export const generateRefinedPlanes = (...a) => t("model/search::generateRefinedPlanes", a)`.
+- A module exports a wrapper `export function buildFeModel(...) { return testCall("fem/model::buildFeModel", [...]); }` (facade/internal.ts).
 - The product wasm does not carry these serde impls or exports. Expect about 20–30 % smaller.
 
 ### 3.4 Progress and cancellation

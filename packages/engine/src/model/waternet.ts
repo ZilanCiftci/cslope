@@ -1,17 +1,9 @@
 /**
- * Pore pressure from head lines and reference lines (a "waternet"). At a
- * point between two reference lines the head varies linearly with the
- * elevation from the bottom head line of the upper reference line to the
- * top head line of the lower one; below the lowest reference line it is
- * that line's bottom head line. Above the uppermost reference line it
- * varies linearly from the top head line of that line to the phreatic
- * level (where the head is the phreatic line's), and above the phreatic
- * level it is the phreatic line's. A reference line without head lines is
- * left out. The pore pressure is γw × (head − z), not negative. This
- * describes, for example, a clay layer between a phreatic level and a
- * confined aquifer with another head.
+ * Pore pressure from head lines and reference lines (a "waternet").
  *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/model/waternet.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import { engineEpoch } from "../engine";
 import { wasm } from "../facade/internal";

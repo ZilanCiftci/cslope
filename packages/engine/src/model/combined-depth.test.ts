@@ -1,13 +1,15 @@
 /**
  * Combined S = f(depth): the drained c′ + σ′·tan φ′ (c′ varying with the
  * same depth as Su) limited by the undrained Su, the depth measured from
- * the ground or the top of the layer.
+ * the ground or the top of the layer. (Its design strength, of the
+ * internal designStrength, is tested in Rust:
+ * packages/engine-rs/crates/cslope-engine/tests/types_unit.rs.)
  */
 
 import { describe, it, expect } from "vitest";
 import type { MaterialModel } from "../types/material-models";
 import type { SlopeDefinition } from "../types/slope-definition";
-import { designStrength, resolveStrength } from "../types/strength";
+import { resolveStrength } from "../types/strength";
 import { validateMaterialModel } from "../types/validation";
 import { layered, mc, runVerification } from "../verification/cases";
 import { buildSlope } from "./build-slope";
@@ -52,15 +54,6 @@ describe("resolveStrength, combined S = f(depth)", () => {
     const st = resolveStrength({ ...model, anisotropy: [[-90, 0.8], [90, 0.8]] } as MaterialModel, ctx);
     expect(st.cohesion).toBeCloseTo(1.6, 12);
     expect(st.cohesionUndrained).toBeCloseTo(16 * 0.8, 12);
-  });
-
-  it("takes the drained partial factors on c′ and tan φ′ and γcu on Su", () => {
-    const st = resolveStrength(model, ctx);
-    const d = designStrength("s-f-depth", st, { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1, permanentLoad: 1 } as never);
-    expect(d.undrained).toBe(false);
-    expect(d.cohesion).toBeCloseTo(1.6 / 1.3, 12);
-    expect(d.tanPhi).toBeCloseTo(Math.tan(Math.PI / 6) / 1.3, 12);
-    expect(d.cohesionUndrained).toBeCloseTo(16 / 1.5, 12);
   });
 
   it("validates the drained parameters", () => {
