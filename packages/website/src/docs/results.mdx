@@ -54,10 +54,12 @@ With **All surfaces**, each surface is colored by its factor of safety, from red
 
 **Results › Plots › Results plot** opens a window with plots of the analyzed surfaces:
 
-- **Slip surface variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force, pulling force and the effective normal force N′ on the base (negative on a slice the summary's notes flag). Hovering a point marks that slice on the result canvas. Choose the surface in **Slip surface**: the critical one or any other analyzed surface, listed with its factor of safety.
-- **Lambda vs Fm/Ff** (Morgenstern–Price only): the factors of safety from moment and force equilibrium against λ. The factor of safety is where they agree within the tolerance.
+- **Slip surface variables**: a quantity along a slip surface, against the slice number or x. The quantities are shear strength, friction angle, cohesion, base cohesion, pore pressure, pore water force, slice weight, cohesion strength, resisting force, pulling force and the effective normal force N′ on the base (negative on a slice the summary's notes flag). Hovering a point marks that slice on the result canvas. Choose the surface in **Slip surface**: the critical one or any other analyzed surface, listed with its factor of safety F ("Critical – F 1.250").
+- **F against λ** (Morgenstern–Price only): the factors of safety from moment (Fm) and force (Ff) equilibrium against λ. F is where they agree within the tolerance.
 
-<Figure src="/media/tutorials/dam/04-lambda.png" alt="Fm and Ff against lambda for the critical surface of a dam" caption="Lambda vs Fm/Ff: the two factors of safety agree at the result." />
+**Export CSV** saves the plot's values: every quantity per slice of the surface shown, or λ, Fm and Ff. The ▾ beside it chooses a decimal point (1.5) or a decimal comma (1,5, with `;` as the separator, for spreadsheets in many European locales); the choice is remembered for the next export, also in the Sensitivity and Probabilistic windows.
+
+<Figure src="/media/tutorials/dam/04-lambda.png" alt="Fm and Ff against lambda for the critical surface of a dam" caption="F against λ: the two factors of safety agree at the result." />
 
 ## Slice data
 

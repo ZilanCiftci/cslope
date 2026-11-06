@@ -23,6 +23,9 @@ import {
   YAxis,
 } from "recharts";
 import { CHART } from "../../components/ui/chart-colors";
+import { CsvExportButton } from "../../components/ui/CsvExportButton";
+import { lambdaPlotCsv, slicePlotCsv } from "./results-plot-csv";
+import { downloadFile, safeFileName } from "../../utils/download";
 import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { resultDefinition } from "./result-definition";
 import { isElectron } from "../../utils/is-electron";
@@ -103,7 +106,7 @@ const METRIC_OPTIONS: Array<{ key: MetricKey; label: string; unit: string; group
   { key: "mobilizedShearStress", label: "Mobilized shear stress (τ)", unit: "kPa", group: "Stresses on the base" },
   { key: "baseNormalStress", label: "Effective normal stress (σ′)", unit: "kPa", group: "Stresses on the base" },
   { key: "porePressure", label: "Pore pressure", unit: "kPa", group: "Stresses on the base" },
-  { key: "localFos", label: "Local factor of safety", unit: "", group: "Stresses on the base" },
+  { key: "localFos", label: "Local F", unit: "", group: "Stresses on the base" },
   { key: "normalEffective", label: "Effective normal force (N′)", unit: "kN", group: "Forces" },
   { key: "mobilizedShearForce", label: "Mobilized shear force", unit: "kN", group: "Forces" },
   { key: "resistingForce", label: "Resisting force", unit: "kN", group: "Forces" },
@@ -491,7 +494,7 @@ export function ResultsPlotDialogApp() {
             className="text-[11px] mt-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Values per slice along a slip surface, or the factors of safety Fm and Ff against λ.
+            Values per slice along a slip surface, or F from moment (Fm) and force (Ff) equilibrium against λ.
           </p>
         </div>
         {/* Only while the result is not there yet: once it is, the plot
@@ -535,7 +538,7 @@ export function ResultsPlotDialogApp() {
               >
                 <option value="slipSurface">Slip surface variables</option>
                 <option value="lambdaFmFf" disabled={!canShowLambdaPlot}>
-                  Lambda vs Fm/Ff
+                  F against λ
                 </option>
               </select>
             </label>
@@ -568,7 +571,7 @@ export function ResultsPlotDialogApp() {
                       key={`${surface.cx}-${surface.cy}-${surface.radius}-${idx}`}
                       value={idx}
                     >
-                      {tag} - FOS {formatNumber(surface.fos, 3)}
+                      {tag} – F {formatNumber(surface.fos, 3)}
                     </option>
                   );
                 })}
@@ -590,11 +593,11 @@ export function ResultsPlotDialogApp() {
               </label>
             ) : (
               // Fixed for this plot: plain text, not a field that cannot be used.
-              <FixedAxis label="X axis" value="Lambda" />
+              <FixedAxis label="X axis" value="λ" />
             )}
 
             {plotMode !== "slipSurface" ? (
-              <FixedAxis label="Y axis" value="Factor of safety" />
+              <FixedAxis label="Y axis" value="F" />
             ) : (
               <label className="text-[10px] flex flex-col gap-1">
                 <span style={{ color: "var(--color-vsc-text-muted)" }}>
@@ -624,7 +627,7 @@ export function ResultsPlotDialogApp() {
           >
             {plotMode === "slipSurface" ? (
               <>
-                <span>FOS: {formatNumber(selectedSurface.fos, 3)}</span>
+                <span>F: {formatNumber(selectedSurface.fos, 3)}</span>
                 <span>Slices: {plotData.length}</span>
                 <span>
                   {hasCritical ? "Critical surface" : "Non-critical surface"}
@@ -633,7 +636,7 @@ export function ResultsPlotDialogApp() {
             ) : (
               <>
                 <span>Method: {snapshot?.result?.method ?? "-"}</span>
-                <span>Lambda points: {lambdaData.length}</span>
+                <span>λ points: {lambdaData.length}</span>
                 <span>
                   Equilibrium λ:{" "}
                   {formatNumber(equilibriumPoint?.lambda ?? NaN, 4)}
@@ -753,14 +756,14 @@ export function ResultsPlotDialogApp() {
                 className="h-full flex items-center justify-center text-[11px]"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
-                Lambda vs Fm/Ff is available only for Morgenstern-Price runs.
+                F against λ is available only for Morgenstern-Price runs.
               </div>
             ) : lambdaData.length === 0 ? (
               <div
                 className="h-full flex items-center justify-center text-[11px]"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
-                No Lambda vs Fm/Ff data is available for the selected slip
+                No values of F against λ are available for the selected slip
                 surface.
               </div>
             ) : (
@@ -784,7 +787,7 @@ export function ResultsPlotDialogApp() {
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
                     axisLine={{ stroke: "var(--color-vsc-border)" }}
                     label={{
-                      value: "Lambda",
+                      value: "λ",
                       position: "insideBottom",
                       offset: -8,
                       fill: "var(--color-vsc-text-muted)",
@@ -801,7 +804,7 @@ export function ResultsPlotDialogApp() {
                     tickLine={{ stroke: "var(--color-vsc-border)" }}
                     axisLine={{ stroke: "var(--color-vsc-border)" }}
                     label={{
-                      value: "Factor of safety",
+                      value: "F",
                       angle: -90,
                       position: "insideLeft",
                       fill: "var(--color-vsc-text-muted)",
@@ -819,8 +822,8 @@ export function ResultsPlotDialogApp() {
                         formatLabel={(label) => {
                           const numeric = toFiniteNumber(label);
                           return numeric == null
-                            ? "Lambda -"
-                            : `Lambda ${formatNumber(numeric, 3)}`;
+                            ? "λ -"
+                            : `λ ${formatNumber(numeric, 3)}`;
                         }}
                       />
                     )}
@@ -885,9 +888,21 @@ export function ResultsPlotDialogApp() {
       )}
 
       <div
-        className="pt-3 mt-2 border-t dialog-buttons"
+        className="pt-3 mt-2 border-t dialog-buttons items-center"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
+        <CsvExportButton
+          disabled={plotMode === "slipSurface" ? plotData.length === 0 : !canShowLambdaPlot || lambdaData.length === 0}
+          onExport={(decimalComma) => {
+            const name = snapshot?.model.name || "cslope";
+            const [file, text] =
+              plotMode === "slipSurface"
+                ? [`${name} slices`, slicePlotCsv(plotData, METRIC_OPTIONS, decimalComma)]
+                : [`${name} F against lambda`, lambdaPlotCsv(lambdaData, decimalComma)];
+            downloadFile(safeFileName(file, "csv"), "\uFEFF" + text, "text/csv;charset=utf-8");
+          }}
+        />
+        <span className="flex-1" />
         <button
           onClick={() => window.close()}
           className="btn btn-primary"

@@ -56,9 +56,9 @@ describe("sensitivity analysis", () => {
   it("spaces values evenly and writes CSV", () => {
     expect(sensitivityValues(10, 20, 3)).toEqual([10, 15, 20]);
     expect(sensitivityValues(25.6, 38.4, 9)[1]).toBe(27.2);
-    expect(sensitivityCsv("c", [{ value: 1.5, fos: 2 }], true)).toBe("c;FOS;Note\r\n1,5;2;\r\n");
+    expect(sensitivityCsv("c", [{ value: 1.5, fos: 2 }], true)).toBe("c;F;Note\r\n1,5;2;\r\n");
     expect(sensitivityCsv("c (kPa)", [{ value: 10, fos: 1.2345678 }, { value: 20, fos: null, error: "x, y" }])).toBe(
-      'c (kPa),FOS,Note\r\n10,1.2346,\r\n20,,"x, y"\r\n',
+      'c (kPa),F,Note\r\n10,1.2346,\r\n20,,"x, y"\r\n',
     );
   });
 

@@ -17,6 +17,7 @@ import { DRAWING_UNIT_CHOICES, INSUNITS, type VectorDrawing } from "./vectors";
 import { drawVectorTexts, vectorPath } from "./vector-render";
 import { cssVar } from "../canvas/constants";
 import { GroupHeading } from "../properties/GroupHeading";
+import { WorkspaceWindowFrame } from "../../components/ui/ToolWindowFrame";
 import { apply, cropCorners, normalizeCrop, type Affine, type Crop, type Pt } from "./transform";
 import { newPlacementId, placementLabel } from "./placement";
 import {
@@ -63,9 +64,19 @@ export function PlaceDrawingDialogApp() {
   if (state?.edit && state.edit.nonce !== sheets.nonce) setSheets({ on: !!state.edit.newModels, nonce: state.edit.nonce });
   if (!state) {
     return (
-      <div className="h-screen p-3 text-[11px]" style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text-muted)" }}>
-        Waiting for the main window…
-      </div>
+      <WorkspaceWindowFrame
+        title="Place drawing"
+        description="Crop and calibrate a drawing of the section, then place it under the model."
+        buttons={
+          <button className="btn" onClick={() => window.close()}>
+            Cancel
+          </button>
+        }
+      >
+        <p role="status" className="p-3 text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
+          Waiting for the main window…
+        </p>
+      </WorkspaceWindowFrame>
     );
   }
   if (sheets.on) {
@@ -269,15 +280,31 @@ export function PlaceDrawingWindow({
     setTool("pick");
   };
 
+  const modelName = state.modelName || "the active model";
   return (
-    <div className="h-screen flex flex-col text-[12px]" style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text)" }}>
+    <WorkspaceWindowFrame
+      title={editing ? "Recalibrate drawing" : "Place drawing"}
+      description={
+        editing
+          ? `Change the crop and calibration of ${editing.name || "the drawing"}, then update it under ${modelName}.`
+          : `Crop and calibrate a drawing of the section, then place it under ${modelName}.`
+      }
+      buttons={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={place} disabled={!result.fit.ok || !shown}>
+            {editing ? "Update" : "Place"}
+          </button>
+        </>
+      }
+    >
       <AssetStrip
         assets={state.assets}
         selected={assetId}
         onSelect={chooseAsset}
         onAdd={() => fileInput.current?.click()}
-        modelName={state.modelName}
-        editing={editing}
         onNewModels={editing ? undefined : onNewModels}
       />
       <input ref={fileInput} type="file" accept={DRAWING_ACCEPT} className="hidden" onChange={(e) => void addFile(e)} aria-label="Drawing file" />
@@ -401,51 +428,31 @@ export function PlaceDrawingWindow({
               <Preview state={state} assetId={assetId} page={page} crop={shown} transform={result.fit.ok ? result.fit.transform : null} />
             </section>
           </div>
-          <div className="p-3 border-t flex justify-end gap-2" style={{ borderColor: "var(--color-vsc-border)" }}>
-            <button className="btn btn-primary min-w-[80px]" onClick={place} disabled={!result.fit.ok || !shown}>
-              {editing ? "Update" : "Place"}
-            </button>
-            <button className="btn min-w-[80px]" onClick={onClose}>
-              Cancel
-            </button>
-          </div>
         </div>
       </div>
-    </div>
+    </WorkspaceWindowFrame>
   );
 }
 
 // ── The files ───────────────────────────────────────────────────────
 
+/** The drawings of the project, as a strip under the window's heading. */
 export function AssetStrip({
   assets,
   selected,
   onSelect,
   onAdd,
-  modelName,
-  editing,
-  title,
   onNewModels,
 }: {
   assets: DrawingAssetInfo[];
   selected: string | null;
   onSelect: (id: string) => void;
   onAdd: () => void;
-  modelName: string;
-  editing: BackgroundImage | null;
-  /** The heading (default: Place drawing, or Recalibrate drawing). */
-  title?: { main: string; sub: string };
   onNewModels?: () => void;
 }) {
   const kind = drawingKindName;
   return (
     <div className="border-b px-3 py-2 flex items-center gap-3" style={{ borderColor: "var(--color-vsc-border)" }}>
-      <div className="shrink-0">
-        <div className="font-semibold">{title?.main ?? (editing ? "Recalibrate drawing" : "Place drawing")}</div>
-        <div className="text-[11px]" style={muted}>
-          {title?.sub ?? `into ${modelName || "the active model"}`}
-        </div>
-      </div>
       <div className="flex-1 min-w-0">
         <div className="text-[11px] mb-1" style={muted}>
           Drawings in this project

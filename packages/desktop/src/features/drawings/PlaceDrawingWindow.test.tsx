@@ -4,8 +4,9 @@
  * names of the crop commands.
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { PlaceDrawingWindow } from "./PlaceDrawingWindow";
+import { NewModelsWindow } from "./NewModelsWindow";
 import { setAssetLoader } from "./drawing-cache";
 import { DWG_MIME } from "./sources";
 import type { DrawingWindowState } from "./window-sync";
@@ -59,6 +60,31 @@ describe("Place drawing window", () => {
     const message = screen.getByTestId("calibration-message");
     expect(message).toHaveTextContent("Click point x1 on the x axis.");
     expect(message).toHaveAttribute("data-kind", "prompt");
+  });
+
+  it("has the window frame: a heading with a sentence, Cancel and Place (last) in the button row", () => {
+    const onClose = vi.fn();
+    render(<PlaceDrawingWindow state={state([])} onCommand={vi.fn()} onClose={onClose} />);
+    expect(screen.getByRole("heading", { name: "Place drawing" })).toBeInTheDocument();
+    expect(screen.getByText("Crop and calibrate a drawing of the section, then place it under Section 1.")).toBeInTheDocument();
+    const place = screen.getByRole("button", { name: "Place" });
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    expect(place.parentElement).toBe(cancel.parentElement);
+    expect(place.parentElement).toHaveClass("dialog-buttons");
+    expect(cancel.compareDocumentPosition(place) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.click(cancel);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("New models from drawing has the same frame, with Place drawing… at the left of the button row", () => {
+    const onBack = vi.fn();
+    render(<NewModelsWindow state={state([])} onCommand={vi.fn()} onClose={vi.fn()} onBack={onBack} />);
+    expect(screen.getByRole("heading", { name: "New models from drawing" })).toBeInTheDocument();
+    const create = screen.getByRole("button", { name: "Create model" });
+    expect(create).toBeDisabled();
+    expect(create.parentElement).toHaveClass("dialog-buttons");
+    fireEvent.click(screen.getByRole("button", { name: "Place drawing…" }));
+    expect(onBack).toHaveBeenCalled();
   });
 
   it("offers no steps and no viewer tools before there is a drawing", () => {

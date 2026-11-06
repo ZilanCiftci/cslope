@@ -4,6 +4,11 @@ import userEvent from "@testing-library/user-event";
 import type { AnalysisResult, SlipSurfaceResult } from "@cslope/engine";
 
 vi.mock("../../utils/is-electron", () => ({ isElectron: true }));
+vi.mock("../../utils/download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../utils/download")>()),
+  downloadFile: vi.fn(),
+}));
+import { downloadFile } from "../../utils/download";
 
 import { ResultsPlotDialogApp } from "./ResultsPlotDialogApp";
 import { resultDefinition } from "./result-definition";
@@ -79,7 +84,7 @@ describe("ResultsPlotDialogApp", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists surfaces sorted by FOS with the critical one first", () => {
+  it("lists surfaces sorted by F with the critical one first", () => {
     const model = activeModel();
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", {
@@ -95,11 +100,11 @@ describe("ResultsPlotDialogApp", () => {
       (surfaceSelect as HTMLSelectElement).options,
     ).map((o) => o.textContent);
     expect(labels).toEqual([
-      "Critical - FOS 1.250",
-      "2 - FOS 1.500",
-      "3 - FOS 1.800",
+      "Critical – F 1.250",
+      "2 – F 1.500",
+      "3 – F 1.800",
     ]);
-    expect(screen.getByText("FOS: 1.250")).toBeInTheDocument();
+    expect(screen.getByText("F: 1.250")).toBeInTheDocument();
     expect(screen.getByText("Critical surface")).toBeInTheDocument();
     // The slices of the default model are derived for the surface.
     const slices = screen.getByText(/^Slices: \d+$/);
@@ -120,7 +125,7 @@ describe("ResultsPlotDialogApp", () => {
       screen.getByRole("combobox", { name: "Slip surface" }),
       "1",
     );
-    expect(screen.getByText("FOS: 1.500")).toBeInTheDocument();
+    expect(screen.getByText("F: 1.500")).toBeInTheDocument();
     expect(screen.getByText("Non-critical surface")).toBeInTheDocument();
 
     await userEvent.selectOptions(
@@ -154,12 +159,12 @@ describe("ResultsPlotDialogApp", () => {
       screen.getByRole("combobox", { name: "Slip surface" }),
       "2",
     );
-    expect(screen.getByText("FOS: 1.700")).toBeInTheDocument();
+    expect(screen.getByText("F: 1.700")).toBeInTheDocument();
     bridge.emit("onResultsPlotChanged", {
       model,
       result: result([surfaceThroughSlope(model, 1.1)]),
     });
-    expect(screen.getByText("FOS: 1.100")).toBeInTheDocument();
+    expect(screen.getByText("F: 1.100")).toBeInTheDocument();
   });
 
   it("offers the lambda plot only for Morgenstern-Price runs", async () => {
@@ -176,7 +181,7 @@ describe("ResultsPlotDialogApp", () => {
     expect(lambdaOption.disabled).toBe(true);
   });
 
-  it("shows the lambda vs Fm/Ff summary with the equilibrium point", async () => {
+  it("shows the F against λ summary with the equilibrium point", async () => {
     const model = activeModel();
     const surface: SlipSurfaceResult = {
       ...surfaceThroughSlope(model, 1.3),
@@ -196,12 +201,13 @@ describe("ResultsPlotDialogApp", () => {
       "lambdaFmFf",
     );
     expect(screen.getByText("Method: Morgenstern-Price")).toBeInTheDocument();
-    expect(screen.getByText("Lambda points: 3")).toBeInTheDocument();
+    expect(screen.getByText("λ points: 3")).toBeInTheDocument();
     expect(screen.getByText("Equilibrium λ: 0.2000")).toBeInTheDocument();
     // The axis selectors become fixed labels.
     expect(screen.queryByRole("combobox", { name: "X axis" })).toBeNull();
-    expect(screen.getByText("Lambda")).toBeInTheDocument();
-    expect(screen.getByText("Factor of safety")).toBeInTheDocument();
+    expect(screen.getByText("λ")).toBeInTheDocument();
+    expect(screen.getByText("F")).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "F against λ" })).toBeInTheDocument();
 
     // A later Bishop result falls back to the slip-surface plot.
     bridge.emit("onResultsPlotChanged", {
@@ -211,7 +217,7 @@ describe("ResultsPlotDialogApp", () => {
     expect(
       (screen.getByRole("combobox", { name: "Plot" }) as HTMLSelectElement).value,
     ).toBe("slipSurface");
-    expect(screen.getByText("FOS: 1.300")).toBeInTheDocument();
+    expect(screen.getByText("F: 1.300")).toBeInTheDocument();
   });
 
   it("explains when a Morgenstern-Price surface has no lambda data", async () => {
@@ -226,7 +232,7 @@ describe("ResultsPlotDialogApp", () => {
       "lambdaFmFf",
     );
     expect(
-      screen.getByText(/No Lambda vs Fm\/Ff data is available/),
+      screen.getByText(/No values of F against λ are available/),
     ).toBeInTheDocument();
     expect(screen.getByText("Equilibrium λ: -")).toBeInTheDocument();
   });
@@ -294,5 +300,42 @@ describe("ResultsPlotDialogApp", () => {
     const { slopeDef, orientation } = resultDefinition(model, own);
     expect(orientation).toBe("ltr");
     expect(slopeDef.coordinates).toEqual(model.coordinates);
+  });
+});
+
+describe("Export CSV in the Results plot", () => {
+  it("is disabled before there is a result", () => {
+    render(<ResultsPlotDialogApp />);
+    expect(screen.getByRole("button", { name: "Export CSV" })).toBeDisabled();
+  });
+
+  it("exports every quantity per slice of the surface shown, and λ, Fm, Ff of the F against λ plot", async () => {
+    localStorage.removeItem("cslope-csv-decimal");
+    const model = activeModel();
+    const surface: SlipSurfaceResult = {
+      ...surfaceThroughSlope(model, 1.3),
+      lffArray: [
+        [0, 1.4, 1.1, 0.3],
+        [0.2, 1.31, 1.29, 0.02],
+      ],
+    };
+    render(<ResultsPlotDialogApp />);
+    bridge.emit("onResultsPlotState", { model, result: result([surface], "Morgenstern-Price") });
+    vi.mocked(downloadFile).mockClear();
+    await userEvent.click(screen.getByRole("button", { name: "Export CSV" }));
+    const [file, data] = vi.mocked(downloadFile).mock.calls[0];
+    expect(file).toBe(`${model.name} slices.csv`);
+    const lines = String(data).replace("\uFEFF", "").split("\r\n");
+    expect(lines[0].startsWith("Slice,x (m),Shear strength (kPa),")).toBe(true);
+    expect(lines[0]).toContain("Local F,");
+    expect(lines[1].startsWith("1,")).toBe(true);
+
+    await userEvent.selectOptions(screen.getByRole("combobox", { name: "Plot" }), "lambdaFmFf");
+    // With the decimal comma from the menu.
+    await userEvent.click(screen.getByRole("button", { name: "CSV decimal separator" }));
+    await userEvent.click(screen.getByRole("menuitemradio", { name: "Decimal comma (1,5)" }));
+    const [file2, data2] = vi.mocked(downloadFile).mock.calls[1];
+    expect(file2).toBe(`${model.name} F against lambda.csv`);
+    expect(String(data2)).toBe("\uFEFFλ;Fm;Ff\r\n0;1,4;1,1\r\n0,2;1,31;1,29\r\n");
   });
 });

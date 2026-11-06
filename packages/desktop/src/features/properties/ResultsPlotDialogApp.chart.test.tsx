@@ -124,7 +124,7 @@ describe("ResultsPlotDialogApp charts", () => {
     const { container } = render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", { model, result: result(s, "Morgenstern-Price") });
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Plot" }), "lambdaFmFf");
-    expect(screen.getByText("Lambda points: 1")).toBeInTheDocument();
+    expect(screen.getByText("λ points: 1")).toBeInTheDocument();
     expect(screen.getByText("Equilibrium λ: 0.3000")).toBeInTheDocument();
     expect(tickTexts(container).length).toBeGreaterThan(0);
   });
@@ -146,7 +146,7 @@ describe("the slip surface plot's quantities", () => {
       expect(select.querySelector(`option[value="${key}"]`)).not.toBeNull();
     }
     await userEvent.selectOptions(select, "localFos");
-    expect(axisLabels(container)).toContain("Local factor of safety");
+    expect(axisLabels(container)).toContain("Local F");
     await userEvent.selectOptions(select, "baseNormalStress");
     expect(axisLabels(container)).toContain("Effective normal stress (σ′) (kPa)");
   });

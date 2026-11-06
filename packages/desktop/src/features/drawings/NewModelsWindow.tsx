@@ -38,6 +38,7 @@ import {
 } from "./PlaceDrawingWindow";
 import { drawingExtentText, fileUnitCode, rememberLocalBytes, useDrawingsTick } from "./place-window-shared";
 import { GroupHeading } from "../properties/GroupHeading";
+import { WorkspaceWindowFrame } from "../../components/ui/ToolWindowFrame";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -181,15 +182,37 @@ export function NewModelsWindow({
     : [];
 
   return (
-    <div className="h-screen flex flex-col text-[12px]" style={{ background: "var(--color-vsc-bg)", color: "var(--color-vsc-text)" }}>
+    <WorkspaceWindowFrame
+      title="New models from drawing"
+      description="Draw a frame around each section of a drawing and calibrate it; each frame becomes a new model."
+      status={
+        <>
+          <button className="btn" onClick={onBack}>
+            Place drawing…
+          </button>
+          {!made.ok && frames.length > 0 && (
+            <span className="min-w-0 truncate" data-testid="create-models-message" title={made.error}>
+              {made.error}
+            </span>
+          )}
+        </>
+      }
+      buttons={
+        <>
+          <button className="btn" onClick={onClose}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={create} disabled={!made.ok}>
+            {frames.length > 1 ? `Create ${frames.length} models` : "Create model"}
+          </button>
+        </>
+      }
+    >
       <AssetStrip
         assets={state.assets}
         selected={assetId}
         onSelect={chooseAsset}
         onAdd={() => fileInput.current?.click()}
-        modelName={state.modelName}
-        editing={null}
-        title={{ main: "New models from drawing", sub: "one model per frame" }}
       />
       <input ref={fileInput} type="file" accept={DRAWING_ACCEPT} className="hidden" onChange={(e) => void addFile(e)} aria-label="Drawing file" />
       {message && (
@@ -340,26 +363,8 @@ export function NewModelsWindow({
               panel) to make its boundaries of the drawing&apos;s lines, or draw them over the drawing.
             </p>
           </div>
-          <div className="p-3 border-t flex flex-col gap-2" style={{ borderColor: "var(--color-vsc-border)" }}>
-            {!made.ok && frames.length > 0 && (
-              <p className="text-[11px]" data-testid="create-models-message">
-                {made.error}
-              </p>
-            )}
-            <div className="flex justify-end gap-2">
-              <button className="btn mr-auto" onClick={onBack}>
-                Place drawing…
-              </button>
-              <button className="btn btn-primary min-w-[80px]" onClick={create} disabled={!made.ok}>
-                {frames.length > 1 ? `Create ${frames.length} models` : "Create model"}
-              </button>
-              <button className="btn min-w-[80px]" onClick={onClose}>
-                Cancel
-              </button>
-            </div>
-          </div>
         </div>
       </div>
-    </div>
+    </WorkspaceWindowFrame>
   );
 }
