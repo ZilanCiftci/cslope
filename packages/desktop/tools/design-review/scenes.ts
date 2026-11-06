@@ -532,6 +532,34 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-layer-properties",
+    title: "Result sidebar, a display layer (FOS label) selected in Layers: its properties",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showFosLabel: true, layerStyles: { fosLabel: { color: "#cc0000", fontSize: 18 } } }); s.setSelectedResultLayer("fosLabel"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-layer-styles",
+    title: "Result view with styled display layers (FOS label, critical surface, slices, center, soil at 50 %)",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => {
+        s.setResultViewSettings({ showSlices: true, showCentreMarker: true, showFosLabel: true, layerStyles: {
+          fosLabel: { color: "#cc0000", fontSize: 20, fontFamily: "serif" },
+          criticalSurface: { color: "#0066cc", width: 3 },
+          slices: { color: "#0066cc", width: 1 },
+          center: { color: "#0066cc", size: 5 },
+          soilColor: { opacity: 0.5 },
+        } });
+        s.setSelectedResultLayer("criticalSurface");
+      }`);
+    },
+  },
+  {
     id: "result-layers-hover",
     title: "Result sidebar, Layers list with a row under the pointer (grip shown)",
     area: "sidebar",

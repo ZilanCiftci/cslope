@@ -6,7 +6,9 @@
  * with Alt+Up and Alt+Down, to change the order the result view and the
  * PDF draw them in (the model's `layerOrder`, an undo step). A click on an
  * annotation selects it (Ctrl, Cmd or Shift: adds it); its button removes
- * it. A display layer's button turns it off, as the ribbon does; a
+ * it. A click on a display layer selects it: its style (LayerProperties)
+ * shows in the sidebar. A display layer's button turns it off, as the
+ * ribbon does; a
  * drawing's takes it out of the results ("Show in results").
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -32,29 +34,29 @@ import type { Annotation, ResultViewSettings } from "../../store/types";
 import { referenceListName } from "../annotations/reference";
 import { projectAsset } from "../drawings/asset-registry";
 import { placementLabel } from "../drawings/placement";
-import { movedLayerOrder, resultLayers, type DisplayLayerKey, type LayerSource, type ResultLayer } from "./layers";
+import { DISPLAY_LAYER_NAMES, movedLayerOrder, resultLayers, type DisplayLayerKey, type LayerSource, type ResultLayer } from "./layers";
 
 // The ribbon's icon of each thing (the button that adds or shows it), at list size.
 const ICON = { size: 14, strokeWidth: 1.75, "aria-hidden": true } as const;
 
-/** A display layer's name (as the ribbon's button), icon and what turns it off. */
-const DISPLAY: Record<DisplayLayerKey, { name: string; icon: ReactNode; off?: Partial<ResultViewSettings> }> = {
-  soilColor: { name: "Soil colors", icon: <SoilColorsIcon {...ICON} />, off: { showSoilColor: false } },
-  femMesh: { name: "FE mesh", icon: <FeMeshIcon {...ICON} />, off: { showFemMesh: false } },
-  femPlasticZone: { name: "Plastic zone", icon: <PlasticZoneIcon {...ICON} />, off: { showFemPlasticZone: false } },
-  surfaces: { name: "Surfaces", icon: <SurfacesIcon {...ICON} />, off: { surfaceDisplay: "critical" } },
-  customSurfaces: { name: "Custom surfaces", icon: <CustomPlanesIcon {...ICON} />, off: { showCustomSurfaces: false } },
+/** A display layer's icon and what turns it off (its name: DISPLAY_LAYER_NAMES). */
+const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; off?: Partial<ResultViewSettings> }> = {
+  soilColor: { icon: <SoilColorsIcon {...ICON} />, off: { showSoilColor: false } },
+  femMesh: { icon: <FeMeshIcon {...ICON} />, off: { showFemMesh: false } },
+  femPlasticZone: { icon: <PlasticZoneIcon {...ICON} />, off: { showFemPlasticZone: false } },
+  surfaces: { icon: <SurfacesIcon {...ICON} />, off: { surfaceDisplay: "critical" } },
+  customSurfaces: { icon: <CustomPlanesIcon {...ICON} />, off: { showCustomSurfaces: false } },
   // Always drawn: no button (and no ribbon icon).
-  criticalSurface: { name: "Critical surface", icon: <Target {...ICON} /> },
-  slices: { name: "Slices", icon: <SlicesIcon {...ICON} />, off: { showSlices: false } },
-  center: { name: "Center", icon: <CentreIcon {...ICON} />, off: { showCentreMarker: false } },
-  fosLabel: { name: "FOS label", icon: <FosLabelIcon {...ICON} />, off: { showFosLabel: false } },
+  criticalSurface: { icon: <Target {...ICON} /> },
+  slices: { icon: <SlicesIcon {...ICON} />, off: { showSlices: false } },
+  center: { icon: <CentreIcon {...ICON} />, off: { showCentreMarker: false } },
+  fosLabel: { icon: <FosLabelIcon {...ICON} />, off: { showFosLabel: false } },
 };
 
 /** What the button of a display layer says it does. */
 function offTitle(key: DisplayLayerKey): string {
   if (key === "surfaces") return "Turn off (shows the critical surface only, as Surfaces › Critical only in the ribbon)";
-  return `Turn off (as the ${DISPLAY[key].name} button in the ribbon)`;
+  return `Turn off (as the ${DISPLAY_LAYER_NAMES[key]} button in the ribbon)`;
 }
 
 /** An annotation's icon. */
@@ -91,6 +93,8 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
   const setSelectedAnnotations = useAppStore((s) => s.setSelectedAnnotations);
   const toggleAnnotationSelection = useAppStore((s) => s.toggleAnnotationSelection);
+  const selectedLayer = useAppStore((s) => s.selectedResultLayer);
+  const setSelectedLayer = useAppStore((s) => s.setSelectedResultLayer);
 
   const src: LayerSource = { resultViewSettings: rvs, result, backgrounds };
   // Topmost first.
@@ -123,7 +127,8 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
   const view = (layer: ResultLayer): RowView => {
     if (layer.kind === "display") {
       const d = DISPLAY[layer.layer];
-      return { layer, name: d.name, title: d.name, icon: d.icon };
+      const name = DISPLAY_LAYER_NAMES[layer.layer];
+      return { layer, name, title: name, icon: d.icon };
     }
     if (layer.kind === "drawing") {
       const name = placementLabel(layer.drawing, projectAsset(layer.drawing.assetId)?.originalName);
@@ -150,6 +155,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
     else {
       const off = DISPLAY[layer.layer].off;
       if (off) setRvs(off);
+      if (selectedLayer === layer.layer) setSelectedLayer(null);
     }
   };
 
@@ -174,7 +180,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
       {layers.map((layer, index) => {
         const { name, title, icon } = view(layer);
         const isAnnotation = layer.kind === "annotation";
-        const selected = isAnnotation && selectedAnnotationIds.includes(layer.key);
+        const selected = isAnnotation ? selectedAnnotationIds.includes(layer.key) : layer.kind === "display" && selectedLayer === layer.layer;
         const removable = layer.kind !== "display" || DISPLAY[layer.layer].off !== undefined;
         const removeTitle =
           layer.kind === "annotation"
@@ -233,6 +239,11 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
               setDrop(null);
             }}
             onClick={(e) => {
+              // A display layer: its properties (style) in the sidebar.
+              if (layer.kind === "display") {
+                if (!selected) setSelectedLayer(layer.layer);
+                return;
+              }
               if (!isAnnotation) return;
               if (e.ctrlKey || e.metaKey || e.shiftKey) toggleAnnotationSelection(layer.key, true);
               else if (!selected) setSelectedAnnotations([layer.key]);
@@ -252,6 +263,9 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
                 if ((e.key === "Enter" || e.key === " ") && isAnnotation) {
                   e.preventDefault();
                   setSelectedAnnotations([layer.key]);
+                } else if ((e.key === "Enter" || e.key === " ") && layer.kind === "display") {
+                  e.preventDefault();
+                  setSelectedLayer(layer.layer);
                 }
                 return;
               }

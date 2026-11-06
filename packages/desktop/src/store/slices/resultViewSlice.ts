@@ -68,6 +68,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
   resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS },
   selectedAnnotationIds: [],
   selectedResultObject: null,
+  selectedResultLayer: null,
   paperPropertiesFocusPending: false,
 
   setResultViewSettings: (patch) =>
@@ -128,6 +129,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       }),
       selectedAnnotationIds: [anno.id],
       selectedResultObject: null,
+      selectedResultLayer: null,
     }));
     return anno.id;
   },
@@ -168,7 +170,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
     })),
 
   setSelectedAnnotations: (ids) =>
-    set({ selectedAnnotationIds: ids, selectedResultObject: null }),
+    set({ selectedAnnotationIds: ids, selectedResultObject: null, selectedResultLayer: null }),
 
   toggleAnnotationSelection: (id, additive) =>
     set((s) => {
@@ -179,13 +181,17 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
             ? s.selectedAnnotationIds.filter((i) => i !== id)
             : [...s.selectedAnnotationIds, id],
           selectedResultObject: null,
+          selectedResultLayer: null,
         };
       }
-      return { selectedAnnotationIds: [id], selectedResultObject: null };
+      return { selectedAnnotationIds: [id], selectedResultObject: null, selectedResultLayer: null };
     }),
 
   setSelectedResultObject: (target) =>
-    set({ selectedResultObject: target, selectedAnnotationIds: [] }),
+    set({ selectedResultObject: target, selectedAnnotationIds: [], selectedResultLayer: null }),
+
+  setSelectedResultLayer: (key) =>
+    set({ selectedResultLayer: key, selectedAnnotationIds: [], selectedResultObject: null }),
 
   showPaperProperties: () =>
     set({
@@ -193,6 +199,7 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       sidebarOpen: true,
       selectedResultObject: "paper-frame",
       selectedAnnotationIds: [],
+      selectedResultLayer: null,
       paperPropertiesFocusPending: true,
     }),
 

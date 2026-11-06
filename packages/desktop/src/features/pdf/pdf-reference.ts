@@ -6,7 +6,8 @@
  */
 
 import type { jsPDF } from "jspdf";
-import type { Annotation, ReferenceAnnotation } from "../../store/types";
+import type { Annotation, ReferenceAnnotation, ResultLayerStyles } from "../../store/types";
+import { fosLabelLayoutPdf } from "./pdf-drawing";
 import {
   isReferenceAnnotation,
   referenceDashPattern,
@@ -23,7 +24,7 @@ import {
 } from "../canvas/reference-draw";
 import { REFERENCE_ANNOTATION_COLOR } from "../rendering/style-spec";
 import { surfaceYAtX } from "../view/surface";
-import { fosLabelAnchor, surfacePoints, type DrawableSurface } from "../../utils/arc";
+import { surfacePoints, type DrawableSurface } from "../../utils/arc";
 import { setSansFont } from "./pdf-fonts";
 import { buildPolylinePath, parseColor, pdfPath, type PdfTransform } from "./pdf-helpers";
 
@@ -76,6 +77,8 @@ export interface ReferenceLabelContextPdf {
   /** The critical surface and whether its FOS label is drawn. */
   criticalSurface?: (DrawableSurface & { fos: number }) | null;
   showFosLabel?: boolean;
+  /** The FOS label's style (layerStyles.fosLabel): its box is kept clear as drawn. */
+  fosLabelStyle?: ResultLayerStyles["fosLabel"];
   /** The custom surfaces drawn (dashed) and their FOS labels' boxes (mm). */
   customSurfaces?: readonly DrawableSurface[];
   customLabelBoxes?: readonly Box[];
@@ -113,11 +116,7 @@ export function drawReferenceLabelsPdf(
     layout.reservePolyline(toPdf(surfacePoints(cs)), 3 * z);
     if (ctx.showFosLabel) {
       // The FOS label's plate, as drawCriticalSurface draws it.
-      const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(cs));
-      pdf.setFontSize(10);
-      setSansFont(pdf, "bold");
-      const tw = pdf.getTextWidth(cs.fos.toFixed(3));
-      layout.reserve({ left: ccx + 2.5, top: ccy - 4.5, right: ccx + 3.5 + tw, bottom: ccy + 1 });
+      layout.reserve(fosLabelLayoutPdf(pdf, tf, cs, 0, ctx.fosLabelStyle).box);
     }
   }
   for (const s of ctx.customSurfaces ?? []) layout.reservePolyline(toPdf(surfacePoints(s)), 2 * z);

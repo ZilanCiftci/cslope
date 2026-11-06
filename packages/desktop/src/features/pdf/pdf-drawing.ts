@@ -91,8 +91,11 @@ import {
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
   COLOR_BAR_PLATE_PAD,
-  type DualColor,
+  CENTER_DOT_RADIUS_PX,
+  CRITICAL_SURFACE_LINE_WIDTH_PX,
+  SLIP_SURFACE_LINE_WIDTH_PX,
 } from "../rendering/style-spec";
+import { fosLabelScale, fosLabelText, pdfScaled } from "../results/layer-styles";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
@@ -297,6 +300,8 @@ export function drawMaterialRegions(
   showSoilColor?: boolean,
   /** "fills": the soil colours only (a layer above the outlines); default: both. */
   part: "all" | "fills" = "all",
+  /** The opacity of the soil colours (the Soil colors layer's style); default: opaque. */
+  soilOpacity?: number,
 ) {
   const colorEnabled = showSoilColor !== false;
   const defaultMatId = materials[0]?.id ?? "";
@@ -340,8 +345,11 @@ export function drawMaterialRegions(
       const [r, g, b] = parseColor(mat.color);
       pdf.setFillColor(r, g, b);
 
-      // Opaque, like the canvas and the material table swatches.
+      // Opaque, like the canvas and the material table swatches (unless
+      // the layer's style says otherwise).
+      if (soilOpacity !== undefined) setOpacity(pdf, soilOpacity);
       pdfPath(pdf, ops, region.holes ? "f*" : "f");
+      if (soilOpacity !== undefined) resetOpacity(pdf);
     }
 
     // Region border stroke
@@ -991,9 +999,10 @@ export function drawSlipSurfaces(
     const pdfPts = arcPts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
     const color = parseColor(fosScale.colorOf(surf.fos));
 
+    const style = rvs.layerStyles?.surfaces;
     pdf.setDrawColor(...color);
-    pdf.setLineWidth(0.15);
-    setOpacity(pdf, 1, SLIP_SURFACE_OPACITY);
+    pdf.setLineWidth(pdfScaled(0.15, style?.width, SLIP_SURFACE_LINE_WIDTH_PX));
+    setOpacity(pdf, 1, style?.opacity ?? SLIP_SURFACE_OPACITY);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
     resetOpacity(pdf);
@@ -1105,8 +1114,9 @@ export function drawCriticalSurface(
     // From the top of a tension crack (its face is part of the surface).
     const pts: [number, number][] = crack ? [[crack.x, crack.top], ...arcPts] : arcPts;
     const pdfPts = pts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
-    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.38);
+    const style = rvs.layerStyles?.criticalSurface;
+    pdf.setDrawColor(...(style?.color ? parseColor(style.color) : CRITICAL_SURFACE_COLOR.rgb));
+    pdf.setLineWidth(pdfScaled(0.38, style?.width, CRITICAL_SURFACE_LINE_WIDTH_PX));
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
   }
@@ -1147,7 +1157,9 @@ export function drawCriticalSlicesPdf(
       regions.map((r) => [r, isDarkFill(materials.find((m) => m.id === r.materialId)?.color)]),
     );
 
-    pdf.setLineWidth(SLICE_LINE_WIDTH_PX * tf.mmPerPx * Math.max(0.6, density));
+    const style = rvs.layerStyles?.slices;
+    const chosen = style?.color ? parseColor(style.color) : null;
+    pdf.setLineWidth((style?.width ?? SLICE_LINE_WIDTH_PX) * tf.mmPerPx * Math.max(0.6, density));
     setOpacity(pdf, 1, SLICE_LINE_OPACITY * density);
     for (const x of xBounds) {
       const topY = surfaceYAtX(coordinates, x);
@@ -1155,7 +1167,7 @@ export function drawCriticalSlicesPdf(
       if (topY === null || botY === null) continue;
       for (const part of splitVerticalByRegion(regions, x, botY, topY)) {
         const dark = part.region !== null && regionDark.get(part.region) === true;
-        pdf.setDrawColor(...(dark ? SLICE_LINE_ON_DARK_COLOR.rgb : CRITICAL_SURFACE_COLOR.rgb));
+        pdf.setDrawColor(...(chosen ?? (dark ? SLICE_LINE_ON_DARK_COLOR.rgb : CRITICAL_SURFACE_COLOR.rgb)));
         const [sx, sy] = tf.worldToPdf(x, part.y1);
         const [, ey] = tf.worldToPdf(x, part.y0);
         pdf.line(sx, sy, sx, ey);
@@ -1175,13 +1187,17 @@ export function drawCentreMarkerPdf(pdf: jsPDF, tf: PdfTransform, result: Analys
     const [epx, epy] = tf.worldToPdf(cs.entryPoint[0], cs.entryPoint[1]);
     const [xpx, xpy] = tf.worldToPdf(cs.exitPoint[0], cs.exitPoint[1]);
 
-    pdf.setDrawColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.setLineWidth(0.25);
-    pdf.line(ccx, ccy, epx, epy);
-    pdf.line(ccx, ccy, xpx, xpy);
+    const style = rvs.layerStyles?.center;
+    const color = style?.color ? parseColor(style.color) : CRITICAL_SURFACE_COLOR.rgb;
+    if (style?.radiusLines !== false) {
+      pdf.setDrawColor(...color);
+      pdf.setLineWidth(0.25);
+      pdf.line(ccx, ccy, epx, epy);
+      pdf.line(ccx, ccy, xpx, xpy);
+    }
 
-    pdf.setFillColor(...CRITICAL_SURFACE_COLOR.rgb);
-    pdf.circle(ccx, ccy, 0.8, "F");
+    pdf.setFillColor(...color);
+    pdf.circle(ccx, ccy, pdfScaled(0.8, style?.size, CENTER_DOT_RADIUS_PX), "F");
   }
 }
 
@@ -1190,13 +1206,16 @@ export function drawCriticalFosLabelPdf(pdf: jsPDF, tf: PdfTransform, result: An
   const cs = result.criticalSurface;
   if (!cs) return;
   if (rvs.showFosLabel) {
-    drawFosLabelPdf(pdf, fosLabelLayoutPdf(pdf, tf, cs), CRITICAL_SURFACE_COLOR);
+    const style = rvs.layerStyles?.fosLabel;
+    drawFosLabelPdf(pdf, fosLabelLayoutPdf(pdf, tf, cs, 0, style), style?.color ? parseColor(style.color) : CRITICAL_SURFACE_COLOR.rgb);
   }
 }
 
 /** A FOS label as the PDF places it (mm): its text, position and box, measured in the label font. */
 interface FosLabelPdf {
   text: string;
+  /** The font: size (pt), family and style. */
+  font: { size: number; family: string; style: "normal" | "bold" };
   labelX: number;
   /** The underline's y; the text stands above it. */
   y: number;
@@ -1204,29 +1223,46 @@ interface FosLabelPdf {
   box: Box;
 }
 
-function fosLabelLayoutPdf(pdf: jsPDF, tf: PdfTransform, surf: DrawableSurface & { fos: number }, dy = 0): FosLabelPdf {
+/**
+ * A FOS label's place and font in the PDF: 10 pt bold sans-serif by
+ * default (12 px on the canvas), scaled with the style's size (`fontSize`
+ * px), in its font, with its decimals.
+ */
+export function fosLabelLayoutPdf(
+  pdf: jsPDF,
+  tf: PdfTransform,
+  surf: DrawableSurface & { fos: number },
+  dy = 0,
+  style?: { fontSize?: number; fontFamily?: string; bold?: boolean; decimals?: number },
+): FosLabelPdf {
   const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(surf));
-  const text = surf.fos.toFixed(3);
+  const text = fosLabelText(surf.fos, style);
+  const k = fosLabelScale(style);
   const labelX = ccx + 3;
   const y = ccy + dy;
-  pdf.setFontSize(10);
-  setSansFont(pdf, "bold");
+  const font = { size: 10 * k, family: mapFont(style?.fontFamily ?? "sans-serif"), style: style?.bold === false ? ("normal" as const) : ("bold" as const) };
+  setFosLabelFont(pdf, font);
   const width = pdf.getTextWidth(text);
-  return { text, labelX, y, width, box: { left: labelX - 0.5, top: y - 4.5, right: labelX + width + 0.5, bottom: y + 1 } };
+  return { text, font, labelX, y, width, box: { left: labelX - 0.5, top: y - 4.5 * k, right: labelX + width + 0.5, bottom: y + 1 * k } };
+}
+
+function setFosLabelFont(pdf: jsPDF, font: FosLabelPdf["font"]) {
+  pdf.setFontSize(font.size);
+  if (font.family === PDF_SANS) setSansFont(pdf, font.style);
+  else pdf.setFont(font.family, font.style);
 }
 
 /** The FOS label on its white plate, underlined, in the colour of its surface. */
-function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, color: DualColor) {
+function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, rgb: [number, number, number]) {
   const { text, labelX, y, width, box } = label;
-  pdf.setFontSize(10);
-  setSansFont(pdf, "bold");
+  setFosLabelFont(pdf, label.font);
   pdf.setFillColor(...FOS_LABEL_BG_COLOR.rgb);
   pdf.rect(box.left, box.top, box.right - box.left, box.bottom - box.top, "F");
 
-  pdf.setTextColor(...color.rgb);
-  pdf.text(text, labelX, y - 1);
+  pdf.setTextColor(...rgb);
+  pdf.text(text, labelX, y - 1 * (label.font.size / 10));
 
-  pdf.setDrawColor(...color.rgb);
+  pdf.setDrawColor(...rgb);
   pdf.setLineWidth(0.2);
   pdf.line(labelX - 0.2, y, labelX + width + 0.2, y);
 }
@@ -1251,8 +1287,9 @@ export function drawCustomSurfaceLines(pdf: jsPDF, tf: PdfTransform, result: Ana
   const surfaces = customSurfacesToDraw(result, rvs);
   if (surfaces.length === 0) return surfaces;
 
-  pdf.setDrawColor(...CUSTOM_SURFACE_COLOR.rgb);
-  pdf.setLineWidth(CUSTOM_SURFACE_LINE_WIDTH_PX * tf.mmPerPx);
+  const style = rvs.layerStyles?.customSurfaces;
+  pdf.setDrawColor(...(style?.color ? parseColor(style.color) : CUSTOM_SURFACE_COLOR.rgb));
+  pdf.setLineWidth((style?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX) * tf.mmPerPx);
   pdf.setLineDashPattern(
     CUSTOM_SURFACE_DASH_PX.map((d) => d * tf.mmPerPx),
     0,
@@ -1275,17 +1312,22 @@ export function drawCustomSurfaceLabels(pdf: jsPDF, tf: PdfTransform, result: An
   const surfaces = customSurfacesToDraw(result, rvs);
   if (surfaces.length === 0 || !rvs.showFosLabel) return [];
   const cs = result.criticalSurface;
-  const placed: Box[] = cs ? [fosLabelLayoutPdf(pdf, tf, cs).box] : [];
+  const fosStyle = rvs.layerStyles?.fosLabel;
+  const customStyle = rvs.layerStyles?.customSurfaces;
+  // In the FOS label's font, at the custom surfaces' label size.
+  const style = { ...fosStyle, fontSize: customStyle?.fontSize ?? fosStyle?.fontSize };
+  const color = customStyle?.color ? parseColor(customStyle.color) : CUSTOM_SURFACE_COLOR.rgb;
+  const placed: Box[] = cs ? [fosLabelLayoutPdf(pdf, tf, cs, 0, fosStyle).box] : [];
   const boxes: Box[] = [];
   for (const surf of surfaces) {
-    let label = fosLabelLayoutPdf(pdf, tf, surf);
+    let label = fosLabelLayoutPdf(pdf, tf, surf, 0, style);
     const step = label.box.bottom - label.box.top + 0.5;
     for (let n = 1; n <= 20 && placed.some((b) => boxesOverlap(label.box, b, 0)); n++) {
-      label = fosLabelLayoutPdf(pdf, tf, surf, n * step);
+      label = fosLabelLayoutPdf(pdf, tf, surf, n * step, style);
     }
     placed.push(label.box);
     boxes.push(label.box);
-    drawFosLabelPdf(pdf, label, CUSTOM_SURFACE_COLOR);
+    drawFosLabelPdf(pdf, label, color);
   }
   return boxes;
 }

@@ -6,12 +6,12 @@
  */
 
 import { cloneElement, isValidElement, useId, useState } from "react";
+import { ColorSwatches } from "../../components/ui/ColorSwatches";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { formatPolyline, parsePolyline } from "../../utils/polyline";
 import type { Annotation, ReferenceAnnotation, ReferenceDash } from "../../store/types";
 import { MIN_REFERENCE_RADIUS, REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
 
-const COLORS = ["#a21caf", "#e879f9", "#cc0000", "#cc6600", "#00cc00", "#0066cc", "#000000", "#666666", "#ffffff"];
 const DASHES: { value: ReferenceDash; label: string }[] = [
   { value: "solid", label: "Solid" },
   { value: "dashed", label: "Dashed" },
@@ -142,35 +142,12 @@ export function ReferenceProperties({
       )}
 
       <Field label="Color" group>
-        {/* One row: the swatches shrink (up to 20 px) to fit the sidebar's width. */}
-        <div className="flex gap-1 items-center">
-          <button
-            onClick={() => apply({ color: undefined })}
-            className="h-5 px-1.5 shrink-0 rounded-sm cursor-pointer text-[10px]"
-            aria-pressed={colorValue === ""}
-            title="The theme's reference color"
-            style={{
-              border: colorValue === "" ? "2px solid var(--color-vsc-accent)" : "1px solid var(--color-vsc-border)",
-              color: "var(--color-vsc-text)",
-              background: "transparent",
-            }}
-          >
-            Theme
-          </button>
-          {COLORS.map((c) => (
-            <button
-              key={c}
-              onClick={() => apply({ color: c })}
-              className="flex-1 min-w-0 max-w-5 aspect-square rounded-sm cursor-pointer"
-              aria-label={`Color ${c}`}
-              aria-pressed={colorValue === c}
-              style={{
-                background: c,
-                border: colorValue === c ? "2px solid var(--color-vsc-accent)" : "1px solid var(--color-vsc-border)",
-              }}
-            />
-          ))}
-        </div>
+        <ColorSwatches
+          value={colorValue === undefined ? null : colorValue}
+          onChange={(color) => apply({ color })}
+          defaultLabel="Theme"
+          defaultTitle="The theme's reference color"
+        />
       </Field>
 
       <div className="flex gap-2">
