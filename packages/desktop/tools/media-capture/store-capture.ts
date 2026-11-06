@@ -10,7 +10,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- page.evaluate() runs in renderer context without type imports */
 
 import type { BrowserContext, CDPSession, Page } from "playwright";
-import type { Scene } from "../../../website/src/content/media-scene-types";
+import { sceneSources, type CaptureTheme, type Scene } from "../../../website/src/content/media-scene-types";
 import { RENDER_SETTLE_MS, ANALYSIS_TIMEOUT_MS, CAPTURE_DPR } from "./capture-config";
 import { VERIFICATION_CASES } from "@cslope/engine/verification";
 import { verificationModel as fromCase } from "../../src/store/verification-models";
@@ -182,23 +182,24 @@ async function findWindow(context: BrowserContext, title: string, timeoutMs = 15
  * Capture a single scene.
  *
  * Steps:
- *  1. Load the benchmarks and switch to the scene's model.
+ *  1. Load the benchmarks and switch to the scene's model (or start a new
+ *     project, or open the verification problem).
  *  2. Apply the mode, result-view overrides and actions.
  *  3. If needed, run the analysis, switch to result mode and apply the
  *     after-analysis actions.
  *  4. Show the ribbon tab and click the buttons.
  *  5. Wait for rendering and capture.
  */
-export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
+export async function captureScene(page: Page, scene: Scene, theme: CaptureTheme = "light"): Promise<Buffer> {
   const { setup, output } = scene;
 
-  if (!scene.benchmark === !scene.verification) {
-    throw new Error(`Scene "${scene.id}" needs a benchmark or a verification problem`);
+  if (sceneSources(scene) !== 1) {
+    throw new Error(`Scene "${scene.id}" needs one of a benchmark, a verification problem or a new project`);
   }
   const model = scene.verification ? verificationModel(scene.verification.id, scene.verification.method) : null;
 
   await page.evaluate(
-    ({ benchmarkName, model, setup }) => {
+    ({ benchmarkName, model, newProject, setup }) => {
       const store = (window as any).__CSLOPE_STORE__;
       if (!store) throw new Error("Store bridge not available — is VITE_CAPTURE_MODE set?");
       // Nothing carries over from the previous scene: no selection, no focus.
@@ -206,9 +207,10 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
       store.getState().setSelectedResultObject?.(null);
       store.getState().setSelectedAnnotations?.([]);
       if (model) store.getState().loadProject({ models: [model], activeModelId: model.id });
+      else if (newProject) store.getState().newProject();
       else store.getState().loadExamples();
       const state = store.getState();
-      const target = model ?? state.models.find((m: any) => m.name === benchmarkName);
+      const target = model ?? (newProject ? state.models[0] : state.models.find((m: any) => m.name === benchmarkName));
       if (!target) {
         const names = state.models.map((m: any) => m.name).join(", ");
         throw new Error(`Benchmark "${benchmarkName}" not found. Available: ${names}`);
@@ -226,7 +228,7 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
         store.getState().setResultViewSettings({ ...current, ...setup.resultView });
       }
     },
-    { benchmarkName: scene.benchmark, model, setup },
+    { benchmarkName: scene.benchmark, model, newProject: scene.newProject === true, setup },
   );
   await applyActions(page, setup.actions);
 
@@ -301,15 +303,29 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
   }
 
   if (output.crop === "export") {
-    const exported = await page.evaluate(() => (window as any).__CSLOPE_EXPORT_PNG__() as string | null);
+    const exported = await page.evaluate((t) => (window as any).__CSLOPE_EXPORT_PNG__({ theme: t }) as string | null, theme);
     if (!exported) throw new Error(`Nothing to export for "${scene.id}"`);
     return Buffer.from(exported.replace(/^data:image\/png;base64,/, ""), "base64");
   }
 
-  const dataUrl = await page.evaluate(() => {
+  const dataUrl = await page.evaluate((rulers) => {
     const canvas = document.querySelector("[data-testid='slope-canvas']") as HTMLCanvasElement | null;
     if (!canvas) throw new Error("Canvas element not found");
-    return canvas.toDataURL("image/png");
-  });
+    if (!rulers) return canvas.toDataURL("image/png");
+    // The drawing with the canvases laid over it at the same place (the
+    // rulers), as the window shows them, without the floating toolbar.
+    const box = canvas.getBoundingClientRect();
+    const out = document.createElement("canvas");
+    out.width = canvas.width;
+    out.height = canvas.height;
+    const ctx = out.getContext("2d")!;
+    ctx.drawImage(canvas, 0, 0);
+    for (const c of document.querySelectorAll("canvas")) {
+      const b = c.getBoundingClientRect();
+      if (c === canvas || Math.abs(b.left - box.left) > 1 || Math.abs(b.top - box.top) > 1 || !c.width) continue;
+      ctx.drawImage(c, 0, 0, (b.width / box.width) * out.width, (b.height / box.height) * out.height);
+    }
+    return out.toDataURL("image/png");
+  }, output.rulers === true);
   return Buffer.from(dataUrl.replace(/^data:image\/png;base64,/, ""), "base64");
 }

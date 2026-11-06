@@ -25,6 +25,8 @@ export interface SceneSetup {
     showSoilColor?: boolean;
     surfaceDisplay?: "critical" | "all" | "filter";
     fosFilterMax?: number;
+    /** The part of the model the paper shows (Results › the paper's extents). */
+    viewLock?: { bottomLeft: [number, number]; topRight: [number, number] };
   };
   /**
    * Store actions applied in order after the benchmark is loaded and the
@@ -67,11 +69,17 @@ export interface SceneOutput {
   /**
    * "canvas": the drawing canvas only; "full": the whole main window;
    * "window": the dialog window whose title is `window`; "export": the
-   * result plot as the app's "Export PNG" saves it (the paper, on white).
+   * result plot as the app's "Export PNG" saves it (the paper; in the dark
+   * theme the dark paper, which the app's export does not offer).
    */
   crop: "canvas" | "full" | "window" | "export";
   /** The dialog window's title, for crop "window". */
   window?: string;
+  /**
+   * Crop "canvas" in edit mode: draw the rulers (the axes along the left
+   * and bottom edges, a canvas of their own over the drawing) on the image.
+   */
+  rulers?: boolean;
   /**
    * Shrink a dialog window to its content's height (default). Off for
    * windows whose content grows with the window, such as a chart.
@@ -91,6 +99,12 @@ export interface Scene {
   /** Name of the benchmark model to load (must match a name in BENCHMARK_MODELS). */
   benchmark?: string;
   /**
+   * Instead of a benchmark: a new project, as File › New and the start of
+   * the app give it (one model, "Model 1", with T-ACADS Simple's geometry
+   * and no title). For the tutorials that start with File › New.
+   */
+  newProject?: boolean;
+  /**
    * Instead of a benchmark: a verification problem opened in the app, run
    * as one of its analyses (cSlope's name for it, as the verification table
    * shows it).
@@ -100,4 +114,17 @@ export interface Scene {
   setup: SceneSetup;
   /** Output configuration. */
   output: SceneOutput;
+}
+
+/** Every scene is captured in both themes of the app. */
+export type CaptureTheme = "light" | "dark";
+
+/** The file of a scene's image in a theme: "a.png" (light), "a-dark.png" (dark). */
+export function themedFilename(filename: string, theme: CaptureTheme): string {
+  return theme === "dark" ? filename.replace(/\.png$/, "-dark.png") : filename;
+}
+
+/** How a scene starts: exactly one of a benchmark, a verification problem or a new project. */
+export function sceneSources(scene: Pick<Scene, "benchmark" | "verification" | "newProject">): number {
+  return [scene.benchmark, scene.verification, scene.newProject].filter(Boolean).length;
 }

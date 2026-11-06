@@ -1,182 +1,1060 @@
 {
- "/media/generated/edit-geometry.png": [
-  2284,
-  1479
- ],
- "/media/generated/edit-materials.png": [
-  2284,
-  1479
- ],
- "/media/generated/edit-showcase.png": [
-  2284,
-  1479
- ],
- "/media/generated/edit-water-table.png": [
-  2284,
-  1479
- ],
- "/media/generated/result-all-surfaces.png": [
-  1724,
-  1479
- ],
- "/media/generated/result-annotations.png": [
-  1724,
-  1479
- ],
- "/media/generated/result-app.png": [
-  2880,
-  1800
- ],
- "/media/generated/result-critical-surface.png": [
-  1724,
-  1479
- ],
- "/media/generated/result-dam.png": [
-  1724,
-  1479
- ],
- "/media/generated/result-showcase.png": [
-  1724,
-  1479
- ],
- "/media/home/V021d.png": [
-  2400,
-  1695
- ],
- "/media/home/V049.png": [
-  2400,
-  1695
- ],
- "/media/home/V053.png": [
-  2400,
-  1695
- ],
- "/media/tutorials/block-search/01-options.png": [
-  1040,
-  1520
- ],
- "/media/tutorials/block-search/02-objects.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/block-search/03-result.png": [
-  1820,
-  1483
- ],
- "/media/tutorials/dam/01-model.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/dam/02-materials.png": [
-  1520,
-  1464
- ],
- "/media/tutorials/dam/04-lambda.png": [
-  1960,
-  1520
- ],
- "/media/tutorials/first-analysis/01-window.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/first-analysis/02-exterior.png": [
-  1040,
-  648
- ],
- "/media/tutorials/first-analysis/03-materials.png": [
-  1520,
-  1314
- ],
- "/media/tutorials/first-analysis/04-search-limits.png": [
-  1040,
-  628
- ],
- "/media/tutorials/first-analysis/05-search-limits-canvas.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/first-analysis/06-options.png": [
-  1040,
-  1520
- ],
- "/media/tutorials/first-analysis/07-result.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/layered/01-model.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/layered/02-interior.png": [
-  1040,
-  968
- ],
- "/media/tutorials/layered/03-materials.png": [
-  1520,
-  1414
- ],
- "/media/tutorials/layered/04-assign.png": [
-  1040,
-  584
- ],
- "/media/tutorials/layered/05-result.png": [
-  1820,
-  1483
- ],
- "/media/tutorials/partial-factors/01-options.png": [
-  1040,
-  1520
- ],
- "/media/tutorials/partial-factors/02-result.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/probabilistic/01-sensitivity.png": [
-  1240,
-  1318
- ],
- "/media/tutorials/probabilistic/02-probabilistic.png": [
-  1240,
-  992
- ],
- "/media/tutorials/reporting/01-paper.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/reporting/02-color-bar.png": [
-  1820,
-  1483
- ],
- "/media/tutorials/reporting/04-export.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/soil-nails/01-reinforcement.png": [
-  1520,
-  1412
- ],
- "/media/tutorials/soil-nails/02-model.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/soil-nails/03-result.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/water-table/01-model.png": [
-  2380,
-  1483
- ],
- "/media/tutorials/water-table/02-piezo.png": [
-  1040,
-  882
- ],
- "/media/tutorials/water-table/03-result.png": [
-  2880,
-  1800
- ],
- "/media/tutorials/water-table/04-pore-pressure.png": [
-  1960,
-  1520
- ]
+ "/media/generated/edit-geometry-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "ff505d660d71a14a",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-geometry.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "fc7cb7f99ee1e0cd",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-materials-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "abed75d3682a0345",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-materials.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "0d3edfe05b3a034f",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-showcase-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "efdd695c520fb208",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-showcase.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "c9ce84722cc77485",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-water-table-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "b4bae0276dd5b954",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/edit-water-table.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "38f779c34dfb5bf0",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-all-surfaces-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "79bdb85af7bbfb37",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-all-surfaces.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "9778af861090b485",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-annotations-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "26e9e8d8d2dec673",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-annotations.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "a9ca7f7e1726087b",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-app-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "009c5847f724657f",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-app.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "03ce8d3dbe711029",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-critical-surface-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "3c13b7d6dc45aadc",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-critical-surface.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "b5d8c459ad0ca40c",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-dam-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "5e694e2ed7e8e555",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-dam.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "433fb2afb897a329",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-showcase-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "c855dcb289c19fdb",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/generated/result-showcase.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "91ebbc37e22ba6ef",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/home/V021d-dark.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "ffce571e02f7306a",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/home/V021d.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "4294ec3180db435b",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/home/V049-dark.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "6fc43236bbbbebbf",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/home/V049.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "589c4b67c035dcad",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/home/V053-dark.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "7f63e147c5f0a733",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/home/V053.png": {
+  "size": [
+   2400,
+   1695
+  ],
+  "hash": "ef10554c1ad47235",
+  "webp": [
+   400,
+   800
+  ]
+ },
+ "/media/tutorials/block-search/01-options-dark.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "9dc2a2bb85676a0e",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/block-search/01-options.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "6e50d8d5004ce15f",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/block-search/02-objects-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "0f9c2e53ba604074",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/block-search/02-objects.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "58c5b8c57131be13",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/block-search/03-result-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "2298426652335d01",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/block-search/03-result.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "7986829760779489",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/dam/01-model-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "fb5aff2d548b9df7",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/dam/01-model.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "900de2e145ee70fc",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/dam/02-materials-dark.png": {
+  "size": [
+   1520,
+   1466
+  ],
+  "hash": "9618199a41a3b142",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/dam/02-materials.png": {
+  "size": [
+   1520,
+   1466
+  ],
+  "hash": "4fdf6fe17b0ae463",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/dam/04-lambda-dark.png": {
+  "size": [
+   1960,
+   1520
+  ],
+  "hash": "ee5729355d5cceca",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/dam/04-lambda.png": {
+  "size": [
+   1960,
+   1520
+  ],
+  "hash": "eba6ab28a87e2345",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/01-window-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "758ff4e9da94d633",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/01-window.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "158f31494ce7952d",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/02-exterior-dark.png": {
+  "size": [
+   1040,
+   652
+  ],
+  "hash": "62f25e2522937b7d",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/02-exterior.png": {
+  "size": [
+   1040,
+   652
+  ],
+  "hash": "ee8e7e3d3ee8f80c",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/03-materials-dark.png": {
+  "size": [
+   1520,
+   1318
+  ],
+  "hash": "c9913332aa0fef26",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/first-analysis/03-materials.png": {
+  "size": [
+   1520,
+   1318
+  ],
+  "hash": "249b072501a07e20",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/first-analysis/04-search-limits-dark.png": {
+  "size": [
+   1040,
+   626
+  ],
+  "hash": "4ec7f8346383f82c",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/04-search-limits.png": {
+  "size": [
+   1040,
+   626
+  ],
+  "hash": "af9ee3fc9d2edcce",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/05-search-limits-canvas-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "9d51b284603a475b",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/05-search-limits-canvas.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "51b89b8320096785",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/06-options-dark.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "38da4f617f453672",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/06-options.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "81ba5f1ee9ca2fb8",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/first-analysis/07-result-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "df7f0a06c55b02a7",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/first-analysis/07-result.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "d493b5c04103c443",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/layered/01-model-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "abed75d3682a0345",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/layered/01-model.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "0d3edfe05b3a034f",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/layered/02-interior-dark.png": {
+  "size": [
+   1040,
+   968
+  ],
+  "hash": "b6441267f9d8664e",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/layered/02-interior.png": {
+  "size": [
+   1040,
+   968
+  ],
+  "hash": "4d69d2d120a5499a",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/layered/03-materials-dark.png": {
+  "size": [
+   1520,
+   1412
+  ],
+  "hash": "512615fe2a9a5bac",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/layered/03-materials.png": {
+  "size": [
+   1520,
+   1412
+  ],
+  "hash": "7a3589c42370c6b8",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/layered/04-assign-dark.png": {
+  "size": [
+   1040,
+   582
+  ],
+  "hash": "c83cf2c2e3a31e39",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/layered/04-assign.png": {
+  "size": [
+   1040,
+   582
+  ],
+  "hash": "0ed78a7c02e39732",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/layered/05-result-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "e0e8af09557cc009",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/layered/05-result.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "84d4a6c1f1cfe251",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/partial-factors/01-options-dark.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "6f9531532fdaeb6c",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/partial-factors/01-options.png": {
+  "size": [
+   1040,
+   1520
+  ],
+  "hash": "8d40c3c0de5868c4",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/partial-factors/02-result-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "77a9658bd9e6cddd",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/partial-factors/02-result.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "caabbcf189d79d40",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/probabilistic/01-sensitivity-dark.png": {
+  "size": [
+   1240,
+   1318
+  ],
+  "hash": "aef7990ef87e62d1",
+  "webp": [
+   800,
+   1200,
+   1240
+  ]
+ },
+ "/media/tutorials/probabilistic/01-sensitivity.png": {
+  "size": [
+   1240,
+   1318
+  ],
+  "hash": "11864f59011406cf",
+  "webp": [
+   800,
+   1200,
+   1240
+  ]
+ },
+ "/media/tutorials/probabilistic/02-probabilistic-dark.png": {
+  "size": [
+   1240,
+   992
+  ],
+  "hash": "96a59b192cf04fb7",
+  "webp": [
+   800,
+   1200,
+   1240
+  ]
+ },
+ "/media/tutorials/probabilistic/02-probabilistic.png": {
+  "size": [
+   1240,
+   992
+  ],
+  "hash": "3cca316b8b954aee",
+  "webp": [
+   800,
+   1200,
+   1240
+  ]
+ },
+ "/media/tutorials/reporting/01-paper-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "5041453df6e6dc31",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/reporting/01-paper.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "af7c581cacc10698",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/reporting/02-color-bar-dark.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "79bdb85af7bbfb37",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/reporting/02-color-bar.png": {
+  "size": [
+   1820,
+   1483
+  ],
+  "hash": "9778af861090b485",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/reporting/04-export-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "882d40455d6c1a20",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/reporting/04-export.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "e3c0567388dae4b2",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/soil-nails/01-reinforcement-dark.png": {
+  "size": [
+   1520,
+   1412
+  ],
+  "hash": "068a74a2e009ea1a",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/soil-nails/01-reinforcement.png": {
+  "size": [
+   1520,
+   1412
+  ],
+  "hash": "97e00229dceba13b",
+  "webp": [
+   800,
+   1200,
+   1520
+  ]
+ },
+ "/media/tutorials/soil-nails/02-model-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "ae62614a841e6ef9",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/soil-nails/02-model.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "0ea9acf18c2d2f8a",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/soil-nails/03-result-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "857a700ae17761fa",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/soil-nails/03-result.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "791d54dded36e8fd",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/01-model-dark.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "b4bae0276dd5b954",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/01-model.png": {
+  "size": [
+   2380,
+   1483
+  ],
+  "hash": "38f779c34dfb5bf0",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/02-piezo-dark.png": {
+  "size": [
+   1040,
+   880
+  ],
+  "hash": "4a3ac014fb53ae55",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/water-table/02-piezo.png": {
+  "size": [
+   1040,
+   880
+  ],
+  "hash": "2b22422ea4cf0016",
+  "webp": [
+   800,
+   1040
+  ]
+ },
+ "/media/tutorials/water-table/03-result-dark.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "6a9992aa742bf395",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/03-result.png": {
+  "size": [
+   2880,
+   1800
+  ],
+  "hash": "09a1ec3e00f27832",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/04-pore-pressure-dark.png": {
+  "size": [
+   1960,
+   1520
+  ],
+  "hash": "90dbf9e1977ed5c5",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ },
+ "/media/tutorials/water-table/04-pore-pressure.png": {
+  "size": [
+   1960,
+   1520
+  ],
+  "hash": "7c5cddf509f95955",
+  "webp": [
+   800,
+   1200,
+   1600
+  ]
+ }
 }

@@ -2,18 +2,22 @@ import { Children, isValidElement, type ComponentProps, type ReactNode } from "r
 import { Link } from "react-router";
 import { AlertTriangle, Info, Lightbulb } from "lucide-react";
 
+import { Picture } from "@/components/Picture";
+import { useFullSizeHref } from "@/lib/full-size";
 import { MEDIA, media as mediaAt, type Media } from "@/content/media";
 import { cn } from "@/lib/utils";
 
-const knownMedia = (src: string): Media | undefined => {
-  try {
-    return mediaAt(src, "");
-  } catch {
-    return undefined;
-  }
-};
+/** The width a docs figure is shown at: the article column (DocsPage). */
+const FIGURE_SIZES = "(min-width: 1280px) 736px, (min-width: 1024px) calc(100vw - 320px), calc(100vw - 32px)";
 
-/** A screenshot with a caption: `<Figure media="criticalSurface" caption="…" />` or with src, width and height. */
+/**
+ * A screenshot with a caption: `<Figure media="criticalSurface" caption="…" />`
+ * or `<Figure src="/media/…png" alt="…" caption="…" />`. It shows the
+ * capture in the site's theme, as WebP of about the width it is shown at,
+ * and opens the full-size image on click. An image under /media that is
+ * not in media-sizes.json stops the build (run bun scripts/media-sizes.ts),
+ * rather than showing without its size.
+ */
 export function Figure({
   media,
   src,
@@ -29,28 +33,20 @@ export function Figure({
   height?: number;
   caption?: ReactNode;
 }) {
-  // A src under /media gets its size from media-sizes.json; an image that
-  // is not there still shows, without a reserved size (links.test.ts
-  // reports it).
   const m: Media | undefined = media
     ? MEDIA[media]
-    : src
-      ? width && height
-        ? { src, alt: alt ?? "", width, height }
-        : (knownMedia(src) ?? { src, alt: alt ?? "", width: 0, height: 0 })
-      : undefined;
-  if (!m) throw new Error("Figure needs media or src");
+    : src?.startsWith("/media/")
+      ? mediaAt(src, alt ?? "")
+      : src && width && height
+        ? { src, alt: alt ?? "", width, height, srcSet: "" }
+        : undefined;
+  if (!m) throw new Error(`Figure needs media, an image under /media, or a src with its width and height (${src ?? "no src"})`);
+  const href = useFullSizeHref(m);
   return (
     <figure className="not-prose my-8 overflow-hidden rounded-lg border bg-card">
-      <img
-        src={m.src}
-        alt={alt ?? m.alt}
-        width={m.width || undefined}
-        height={m.height || undefined}
-        loading="lazy"
-        decoding="async"
-        className="block h-auto w-full"
-      />
+      <a href={href} target="_blank" rel="noopener" className="block cursor-zoom-in" title="Open at full size">
+        <Picture media={m} alt={alt ?? m.alt} sizes={FIGURE_SIZES} className="block h-auto w-full" />
+      </a>
       {caption && <figcaption className="border-t px-4 py-3 text-sm text-muted-foreground">{caption}</figcaption>}
     </figure>
   );

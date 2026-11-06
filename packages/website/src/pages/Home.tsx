@@ -15,8 +15,10 @@ import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Section, SectionHeading } from "@/components/Section";
+import { Picture } from "@/components/Picture";
+import { useFullSizeHref } from "@/lib/full-size";
 import { Screenshot } from "@/components/Screenshot";
-import { MEDIA, homeExampleImage } from "@/content/media";
+import { MEDIA, homeExampleImage, type Media } from "@/content/media";
 import { HOME } from "@/content/home";
 import { formatPublished, formatRange } from "@/content/verification";
 import { usePageMeta } from "@/lib/page-meta";
@@ -62,7 +64,12 @@ function Hero() {
           <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} license.</p>
         </div>
         {/* The whole program, wide enough to read: below the text, not beside it. */}
-        <Screenshot {...MEDIA.app} priority className="animate-fade-up shadow-xl [animation-delay:120ms]" />
+        <Screenshot
+          media={MEDIA.app}
+          sizes="(min-width: 1152px) 1104px, calc(100vw - 32px)"
+          priority
+          className="animate-fade-up shadow-xl [animation-delay:120ms]"
+        />
       </div>
     </section>
   );
@@ -157,10 +164,16 @@ function Capabilities() {
 }
 
 /** An exported result plot, small; it opens full size. */
-function ExampleImage({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) {
+function ExampleImage({ media }: { media: Media }) {
   return (
-    <a href={src} target="_blank" rel="noopener" className="block shrink-0 overflow-hidden rounded border bg-white hover:ring-2 hover:ring-ring">
-      <img src={src} alt={alt} width={width} height={height} loading="lazy" decoding="async" className="block h-auto w-32 sm:w-44" />
+    <a
+      href={useFullSizeHref(media)}
+      target="_blank"
+      rel="noopener"
+      title="Open at full size"
+      className="block shrink-0 cursor-zoom-in overflow-hidden rounded border bg-card hover:ring-2 hover:ring-ring"
+    >
+      <Picture media={media} sizes="(min-width: 640px) 176px, 128px" className="block h-auto w-32 sm:w-44" />
     </a>
   );
 }
@@ -224,7 +237,7 @@ function Verification() {
                 <tr key={problem.id} className="max-sm:grid max-sm:grid-cols-3">
                   <td className="px-4 py-3 max-sm:col-span-3 max-sm:pb-1">
                     <div className="flex flex-col items-start gap-2 max-sm:flex-row max-sm:items-center max-sm:gap-3">
-                      <ExampleImage {...homeExampleImage(problem.id, problem.title)} />
+                      <ExampleImage media={homeExampleImage(problem.id, problem.title)} />
                       <div>
                         <div className="font-medium">{problem.title}</div>
                         <div className="text-xs text-muted-foreground">{result.method}</div>
@@ -267,7 +280,13 @@ function Gallery() {
       <SectionHeading eyebrow="The application" title="Built for daily engineering work" />
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         {GALLERY.map((g) => (
-          <Screenshot key={g.media.src} {...g.media} caption={g.caption} aspect="1724 / 1479" />
+          <Screenshot
+            key={g.media.src}
+            media={g.media}
+            sizes="(min-width: 1152px) 540px, (min-width: 768px) calc(50vw - 36px), calc(100vw - 32px)"
+            caption={g.caption}
+            aspect="1724 / 1479"
+          />
         ))}
       </div>
     </Section>

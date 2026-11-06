@@ -9,7 +9,11 @@
  * Usage:  bun run packages/desktop/tools/media-capture/capture-runner.ts
  *
  * CSLOPE_CAPTURE_ONLY=<prefix> captures only the scenes whose id starts with
- * the prefix (e.g. "tut-first").
+ * the prefix (e.g. "tut-first"); several prefixes are separated by commas.
+ *
+ * Every scene is captured in the light and the dark theme: <name>.png and
+ * <name>-dark.png (the website shows the one of its own theme).
+ * CSLOPE_CAPTURE_THEME=light or =dark captures one of them only.
  */
 
 import { chromium, type Browser, type Page } from "playwright";
@@ -18,6 +22,7 @@ import { resolve, join } from "node:path";
 import { execSync, spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
 import { scenes } from "../../../website/src/content/media-scenes";
+import { themedFilename, type CaptureTheme } from "../../../website/src/content/media-scene-types";
 import { initEngine } from "@cslope/engine";
 import { captureScene, setPixelRatio } from "./store-capture";
 import { VIEWPORT_WIDTH, VIEWPORT_HEIGHT, OUTPUT_DIR, MEDIA_DIR, CAPTURE_DPR } from "./capture-config";
@@ -53,8 +58,28 @@ function withTimeout<T>(
   });
 }
 
-const ONLY = process.env.CSLOPE_CAPTURE_ONLY;
-const selected = ONLY ? scenes.filter((s) => s.id.startsWith(ONLY)) : scenes;
+const ONLY = process.env.CSLOPE_CAPTURE_ONLY?.split(",").map((p) => p.trim()).filter(Boolean);
+const selected = ONLY?.length ? scenes.filter((s) => ONLY.some((p) => s.id.startsWith(p))) : scenes;
+
+const THEME_ENV = process.env.CSLOPE_CAPTURE_THEME;
+if (THEME_ENV && THEME_ENV !== "light" && THEME_ENV !== "dark") {
+  throw new Error(`CSLOPE_CAPTURE_THEME must be "light" or "dark", not "${THEME_ENV}"`);
+}
+const THEMES: CaptureTheme[] = THEME_ENV ? [THEME_ENV as CaptureTheme] : ["light", "dark"];
+
+/**
+ * The app's theme, in the main window and (through localStorage, which
+ * they read when they open) in the dialog windows opened after this.
+ */
+async function setTheme(page: Page, theme: CaptureTheme) {
+  await page.evaluate((t) => {
+    localStorage.setItem("cslope-theme", t);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const store = (window as any).__CSLOPE_STORE__;
+    if (store) store.getState().setTheme(t);
+    else document.documentElement.dataset.theme = t;
+  }, theme);
+}
 
 async function main() {
   // the verification models are built with the engine here, in Bun
@@ -62,7 +87,7 @@ async function main() {
   const outDir = join(ROOT, OUTPUT_DIR);
   await mkdir(outDir, { recursive: true });
 
-  console.log(`\n  Media Capture — ${selected.length} scenes\n`);
+  console.log(`\n  Media Capture — ${selected.length} scenes, ${THEMES.join(" and ")} theme\n`);
   console.log(`  Output → ${join(ROOT, MEDIA_DIR)}/<scene dir>\n`);
 
   // Build the app with the capture bridge baked into the renderer bundle.
@@ -133,11 +158,8 @@ async function main() {
     await page.waitForLoadState("domcontentloaded");
     console.log("  DOM loaded.\n");
 
-    // Force light theme (clean Electron profile has no localStorage)
-    await page.evaluate(() => {
-      localStorage.setItem("cslope-theme", "light");
-      document.documentElement.dataset.theme = "light";
-    });
+    // Start in the light theme (a clean Electron profile has no localStorage).
+    await setTheme(page, "light");
 
     // A fixed CSS size, rendered at CAPTURE_DPR for sharp images.
     await setPixelRatio(page, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
@@ -160,28 +182,32 @@ async function main() {
     let passed = 0;
     let failed = 0;
 
-    for (const scene of selected) {
-      const label = `  [${scene.id}] ${scene.title}`;
-      try {
-        const png = await captureScene(page, scene);
-        const dir = join(ROOT, MEDIA_DIR, scene.output.dir ?? "generated");
-        await mkdir(dir, { recursive: true });
-        await writeFile(join(dir, scene.output.filename), png);
-        console.log(`  ✓ ${label} → ${scene.output.dir ?? "generated"}/${scene.output.filename}`);
-        passed++;
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        console.error(`  ✗ ${label} — ${msg}`);
-        failed++;
-      } finally {
-        // Close the dialog windows the scene opened.
-        for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
-        await page.keyboard.press("Escape").catch(() => {});
+    for (const theme of THEMES) {
+      await setTheme(page, theme);
+      for (const scene of selected) {
+        const label = `  [${scene.id}, ${theme}] ${scene.title}`;
+        try {
+          const png = await captureScene(page, scene, theme);
+          const dir = join(ROOT, MEDIA_DIR, scene.output.dir ?? "generated");
+          const filename = themedFilename(scene.output.filename, theme);
+          await mkdir(dir, { recursive: true });
+          await writeFile(join(dir, filename), png);
+          console.log(`  ✓ ${label} → ${scene.output.dir ?? "generated"}/${filename}`);
+          passed++;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`  ✗ ${label} — ${msg}`);
+          failed++;
+        } finally {
+          // Close the dialog windows the scene opened.
+          for (const p of page.context().pages()) if (p !== page) await p.close().catch(() => {});
+          await page.keyboard.press("Escape").catch(() => {});
+        }
       }
     }
 
     console.log(
-      `\n  Done: ${passed} captured, ${failed} failed, ${selected.length} total.\n`,
+      `\n  Done: ${passed} captured, ${failed} failed, ${selected.length * THEMES.length} total.\n`,
     );
 
     if (failed > 0) {
