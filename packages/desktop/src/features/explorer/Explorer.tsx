@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useAppStore, type ProjectInfo } from "../../store/app-store";
 import { PanelHeaderRow } from "../../components/SidePanelChrome";
-import { FoldChevron, SECTION_HEADING_ROW } from "../../components/ui/Section";
+import { FoldChevron, SECTION_HEADING_ROW, SECTION_HEADING_TEXT } from "../../components/ui/Section";
 import { ContextMenu, type MenuPos } from "./ContextMenu";
 import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
@@ -298,7 +298,7 @@ export function Explorer() {
         }
       >
         <button
-          className={`${SECTION_HEADING_ROW} cursor-pointer w-full text-left`}
+          className={`${SECTION_HEADING_ROW} ${SECTION_HEADING_TEXT} cursor-pointer w-full text-left`}
           onClick={() => setModelsOpen((v) => !v)}
           aria-expanded={modelsOpen}
           aria-label="Toggle models list"

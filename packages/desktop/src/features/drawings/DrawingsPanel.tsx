@@ -378,7 +378,7 @@ export function AttachmentsPanel() {
       {open && (
         <button
           className="mx-4 mt-0.5 mb-1.5 text-[11px] cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-link, var(--color-vsc-accent))" }}
+          style={{ color: "var(--color-vsc-accent)" }}
           onClick={() => openPlaceDrawing()}
           title="Add a drawing file and place it in the active model"
         >
