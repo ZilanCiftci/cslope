@@ -9,7 +9,8 @@
 //! `{ $slope: h }`. The internal functions that only the Rust tests test
 //! have no entry here (issue #51): only the finite element model and its
 //! strength reduction, which the facade's FE tests use, are dispatched
-//! ([`crate::api::fem_testing`]).
+//! ([`crate::api::fem_testing`]), and the app model conversion
+//! ([`crate::api::project_testing`]).
 
 use crate::errors::js_error;
 use wasm_bindgen::prelude::*;
@@ -19,6 +20,9 @@ use wasm_bindgen::prelude::*;
 pub fn __test_call(name: &str, a: JsValue) -> Result<JsValue, JsValue> {
     if name.starts_with("fem/") {
         return crate::api::fem_testing::call(name, a);
+    }
+    if name.starts_with("project::") {
+        return crate::api::project_testing::call(name, a);
     }
     Err(js_error(&format!(
         "__test_call: no internal function \"{name}\" in the testing build"
@@ -30,6 +34,7 @@ pub fn __test_call(name: &str, a: JsValue) -> Result<JsValue, JsValue> {
 pub fn __test_functions() -> Vec<String> {
     crate::api::fem_testing::FEM_TEST_FUNCTIONS
         .iter()
+        .chain(crate::api::project_testing::PROJECT_TEST_FUNCTIONS)
         .map(|s| s.to_string())
         .collect()
 }

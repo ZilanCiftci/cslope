@@ -11,6 +11,8 @@ pub mod fem_testing;
 pub mod geometry;
 pub mod math;
 pub mod model;
+#[cfg(feature = "testing")]
+pub mod project_testing;
 pub mod slope;
 pub mod types;
 pub mod wire;

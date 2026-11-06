@@ -199,7 +199,7 @@ Child slopes refer only to their own material table. Ids must never cross slopes
 
 ```
 packages/engine-rs/
-  Cargo.toml                    workspace: cslope-engine, cslope-wasm, cslope-py
+  Cargo.toml                    workspace: cslope-engine, cslope-project, cslope-wasm, cslope-py
   rust-toolchain.toml           1.97.0 + wasm32-unknown-unknown
   clippy.toml                   disallowed-methods (§5.3)
   PORTING.md  ARCHITECTURE.md   PORTING-SYNC.json (§9)
@@ -219,6 +219,10 @@ packages/engine-rs/
           snapshot.rs          WithSlope<'_, T> serialisers, SlopeSnapshot
       tests/                    <area>_*.rs differential + ported unit tests
       benches/                  criterion-free timing bins (std only)
+    cslope-project/             the app's model (ModelEntry) and its conversion to and
+                                from the definition (port of store/helpers.ts and
+                                store/definition-model.ts; tests/golden.rs against
+                                golden/project-corpus.json, issue #57)
     cslope-wasm/                cdylib: wasm-bindgen + serde-wasm-bindgen
       src/lib.rs registry.rs slope.rs analysis.rs fem.rs reliability.rs
           errors.rs panic.rs clock.rs testing.rs (feature "testing")
@@ -655,7 +659,7 @@ pub struct Serial;                                         // default; wasm
 - It matches the `clarabel.wasm` precedent.
 - Repository growth is about 1–1.5 MB compressed per engine change. During the port the wasm is committed only at phase milestones. Revisit with LFS if growth becomes a problem.
 - CI keeps the committed build honest:
-  - **Freshness check.** It needs no Rust and runs in the `check` job: `bun packages/engine-rs/tools/check-wasm-fresh.ts` recomputes `sourceHash` and fails if it differs from `BUILD-INFO.json` ("the engine sources changed; run `bun run build:wasm` and commit `packages/engine/src/wasm`").
+  - **Freshness check.** It needs no Rust and runs in the `check` job: `bun packages/engine-rs/tools/check-wasm-fresh.ts` recomputes `sourceHash` (over the crates the build compiles: cslope-wasm and its path dependencies, for the product without the testing feature's optional ones, so cslope-py and cslope-project do not mark it stale) and fails if it differs from `BUILD-INFO.json` ("the engine sources changed; run `bun run build:wasm` and commit `packages/engine/src/wasm`").
   - **Reproducibility.** The `rust` job rebuilds on Linux and compares bytes with the committed build (the wasm, the glue and `BUILD-INFO.json`). On a mismatch it fails and uploads its build as an artifact to look at or commit instead. The build is reproducible: `tools/build-wasm.ts` remaps machine paths, leaves the producers section out, and the wasm-bindgen CLI is installed `--locked` on both sides.
 
 ### 8.4 CI jobs (`.github/workflows/ci.yml`)

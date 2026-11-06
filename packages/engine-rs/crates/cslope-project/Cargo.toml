@@ -1,0 +1,13 @@
+[package]
+name = "cslope-project"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "cSlope project models: the app's model of a .cslp file and its conversion to and from the engine's slope definition"
+publish = false
+
+[dependencies]
+cslope-engine = { path = "../cslope-engine" }
+serde.workspace = true
+serde_json.workspace = true
+serde_path_to_error.workspace = true

@@ -17,6 +17,7 @@ doctest = false
 
 [dependencies]
 cslope-engine = { path = "../cslope-engine", features = ["rayon"] }
+cslope-project = { path = "../cslope-project" }
 serde.workspace = true
 serde_json.workspace = true
 # Exact pins (PORTING.md rule 5): pythonize must match pyo3's minor version.

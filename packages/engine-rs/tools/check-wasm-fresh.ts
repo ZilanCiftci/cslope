@@ -29,6 +29,6 @@ const info = JSON.parse(readFileSync(infoPath, "utf8")) as BuildInfo;
 const wasm = join(dir, "cslope_wasm_bg.wasm");
 if (!existsSync(wasm)) fail(`The ${flavour} build has no cslope_wasm_bg.wasm`);
 if (fileSha256(wasm) !== info.wasmSha256) fail(`cslope_wasm_bg.wasm is not the file BUILD-INFO.json records`);
-const now = sourceHash();
+const now = sourceHash(flavour === "testing" ? "testing" : "product");
 if (now !== info.sourceHash) fail(`The engine sources changed since the ${flavour} build (source hash ${now.slice(0, 12)}, built from ${info.sourceHash.slice(0, 12)})`);
 console.log(`The ${flavour} build is fresh (source hash ${now.slice(0, 12)}, ${info.bytes} bytes).`);

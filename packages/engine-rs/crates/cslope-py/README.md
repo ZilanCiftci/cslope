@@ -143,8 +143,21 @@ p = project.read("slope.cslp")
 for m in p.models:
     print(m.id, m.name, m.min_fos)          # None without a saved result
 model = p.active_model.data                 # the model's dict, as model.json holds it
-result = cslope.analyse(model, model["options"])
+definition = cslope.model_to_definition(model)   # the engine's definition, as the app makes it
+result = cslope.analyse(definition, model["options"])
 ```
+
+The model's dict is the app's shape, not the engine's: `model_to_definition`
+converts it as the app does before a run (the port of the app's
+`buildModelSpaceSlopeDTO` in the crate `cslope-project`, held to the app's
+by a golden corpus), in the model's own orientation. From the command line,
+`cslope export site.cslp [--model NAME | --all] [-o PATH]` writes a model as
+an analysis document (`{"format": "cslope-analysis", ...}`) with its
+options, which `cslope validate` and `cslope analyse` take. It reads
+projects of the current schema version only: a file saved by an earlier
+cSlope is refused (open it in the app and save it; the app migrates it).
+The `inputHash` of a saved result is over the definition in canonical
+orientation (`to_canonical`), not over the exported one.
 
 `read(path)` gives a `Project`: `manifest`, `version` (the project schema
 version), `active_model_id`, `units`, `models` (each a `Model` with `id`,

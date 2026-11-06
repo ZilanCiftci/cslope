@@ -2,6 +2,7 @@
 
     cslope analyse slope.json [--json] [--threads N]
     cslope validate slope.json
+    cslope export site.cslp [--model NAME | --all] [-o PATH]
     cslope schema [name]
     cslope info
 
@@ -155,6 +156,101 @@ def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     return EXIT_OK
 
 
+#: The project schema version ``cslope export`` reads (the app's
+#: PROJECT_FILE_VERSION): an older project is migrated by the app on open.
+PROJECT_SCHEMA_VERSION = 3
+
+
+def export_document(model: Dict[str, Any]) -> Dict[str, Any]:
+    """The analysis document of a model of a project file (its
+    ``model.json`` as a dict): the engine's definition as the app makes it,
+    in the model's own orientation, and the model's options as the app runs
+    them (absent: the app's defaults, which ``analyse`` takes anyway).
+
+    The project's ``inputHash`` (docs/file-format.md, section 5) is the hash
+    of the definition in canonical orientation (sliding towards +x), so for
+    a model facing left it is not the hash of this document's definition;
+    ``cslope.to_canonical`` turns it."""
+    import cslope
+
+    from .build import DOCUMENT_FORMAT, DOCUMENT_FORMAT_VERSION
+
+    doc: Dict[str, Any] = {
+        "format": DOCUMENT_FORMAT,
+        "formatVersion": DOCUMENT_FORMAT_VERSION,
+        "definition": cslope.model_to_definition(model),
+    }
+    if isinstance(model.get("options"), dict):
+        doc["options"] = model["options"]
+    return doc
+
+
+def _open_project(path: str) -> Any:
+    from . import project
+
+    try:
+        p = project.read(path)
+    except OSError as e:
+        raise _Invalid([{"path": "", "message": "Cannot read {}: {}".format(path, e.strerror or e)}]) from None
+    except ValueError as e:
+        raise _Invalid([{"path": "", "message": "{}: {}".format(path, e)}]) from None
+    again = "open it in the cSlope app and save it, then export the saved file"
+    if p.layout != "cslp":
+        p.close()
+        raise _Invalid([{"path": "", "message": "{} is a project file of an earlier cSlope version; {}.".format(path, again)}])
+    if p.version < PROJECT_SCHEMA_VERSION:
+        p.close()
+        raise _Invalid(
+            [{"path": "", "message": "{} was saved by an earlier cSlope (project schema version {}); {}.".format(path, p.version, again)}]
+        )
+    if p.version > PROJECT_SCHEMA_VERSION:
+        p.close()
+        raise _Invalid(
+            [{"path": "", "message": "{} was saved by a newer cSlope (project schema version {}); update cslope to export it.".format(path, p.version)}]
+        )
+    return p
+
+
+def _cmd_export(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
+    from .build import dumps
+
+    with _open_project(args.project) as p:
+        if args.all:
+            models = list(p.models)
+        elif args.model is not None:
+            models = [m for m in p.models if m.name == args.model] or [m for m in p.models if m.id == args.model]
+            if not models:
+                names = ", ".join(repr(m.name) for m in p.models)
+                raise _Invalid([{"path": "", "message": "No model named {!r} in {} (its models: {}).".format(args.model, args.project, names)}])
+            if len(models) > 1:
+                raise _Invalid(
+                    [{"path": "", "message": "{} models are named {!r}; give the id instead ({}).".format(len(models), args.model, ", ".join(m.id for m in models))}]
+                )
+        else:
+            models = [p.active_model]
+        docs = []
+        for m in models:
+            try:
+                docs.append((m, export_document(m.data)))
+            except ValueError as e:
+                raise _Invalid([{"path": "", "message": "Model {!r}: {}".format(m.name, e)}]) from None
+    if args.all and args.output:
+        os.makedirs(args.output, exist_ok=True)
+        for m, doc in docs:
+            target = os.path.join(args.output, m.id + ".json")
+            with open(target, "w", encoding="utf-8", newline="\n") as f:
+                f.write(dumps(doc))
+            out.write("{}\t{}\n".format(target, m.name))
+        return EXIT_OK
+    text = dumps(docs[0][1]) if not args.all else json.dumps([d for _, d in docs], ensure_ascii=False) + "\n"
+    if args.output:
+        with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+    else:
+        out.write(text)
+    return EXIT_OK
+
+
 def _cmd_schema(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
@@ -195,6 +291,19 @@ def _parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate", help="check a document and list its issues")
     v.add_argument("document", help="an analysis document (JSON)")
     v.set_defaults(run=_cmd_validate)
+    e = sub.add_parser(
+        "export",
+        help="write a model of a project file (.cslp) as an analysis document",
+        description="Write a model of a project file (.cslp) as an analysis document: the engine's definition "
+        "as the app makes it, in the model's own orientation, with the model's options. Without --model or "
+        "--all, the active model. A project saved by an earlier cSlope is refused: open it in the app and save it.",
+    )
+    e.add_argument("project", help="a project file (.cslp)")
+    which = e.add_mutually_exclusive_group()
+    which.add_argument("--model", metavar="NAME", help="the model of this name (or id)")
+    which.add_argument("--all", action="store_true", help="every model: a JSON list, or with -o a folder of <model id>.json files")
+    e.add_argument("-o", "--output", metavar="PATH", help="write to this file (with --all: folder) instead of printing")
+    e.set_defaults(run=_cmd_export)
     s = sub.add_parser("schema", help="print a JSON schema (cslope info lists the names)")
     s.add_argument("name", nargs="?", help="the schema's name (default: analysis-document)")
     s.set_defaults(run=_cmd_schema)

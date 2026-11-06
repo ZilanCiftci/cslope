@@ -112,7 +112,7 @@ function build(flavour: Flavour, wasmBindgen: string): BuildInfo {
     flavour,
     rustc: run("rustc", ["-V"]).trim(),
     wasmBindgen,
-    sourceHash: sourceHash(),
+    sourceHash: sourceHash(flavour),
     wasmSha256: fileSha256(wasm),
     bytes: bytes.length,
     brotliBytes: brotliCompressSync(bytes, { params: { [zlib.BROTLI_PARAM_QUALITY]: 11 } }).length,

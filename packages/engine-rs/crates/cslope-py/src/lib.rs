@@ -310,6 +310,20 @@ fn default_options<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
     to_py(py, &public_default_options())
 }
 
+/// The engine's definition of an app model (a ``model.json`` of a
+/// ``.cslp`` file, as a dict), in the model's own orientation: the app's
+/// conversion (``buildModelSpaceSlopeDTO``), ported to Rust in the crate
+/// cslope-project.
+#[pyfunction]
+fn model_to_definition<'py>(
+    py: Python<'py>,
+    model: &Bound<'py, PyAny>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let value: serde_json::Value = from_py(model, "model")?;
+    let model = cslope_project::ModelEntry::from_json(value).map_err(PyValueError::new_err)?;
+    to_py(py, &cslope_project::model_to_definition(&model))
+}
+
 #[pymodule]
 #[pyo3(name = "_native")]
 fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -335,5 +349,6 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(swedish_partial_factors, m)?)?;
     m.add_function(wrap_pyfunction!(schema, m)?)?;
     m.add_function(wrap_pyfunction!(default_options, m)?)?;
+    m.add_function(wrap_pyfunction!(model_to_definition, m)?)?;
     Ok(())
 }
