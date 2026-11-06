@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
+import { ModalFrame } from "../../components/ui/ModalFrame";
 import type { ProjectInfo } from "../../store/app-store";
 import { parseDecimalText } from "../../utils/decimal";
 
@@ -98,234 +99,101 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
     onSave(patch);
   };
 
-  // Escape acts as Cancel.  Captured on the window so the canvas and other
-  // document-level shortcuts underneath the modal do not also react to it.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
+  const idBase = useId();
+  const fieldId = (key: ProjectInfoKey) => `${idBase}-${key}`;
+
+  /** A labeled field; a value that differs between the models shows the placeholder "Mixed values". */
+  const field = (
+    label: string,
+    key: ProjectInfoKey,
+    opts: { wide?: boolean; multiline?: boolean; decimal?: boolean } = {},
+  ) => {
+    const common = {
+      id: fieldId(key),
+      value: info[key],
+      placeholder: mixedFields.has(key) ? "Mixed values" : "",
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [onClose]);
-
-  const inputClassName =
-    "w-full";
-
-  const fieldBorder = (field: ProjectInfoKey) => {
-    const isMixedUntouched =
-      mixedFields.has(field) && !touchedFields.has(field);
-    return isMixedUntouched
-      ? {
-          border: "1px dashed var(--color-vsc-accent)",
-          background:
-            "color-mix(in srgb, var(--color-vsc-field-bg) 90%, var(--color-vsc-accent) 10%)",
-        }
-      : undefined;
+    const control: ReactNode = opts.multiline ? (
+      <textarea
+        {...common}
+        rows={3}
+        onChange={(e) => handleChange(key, e.target.value)}
+        className="w-full resize-none"
+      />
+    ) : (
+      <input
+        {...common}
+        type="text"
+        inputMode={opts.decimal ? "decimal" : undefined}
+        onChange={(e) => handleChange(key, e.target.value)}
+        className="w-full"
+      />
+    );
+    return (
+      <div className={opts.wide ? "col-span-2" : undefined}>
+        <label
+          htmlFor={fieldId(key)}
+          className="block text-[11px] mb-1"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          {label}
+        </label>
+        {control}
+      </div>
+    );
   };
 
-  const fieldLabel = (label: string, field: ProjectInfoKey) => (
-    <label className="block text-xs font-medium mb-1 opacity-70">
-      {label}
-      {mixedFields.has(field) && !touchedFields.has(field) ? " (mixed)" : ""}
-    </label>
-  );
-
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Model properties"
-        className="w-[480px] rounded-lg shadow-2xl flex flex-col max-h-[90vh]"
-        style={{
-          background: "var(--color-vsc-bg)",
-          border: "1px solid var(--color-vsc-border)",
-        }}
-      >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-vsc-border)]">
-          <div>
-            <h3 className="font-semibold text-sm">Model properties</h3>
-            {multiEdit ? (
-              <p className="text-[11px] opacity-65 mt-0.5">
-                Editing {initialInfos.length} models
-              </p>
-            ) : null}
-          </div>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            title="Close (Esc)"
-            className="w-6 h-6 flex items-center justify-center hover:bg-[var(--color-vsc-list-hover)] rounded"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              {fieldLabel("Title", "title")}
-              <input
-                type="text"
-                value={info.title}
-                onChange={(e) => handleChange("title", e.target.value)}
-                placeholder={mixedFields.has("title") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("title")}
-              />
-            </div>
-            <div className="col-span-2">
-              {fieldLabel("Subtitle", "subtitle")}
-              <input
-                type="text"
-                value={info.subtitle}
-                onChange={(e) => handleChange("subtitle", e.target.value)}
-                placeholder={mixedFields.has("subtitle") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("subtitle")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Client", "client")}
-              <input
-                type="text"
-                value={info.client}
-                onChange={(e) => handleChange("client", e.target.value)}
-                placeholder={mixedFields.has("client") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("client")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Project no.", "projectNumber")}
-              <input
-                type="text"
-                value={info.projectNumber}
-                onChange={(e) => handleChange("projectNumber", e.target.value)}
-                placeholder={
-                  mixedFields.has("projectNumber") ? "Mixed values" : ""
-                }
-                className={inputClassName}
-                style={fieldBorder("projectNumber")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Revision", "revision")}
-              <input
-                type="text"
-                value={info.revision}
-                onChange={(e) => handleChange("revision", e.target.value)}
-                placeholder={mixedFields.has("revision") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("revision")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Date", "date")}
-              <input
-                type="text"
-                value={info.date}
-                onChange={(e) => handleChange("date", e.target.value)}
-                placeholder={mixedFields.has("date") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("date")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Author", "author")}
-              <input
-                type="text"
-                value={info.author}
-                onChange={(e) => handleChange("author", e.target.value)}
-                placeholder={mixedFields.has("author") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("author")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Checker", "checker")}
-              <input
-                type="text"
-                value={info.checker}
-                onChange={(e) => handleChange("checker", e.target.value)}
-                placeholder={mixedFields.has("checker") ? "Mixed values" : ""}
-                className={inputClassName}
-                style={fieldBorder("checker")}
-              />
-            </div>
-            <div className="col-span-2">
-              {fieldLabel("Description / Notes", "description")}
-              <textarea
-                value={info.description}
-                onChange={(e) => handleChange("description", e.target.value)}
-                rows={3}
-                placeholder={
-                  mixedFields.has("description") ? "Mixed values" : ""
-                }
-                className={`${inputClassName} resize-none`}
-                style={fieldBorder("description")}
-              />
-            </div>
-
-            <div>
-              {fieldLabel("Canvas width (m)", "canvasWidth")}
-              <input
-                type="text"
-                inputMode="decimal"
-                value={info.canvasWidth}
-                onChange={(e) => handleChange("canvasWidth", e.target.value)}
-                placeholder={
-                  mixedFields.has("canvasWidth") ? "Mixed values" : ""
-                }
-                className={inputClassName}
-                style={fieldBorder("canvasWidth")}
-              />
-            </div>
-            <div>
-              {fieldLabel("Canvas height (m)", "canvasHeight")}
-              <input
-                type="text"
-                inputMode="decimal"
-                value={info.canvasHeight}
-                onChange={(e) => handleChange("canvasHeight", e.target.value)}
-                placeholder={
-                  mixedFields.has("canvasHeight") ? "Mixed values" : ""
-                }
-                className={inputClassName}
-                style={fieldBorder("canvasHeight")}
-              />
-            </div>
-          </div>
-          {importNotes && importNotes.length > 0 && (
-            <section aria-label="Import notes" data-testid="import-notes">
-              <div className="text-xs font-medium mb-1 opacity-70">Import notes</div>
-              <ul className="text-[11px] list-disc pl-4 space-y-0.5 max-h-40 overflow-y-auto">
-                {importNotes.map((n, i) => (
-                  <li key={i}>{n}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-
-        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--color-vsc-border)] bg-[var(--color-vsc-panel)] rounded-b-lg">
-          <button
-            onClick={onClose}
-            className="btn min-w-[80px]"
-          >
+    <ModalFrame
+      title="Model properties"
+      description={
+        multiEdit
+          ? `Editing ${initialInfos.length} models: a field you change is set in all of them.`
+          : "The model's title block, shown by text annotations (#Title, #Client, …) and in the PDF report."
+      }
+      onClose={onClose}
+      widthClassName="w-[480px]"
+      buttons={
+        <>
+          <button type="button" onClick={onClose} className="btn">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            className="btn btn-primary min-w-[80px]"
-          >
+          <button type="button" onClick={handleSave} className="btn btn-primary">
             Save changes
           </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+          {field("Title", "title", { wide: true })}
+          {field("Subtitle", "subtitle", { wide: true })}
+          {field("Client", "client")}
+          {field("Project no.", "projectNumber")}
+          {field("Revision", "revision")}
+          {field("Date", "date")}
+          {field("Author", "author")}
+          {field("Checker", "checker")}
+          {field("Description", "description", { wide: true, multiline: true })}
+          {field("Canvas width (m)", "canvasWidth", { decimal: true })}
+          {field("Canvas height (m)", "canvasHeight", { decimal: true })}
         </div>
+        {importNotes && importNotes.length > 0 && (
+          <section aria-label="Import notes" data-testid="import-notes">
+            <h4
+              className="text-[10px] font-bold uppercase tracking-[0.08em] mb-1"
+              style={{ color: "var(--color-vsc-text-muted)" }}
+            >
+              Import notes
+            </h4>
+            <ul className="text-[11px] list-disc pl-4 flex flex-col gap-0.5 max-h-40 overflow-y-auto">
+              {importNotes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
-    </div>
+    </ModalFrame>
   );
 }

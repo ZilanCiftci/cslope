@@ -19,14 +19,19 @@ export class ErrorBoundary extends Component<{ children: ReactNode }, { error: E
   render() {
     if (!this.state.error) return this.props.children;
     return (
-      <div role="alert" style={{ padding: 32, fontFamily: "system-ui, sans-serif", maxWidth: 640 }}>
-        <h1 style={{ fontSize: 18, marginBottom: 12 }}>cSlope ran into an error</h1>
-        <p style={{ marginBottom: 12 }}>
+      <div role="alert" className="p-8 max-w-[640px] text-[12px]" style={{ color: "var(--color-vsc-text)" }}>
+        <h1 className="text-[12px] font-semibold mb-2">cSlope ran into an error</h1>
+        <p className="mb-3">
           The window could not be drawn. This can happen with a damaged project file. Reload to start again; files on disk
           are not changed.
         </p>
-        <pre style={{ whiteSpace: "pre-wrap", fontSize: 12, opacity: 0.8, marginBottom: 16 }}>{this.state.error.message}</pre>
-        <button type="button" onClick={() => window.location.reload()}>
+        <pre
+          className="whitespace-pre-wrap text-[11px] mb-4 select-text"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          {this.state.error.message}
+        </pre>
+        <button type="button" className="btn btn-primary min-w-[80px]" onClick={() => window.location.reload()}>
           Reload
         </button>
       </div>
