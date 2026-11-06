@@ -8,12 +8,25 @@
  *
  *   design-review-out/shots/<scene>-<theme>.png      (DPR 2; 1.5 for the -150 scenes)
  *   design-review-out/metrics/<scene>-<theme>.json   (texts, contrast, controls, layout, axe)
- *   design-review-out/index.json                     (every scene, its files and errors)
+ *   design-review-out/index.json                     (every scene, its files, the measured DPR and errors)
  *
  * The page is reloaded before each capture and the app restarted every
  * RESTART_EVERY scenes, so that nothing carries over.
  *
  *   CSLOPE_CAPTURE_NO_SANDBOX=1 xvfb-run -a -s "-screen 0 3000x2000x24" bun packages/desktop/tools/design-review/run.ts
+ *
+ * The 150 % captures (scenes with `also150`) need an app started at that
+ * scale on a 1920 × 1080 screen (1280 × 720 DIP), as on a Windows laptop at
+ * 150 %: the DevTools emulation can't change the scale a window is drawn
+ * at. After the 100 % pass, run.ts therefore runs itself again for them,
+ * in a second app instance under its own virtual screen:
+ *
+ *   DESIGN_REVIEW_SCALE=1.5 xvfb-run -a -s "-screen 0 1920x1080x24" bun packages/desktop/tools/design-review/run.ts
+ *
+ * which can also be run alone (it then reuses the last build).
+ * DESIGN_REVIEW_NO_150=1 leaves the 150 % pass out. Every capture records
+ * the device pixel ratio measured in the page and in the PNG; one that
+ * differs from the pass's scale is an error.
  *
  * DESIGN_REVIEW_ONLY=<prefix>[,<prefix>…] runs the scenes whose id starts with
  * one of them (the index then keeps the other scenes' earlier entries);
@@ -62,6 +75,12 @@ const RESTART_EVERY = 10;
 const SCENE_TIMEOUT_MS = 90_000;
 const THEMES: Theme[] = ["light", "dark"];
 const ONLY = process.env.DESIGN_REVIEW_ONLY?.split(",").map((s) => s.trim()).filter(Boolean);
+/** The scale this pass runs the app at: 2 (the 100 % captures, drawn at 2 for detail) or 1.5 (the -150 captures). */
+const SCALE = Number(process.env.DESIGN_REVIEW_SCALE ?? DPR);
+const PASS_150 = SCALE === 1.5;
+if (SCALE !== DPR && !PASS_150) throw new Error(`DESIGN_REVIEW_SCALE must be ${DPR} or 1.5, not ${process.env.DESIGN_REVIEW_SCALE}`);
+/** The 150 % screen in DIPs: 1920 × 1080 at 150 % (no taskbar under the virtual display). */
+const SCREEN_150 = { width: 1280, height: 720 };
 
 export interface IndexEntry {
   id: string;
@@ -69,7 +88,10 @@ export interface IndexEntry {
   title: string;
   area: string;
   theme: Theme;
+  /** The device pixel ratio measured in the page (the pass's scale when not measured). */
   dpr: number;
+  /** The screenshot's pixels per CSS pixel, measured in the PNG. */
+  pngScale?: number;
   shot: string | null;
   metrics: string | null;
   nativeDialogs: string[];
@@ -182,7 +204,7 @@ class App {
   confirmAnswer = false;
 
   async start() {
-    const { browser, page, proc } = await launchApp(PORT);
+    const { browser, page, proc } = await launchApp(PORT, SCALE);
     this.browser = browser;
     this.page = page;
     this.proc = proc;
@@ -228,7 +250,7 @@ async function boxOf(focus: Target["focus"]): Promise<Box | null> {
 }
 
 async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, theme: Theme, scale150: boolean): Promise<IndexEntry> {
-  const dpr = scale150 ? 1.5 : DPR;
+  const dpr = SCALE;
   const id = scale150 ? `${scene.id}-150` : scene.id;
   const size = scale150 ? MAIN_SIZE_150 : (scene.size ?? MAIN_SIZE);
   const entry: IndexEntry = {
@@ -283,8 +305,8 @@ async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, 
       store: (fn, arg) => store(page, fn, arg),
       window: async (hash, open) => {
         await open();
+        // Kept at the size the app gives it (fitted to its content), at the instance's scale.
         const win = await findWindow(page, hash);
-        await setViewport(win, dpr);
         await win.waitForTimeout(300);
         target = win;
         return win;
@@ -346,6 +368,7 @@ async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, 
       }
     }
     let focus: Box | null = null;
+    let shotCss: { width: number; height: number } | null = null;
     try {
       focus = await boxOf(t.focus);
     } catch (e) {
@@ -361,9 +384,20 @@ async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, 
             })()
           : undefined;
       await target.screenshot({ path: join(OUT_DIR, shotRel), clip, animations: "disabled", caret: "hide" });
+      shotCss = clip ?? view;
     }
     entry.shot = shotRel;
     const metrics = await measure(target, focus);
+    // The scale it was drawn at, measured: in the page and in the PNG (the page can report an
+    // emulated scale that the screenshot isn't drawn at).
+    entry.dpr = metrics.window.dpr;
+    if (shotCss) {
+      const png = readFileSync(join(OUT_DIR, shotRel));
+      entry.pngScale = Math.round((png.readUInt32BE(16) / shotCss.width) * 100) / 100;
+    }
+    for (const [what, v] of [["page", entry.dpr], ["PNG", entry.pngScale]] as const) {
+      if (v !== undefined && Math.abs(v - dpr) > 0.02) entry.errors.push(`device pixel ratio ${v} measured in the ${what}, expected ${dpr}`);
+    }
     writeFileSync(
       join(OUT_DIR, metricsRel),
       JSON.stringify({ id, sceneId: scene.id, title: entry.title, area: scene.area, theme, url: target.url().split("#")[1] ?? "main", nativeDialogs: app.nativeDialogs, ...metrics }, null, 1),
@@ -380,25 +414,64 @@ async function capture(app: App, data: Data, files: Ctx["files"], scene: Scene, 
 
 // ── Main ───────────────────────────────────────────────────────────────
 
+/** The 150 % pass in its own app instance and virtual screen (see the top of this file). */
+function run150() {
+  try {
+    execSync("command -v xvfb-run", { stdio: "ignore", shell: "/bin/sh" });
+  } catch {
+    console.log(
+      "\n  150 % pass skipped: it needs xvfb-run (a 1920 × 1080 virtual screen). Set DESIGN_REVIEW_NO_150=1 to skip it quietly,\n" +
+        '  or run it alone where xvfb-run exists: DESIGN_REVIEW_SCALE=1.5 xvfb-run -a -s "-screen 0 1920x1080x24" bun packages/desktop/tools/design-review/run.ts\n',
+    );
+    return;
+  }
+  console.log("\n  150 % pass: a second app instance at scale 1.5 on a 1920 × 1080 screen\n");
+  execSync(`xvfb-run -a -s "-screen 0 1920x1080x24" bun "${import.meta.filename}"`, {
+    cwd: ROOT,
+    stdio: "inherit",
+    env: { ...process.env, DESIGN_REVIEW_SCALE: "1.5", DESIGN_REVIEW_SKIP_BUILD: "1" },
+  });
+}
+
+/** The 150 % pass only runs on a 1280 × 720 DIP screen at scale 1.5: else its captures show nothing of 150 %. */
+async function check150Screen(page: Page) {
+  const m = await page.evaluate(() => ({ dpr: window.devicePixelRatio, width: screen.width, height: screen.height }));
+  if (m.dpr !== 1.5 || m.width !== SCREEN_150.width || m.height !== SCREEN_150.height) {
+    throw new Error(
+      `The 150 % pass needs scale 1.5 on a ${SCREEN_150.width} × ${SCREEN_150.height} DIP screen (xvfb-run -s "-screen 0 1920x1080x24"); ` +
+        `the page reports ${m.dpr} on ${m.width} × ${m.height}`,
+    );
+  }
+}
+
 async function main() {
   for (const d of ["shots", "metrics", "errors"]) mkdirSync(join(OUT_DIR, d), { recursive: true });
-  const selected = ONLY ? SCENES.filter((s) => ONLY.some((p) => s.id.startsWith(p))) : SCENES;
-  console.log(`\n  Design review: ${selected.length} scenes × ${THEMES.length} themes\n  Output → ${OUT_DIR}\n`);
+  const matching = ONLY ? SCENES.filter((s) => ONLY.some((p) => s.id.startsWith(p))) : SCENES;
+  const selected = PASS_150 ? matching.filter((s) => s.also150) : matching;
+  const pass = PASS_150 ? "150 % pass" : "Design review";
+  console.log(`\n  ${pass}: ${selected.length} scenes × ${THEMES.length} themes\n  Output → ${OUT_DIR}\n`);
 
-  if (!process.env.DESIGN_REVIEW_SKIP_BUILD) {
+  // The 150 % pass uses the build the 100 % pass made.
+  const skipBuild = PASS_150 || !!process.env.DESIGN_REVIEW_SKIP_BUILD;
+  if (!skipBuild) {
     console.log("  Building app (VITE_CAPTURE_MODE=1)…");
     execSync("bunx vite build", { cwd: DESKTOP_DIR, stdio: "inherit", env: { ...process.env, VITE_CAPTURE_MODE: "1" } });
   } else if (!existsSync(join(DESKTOP_DIR, "dist", "index.html"))) {
-    throw new Error("DESIGN_REVIEW_SKIP_BUILD is set but there is no build in packages/desktop/dist");
+    throw new Error("No build in packages/desktop/dist (DESIGN_REVIEW_SKIP_BUILD or the 150 % pass needs one)");
   }
   const { data, files } = await prepareData();
 
   const indexPath = join(OUT_DIR, "index.json");
-  const previous: IndexEntry[] = ONLY && existsSync(indexPath) ? JSON.parse(readFileSync(indexPath, "utf-8")).scenes : [];
+  // The 150 % pass adds to the index the 100 % pass wrote.
+  const previous: IndexEntry[] = (ONLY || PASS_150) && existsSync(indexPath) ? JSON.parse(readFileSync(indexPath, "utf-8")).scenes : [];
   const entries: IndexEntry[] = [];
   const t0 = Date.now();
   let app = new App();
   await app.start();
+  if (PASS_150) await check150Screen(app.page).catch(async (e) => {
+    await app.stop();
+    throw e;
+  });
   let sinceRestart = 0;
   try {
     for (const scene of selected) {
@@ -408,23 +481,20 @@ async function main() {
         await app.start();
         sinceRestart = 0;
       }
-      const variants = scene.also150 ? [false, true] : [false];
-      for (const scale150 of variants) {
-        for (const theme of THEMES) {
-          let entry = await capture(app, data, files, scene, theme, scale150);
-          // A crashed or stuck app: restart and try once more.
-          if (entry.errors.length && !scene.skip && !entry.shot) {
-            await app.stop();
-            app = new App();
-            await app.start();
-            sinceRestart = 0;
-            const retry = await capture(app, data, files, scene, theme, scale150);
-            if (retry.shot || retry.errors.length <= entry.errors.length) entry = retry;
-          }
-          entries.push(entry);
-          const mark = entry.errors.length ? (entry.shot ? "!" : "✗") : "✓";
-          console.log(`  ${mark} ${entry.id}-${theme} (${(entry.ms / 1000).toFixed(1)} s)${entry.errors.length ? `  ${entry.errors.join("; ")}` : ""}`);
+      for (const theme of THEMES) {
+        let entry = await capture(app, data, files, scene, theme, PASS_150);
+        // A crashed or stuck app: restart and try once more.
+        if (entry.errors.length && !scene.skip && !entry.shot) {
+          await app.stop();
+          app = new App();
+          await app.start();
+          sinceRestart = 0;
+          const retry = await capture(app, data, files, scene, theme, PASS_150);
+          if (retry.shot || retry.errors.length <= entry.errors.length) entry = retry;
         }
+        entries.push(entry);
+        const mark = entry.errors.length ? (entry.shot ? "!" : "✗") : "✓";
+        console.log(`  ${mark} ${entry.id}-${theme} (${(entry.ms / 1000).toFixed(1)} s)${entry.errors.length ? `  ${entry.errors.join("; ")}` : ""}`);
       }
       sinceRestart++;
       if (scene.restartAfter) sinceRestart = RESTART_EVERY;
@@ -452,6 +522,7 @@ async function main() {
   );
   const failed = entries.filter((e) => !e.shot);
   console.log(`\n  Done in ${seconds} s: ${entries.length - failed.length} shots, ${failed.length} not captured.\n`);
+  if (!PASS_150 && !process.env.DESIGN_REVIEW_NO_150 && selected.some((s) => s.also150)) run150();
 }
 
 main().catch((err) => {
