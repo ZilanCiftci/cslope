@@ -2,6 +2,7 @@
  * SlopeCanvas — Interactive HTML5 Canvas for editing slope geometry.
  */
 
+import { AssignMaterialHint } from "./AssignMaterialHint";
 import type React from "react";
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import {
@@ -1023,7 +1024,7 @@ export function ResultCanvas() {
               width: zoomRect.width,
               height: zoomRect.height,
               border: "1px dashed var(--color-vsc-accent)",
-              background: "rgba(0,120,212,0.12)",
+              background: "var(--color-vsc-selected-bg)",
               zIndex: 35,
             }}
           />
@@ -1039,35 +1040,11 @@ export function ResultCanvas() {
         )}
 
         {assigningMaterialId && (
-          <div
-            className="absolute top-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-md text-[12px] font-medium select-none"
-            style={{
-              background: "var(--color-vsc-accent)",
-              color: "var(--color-canvas-tooltip-text)",
-              boxShadow: "0 4px 12px var(--color-canvas-tooltip-shadow)",
-            }}
-          >
-            <span
-              className="w-3 h-3 rounded-sm inline-block"
-              style={{
-                background:
-                  materials.find((m) => m.id === assigningMaterialId)?.color ??
-                  "#888",
-                border: "1px solid rgba(255,255,255,0.4)",
-              }}
-            />
-            Click a region to assign{" "}
-            <strong>
-              {materials.find((m) => m.id === assigningMaterialId)?.name ?? "?"}
-            </strong>
-            <button
-              onClick={() => setAssigningMaterial(null)}
-              className="ml-1 px-1.5 py-0.5 rounded text-[11px] cursor-pointer"
-              style={{ background: "rgba(255,255,255,0.2)" }}
-            >
-              Cancel
-            </button>
-          </div>
+          <AssignMaterialHint
+            name={materials.find((m) => m.id === assigningMaterialId)?.name}
+            color={materials.find((m) => m.id === assigningMaterialId)?.color}
+            onCancel={() => setAssigningMaterial(null)}
+          />
         )}
         <SnapMarkerView marker={snapMarker} />
         <ContextMenuOverlay menu={contextMenu} />

@@ -120,6 +120,23 @@ describe("Save as anonymized in a browser", () => {
     expect(Math.min(...copy.models[0].coordinates.map((c) => c[1]))).toBe(0);
   });
 
+  it("chooses what happens to free text with toggle buttons and lists only what is done", async () => {
+    // Free text is replaced by default.
+    renderMenu();
+    await userEvent.click(screen.getByRole("button", { name: /Save as anonymized/ }));
+    const dialog = screen.getByRole("dialog", { name: "Save as anonymized" });
+    const replace = within(dialog).getByRole("button", { name: "Replace it with “Text”" });
+    const remove = within(dialog).getByRole("button", { name: "Delete the text annotations" });
+    expect(replace).toHaveAttribute("aria-pressed", "true");
+    expect(remove).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(remove);
+    expect(remove).toHaveAttribute("aria-pressed", "true");
+    expect(replace).toHaveAttribute("aria-pressed", "false");
+    // Options that change nothing in this project have no line.
+    const summary = within(dialog).getByTestId("anonymize-summary").textContent ?? "";
+    expect(summary).not.toMatch(/\b0 /);
+  });
+
   it("saves nothing when the name is cancelled, and closes on Cancel", async () => {
     const prompt = vi.spyOn(window, "prompt").mockReturnValue(null);
     renderMenu();

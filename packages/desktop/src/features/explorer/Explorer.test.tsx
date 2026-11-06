@@ -361,10 +361,7 @@ describe("ProjectInfoDialog", () => {
     ...patch,
   });
 
-  const input = (label: string) =>
-    screen.getByText(label, { exact: false }).parentElement!.querySelector(
-      "input, textarea",
-    ) as HTMLInputElement;
+  const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 
   it("saves only the fields that were changed, numbers as numbers", async () => {
     const onSave = vi.fn();
@@ -373,7 +370,7 @@ describe("ProjectInfoDialog", () => {
     await userEvent.type(input("Author"), "ZC");
     await userEvent.clear(input("Canvas width (m)"));
     await userEvent.type(input("Canvas width (m)"), "1500");
-    await userEvent.type(input("Description / Notes"), "Notes");
+    await userEvent.type(input("Description"), "Notes");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({
       author: "ZC",
@@ -391,14 +388,12 @@ describe("ProjectInfoDialog", () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getByText("Editing 2 models")).toBeInTheDocument();
-    expect(screen.getByText("Client (mixed)")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Model properties" })).toHaveAccessibleDescription(/^Editing 2 models/);
     expect(input("Client")).toHaveValue("");
     expect(input("Client")).toHaveAttribute("placeholder", "Mixed values");
     // Shared values are shown.
     expect(input("Project no.")).toHaveValue("P1");
     await userEvent.type(input("Client"), "C");
-    expect(screen.queryByText("Client (mixed)")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({ client: "C" });
   });

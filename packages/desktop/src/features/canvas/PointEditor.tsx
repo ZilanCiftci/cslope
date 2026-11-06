@@ -48,8 +48,8 @@ export function PointEditor({ editor, onClose }: { editor: PointEditorState; onC
 
   const field = (label: string, value: string, set: (v: string) => void, focus = false) => (
     <label className="flex items-center gap-1.5">
-      <span className="w-3 text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
-        {label}
+      <span className="w-9 text-[11px]" style={{ color: "var(--color-vsc-text)" }}>
+        {label} (m)
       </span>
       <input
         autoFocus={focus}
@@ -70,13 +70,13 @@ export function PointEditor({ editor, onClose }: { editor: PointEditorState; onC
       role="dialog"
       aria-label="Edit point"
       data-testid="point-editor"
-      className="absolute z-50 p-2 rounded-md shadow-xl flex flex-col gap-1.5"
+      className="absolute z-50 p-2 rounded-xs flex flex-col gap-1.5"
       style={{
         left: editor.x + 12,
         top: editor.y + 12,
         background: "var(--color-vsc-input-bg)",
         border: "1px solid var(--color-vsc-border)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        boxShadow: "var(--color-vsc-shadow-float)",
         color: "var(--color-vsc-text)",
       }}
       onPointerDown={(e) => e.stopPropagation()}

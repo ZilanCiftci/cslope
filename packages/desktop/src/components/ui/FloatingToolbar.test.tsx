@@ -58,8 +58,22 @@ describe("FloatingToolbar", () => {
 
   it("does not switch to results without a result", () => {
     const { props } = setup({ hasResult: false });
+    expect(screen.getByTitle("Results")).toBeDisabled();
     click(screen.getByTitle("Results"));
     expect(props.setMode).not.toHaveBeenCalled();
+  });
+
+  it("keeps Results pressed and enabled in the result view of a failed run", () => {
+    setup({ mode: "result", hasResult: false });
+    const results = screen.getByTitle("Results");
+    expect(results).toBeEnabled();
+    expect(results).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("names the zoom select and the run menu button", () => {
+    setup();
+    expect(screen.getByRole("combobox", { name: "Zoom" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More run options" })).toBeInTheDocument();
   });
 
   it("runs, and cancels while running", () => {
@@ -78,7 +92,7 @@ describe("FloatingToolbar", () => {
     expect(screen.getByTitle("More run options")).toBeDisabled();
   });
 
-  it("offers Run all, Clear results and Clear all results in the run menu", () => {
+  it("offers Run all and clearing the results of this model or all models in the run menu", () => {
     const { props } = setup();
     click(screen.getByTitle("More run options"));
     click(screen.getByRole("button", { name: "Run all" }));
@@ -87,26 +101,26 @@ describe("FloatingToolbar", () => {
     expect(screen.queryByRole("button", { name: "Run all" })).toBeNull();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Clear results" }));
+    click(screen.getByRole("button", { name: "Clear results of this model" }));
     expect(props.onReset).toHaveBeenCalled();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Clear all results" }));
+    click(screen.getByRole("button", { name: "Clear results of all models" }));
     expect(props.onResetAll).toHaveBeenCalled();
   });
 
   it("disables Reset without a result and closes the menu on an outside click", () => {
     setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    expect(screen.getByRole("button", { name: "Clear results" }).style.pointerEvents).toBe("none");
+    expect(screen.getByRole("button", { name: "Clear results of this model" }).style.pointerEvents).toBe("none");
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("button", { name: "Clear all results" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Clear results of all models" })).toBeNull();
   });
 
   it("does not reset from the keyboard while Reset is disabled", async () => {
     const { props } = setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    const reset = screen.getByRole("button", { name: "Clear results" });
+    const reset = screen.getByRole("button", { name: "Clear results of this model" });
     expect(reset).toBeDisabled();
     reset.focus();
     await userEvent.keyboard("{Enter}");
@@ -145,7 +159,7 @@ describe("FloatingToolbar", () => {
   it("disables the viewport controls without a canvas", () => {
     setup({ canvasToolbar: null });
     expect(screen.getByRole("combobox")).toBeDisabled();
-    expect((screen.getByTitle("Zoom in") as HTMLElement).style.pointerEvents).toBe("none");
+    expect(screen.getByTitle("Zoom in")).toBeDisabled();
   });
 
   it("fades after 3 s without hover and comes back on hover", () => {
