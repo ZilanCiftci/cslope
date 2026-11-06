@@ -14,6 +14,7 @@ async function confirmReplace(question: string): Promise<boolean> {
 }
 import { isElectron } from "../../../utils/is-electron";
 import { PopupPanel } from "../PopupPanel";
+import { AboutDialog } from "../../AboutDialog";
 import {
   AboutIcon,
   BenchmarksIcon,
@@ -57,6 +58,7 @@ interface Props {
 
 export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   // Replace the project with a set of models, as a new unsaved project.
   const loadModels = async (what: string, load: () => void) => {
@@ -73,14 +75,6 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
   const handleLoadExamples = () => loadModels("the example models", () => useAppStore.getState().loadExamples());
   const handleLoadBenchmarks = () =>
     loadModels("the verification problems", () => useAppStore.getState().loadBenchmarks());
-
-  const handleAbout = () => {
-    if (isElectron) {
-      window.cslope.menuAbout();
-    } else {
-      window.alert("cSlope — Slope stability analysis\nhttps://cslope.com");
-    }
-  };
 
   const handleDocs = () => {
     openDocumentation();
@@ -141,13 +135,15 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<AboutIcon {...SMALL_ICON} />}
                   label="About"
-                  onClick={handleAbout}
+                  onClick={() => setAboutOpen(true)}
                 />
               </RibbonStack>
             </RibbonGroup>
           </div>,
           panelHost,
         )}
+
+      {aboutOpen && <AboutDialog onClose={() => setAboutOpen(false)} />}
 
       {shortcutsOpen && (
         <PopupPanel

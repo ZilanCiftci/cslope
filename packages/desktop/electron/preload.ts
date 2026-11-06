@@ -94,7 +94,8 @@ contextBridge.exposeInMainWorld("cslope", {
   fitDialogHeight: (height: number) => ipcRenderer.send("window:fitDialogHeight", height),
   // Menu actions
   menuNew: () => ipcRenderer.send("menu:new"),
-  menuAbout: () => ipcRenderer.send("menu:about"),
+  // Help › About's links: "licenses" or "source" (main.ts fixes where they lead).
+  openAboutLink: (target: string) => ipcRenderer.send("help:openAboutLink", target),
   // The documentation, or one of its pages at a heading ("analysis#method").
   openDocumentation: (page?: string) => ipcRenderer.send("help:openDocumentation", page),
   toggleDevTools: () => ipcRenderer.send("dev:toggle-devtools"),
