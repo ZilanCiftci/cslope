@@ -145,7 +145,7 @@ export function sensitivityCsv(
 ): string {
   return toCsv(
     [
-      [label, "FOS", "Note"],
+      [label, "F", "Note"],
       ...points.map((p) => [
         p.value,
         p.fos == null ? null : Math.round(p.fos * 10000) / 10000,

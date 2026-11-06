@@ -78,21 +78,21 @@ export function reliabilityCsv(
   const r4 = (v: number) => (Number.isFinite(v) ? Math.round(v * 10000) / 10000 : null);
   const rows: (string | number | null)[][] = [
     ["Method", result.method === "taylor" ? "Taylor series" : "Monte Carlo"],
-    ["FOS (mean values)", r4(result.fos)],
-    ["Mean FOS", r4(result.meanFOS)],
-    ["σ FOS", r4(result.sdFOS)],
+    ["F (mean values)", r4(result.fos)],
+    ["Mean F", r4(result.meanFOS)],
+    ["σ F", r4(result.sdFOS)],
     ["COV", r4(result.cov)],
     ["β (lognormal)", r4(result.betaLognormal)],
     ["Pf (lognormal)", r4(result.pfLognormal)],
     ["β (normal)", r4(result.betaNormal)],
   ];
-  if (result.pf != null) rows.push(["Pf (share of samples with FOS < 1)", r4(result.pf)]);
+  if (result.pf != null) rows.push(["Pf (share of samples with F < 1)", r4(result.pf)]);
   rows.push([]);
   if (result.terms) {
-    rows.push(["Variable", "Mean", "σ", "FOS (mean + σ)", "FOS (mean − σ)"]);
+    rows.push(["Variable", "Mean", "σ", "F (mean + σ)", "F (mean − σ)"]);
     for (const t of result.terms) rows.push([labels[t.variable] ?? "", t.mean, t.sd, r4(t.fPlus), r4(t.fMinus)]);
   } else if (result.samples) {
-    rows.push(["Sample", "FOS"]);
+    rows.push(["Sample", "F"]);
     result.samples.forEach((f, i) => rows.push([i + 1, r4(f)]));
   }
   return toCsv(rows, decimalComma);
