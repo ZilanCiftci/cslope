@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
-import { HelpButton } from "../../components/ui/HelpButton";
 import {
   SpreadsheetNumberInput,
-  SpreadsheetRemoveButton,
+  RowRemoveButton,
+  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
@@ -13,6 +13,7 @@ import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpre
 import { useAppStore } from "../../store/app-store";
 import type { LineLoadRow, ParameterDef, UdlRow } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
+import { DialogHeader } from "./DialogHeader";
 
 interface LoadsStatePayload {
   udls: UdlRow[];
@@ -219,12 +220,12 @@ export function LineLoadsDialogApp() {
       },
     },
     {
-      header: null,
+      header: <RemoveColumnHeader />,
       widthClassName: "w-8",
-      cellClassName: "py-1 px-2",
+      cellClassName: "px-1",
       align: "right",
       renderCell: (row, i) => (
-        <SpreadsheetRemoveButton
+        <RowRemoveButton
           ariaLabel={`Remove line load ${i + 1}`}
           onClick={(e) => {
             e.stopPropagation();
@@ -243,10 +244,11 @@ export function LineLoadsDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2 flex items-center gap-1.5">
-        <h2 className="text-[12px] font-semibold">Line loads</h2>
-        <HelpButton topic="Line loads" page="loads#line-loads" />
-      </div>
+      <DialogHeader
+        title="Line loads"
+        description="Concentrated loads per meter of slope at a point on the ground, at any angle."
+        help={{ topic: "Line loads", page: "loads#line-loads" }}
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <SpreadsheetTable
           rows={lineLoads}
@@ -254,11 +256,12 @@ export function LineLoadsDialogApp() {
           getRowKey={(row) => row.id}
           selectedRowIndex={canvasSelection?.object.type === "lineLoad" ? lineLoads.findIndex((l) => l.id === (canvasSelection.object as { id: string }).id) : null}
           onRowClick={(row) => selectCanvasObject({ type: "lineLoad", id: row.id })}
+          emptyText="No line loads."
         />
         <button
           onClick={addLineLoad}
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-accent)" }}
+          style={{ color: "var(--color-vsc-link)" }}
         >
           + Add line load
         </button>

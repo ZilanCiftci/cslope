@@ -9,6 +9,7 @@ import type {
   ModelEntry,
   ModelOrientation,
 } from "../../store/types";
+import { DialogHeader } from "./DialogHeader";
 
 interface AnalysisStatePayload {
   coordinates: [number, number][];
@@ -95,9 +96,10 @@ export function CustomSearchPlanesDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Custom search planes</h2>
-      </div>
+      <DialogHeader
+        title="Custom surfaces"
+        description="Slip surfaces to analyze as given: circles, or polylines through the soil (the ends are extended to the ground)."
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <CustomSearchPlanesSection plain />
       </div>

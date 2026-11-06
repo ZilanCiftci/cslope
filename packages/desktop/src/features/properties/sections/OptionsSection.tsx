@@ -850,7 +850,7 @@ function Sgi3dFields({
               className="flex flex-col gap-0.5"
               title="F2D,överstark,min of the adjacent stretches (eq. 2-4). Blank: infinitely overstrong adjacent stability (eq. 2-3)."
             >
-              <Label>Adjacent F2D (blank: ∞)</Label>
+              <Label>Adjacent F (2D, empty = no limit)</Label>
               <DraftNumberInput
                 min={0}
                 step={0.05}
@@ -863,7 +863,7 @@ function Sgi3dFields({
           </div>
           {materialNames.length > 0 && (
             <fieldset className="flex flex-col gap-0.5" title="Materials left out of the end faces, for example a fissured dry crust. Friction soil never counts.">
-              <Label>Not in the end faces</Label>
+              <Label>Materials excluded from the end faces</Label>
               {materialNames.map((name) => (
                 <label key={name} className="flex items-center gap-1.5">
                   <input
@@ -931,8 +931,12 @@ function FemFields({
         <Label>Run strength reduction (FE)</Label>
       </label>
       <p
-        className="col-span-2 text-[10px]"
-        style={{ color: "var(--color-vsc-warning-text)" }}
+        className="col-span-2 px-2 py-1.5 rounded-xs text-[11px]"
+        style={{
+          background: "color-mix(in srgb, var(--color-vsc-warning) 12%, transparent)",
+          border: "1px solid var(--color-vsc-warning)",
+          color: "var(--color-vsc-text)",
+        }}
         role="note"
         aria-label="Finite elements are experimental"
       >
@@ -1024,8 +1028,7 @@ function FemFields({
         />
       </label>
       <label className="flex flex-col gap-0.5">
-        {/* In a serif italic: the UI font draws ν like a v. */}
-        <Label>Poisson&apos;s ratio <span style={{ fontFamily: "'Times New Roman', Times, serif", fontStyle: "italic", fontSize: "1.15em" }}>ν</span></Label>
+        <Label>Poisson&apos;s ratio ν</Label>
         <DraftNumberInput
           value={settings.poissonsRatio}
           min={0}
@@ -1103,34 +1106,40 @@ function FemFields({
           title="For a cut slope: the ground level before the excavation. The K0 stresses are those under this level, and their out-of-balance force unloads the excavation. Empty: the present ground surface."
         />
       </label>
-      <details className="col-span-2">
-        <summary className="cursor-pointer text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
-          Construction stages
-          {settings.materialStages && Object.keys(settings.materialStages).length ? ` (${Object.keys(settings.materialStages).length} later)` : ""}
-        </summary>
-        <p className="my-1 text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
-          Stage 0 is built first; each later stage is built on the one before, solved at F = 1 (e.g. an embankment in layers). The strength reduction starts from the last stage.
-        </p>
-        <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-          {materialNames.map((name) => (
-            <label key={name} className="flex items-center justify-between gap-1.5">
-              <span className="truncate text-[11px]" title={name}>
-                {name}
-              </span>
-              <DraftNumberInput
-                value={settings.materialStages?.[name] ?? 0}
-                min={0}
-                max={20}
-                step={1}
-                disabled={off}
-                onValueChange={(v) => v >= 0 && v <= 20 && setStage(name, Math.round(v))}
-                aria-label={`Construction stage of ${name}`}
-                className="w-12"
-              />
-            </label>
-          ))}
-        </div>
-      </details>
+      <div className="col-span-2 flex flex-col gap-1">
+        <Label title="Stage 0 is built first; each later stage is built on the one before, solved at F = 1 (e.g. an embankment in layers). The strength reduction starts from the last stage.">
+          Construction stages (0 = built first)
+        </Label>
+        <table className="text-[11px] border-collapse" aria-label="Construction stages">
+          <thead className="sr-only">
+            <tr>
+              <th>Material</th>
+              <th>Stage</th>
+            </tr>
+          </thead>
+          <tbody>
+            {materialNames.map((name) => (
+              <tr key={name}>
+                <td className="py-0.5 pr-3 max-w-0 w-full truncate" title={name}>
+                  {name}
+                </td>
+                <td className="py-0.5">
+                  <DraftNumberInput
+                    value={settings.materialStages?.[name] ?? 0}
+                    min={0}
+                    max={20}
+                    step={1}
+                    disabled={off}
+                    onValueChange={(v) => v >= 0 && v <= 20 && setStage(name, Math.round(v))}
+                    aria-label={`Construction stage of ${name}`}
+                    className="w-12"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <label
         className="flex items-center gap-1.5 self-end"
         title="No tensile effective stress (Rankine cut-off; on by default). Without it, cohesive soil carries tension near the crest and the factor of safety can come out several percent higher."

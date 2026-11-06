@@ -1,7 +1,8 @@
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetRemoveButton,
+  RowRemoveButton,
+  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
@@ -10,6 +11,7 @@ import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
 import type { MaterialBoundaryRow, ParameterDef } from "../../store/types";
 import { resolveParameters } from "../../utils/expression";
+import { DialogHeader, WindowSubheading } from "./DialogHeader";
 
 interface InteriorBoundariesStatePayload {
   coordinates: [number, number][];
@@ -192,9 +194,10 @@ export function InteriorBoundariesDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Interior boundaries</h2>
-      </div>
+      <DialogHeader
+        title="Interior boundaries"
+        description="Lines inside the model that divide it into regions of different materials."
+      />
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         <div className="flex gap-3">
           <div
@@ -218,6 +221,13 @@ export function InteriorBoundariesDialogApp() {
                 </tr>
               </thead>
               <tbody>
+                {materialBoundaries.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-2 py-1.5" style={{ color: "var(--color-vsc-text-muted)" }}>
+                      No interior boundaries.
+                    </td>
+                  </tr>
+                )}
                 {materialBoundaries.map((boundary, idx) => {
                   const isSelected = selectedBoundary?.id === boundary.id;
 
@@ -278,20 +288,11 @@ export function InteriorBoundariesDialogApp() {
           </div>
         </div>
 
-        {selectedBoundary ? (
-          <div
-            className="p-3 rounded space-y-2.5"
-            style={{
-              background: "var(--color-vsc-surface-tint)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
-          >
-            <h4
-              className="text-[10px] font-bold uppercase tracking-[0.1em]"
-              style={{ color: "var(--color-vsc-text-muted)" }}
-            >
+        {selectedBoundary && (
+          <div className="pt-1 space-y-2">
+            <WindowSubheading>
               Boundary {selectedBoundaryIndex + 1} coordinates
-            </h4>
+            </WindowSubheading>
 
             <SpreadsheetTable
               rows={selectedBoundary.coordinates}
@@ -376,13 +377,13 @@ export function InteriorBoundariesDialogApp() {
                     ),
                   },
                   {
-                    header: null,
+                    header: <RemoveColumnHeader />,
                     widthClassName: "w-8",
-                    cellClassName: "py-1 px-2",
+                    cellClassName: "px-1",
                     align: "right",
                     renderCell: (_row, i) =>
                       selectedBoundary.coordinates.length > 2 ? (
-                        <SpreadsheetRemoveButton
+                        <RowRemoveButton
                           ariaLabel={`Remove point ${i + 1}`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -403,21 +404,10 @@ export function InteriorBoundariesDialogApp() {
                 addBoundaryPoint(selectedBoundary.id, [last[0] + 2, last[1]]);
               }}
               className="text-[11px] cursor-pointer hover:underline font-medium"
-              style={{ color: "var(--color-vsc-accent)" }}
+              style={{ color: "var(--color-vsc-link)" }}
             >
               + Add point
             </button>
-          </div>
-        ) : (
-          <div
-            className="text-[11px] p-2 rounded border"
-            style={{
-              color: "var(--color-vsc-text-muted)",
-              borderColor: "var(--color-vsc-border)",
-              background: "var(--color-vsc-surface-tint)",
-            }}
-          >
-            Add a boundary to start editing boundary coordinates.
           </div>
         )}
       </div>

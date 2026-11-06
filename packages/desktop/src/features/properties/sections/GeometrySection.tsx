@@ -2,7 +2,8 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import {
-  SpreadsheetRemoveButton,
+  RowRemoveButton,
+  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../../components/ui/SpreadsheetTable";
@@ -77,13 +78,13 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
       ),
     },
     {
-      header: null,
+      header: <RemoveColumnHeader />,
       widthClassName: "w-8",
-      cellClassName: "py-1 px-2",
+      cellClassName: "px-1",
       align: "right",
       renderCell: (_row, i) =>
         coordinates.length > 3 ? (
-          <SpreadsheetRemoveButton
+          <RowRemoveButton
             ariaLabel={`Remove point ${i + 1}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -109,7 +110,7 @@ export function GeometrySection({ plain = false }: GeometrySectionProps) {
           addCoordinate([last[0] + 5, last[1]]);
         }}
         className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-        style={{ color: "var(--color-vsc-accent)" }}
+        style={{ color: "var(--color-vsc-link)" }}
       >
         + Add point
       </button>
