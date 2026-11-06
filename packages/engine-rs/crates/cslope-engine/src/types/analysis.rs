@@ -1053,4 +1053,9 @@ pub struct AnalysisResult {
     /// the model's own direction (with `bothDirections` too).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_surfaces: Option<Vec<CustomSurfaceResult>>,
+    /// The partial factors the analysis applied (with their basis): the
+    /// strengths were design values and `min_fos` is an over-design factor.
+    /// Absent: characteristic values (and in results of earlier versions).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub partial_factors: Option<PartialFactors>,
 }

@@ -2408,6 +2408,10 @@
           "$ref": "#/$defs/WaterTableValue"
         }
       },
+      "required": [
+        "mode",
+        "value"
+      ],
       "type": "object"
     },
     "WaterTableEntry": {
@@ -2435,7 +2439,7 @@
           ]
         },
         "freeWater": {
-          "description": "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false, the default).",
+          "description": "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false). Without it (and without followBoundary) the line takes waterTable.freeWater, else false.",
           "type": [
             "boolean",
             "null"

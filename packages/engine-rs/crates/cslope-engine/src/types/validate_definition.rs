@@ -87,7 +87,8 @@ pub fn is_document(v: &Value) -> bool {
 /// Validate an analysis document or a bare definition. A document's paths
 /// start at `/definition` and `/options`; a bare definition's at its root,
 /// with `options` (if given) under `/options`. `options` given with a
-/// document replaces the document's own.
+/// document are laid over the document's own, key by key, as `analyse`
+/// takes them.
 pub fn validate(doc_or_definition: &Value, options: Option<&Value>) -> Vec<Issue> {
     validate_with(doc_or_definition, options, &StrictReader)
 }
@@ -147,7 +148,17 @@ pub fn validate_with(
     if is_document(doc_or_definition) {
         let mut doc = doc_or_definition.clone();
         if let (Some(o), Some(opts)) = (doc.as_object_mut(), options) {
-            o.insert("options".into(), opts.clone());
+            // the given options over the document's, key by key, as
+            // `analyse` layers them (a bad key in either is reported)
+            let layered = match (o.get("options"), opts) {
+                (Some(Value::Object(own)), Value::Object(given)) => {
+                    let mut m = own.clone();
+                    m.extend(given.iter().map(|(k, v)| (k.clone(), v.clone())));
+                    Value::Object(m)
+                }
+                _ => opts.clone(),
+            };
+            o.insert("options".into(), layered);
         }
         validate_document(&doc, reader)
     } else {
@@ -780,25 +791,35 @@ type Pt = [f64; 2];
 /// y of a water line at x: linear between its points, level beyond its
 /// ends (as the engine extends it); None without points.
 fn line_y(points: &[Pt], x: f64) -> Option<f64> {
-    let first = points.first()?;
-    let last = points.last()?;
-    if x <= first[0] {
-        return Some(first[1]);
+    // (a line may be drawn either way: its ends are its smallest and
+    // largest x, and each segment is read between its own min and max x)
+    let left = points
+        .iter()
+        .copied()
+        .reduce(|a, b| if b[0] < a[0] { b } else { a })?;
+    let right = points
+        .iter()
+        .copied()
+        .reduce(|a, b| if b[0] > a[0] { b } else { a })?;
+    if x <= left[0] {
+        return Some(left[1]);
     }
-    if x >= last[0] {
-        return Some(last[1]);
+    if x >= right[0] {
+        return Some(right[1]);
     }
     for w in points.windows(2) {
         let ([x0, y0], [x1, y1]) = (w[0], w[1]);
-        if x >= x0 && x <= x1 {
-            return Some(if x1 > x0 {
+        let (lo, hi) = (crate::js::math::min(x0, x1), crate::js::math::max(x0, x1));
+        if x >= lo && x <= hi {
+            return Some(if hi > lo {
                 y0 + (y1 - y0) * (x - x0) / (x1 - x0)
             } else {
+                // a vertical step: the lower end
                 crate::js::math::min(y0, y1)
             });
         }
     }
-    Some(last[1])
+    Some(right[1])
 }
 
 fn in_polygon(p: Pt, ring: &[Pt]) -> bool {
@@ -1091,7 +1112,15 @@ fn model_rules(def: &SlopeDefinition, pre: &str, out: &mut Vec<Issue>) {
                 check_line(points, &format!("{p}/value"), &outside, x_min, x_max, &range, out);
                 main_line = Some(points.clone());
             }
-            (WaterTableMode::Other(_), _) => {}
+            (WaterTableMode::Other(m), _) => out.push(Issue::error(
+                format!("{p}/mode"),
+                "water-table-ignored",
+                if m.is_null() {
+                    "The water table has no mode (\"height\", \"depth\" or \"custom\"): the engine leaves it out.".to_string()
+                } else {
+                    format!("The water table's mode {m} is not \"height\", \"depth\" or \"custom\": the engine leaves it out.")
+                },
+            )),
             _ => out.push(Issue::error(
                 format!("{p}/value"),
                 "water-table-value",

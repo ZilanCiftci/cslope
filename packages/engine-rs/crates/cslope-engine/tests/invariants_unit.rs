@@ -186,6 +186,7 @@ fn a_mirrored_model_finds_the_mirrored_minimum() {
                 fem: None,
                 sgi3d: None,
                 sgi3d_error: None,
+                partial_factors: None,
                 fem_error: None,
                 custom_surfaces: None,
             };

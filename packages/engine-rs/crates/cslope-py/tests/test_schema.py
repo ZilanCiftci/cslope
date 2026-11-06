@@ -135,3 +135,26 @@ def test_schemas():
     assert d["properties"]["format"]["$ref"] == "#/$defs/DocumentFormat"
     with pytest.raises(ValueError):
         cslope.schema("nope")
+
+
+def test_summary_reads_the_design_values_from_the_result():
+    pf = cslope.swedish_partial_factors(3, 1.0, 1.0, 1.3)
+    r = cslope.analyse(examples.clay_crust_with_load(), {"partialFactors": pf, "iterations": 500, "refinedIterations": 0})
+    assert r["partialFactors"]["cu"] == pf["cu"]
+    s = cslope.summarize(r)  # no options
+    assert s["fosLabel"] == "over-design factor"
+    assert s["valueBasis"] == "design"
+    assert "partialFactors" not in cslope.analyse(examples.simple_slope(), {"iterations": 500, "refinedIterations": 0})
+
+
+def test_summary_of_a_document_without_definition_is_an_error():
+    r = cslope.analyse(examples.simple_slope(), {"iterations": 500, "refinedIterations": 0})
+    with pytest.raises(ValueError, match="definition"):
+        cslope.summarize(r, {"format": "cslope-analysis", "formatVersion": 1, "options": {}})
+
+
+def test_validate_layers_options_over_the_documents():
+    d = doc(examples.simple_slope(), {"metod": "Bishop"})
+    issues = cslope.validate(d, {"slices": 30})
+    assert ("/options/metod", "unknown-key") in codes(issues)
+    assert ("/options/slices", "type") not in codes(issues)

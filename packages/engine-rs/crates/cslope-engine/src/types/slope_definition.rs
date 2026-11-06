@@ -219,11 +219,13 @@ pub struct WaterTableDefinition {
         default = "WaterTableMode::missing",
         skip_serializing_if = "WaterTableMode::is_missing"
     )]
+    #[schemars(extend("x-required" = true))]
     pub mode: WaterTableMode,
     #[serde(
         default = "WaterTableValue::missing",
         skip_serializing_if = "WaterTableValue::is_missing"
     )]
+    #[schemars(extend("x-required" = true))]
     pub value: WaterTableValue,
     /// Deprecated (D-24): the inverse of `free_water`, under a name that
     /// reads the wrong way round (true: no free water). `setWaterTable`'s
@@ -286,26 +288,33 @@ pub struct WaterTableEntry {
     )]
     pub follow_boundary: Option<bool>,
     /// Whether water above the ground surface is free water (true) or the
-    /// line is clipped to the ground (false, the default). Takes precedence
-    /// over `follow_boundary` (D-24).
+    /// line is clipped to the ground (false). Takes precedence over
+    /// `follow_boundary` (D-24); without either, the main water table's
+    /// `freeWater` applies, else false.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::nullish_truthy"
     )]
     #[schemars(
-        description = "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false, the default)."
+        description = "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false). Without it (and without followBoundary) the line takes waterTable.freeWater, else false."
     )]
     pub free_water: Option<bool>,
 }
 
 impl WaterTableEntry {
     /// The engine's `followBoundary` of this line: `!free_water` when
-    /// given, else `follow_boundary`, else true.
-    pub fn follows_boundary(&self) -> bool {
-        match self.free_water {
-            Some(free) => !free,
-            None => self.follow_boundary.unwrap_or(true),
+    /// given, else `follow_boundary`, else the main water table's
+    /// `free_water` (`main_free_water`, D-24: a line that says nothing
+    /// follows the main line's free water), else true. (The app writes
+    /// `followBoundary` on every line and never `freeWater`, so what it
+    /// writes reads as before.)
+    pub fn follows_boundary(&self, main_free_water: Option<bool>) -> bool {
+        match (self.free_water, self.follow_boundary, main_free_water) {
+            (Some(free), _, _) => !free,
+            (None, Some(follow), _) => follow,
+            (None, None, Some(free)) => !free,
+            (None, None, None) => true,
         }
     }
 }

@@ -226,8 +226,23 @@ const check = process.argv.includes("--check");
 const schemas = cargoSchemas();
 const stale: string[] = [];
 
+/** A schema without its descriptions (the properties keep their names): what the engine carries. */
+function withoutDescriptions(v: Json, inProperties = false): Json {
+  if (Array.isArray(v)) return v.map((x) => withoutDescriptions(x));
+  if (v === null || typeof v !== "object") return v;
+  const out: { [k: string]: Json } = {};
+  for (const [k, x] of Object.entries(v)) {
+    if (!inProperties && k === "description") continue;
+    out[k] = withoutDescriptions(x, !inProperties && k === "properties");
+  }
+  return out;
+}
+
 const files = new Map<string, string>();
 for (const [name, s] of Object.entries(schemas)) files.set(join(SCHEMA_DIR, `${name}.json`), pretty(s as Json));
+// The copy the engine builds in (types/schema.rs, `document_schema`): one line, no descriptions.
+const EMBEDDED = join(ENGINE_RS, "crates/cslope-engine/src/types/analysis-document.min.json");
+files.set(EMBEDDED, JSON.stringify(withoutDescriptions(schemas["analysis-document"] as Json)) + "\n");
 if (check) {
   for (const [path, text] of files) {
     if (!existsSync(path) || readFileSync(path, "utf8").replace(/\r\n/g, "\n") !== text) stale.push(path);
@@ -239,6 +254,7 @@ if (check) {
   }
 } else {
   mkdirSync(SCHEMA_DIR, { recursive: true });
+  // (the engine needs its copy to build before it can generate the schemas)
   for (const [path, text] of files) writeFileSync(path, text);
 }
 
@@ -258,4 +274,4 @@ if (stale.length > 0) {
   console.error(`Stale (run \`bun packages/engine-rs/tools/schema.ts\` and commit):\n  ${stale.join("\n  ")}`);
   process.exit(1);
 }
-console.log(check ? `The schemas and the TypedDicts are fresh (${files.size} schemas).` : `Wrote ${files.size} schemas and the TypedDicts.`);
+console.log(check ? `The schemas and the TypedDicts are fresh (${Object.keys(schemas).length} schemas).` : `Wrote ${Object.keys(schemas).length} schemas, the engine's copy and the TypedDicts.`);

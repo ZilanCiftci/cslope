@@ -401,7 +401,74 @@ fn the_built_in_schema_is_the_generated_one() {
     let generated = cslope_engine::types::schema::generate();
     assert_eq!(
         Some(cslope_engine::types::schema::document_schema()),
-        generated.get("analysis-document"),
+        generated
+            .get("analysis-document")
+            .map(cslope_engine::types::schema::without_descriptions)
+            .as_ref(),
         "packages/engine/schema/analysis-document.json is stale: run `bun packages/engine-rs/tools/schema.ts`"
     );
+}
+
+#[test]
+fn a_water_table_without_a_mode_is_reported() {
+    let mut d = base();
+    d["waterTable"] = json!({"value": [[0.0, 10.0], [34.0, 4.0]]});
+    assert_issue(&d, "/waterTable/mode", "missing-key", Severity::Error);
+    assert_issue(
+        &d,
+        "/waterTable/mode",
+        "water-table-ignored",
+        Severity::Error,
+    );
+    d["waterTable"]["mode"] = json!("phreatic");
+    assert_issue(
+        &d,
+        "/waterTable/mode",
+        "water-table-ignored",
+        Severity::Error,
+    );
+    d["waterTable"] = json!({"mode": "custom"});
+    assert_issue(&d, "/waterTable/value", "missing-key", Severity::Error);
+}
+
+#[test]
+fn a_water_line_drawn_right_to_left_reads_as_left_to_right() {
+    // the line rises to the left, above the crust's bottom at x = 0
+    let mut forward = base();
+    forward["waterTable"]["value"] = json!([[0.0, -1.0], [34.0, -3.0]]);
+    let mut reversed = base();
+    reversed["waterTable"]["value"] = json!([[34.0, -3.0], [0.0, -1.0]]);
+    for d in [&forward, &reversed] {
+        assert_issue(
+            d,
+            "/materials/0/model/unitWeightSat",
+            "missing-unit-weight-sat",
+            Severity::Warning,
+        );
+    }
+    let codes = |d: &Value| {
+        validate(d, None)
+            .into_iter()
+            .map(|i| (i.path, i.code))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(codes(&forward), codes(&reversed));
+}
+
+#[test]
+fn further_water_lines_take_the_main_lines_free_water() {
+    use cslope_engine::types::{WaterTableDefinition, WaterTableEntry};
+    let entry: WaterTableEntry =
+        serde_json::from_value(json!({"id": "a", "coordinates": [[0, 1], [10, 1]]})).unwrap();
+    assert!(entry.follows_boundary(None)); // clipped, as before
+    assert!(!entry.follows_boundary(Some(true))); // free water, as the main line
+    assert!(entry.follows_boundary(Some(false)));
+    let own: WaterTableEntry = serde_json::from_value(
+        json!({"id": "a", "coordinates": [[0, 1], [10, 1]], "followBoundary": true}),
+    )
+    .unwrap();
+    assert!(own.follows_boundary(Some(true))); // its own setting wins (what the app writes)
+    let main: WaterTableDefinition =
+        serde_json::from_value(json!({"mode": "height", "value": 1, "freeWater": true})).unwrap();
+    assert_eq!(main.follows_boundary(), Some(false));
 }

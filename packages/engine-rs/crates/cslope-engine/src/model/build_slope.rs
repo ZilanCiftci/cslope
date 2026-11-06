@@ -224,8 +224,10 @@ pub fn build_slope(def: &SlopeDefinition) -> Result<Slope> {
 
     // Per-material water tables
     if let Some(tables) = def.water_tables.as_ref().filter(|t| !t.is_empty()) {
+        // (a line without its own setting takes the main line's freeWater, D-24)
+        let main_free = def.water_table.as_ref().and_then(|m| m.free_water);
         for wt in tables {
-            slope.set_water_table_by_id(&wt.id, &wt.coordinates, wt.follows_boundary())?;
+            slope.set_water_table_by_id(&wt.id, &wt.coordinates, wt.follows_boundary(main_free))?;
         }
         for m in &def.materials {
             if let (Some(mat), Some(id)) = (by_name(&materials_by_name, &m.name), &m.water_table_id)

@@ -83,3 +83,32 @@ fn swedish_partial_factors_give_an_over_design_factor() {
     assert_eq!(v["fosLabel"], "over-design factor");
     assert_eq!(v["partialFactors"]["basis"]["etaCu"], 1.0);
 }
+
+#[test]
+fn the_result_records_the_partial_factors() {
+    let pf = swedish_partial_factors(&SwedishFactorBasis {
+        safety_class: 3,
+        eta_cu: 1.0,
+        eta_drained: 1.0,
+        variable_load_base: 1.3,
+    })
+    .unwrap();
+    let o = quick(AnalysisOptionsPatch {
+        partial_factors: Some(Some(pf.clone())),
+        ..Default::default()
+    });
+    let r = run_analysis(&definition(), &o, &mut RunCtx::default()).unwrap();
+    assert_eq!(r.partial_factors.as_ref(), Some(&pf));
+    // summarized without the options: still an over-design factor
+    let s = summarize_result(&r, &AnalysisOptionsPatch::default(), "test");
+    assert_eq!(s.fos_label, FosLabel::OverDesignFactor);
+    assert_eq!(s.value_basis, ValueBasis::Design);
+    // a characteristic run records none
+    let o = quick(AnalysisOptionsPatch::default());
+    let r = run_analysis(&definition(), &o, &mut RunCtx::default()).unwrap();
+    assert!(r.partial_factors.is_none());
+    assert!(serde_json::to_value(&r)
+        .unwrap()
+        .get("partialFactors")
+        .is_none());
+}

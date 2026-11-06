@@ -93,6 +93,7 @@ class AnalysisResult(TypedDict):
     minFOS: float
     nonConvergedSurfaces: NotRequired[Optional[int]]
     otherDirectionMinFOS: NotRequired[Optional[float]]
+    partialFactors: NotRequired[Optional[PartialFactors]]
     sgi3d: NotRequired[Optional[Sgi3dResult]]
     sgi3dError: NotRequired[Optional[str]]
     slidingDirection: NotRequired[Optional[SlopeOrientation]]
@@ -809,8 +810,8 @@ class WaterTableDefinition(TypedDict):
     """Water table definition."""
     followBoundary: NotRequired[Optional[bool]]  # deprecated
     freeWater: NotRequired[Optional[bool]]
-    mode: NotRequired[WaterTableMode]
-    value: NotRequired[WaterTableValue]
+    mode: WaterTableMode
+    value: WaterTableValue
 
 class WaterTableEntry(TypedDict):
     """An additional water table (piezometric line) that materials can refer to with `water_table_id`."""

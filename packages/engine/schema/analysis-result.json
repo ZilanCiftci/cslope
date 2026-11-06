@@ -2000,6 +2000,50 @@
         }
       ]
     },
+    "PartialFactors": {
+      "additionalProperties": false,
+      "description": "Partial factors applied to characteristic values.",
+      "properties": {
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SwedishFactorBasis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How the factors were formed in Swedish practice, for display and\nediting (`swedish_partial_factors`); the analyses use the factors above\nonly. Not set: the factors were entered or taken from another set."
+        },
+        "cohesion": {
+          "description": "γc' on effective cohesion.",
+          "format": "double",
+          "type": "number"
+        },
+        "cu": {
+          "description": "γcu on undrained shear strength.",
+          "format": "double",
+          "type": "number"
+        },
+        "tanPhi": {
+          "description": "γφ' on tan φ'.",
+          "format": "double",
+          "type": "number"
+        },
+        "variableLoad": {
+          "description": "γQ on variable loads (distributed and line loads).",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cu",
+        "cohesion",
+        "tanPhi",
+        "variableLoad"
+      ],
+      "type": "object"
+    },
     "ReinforcementForce": {
       "additionalProperties": false,
       "description": "Applied reinforcement force, per metre of slope.",
@@ -2469,6 +2513,41 @@
       ],
       "description": "Interpolation method of a spatial Mohr-Coulomb model. Another value\n(a string or of another type) is kept as it is (TypeScript falls back to\ninverse distance weighting)."
     },
+    "SwedishFactorBasis": {
+      "additionalProperties": false,
+      "description": "The input of a set of Swedish partial factors (`swedish_partial_factors`).",
+      "properties": {
+        "etaCu": {
+          "description": "Conversion factor η on the undrained shear strength: γcu = 1.5 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "etaDrained": {
+          "description": "Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "safetyClass": {
+          "description": "Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variableLoadBase": {
+          "description": "γQ before γd: γQ = variableLoadBase · γd. 1.3 gives the EN 1997-1 DA3\nload factor in safety class 3; some Swedish guidance uses 1.4 (for\nexample for traffic loads). The governing document decides.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "safetyClass",
+        "etaCu",
+        "etaDrained",
+        "variableLoadBase"
+      ],
+      "type": "object"
+    },
     "TableSpline": {
       "additionalProperties": false,
       "description": "A cubic spline through a table's points: natural (zero curvature) at an\nend without a slope, clamped to the slope given; a straight line with\nthe end slope beyond the ends (math/spline.rs).",
@@ -2633,6 +2712,17 @@
         "number",
         "null"
       ]
+    },
+    "partialFactors": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialFactors"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The partial factors the analysis applied (with their basis): the\nstrengths were design values and `min_fos` is an over-design factor.\nAbsent: characteristic values (and in results of earlier versions)."
     },
     "sgi3d": {
       "anyOf": [

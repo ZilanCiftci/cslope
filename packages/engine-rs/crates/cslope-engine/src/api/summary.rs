@@ -284,12 +284,20 @@ fn direction_text(d: SlopeOrientation) -> &'static str {
 
 /// The summary of `result`, run with `options` (the options the analysis
 /// was given, merged with the defaults it ran with), by `engine_build`.
+/// Whether F is on design values comes from the result
+/// (`AnalysisResult.partial_factors`); the options only for a result
+/// that does not record it.
 pub fn summarize_result(
     result: &AnalysisResult,
     options: &AnalysisOptionsPatch,
     engine_build: &str,
 ) -> ResultSummary {
-    let pf = options.partial_factors.clone().flatten();
+    // (the result says which factors it applied; a result of an earlier
+    // version does not, and the options tell)
+    let pf = result
+        .partial_factors
+        .clone()
+        .or_else(|| options.partial_factors.clone().flatten());
     let fos = result.min_fos.is_finite().then_some(result.min_fos);
     let (fos_label, fos_heading, value_basis) = match &pf {
         Some(_) => (

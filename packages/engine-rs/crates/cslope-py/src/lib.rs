@@ -205,16 +205,11 @@ fn summarize<'py>(
     options: Option<&Bound<'py, PyAny>>,
 ) -> PyResult<Bound<'py, PyAny>> {
     let r: AnalysisResult = from_py(result, "analysis result")?;
-    let (_, doc_options) = match options {
-        Some(o) => split_document(o)
-            .map(|(d, o)| (Some(d), o))
-            .unwrap_or((None, None)),
-        None => (None, None),
-    };
-    let o = match doc_options {
-        // (an analysis document: its options)
-        Some(d) => public_options(Some(&d), None)?,
-        None => public_options(None, options.filter(|o| !is_document(o)))?,
+    // options or an analysis document (its options; one without a
+    // definition is an error, as for `analyse`)
+    let o = match options.filter(|o| !o.is_none()) {
+        Some(o) if is_document(o) => public_options(split_document(o)?.1.as_ref(), None)?,
+        given => public_options(None, given)?,
     };
     to_py(py, &summarize_result(&r, &o, env!("CSLOPE_ENGINE_BUILD")))
 }

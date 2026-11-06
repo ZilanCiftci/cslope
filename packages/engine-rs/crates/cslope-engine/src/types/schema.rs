@@ -206,16 +206,36 @@ pub fn generate() -> BTreeMap<&'static str, Value> {
     m
 }
 
-/// The committed analysis document schema (packages/engine/schema), built
-/// into the engine for `validate_definition`: its `$defs` hold the
-/// definition and the options too. (The other schemas are files; the
-/// Python package carries them all.) CI checks it is what `generate`
-/// gives (tools/schema.ts --check, and a test).
-const DOCUMENT: &str = include_str!("../../../../../engine/schema/analysis-document.json");
+/// The analysis document schema as the engine carries it for
+/// `validate_definition`: without its descriptions, on one line
+/// (analysis-document.min.json beside this file, written by
+/// tools/schema.ts from packages/engine/schema/analysis-document.json,
+/// whose `$defs` hold the definition and the options too). The other
+/// schemas are files; the Python package carries them all. CI checks it is
+/// what `generate` gives (tools/schema.ts --check, and a test).
+const DOCUMENT: &str = include_str!("analysis-document.min.json");
 
 /// The analysis document schema, parsed once.
 pub fn document_schema() -> &'static Value {
     static SCHEMA: OnceLock<Value> = OnceLock::new();
-    // (an empty file: the first generation, before any schema is written)
-    SCHEMA.get_or_init(|| serde_json::from_str(DOCUMENT).unwrap_or(Value::Bool(true)))
+    SCHEMA
+        .get_or_init(|| serde_json::from_str(DOCUMENT).expect("analysis-document.min.json is JSON"))
+}
+
+/// A schema without its `description`s (the properties keep their names),
+/// as the engine carries it (`document_schema`).
+pub fn without_descriptions(v: &Value) -> Value {
+    fn strip(v: &Value, in_properties: bool) -> Value {
+        match v {
+            Value::Object(o) => Value::Object(
+                o.iter()
+                    .filter(|(k, _)| in_properties || k.as_str() != "description")
+                    .map(|(k, x)| (k.clone(), strip(x, !in_properties && k == "properties")))
+                    .collect(),
+            ),
+            Value::Array(a) => Value::Array(a.iter().map(|x| strip(x, false)).collect()),
+            other => other.clone(),
+        }
+    }
+    strip(v, false)
 }
