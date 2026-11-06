@@ -963,7 +963,8 @@ const windows: Scene[] = [
     data: "nonhomog",
     open: async (ctx) => {
       const win = await modelWindow(ctx, "Assign", "material-assignment-dialog");
-      await ctx.store(`(s) => { const keys = Object.keys(s.regionMaterials ?? {}); if (keys[0]) s.setSelectedRegionKey(keys[0]); }`).catch(() => {});
+      // Region keys are "region-<index>" (utils/regions.ts), not the indices of regionMaterials.
+      await ctx.store(`(s) => s.setSelectedRegionKey("region-0")`).catch(() => {});
       await win.waitForTimeout(500);
       return { page: win };
     },

@@ -3,6 +3,7 @@ import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
+import { RowRemoveButton } from "../../../components/ui/SpreadsheetTable";
 import { formatPolyline, parsePolyline } from "../../../utils/polyline";
 import { isElectron } from "../../../utils/is-electron";
 
@@ -64,21 +65,12 @@ export function CustomSearchPlanesSection({
 
   const content = (
     <>
-      <div
-        className="text-[10px] mb-1.5"
-        style={{ color: "var(--color-vsc-text-muted)" }}
-      >
-        Define specific failure surfaces to analyze: circles, or non-circular
-        surfaces as points through the soil (the ends are extended to the
-        ground).
-      </div>
       {planes.length > 0 && (
         <label className="flex items-center gap-2 text-[12px] mb-1.5">
           <input
             type="checkbox"
             checked={customPlanesOnly}
             onChange={(e) => setCustomPlanesOnly(e.target.checked)}
-            className="accent-blue-500"
           />
           Only analyze these surfaces (skip the search)
         </label>
@@ -86,7 +78,7 @@ export function CustomSearchPlanesSection({
       {planes.map((p) => {
         if (p.points) {
           return (
-            <div key={p.id} className="flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
+            <div key={p.id} className="group flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
               <label className="flex flex-col flex-1 min-w-0">
                 <Label>Points x, y (m); x, y; …</Label>
                 <PolylineInput
@@ -95,20 +87,16 @@ export function CustomSearchPlanesSection({
                 />
               </label>
               <AddAsReferenceButton planeId={p.id} />
-              <button
+              <RowRemoveButton
+                ariaLabel="Remove non-circular surface"
                 onClick={() => removePlane(p.id)}
-                className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-                style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
-                aria-label="Remove non-circular surface"
-              >
-                ✕
-              </button>
+              />
             </div>
           );
         }
         const radiusInvalid = p.radius <= 0;
         return (
-          <div key={p.id} className="flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
+          <div key={p.id} className="group flex items-end gap-1 text-[12px]" {...rowProps(p.id)}>
             <label className="flex flex-col">
               <Label>cx (m)</Label>
               <DraftNumberInput
@@ -153,14 +141,10 @@ export function CustomSearchPlanesSection({
               />
             </label>
             <AddAsReferenceButton planeId={p.id} />
-            <button
+            <RowRemoveButton
+              ariaLabel="Remove search plane"
               onClick={() => removePlane(p.id)}
-              className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-              style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
-              aria-label="Remove search plane"
-            >
-              ✕
-            </button>
+            />
           </div>
         );
       })}
@@ -168,14 +152,14 @@ export function CustomSearchPlanesSection({
         <button
           onClick={() => addPlane("circle")}
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-accent)" }}
+          style={{ color: "var(--color-vsc-link)" }}
         >
           + Add circle
         </button>
         <button
           onClick={() => addPlane("polyline")}
           className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-accent)" }}
+          style={{ color: "var(--color-vsc-link)" }}
         >
           + Add non-circular surface
         </button>
@@ -187,7 +171,7 @@ export function CustomSearchPlanesSection({
     return <div className="space-y-2.5">{content}</div>;
   }
 
-  return <Section title="Custom search planes">{content}</Section>;
+  return <Section title="Custom surfaces">{content}</Section>;
 }
 
 /** "Add as reference line": the plane drawn over the result, labelled "Custom surface n". */
@@ -196,7 +180,7 @@ function AddAsReferenceButton({ planeId }: { planeId: string }) {
     <button
       onClick={() => addPlaneAsReference(planeId)}
       className="h-5 px-1 flex items-center rounded hover:bg-[var(--color-vsc-list-hover)] cursor-pointer transition-colors text-[10px] whitespace-nowrap"
-      style={{ color: "var(--color-vsc-accent)" }}
+      style={{ color: "var(--color-vsc-link)" }}
       title="Draw this surface over the result as a reference line (Results view)"
       aria-label="Add as reference line"
     >

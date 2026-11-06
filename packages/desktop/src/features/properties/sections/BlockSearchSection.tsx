@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useAppStore } from "../../../store/app-store";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
+import { RowRemoveButton } from "../../../components/ui/SpreadsheetTable";
 import { formatPolyline, parsePolyline } from "../../../utils/polyline";
 import { blockObjectKind, blockObjectProblem } from "../../../utils/block-search";
 
@@ -25,21 +26,17 @@ export function BlockSearchSection() {
         point is a fixed point, two points a line, three or more a window.
       </p>
       {objects.map((o, i) => (
-        <div key={o.id} className="flex items-end gap-1 text-[12px]">
+        <div key={o.id} className="group flex items-end gap-1 text-[12px]">
           <label className="flex flex-col flex-1 min-w-0">
             <Label>
               Object {i + 1} ({blockObjectKind(o.points.length)}): x, y (m); x, y; …
             </Label>
             <ObjectInput points={o.points} onChange={(points) => updateObject(o.id, points)} />
           </label>
-          <button
+          <RowRemoveButton
+            ariaLabel={`Remove block search object ${i + 1}`}
             onClick={() => removeObject(o.id)}
-            className="w-5 h-5 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 cursor-pointer transition-colors"
-            style={{ color: "var(--color-vsc-text-muted)", fontSize: "10px" }}
-            aria-label={`Remove block search object ${i + 1}`}
-          >
-            ✕
-          </button>
+          />
         </div>
       ))}
       {objects.filter((o) => o.points.length > 0).length === 0 && (
@@ -50,7 +47,7 @@ export function BlockSearchSection() {
       <button
         onClick={addObject}
         className="self-start text-[11px] cursor-pointer hover:underline font-medium"
-        style={{ color: "var(--color-vsc-accent)" }}
+        style={{ color: "var(--color-vsc-link)" }}
       >
         + Add search object
       </button>

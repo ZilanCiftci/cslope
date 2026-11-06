@@ -116,7 +116,10 @@ describe("DefineMaterialsDialog — material list", () => {
   it("renders as a full window with a Close button in window mode", async () => {
     const onClose = vi.fn();
     render(<DefineMaterialsDialog onClose={onClose} mode="window" />);
-    expect(screen.getByRole("heading", { name: "Define materials" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 2, name: "Materials" })).toBeInTheDocument();
+    // The settings below the list name the material they edit.
+    expect(screen.getByRole("heading", { level: 3 })).toHaveTextContent(useAppStore.getState().materials[0].name);
+    expect(screen.getByRole("combobox", { name: "Material model" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -352,7 +355,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
   it("edits the anisotropic modifier table", async () => {
     render(<DefineMaterialsDialog onClose={() => {}} />);
     await userEvent.selectOptions(kindSelect(), "anisotropic-function");
-    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     const rows = () => (model() as { modifierFunction: [number, number][] }).modifierFunction;
     expect(rows()).toEqual([
       [0, 1],
@@ -364,7 +367,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     await userEvent.type(factor, "0,8");
     await userEvent.tab();
     expect(rows()[2]).toEqual([90, 0.8]);
-    await userEvent.click(screen.getByRole("button", { name: "Remove row 3" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove point 3" }));
     expect(rows()).toHaveLength(2);
   });
 
@@ -373,9 +376,9 @@ describe("DefineMaterialsDialog — switching the model", () => {
     await userEvent.selectOptions(kindSelect(), "spatial-mohr-coulomb");
     // No errors before the user has entered anything.
     expect(screen.queryByRole("alert", { name: "Validation errors" })).toBeNull();
-    expect(screen.getByText("No data points yet: add at least one.")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
-    const c = screen.getByLabelText("c (kPa) row 1");
+    expect(screen.getByText("No data points. Add at least one.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
+    const c = screen.getByLabelText("c′ (kPa) row 1");
     await userEvent.clear(c);
     await userEvent.type(c, "12");
     await userEvent.tab();
@@ -384,7 +387,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     await userEvent.selectOptions(screen.getByLabelText("Interpolation method"), "nearest");
     expect(model()).toMatchObject({ interpolation: "nearest" });
     // Removing the last point is an error once the user has edited it.
-    await userEvent.click(screen.getByRole("button", { name: "Remove row 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove point 1" }));
     expect(screen.getByRole("alert", { name: "Validation errors" })).toBeInTheDocument();
   });
 
@@ -411,7 +414,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(mats()[1].model.kind).toBe("mohr-coulomb");
     expect(alert()).toBeNull();
     await userEvent.click(within(listRow(0)).getAllByRole("cell")[1]);
-    expect(screen.getByText("No data points yet: add at least one.")).toBeInTheDocument();
+    expect(screen.getByText("No data points. Add at least one.")).toBeInTheDocument();
     expect(alert()).toBeInTheDocument();
   });
 

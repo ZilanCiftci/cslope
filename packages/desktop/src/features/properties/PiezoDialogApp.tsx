@@ -11,13 +11,15 @@ import { ImportedDataNotice } from "./ImportedDataNotice";
 import { waternetNoticeText } from "./imported-notices";
 import { Label } from "../../components/ui/Label";
 import {
-  SpreadsheetRemoveButton,
+  RowRemoveButton,
+  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { resolveParameters } from "../../utils/expression";
 import { mainPiezoLine, nextPiezoPoint } from "../../utils/piezo";
+import { DialogHeader, WindowSubheading } from "./DialogHeader";
 
 interface PiezoStatePayload {
   piezometricLine: PiezometricLineState;
@@ -209,13 +211,13 @@ export function PiezoDialogApp() {
       ),
     },
     {
-      header: null,
+      header: <RemoveColumnHeader />,
       widthClassName: "w-8",
-      cellClassName: "py-1 px-2",
+      cellClassName: "px-1",
       align: "right",
       renderCell: (_row, i) =>
         activeLine && activeLine.coordinates.length > 2 ? (
-          <SpreadsheetRemoveButton
+          <RowRemoveButton
             ariaLabel={`Remove piezometric point ${i + 1}`}
             onClick={(e) => {
               e.stopPropagation();
@@ -265,16 +267,17 @@ export function PiezoDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Piezometric lines</h2>
-      </div>
+      <DialogHeader
+        title="Piezometric lines"
+        description="Water levels that give the pore pressure, per material."
+      />
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
         {waternet && (
           <ImportedDataNotice
             testId="waternet-notice"
             text={waternetNoticeText(waternet)}
             buttonLabel="Remove head lines"
-            buttonAriaLabel="Remove the imported head and reference lines"
+            buttonTitle="Remove the imported head and reference lines"
             onRemove={removeWaternet}
           />
         )}
@@ -305,6 +308,13 @@ export function PiezoDialogApp() {
                 </tr>
               </thead>
               <tbody>
+                {pl.lines.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-2 py-1.5" style={{ color: "var(--color-vsc-text-muted)" }}>
+                      No piezometric lines.
+                    </td>
+                  </tr>
+                )}
                 {pl.lines.map((line) => {
                   const isSelected = activeLine?.id === line.id;
                   return (
@@ -363,20 +373,9 @@ export function PiezoDialogApp() {
         </div>
 
         {/* ── Coordinate editor for selected line ── */}
-        {activeLine ? (
-          <div
-            className="p-3 rounded space-y-2.5"
-            style={{
-              background: "var(--color-vsc-surface-tint)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
-          >
-            <h4
-              className="text-[10px] font-bold uppercase tracking-[0.1em]"
-              style={{ color: "var(--color-vsc-text-muted)" }}
-            >
-              {activeLine.name} coordinates
-            </h4>
+        {activeLine && (
+          <div className="pt-1 space-y-2">
+            <WindowSubheading>{activeLine.name} coordinates</WindowSubheading>
 
             <SpreadsheetTable
               rows={activeLine.coordinates}
@@ -395,33 +394,16 @@ export function PiezoDialogApp() {
             <button
               onClick={addDefaultPoint}
               className="text-[11px] cursor-pointer hover:underline font-medium"
-              style={{ color: "var(--color-vsc-accent)" }}
+              style={{ color: "var(--color-vsc-link)" }}
             >
               + Add point
             </button>
-          </div>
-        ) : (
-          <div
-            className="text-[11px] p-2 rounded border"
-            style={{
-              color: "var(--color-vsc-text-muted)",
-              borderColor: "var(--color-vsc-border)",
-              background: "var(--color-vsc-surface-tint)",
-            }}
-          >
-            Add a piezometric line to start editing coordinates.
           </div>
         )}
 
         {/* ── Free water and main line ── */}
         {pl.lines.length > 0 && (
-          <div
-            className="p-3 rounded space-y-2"
-            style={{
-              background: "var(--color-vsc-surface-tint)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
-          >
+          <div className="pt-1 space-y-2">
             <label
               className="flex items-center gap-1.5 text-[11px]"
               title="Where the main line lies above the ground the water stands on the slope and loads it. Off: the lines are clipped to the ground surface."
@@ -459,21 +441,10 @@ export function PiezoDialogApp() {
 
         {/* ── Material assignment (only when >1 line) ── */}
         {pl.lines.length > 1 && materials.length > 0 && (
-          <div
-            className="p-3 rounded space-y-2.5"
-            style={{
-              background: "var(--color-vsc-surface-tint)",
-              border: "1px solid var(--color-vsc-border)",
-            }}
-          >
-            <h4
-              className="text-[10px] font-bold uppercase tracking-[0.1em]"
-              style={{ color: "var(--color-vsc-text-muted)" }}
-            >
-              Material assignment
-            </h4>
+          <div className="pt-1 space-y-2">
+            <WindowSubheading>Material assignment</WindowSubheading>
             <p
-              className="text-[10px]"
+              className="text-[11px]"
               style={{ color: "var(--color-vsc-text-muted)" }}
             >
               Choose which piezometric line applies to each material.
@@ -493,6 +464,7 @@ export function PiezoDialogApp() {
                     onChange={(e) =>
                       setPiezoMaterialAssignment(m.id, e.target.value)
                     }
+                    aria-label={`Piezometric line of ${m.name}`}
                   >
                     {pl.lines.map((line) => (
                       <option key={line.id} value={line.id}>

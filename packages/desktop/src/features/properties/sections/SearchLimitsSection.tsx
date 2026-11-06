@@ -3,6 +3,7 @@ import { Section } from "../../../components/ui/Section";
 import { Label } from "../../../components/ui/Label";
 import { DraftNumberInput } from "../../../components/ui/DraftNumberInput";
 import { LimitsDirectionWarning } from "../../analysis/LimitsDirectionWarning";
+import { WindowSubheading } from "../DialogHeader";
 
 interface SearchLimitsSectionProps {
   plain?: boolean;
@@ -29,21 +30,15 @@ export function SearchLimitsSection({
           type="checkbox"
           checked={limits.enabled}
           onChange={(e) => setLimits({ enabled: e.target.checked })}
-          className="accent-blue-500"
         />
         Restrict entry/exit ranges
       </label>
       {limits.enabled && (
         <div className="space-y-2 mt-1.5">
-          <div
-            className="text-[10px] font-bold uppercase tracking-[0.1em]"
-            style={{ color: "var(--color-vsc-text-muted)" }}
-          >
-            Entry range (crest side — {crestSide})
-          </div>
+          <WindowSubheading>Entry range (crest side — {crestSide})</WindowSubheading>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
-              <Label>Min X (m)</Label>
+              <Label>Min x (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.entryLeftX}
@@ -52,7 +47,7 @@ export function SearchLimitsSection({
               />
             </label>
             <label className="flex flex-col gap-0.5">
-              <Label>Max X (m)</Label>
+              <Label>Max x (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.entryRightX}
@@ -61,15 +56,10 @@ export function SearchLimitsSection({
               />
             </label>
           </div>
-          <div
-            className="text-[10px] font-bold uppercase tracking-[0.1em]"
-            style={{ color: "var(--color-vsc-text-muted)" }}
-          >
-            Exit range (toe side — {toeSide})
-          </div>
+          <WindowSubheading>Exit range (toe side — {toeSide})</WindowSubheading>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
-              <Label>Min X (m)</Label>
+              <Label>Min x (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.exitLeftX}
@@ -78,7 +68,7 @@ export function SearchLimitsSection({
               />
             </label>
             <label className="flex flex-col gap-0.5">
-              <Label>Max X (m)</Label>
+              <Label>Max x (m)</Label>
               <DraftNumberInput
                 step="0.5"
                 value={limits.exitRightX}
@@ -91,7 +81,7 @@ export function SearchLimitsSection({
             className="text-[10px]"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Model X range: {xMin} – {xMax} m
+            Model x range: {xMin} – {xMax} m
           </div>
           <LimitsDirectionWarning />
         </div>
