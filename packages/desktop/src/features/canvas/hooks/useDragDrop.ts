@@ -36,6 +36,9 @@ async function openProjectBytes(bytes: Uint8Array | null): Promise<void> {
 export function useDragDrop() {
   useEffect(() => {
     const handleDragOver = (e: DragEvent) => {
+      // A drag an element in the window took (a row being reordered) keeps
+      // its own drop effect: "copy" here would refuse its "move" drop.
+      if (e.defaultPrevented) return;
       e.preventDefault();
       e.stopPropagation();
       if (e.dataTransfer) {
@@ -44,6 +47,7 @@ export function useDragDrop() {
     };
 
     const handleDrop = async (e: DragEvent) => {
+      if (e.defaultPrevented) return;
       e.preventDefault();
       e.stopPropagation();
 

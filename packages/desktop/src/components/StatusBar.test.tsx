@@ -162,19 +162,11 @@ describe("StatusBar", () => {
     expect(select.selectedOptions[0].textContent).toBe("0.5 m");
   });
 
-  it("shows the error of a failed run", () => {
-    render(
-      <StatusBar
-        {...defaultProps}
-        runState="error"
-        errorMessage="No valid slip surface was found."
-      />,
-    );
-    const status = screen.getByTestId("status-run-error");
-    expect(status).toHaveTextContent(
-      "Analysis failed: No valid slip surface was found.",
-    );
-    expect(status).toHaveAttribute("title", "No valid slip surface was found.");
+  it("says only that the run failed: the reason is in the banner", () => {
+    render(<StatusBar {...defaultProps} runState="error" />);
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/^Analysis failed$/);
+    expect(status).not.toHaveAttribute("title");
   });
 
   it("shows the stage of a finite element run and its elapsed time while it runs", () => {
@@ -215,8 +207,8 @@ describe("StatusBar", () => {
   });
 
   it("shows no error unless the run failed", () => {
-    render(<StatusBar {...defaultProps} errorMessage="stale" />);
-    expect(screen.queryByTestId("status-run-error")).toBeNull();
+    render(<StatusBar {...defaultProps} />);
+    expect(screen.queryByText("Analysis failed")).toBeNull();
   });
 
   it("shows a running Run All as finished/total with its progress bar", () => {
@@ -243,6 +235,11 @@ describe("StatusBar", () => {
     expect(screen.queryByRole("progressbar")).toBeNull();
     rerender(<StatusBar {...defaultProps} runAll={{ total: 1, finished: 1, failed: 0, progress: 1, running: false }} />);
     expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run all done: 1 model$/);
+  });
+
+  it("shows the total run time of an ended Run All in seconds with one decimal", () => {
+    render(<StatusBar {...defaultProps} runAll={{ total: 6, finished: 6, failed: 0, progress: 1, running: false, elapsedMs: 12345 }} />);
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run all done: 6 models, 12\.3 s$/);
   });
 
   it("shows no Run All without a batch", () => {

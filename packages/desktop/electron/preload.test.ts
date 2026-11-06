@@ -71,7 +71,7 @@ const EXPECTED: Record<string, [Kind, string]> = {
   appReady: ["send", "app:ready"],
   fitDialogHeight: ["send", "window:fitDialogHeight"],
   menuNew: ["send", "menu:new"],
-  menuAbout: ["send", "menu:about"],
+  openAboutLink: ["send", "help:openAboutLink"],
   openDocumentation: ["send", "help:openDocumentation"],
   toggleDevTools: ["send", "dev:toggle-devtools"],
 };

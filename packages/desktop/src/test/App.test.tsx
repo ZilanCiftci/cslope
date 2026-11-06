@@ -52,9 +52,9 @@ describe("App — VS Code dark layout", () => {
     render(<App />);
     expect(screen.queryByLabelText("Toggle models")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Collapse models")).toBeInTheDocument();
-    // The properties panel exists in result mode only.
-    expect(screen.queryByLabelText("Collapse properties")).not.toBeInTheDocument();
-    expect(screen.queryByLabelText("Open properties")).not.toBeInTheDocument();
+    // The results panel exists in result mode only.
+    expect(screen.queryByLabelText("Collapse results")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Open results")).not.toBeInTheDocument();
   });
 
   it("shows the explorer sidebar by default", () => {
@@ -83,18 +83,18 @@ describe("App — VS Code dark layout", () => {
     expect(screen.queryByTestId("collapsed-models")).not.toBeInTheDocument();
   });
 
-  it("collapses and opens the properties panel in result mode", async () => {
+  it("collapses and opens the results panel in result mode", async () => {
     const user = userEvent.setup();
     useAppStore.setState({ mode: "result" });
     render(<App />);
-    await user.click(screen.getByLabelText("Collapse properties"));
+    await user.click(screen.getByLabelText("Collapse results"));
     expect(useAppStore.getState().sidebarOpen).toBe(false);
-    const strip = screen.getByTestId("collapsed-properties");
-    expect(within(strip).getByText("Properties")).toBeInTheDocument();
-    await user.click(within(strip).getByLabelText("Open properties"));
+    const strip = screen.getByTestId("collapsed-results");
+    expect(within(strip).getByText("Results")).toBeInTheDocument();
+    await user.click(within(strip).getByLabelText("Open results"));
     expect(useAppStore.getState().sidebarOpen).toBe(true);
-    expect(screen.getByLabelText("Collapse properties")).toBeInTheDocument();
-    expect(screen.queryByTestId("collapsed-properties")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Collapse results")).toBeInTheDocument();
+    expect(screen.queryByTestId("collapsed-results")).not.toBeInTheDocument();
   });
 
   it("keeps the explorer on the right, open or collapsed", async () => {
