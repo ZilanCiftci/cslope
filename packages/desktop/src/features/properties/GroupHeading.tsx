@@ -16,19 +16,11 @@ export function GroupHeading({
   return (
     <h3
       className={`text-[10px] font-semibold uppercase tracking-wider mt-4 first:mt-0 mb-2 pb-1${help ? " flex items-center" : ""}`}
-      style={
-        help
-          ? {
-              // Faded text and rule as below, but the ? at full strength.
-              color: "color-mix(in srgb, var(--color-vsc-text) 60%, transparent)",
-              borderBottom: "1px solid color-mix(in srgb, var(--color-vsc-border) 60%, transparent)",
-            }
-          : {
-              color: "var(--color-vsc-text)",
-              opacity: 0.6,
-              borderBottom: "1px solid var(--color-vsc-border)",
-            }
-      }
+      style={{
+        // Muted text (4.5:1 on the panels), a faded rule below.
+        color: "var(--color-vsc-text-muted)",
+        borderBottom: "1px solid color-mix(in srgb, var(--color-vsc-border) 60%, transparent)",
+      }}
     >
       {children}
       {help && (

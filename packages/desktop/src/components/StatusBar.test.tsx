@@ -20,14 +20,14 @@ const defaultProps = {
 };
 
 describe("StatusBar", () => {
-  it("shows EDIT mode indicator", () => {
+  it("shows the Edit mode indicator", () => {
     render(<StatusBar {...defaultProps} />);
-    expect(screen.getByText("EDIT")).toBeInTheDocument();
+    expect(screen.getByText("Edit")).toBeInTheDocument();
   });
 
-  it("shows RESULT mode indicator", () => {
+  it("shows the Result mode indicator", () => {
     render(<StatusBar {...defaultProps} mode="result" />);
-    expect(screen.getByText("RESULT")).toBeInTheDocument();
+    expect(screen.getByText("Result")).toBeInTheDocument();
   });
 
   it("shows point count", () => {
