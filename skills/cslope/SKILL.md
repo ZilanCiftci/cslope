@@ -15,20 +15,28 @@ cSlope's engine, the one in the cSlope app, as a Python package with a `cslope` 
 
 ## Install
 
-No install step is needed with uv:
+Until the package is on PyPI (issue #61), install it from a wheel: the `cslope-*.whl` of your platform from the artifacts of the repository's "Python wheels" workflow, or one you were given.
+
+```
+uv run --with ./cslope-0.1.0-cp39-abi3-manylinux_2_35_x86_64.whl cslope info
+uv run --with ./cslope-*.whl python my_slope.py     # a script that imports cslope
+pip install ./cslope-*.whl                          # or into a virtual environment
+```
+
+Once it is published, no install step is needed:
 
 ```
 uvx cslope info                              # the command
 uv run --with cslope python my_slope.py      # a script that imports cslope
 ```
 
-Or `pip install cslope` in a virtual environment. Python 3.9 or later.
+Python 3.9 or later. `cslope info` prints the package version, the engine build and the schema version.
 
 ## The workflow
 
 1. **Get the inputs from the person.** The geometry, every soil's parameters, the water, the loads and, for a check with partial factors, the safety class and the conversion factors η. **Never invent soil parameters** and **never assume a safety class or η**: ask. If a value is missing, stop and say which.
 2. **Build and save the document** with `cslope.build` (below). Each call checks what it can at once and raises with a message that says what is wrong; fix the input, do not work around the check.
-3. **Validate**: `cslope validate slope.json` lists each issue with its path in the document (`/definition/regionAssignments/1`). Errors stop the analysis; warnings are worth reading.
+3. **Validate**: `save` already refuses a document with errors; `cslope validate slope.json` (or `cslope.validate(doc)`) lists each issue with its path in the document (`/definition/regionAssignments/1`). Errors stop the analysis; warnings are worth reading.
 4. **Run**: `cslope analyse slope.json` prints the summary; `--json` prints `{"summary": ..., "result": ...}` for further processing. `--threads N` limits the threads.
 5. **Report the summary unchanged**: F with its label and basis, the method, the critical surface (entry and exit), and every warning. Do not round F differently, relabel it ("safe", "FoS"), or leave out warnings. A warning can mean F is not reliable.
 
@@ -70,6 +78,10 @@ d.save("slope.json")                         # validates, then writes
 - `d.options` has fixed attributes (`method`, `slices`, `iterations`, `refined_iterations`, `composite_surfaces`, `search_method`, `interslice_function`, `tolerance`, `min_slip_depth`, `tension_crack_depth`, `seismic_horizontal`, `seismic_vertical`, `both_directions`, `partial_factors`). A misspelt one is an `AttributeError`, never a silent default. Its defaults are the app's for a new model.
 - `d.to_dict()` is the document; `Definition.load("slope.json")` reads one back.
 
+## The document and its schema
+
+The document is `{"format": "cslope-analysis", "formatVersion": 1, "definition": {...}, "options": {...}}`. Options it leaves out take the app's defaults (`cslope.default_options()`: Morgenstern-Price, 30 slices, composite surfaces); the builder writes every option it has. `cslope schema` prints its JSON schema, `cslope schema <name>` another one: `analysis-document`, `slope-definition`, `analysis-options`, `analysis-result`, `result-summary`, `validation-issues` and more (`cslope info` lists them). Each schema's `$id` is `urn:cslope:schema:<name>:<version>` (for example `urn:cslope:schema:analysis-document:0.1.0`), the version being `cslope.SCHEMA_VERSION`. Look up a field there rather than guessing its name; unknown keys are errors.
+
 From Python instead of the command:
 
 ```python
@@ -77,7 +89,7 @@ import cslope
 
 doc = d.to_dict()
 result = cslope.analyse(doc)                       # the full result
-summary = cslope.summarize(result, doc["options"])  # what to report
+summary = cslope.summarize(result, doc)             # what to report
 ```
 
 ## Partial factors (Swedish practice)

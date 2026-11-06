@@ -27,6 +27,8 @@ import os
 import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
+import cslope as _cslope
+
 __all__ = [
     "DOCUMENT_FORMAT",
     "DOCUMENT_FORMAT_VERSION",
@@ -134,13 +136,6 @@ def _inside(p: Point, poly: List[Point]) -> bool:
 
 # ── partial factors ─────────────────────────────────────────────────────
 
-_GAMMA_D = {1: 0.83, 2: 0.91, 3: 1.0}
-
-
-def _round3(v: float) -> float:
-    # As the engine (JavaScript's Math.round): halves round up.
-    return math.floor(v * 1000.0 + 0.5) / 1000.0
-
 
 def swedish_partial_factors(
     safety_class: int, eta_cu: float, eta_drained: float, variable_load_base: float
@@ -152,40 +147,14 @@ def swedish_partial_factors(
     γcu = 1.5 / ``eta_cu``, γc′ = γφ′ = 1.3 / ``eta_drained``, and
     γQ = ``variable_load_base`` · γd with γd = 0.83, 0.91 or 1.0 in safety
     class 1, 2 or 3. With partial factors F is an over-design factor on
-    design values, not a factor of safety.
+    design values, not a factor of safety. (``cslope.swedish_partial_factors``.)
     """
-    try:
-        import cslope as _cslope
-
-        native = getattr(_cslope, "swedish_partial_factors", None)
-    except ImportError:  # pragma: no cover - the package is always there
-        native = None
-    if native is not None:
-        return native(
-            safety_class=safety_class,
-            eta_cu=eta_cu,
-            eta_drained=eta_drained,
-            variable_load_base=variable_load_base,
-        )
-    # The engine's rule (types/analysis.rs, swedish_partial_factors) until the
-    # binding exposes it.
-    if isinstance(safety_class, bool) or safety_class not in _GAMMA_D or not isinstance(safety_class, int):
-        raise ValueError("Safety class must be 1, 2 or 3")
-    for name, v in (("eta_cu", eta_cu), ("eta_drained", eta_drained), ("variable_load_base", variable_load_base)):
-        if _number(v, name) <= 0:
-            raise ValueError("{} must be a positive number".format(name))
-    return {
-        "cu": _round3(1.5 / eta_cu),
-        "cohesion": _round3(1.3 / eta_drained),
-        "tanPhi": _round3(1.3 / eta_drained),
-        "variableLoad": _round3(variable_load_base * _GAMMA_D[safety_class]),
-        "basis": {
-            "safetyClass": safety_class,
-            "etaCu": float(eta_cu),
-            "etaDrained": float(eta_drained),
-            "variableLoadBase": float(variable_load_base),
-        },
-    }
+    return _cslope.swedish_partial_factors(
+        safety_class=safety_class,
+        eta_cu=eta_cu,
+        eta_drained=eta_drained,
+        variable_load_base=variable_load_base,
+    )
 
 
 # ── options ─────────────────────────────────────────────────────────────
@@ -529,7 +498,7 @@ class Definition:
 
     # output
 
-    def definition_dict(self, legacy: bool = False) -> Dict[str, Any]:
+    def definition_dict(self) -> Dict[str, Any]:
         """The engine's ``SlopeDefinition`` dict."""
         if self._exterior is None:
             raise ValueError("The model has no exterior")
@@ -551,29 +520,29 @@ class Definition:
             d["lineLoads"] = copy.deepcopy(self._line_loads)
         if self._limits is not None:
             d["analysisLimits"] = dict(self._limits)
-        return _legacy_definition(d) if legacy else d
+        return d
 
-    def to_dict(self, legacy: bool = False) -> Dict[str, Any]:
+    def to_dict(self) -> Dict[str, Any]:
         """The analysis document: ``{"format": "cslope-analysis",
         "formatVersion": 1, "definition": {...}, "options": {...}}``."""
         return {
             "format": DOCUMENT_FORMAT,
             "formatVersion": DOCUMENT_FORMAT_VERSION,
-            "definition": self.definition_dict(legacy=legacy),
+            "definition": self.definition_dict(),
             "options": self.options.to_dict(),
         }
 
     def validate(self) -> List[Dict[str, Any]]:
-        """The engine's issues with this document (``cslope.validate``), or
-        an empty list when the installed engine cannot validate."""
-        return _validate(self.to_dict())
+        """The engine's issues with this document (``cslope.validate``):
+        ``{"path", "code", "message", "severity"}`` dicts."""
+        return _cslope.validate(self.to_dict())
 
     def save(self, path: PathLike) -> List[Dict[str, Any]]:
         """Validate the document and write it to ``path`` (UTF-8 JSON).
         Raises ``InvalidDefinition`` on errors (nothing is written); returns
         the warnings."""
         doc = self.to_dict()
-        issues = _validate(doc)
+        issues = _cslope.validate(doc)
         errors = [i for i in issues if i.get("severity", "error") == "error"]
         if errors:
             raise InvalidDefinition(errors)
@@ -662,76 +631,3 @@ def split_document(doc: Dict[str, Any]) -> Tuple[Dict[str, Any], Optional[Dict[s
             raise ValueError("The document's options must be an object")
         return definition, options
     return doc, None
-
-
-# ── until the binding has the schema, validation and summary (#55) ──────
-# Everything below falls back to the binding as it was before #55; remove the
-# fallbacks once that binding is released.
-
-
-def _app_defaults() -> Dict[str, Any]:
-    return {k: v for k, v in Options().to_dict().items() if k in (
-        "method", "slices", "iterations", "refinedIterations", "compositeSurfaces")}
-
-
-def _legacy_definition(definition: Dict[str, Any]) -> Dict[str, Any]:
-    """The names the engine read before D-24: ``materialName`` on every
-    boundary and ``followBoundary`` (true = no free water)."""
-    d = copy.deepcopy(definition)
-    for b in d.get("materialBoundaries", []) or []:
-        b.setdefault("materialName", "")
-    wt = d.get("waterTable")
-    if isinstance(wt, dict) and "freeWater" in wt:
-        wt["followBoundary"] = not wt.pop("freeWater")
-    return d
-
-
-def _native_has_documents() -> bool:
-    import cslope
-
-    return hasattr(cslope, "validate") and hasattr(cslope, "summarize")
-
-
-def _validate(doc: Dict[str, Any]) -> List[Dict[str, Any]]:
-    import cslope
-
-    fn = getattr(cslope, "validate", None)
-    return [] if fn is None else list(fn(doc))
-
-
-def _analyse(doc: Dict[str, Any], threads: Optional[int] = None) -> Dict[str, Any]:
-    """Run an analysis document (or a bare definition) with the app's
-    defaults for options it does not set."""
-    import cslope
-
-    if _native_has_documents():
-        return cslope.analyse(doc, threads=threads)
-    definition, options = split_document(doc)
-    merged = _app_defaults()
-    merged.update(options or {})
-    return cslope.analyse(_legacy_definition(definition), merged, threads=threads)
-
-
-def _summarize(result: Dict[str, Any], options: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    import cslope
-
-    fn = getattr(cslope, "summarize", None)
-    if fn is not None:
-        return fn(result, options)
-    pf = (options or {}).get("partialFactors")
-    cs = result.get("criticalSurface")
-    return {
-        "fos": result.get("minFOS"),
-        "fosLabel": "over-design factor" if pf else "factor of safety",
-        "valueBasis": "design" if pf else "characteristic",
-        "partialFactors": pf,
-        "method": result.get("method"),
-        "criticalSurface": None if cs is None else {
-            "entry": cs.get("entryPoint"), "exit": cs.get("exitPoint"),
-            "cx": cs.get("cx"), "cy": cs.get("cy"), "radius": cs.get("radius"),
-        },
-        "warnings": [{"code": w.get("code"), "message": w.get("message")} for w in result.get("warnings") or []],
-        "nonConverged": result.get("nonConvergedSurfaces", 0),
-        "bothDirections": result.get("otherDirectionMinFOS") is not None,
-        "engineBuild": cslope.ENGINE_BUILD,
-    }

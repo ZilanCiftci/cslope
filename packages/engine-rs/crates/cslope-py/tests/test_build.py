@@ -20,13 +20,6 @@ from cslope.build import Definition, InvalidDefinition, Options, swedish_partial
 
 EXAMPLES = Path(__file__).resolve().parents[5] / "skills" / "cslope" / "examples"
 needs_examples = pytest.mark.skipif(not EXAMPLES.is_dir(), reason="the skill's examples are not in this checkout")
-needs_validate = pytest.mark.skipif(
-    not hasattr(cslope, "validate"), reason="this binding has no cslope.validate yet (#55)"
-)
-needs_documents = pytest.mark.skipif(
-    not (hasattr(cslope, "validate") and hasattr(cslope, "summarize")),
-    reason="this binding does not read analysis documents yet (#55)",
-)
 
 # The examples' F (Linux x86_64), within the tolerance policy's 1e-6
 # (PORTING.md). Every option is written into the documents, so the engine's
@@ -63,9 +56,9 @@ def test_every_example_is_pinned():
 @pytest.mark.parametrize("name", sorted(PINNED))
 def test_example_runs_with_its_pinned_factor(name):
     doc = example(name).to_dict()
-    result = build._analyse(doc)
+    result = cslope.analyse(doc)
     assert result["minFOS"] == pytest.approx(PINNED[name], abs=1e-6)
-    summary = build._summarize(result, doc["options"])
+    summary = cslope.summarize(result, doc)
     assert summary["fos"] == pytest.approx(PINNED[name], abs=1e-6)
     if name == "swedish_partial_factors":
         assert summary["fosLabel"] == "over-design factor"
@@ -91,7 +84,6 @@ def test_example_loads_back_unchanged(name):
 
 
 @needs_examples
-@needs_validate
 @pytest.mark.parametrize("name", sorted(PINNED))
 def test_example_validates(name):
     doc = json.loads((EXAMPLES / (name + ".json")).read_text(encoding="utf-8"))
@@ -99,7 +91,6 @@ def test_example_validates(name):
 
 
 @needs_examples
-@needs_documents
 def test_analyse_reads_the_document():
     doc = example("layered_soil").to_dict()
     assert cslope.analyse(doc)["minFOS"] == pytest.approx(PINNED["layered_soil"], abs=1e-6)
@@ -134,14 +125,22 @@ def test_document_envelope_and_new_names():
     assert doc["options"]["compositeSurfaces"] is True
 
 
-def test_legacy_names_until_the_engine_reads_the_new_ones():
+def test_new_names_give_the_same_factor_as_the_deprecated_ones():
+    # D-24: freeWater and a boundary without materialName are the engine's
+    # followBoundary = not freeWater and materialName "".
     d = slope()
+    d.add_material("Clay", c=10, phi=25, gamma=19, gamma_sat=20)
     d.add_interior_boundary([(0, 8), (29, 8)])
-    d.add_piezometric_line([(0, 12), (50, 4)])
-    legacy = d.to_dict(legacy=True)["definition"]
-    assert legacy["materialBoundaries"][0]["materialName"] == ""
-    assert legacy["waterTable"]["followBoundary"] is False
-    assert "freeWater" not in legacy["waterTable"]
+    d.assign("Sand", at=(5, 12))
+    d.assign("Clay", at=(5, 2))
+    for free in (True, False):
+        d._water = None
+        d.add_piezometric_line([(0, 12), (30, 6), (50, 6)], free_water=free)
+        doc = d.to_dict()
+        old = json.loads(json.dumps(doc))
+        old["definition"]["materialBoundaries"][0]["materialName"] = ""
+        old["definition"]["waterTable"]["followBoundary"] = not old["definition"]["waterTable"].pop("freeWater")
+        assert cslope.analyse(doc)["minFOS"] == cslope.analyse(old)["minFOS"]
 
 
 def test_save_and_load(tmp_path):
@@ -167,7 +166,7 @@ def test_load_keeps_what_the_builder_does_not_write(tmp_path):
 
 
 def test_load_reads_the_legacy_names():
-    doc = slope().to_dict(legacy=False)
+    doc = slope().to_dict()
     doc["definition"]["waterTable"] = {"mode": "custom", "value": [[0, 12], [50, 4]], "followBoundary": True}
     assert Definition.from_dict(doc).to_dict()["definition"]["waterTable"]["freeWater"] is False
 
@@ -182,14 +181,14 @@ def test_save_refuses_a_definition_with_errors(tmp_path, monkeypatch):
         },
         {"path": "/definition/materials/0", "code": "w", "message": "A warning.", "severity": "warning"},
     ]
-    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: issues, raising=False)
+    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: issues)
     path = tmp_path / "bad.json"
     with pytest.raises(InvalidDefinition) as e:
         slope().save(path)
     assert e.value.issues == issues[:1]
     assert "/definition/regionAssignments" in str(e.value)
     assert not path.exists()
-    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: issues[1:], raising=False)
+    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: issues[1:])
     assert slope().save(path) == issues[1:]
     assert path.exists()
 
@@ -350,8 +349,20 @@ def test_partial_factors_make_an_over_design_factor():
     )
     doc = d.to_dict()
     assert doc["options"]["partialFactors"]["cohesion"] == 1.3
-    summary = build._summarize(build._analyse(doc), doc["options"])
+    summary = cslope.summarize(cslope.analyse(doc), doc)
     assert summary["fosLabel"] == "over-design factor"
     assert summary["valueBasis"] == "design"
     with pytest.raises(ValueError):
         d.options.partial_factors = {"cu": 1.5}
+
+
+def test_save_refuses_a_region_without_material(tmp_path):
+    d = slope()
+    d.add_material("Clay", su=20, gamma=17, gamma_sat=17)
+    d.add_interior_boundary([(0, 8), (29, 8)])
+    d.assign("Sand", at=(5, 12))
+    path = tmp_path / "unassigned.json"
+    with pytest.raises(InvalidDefinition) as e:
+        d.save(path)
+    assert all(i["path"].startswith("/definition") for i in e.value.issues)
+    assert not path.exists()

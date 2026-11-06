@@ -22,9 +22,6 @@ EXIT_OK = 0
 EXIT_ANALYSIS = 1
 EXIT_INVALID = 2
 
-# Partial factor keys -> symbols, as the app shows them.
-_FACTOR_SYMBOLS = (("cu", "γcu"), ("cohesion", "γc′"), ("tanPhi", "γφ′"), ("variableLoad", "γQ"))
-
 
 def _utf8(stream: TextIO) -> TextIO:
     """The stream as UTF-8 (model names on Windows consoles)."""
@@ -88,38 +85,35 @@ def _finite(value: Any) -> Any:
     return value
 
 
-def _fmt_point(p: Any) -> str:
-    if not p or len(p) != 2:
-        return "?"
-    return "({:.2f}, {:.2f})".format(p[0], p[1])
-
-
 def format_summary(summary: Dict[str, Any]) -> str:
-    """The summary as a few lines of text for a person."""
+    """The summary (``cslope.summarize``) as a few lines of text for a
+    person, in the summary's own words."""
     lines = []
     fos = summary.get("fos")
-    label = summary.get("fosLabel", "factor of safety")
-    basis = summary.get("valueBasis", "characteristic")
-    f_text = "none (no valid slip surface)" if fos is None else "{:.3f}".format(fos)
-    lines.append("F {}: {} on {} values".format(f_text, label, basis))
+    if fos is None:
+        lines.append("F: none (no valid slip surface)")
+    else:
+        f_text = summary.get("fosText") or "{:.3f}".format(fos)
+        lines.append("F {}: {} on {} values".format(f_text, summary.get("fosLabel"), summary.get("valueBasis")))
     pf = summary.get("partialFactors")
-    if pf:
-        factors = ", ".join("{} {:g}".format(sym, pf[k]) for k, sym in _FACTOR_SYMBOLS if k in pf)
-        lines.append("Partial factors: {}".format(factors))
+    if isinstance(pf, dict) and pf.get("text"):
+        lines.append("Partial factors: {}".format(pf["text"]))
     if summary.get("method"):
         lines.append("Method: {}".format(summary["method"]))
     cs = summary.get("criticalSurface")
     if isinstance(cs, dict):
-        entry = cs.get("entry", cs.get("entryPoint"))
-        exit_ = cs.get("exit", cs.get("exitPoint"))
-        lines.append("Critical surface: entry {}, exit {} (m)".format(_fmt_point(entry), _fmt_point(exit_)))
-    nc = summary.get("nonConverged")
-    if nc:
-        lines.append("Surfaces that did not converge: {}".format(nc))
+        lines.append("Critical surface: {}".format(cs.get("text")))
+        if cs.get("entryExitText"):
+            lines.append("Entry / exit: {}".format(cs["entryExitText"]))
+    both = summary.get("bothDirections")
+    if isinstance(both, dict) and both.get("text"):
+        lines.append("Both directions: {}".format(both["text"]))
+    if summary.get("nonConvergedText"):
+        lines.append("Not converged: {}".format(summary["nonConvergedText"]))
     warnings = summary.get("warnings") or []
     if warnings:
         lines.append("Warnings:")
-        lines.extend("- {}".format(w.get("message", w)) for w in warnings)
+        lines.extend("- {}".format(w.get("message")) for w in warnings)
     else:
         lines.append("Warnings: none")
     if summary.get("engineBuild"):
@@ -130,21 +124,18 @@ def format_summary(summary: Dict[str, Any]) -> str:
 def _cmd_analyse(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
-    from .build import _analyse, _summarize, _validate, split_document
-
     doc = _read(args.document)
-    errors = _errors(_validate(doc))
+    errors = _errors(cslope.validate(doc))
     if errors:
         raise _Invalid(errors)
     try:
-        result = _analyse(doc, threads=args.threads)
+        result = cslope.analyse(doc, threads=args.threads)
     except cslope.EngineError as e:
         err.write("The analysis failed: {}\n".format(e))
         return EXIT_ANALYSIS
     except (TypeError, ValueError) as e:  # the engine could not read the input
         raise _Invalid([{"path": "", "message": str(e)}]) from None
-    _, options = split_document(doc)
-    summary = _summarize(result, options)
+    summary = cslope.summarize(result, doc)
     if args.json:
         json.dump(_finite({"summary": summary, "result": result}), out, ensure_ascii=False, allow_nan=False)
         out.write("\n")
@@ -156,13 +147,7 @@ def _cmd_analyse(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
 def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
-    from .build import _validate
-
-    doc = _read(args.document)
-    if not hasattr(cslope, "validate"):
-        err.write("This version of cslope cannot validate; update it.\n")
-        return EXIT_ANALYSIS
-    issues = _validate(doc)
+    issues = cslope.validate(_read(args.document))
     _print_issues(issues, out)
     if _errors(issues):
         return EXIT_INVALID
@@ -173,14 +158,10 @@ def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
 def _cmd_schema(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
-    fn = getattr(cslope, "schema", None)
-    if fn is None:
-        err.write("This version of cslope has no schemas; update it.\n")
-        return EXIT_ANALYSIS
     try:
-        schema = fn(args.name) if args.name else fn()
-    except (KeyError, ValueError) as e:
-        err.write("{}\n".format(e.args[0] if e.args else e))
+        schema = cslope.schema(args.name) if args.name else cslope.schema()
+    except ValueError as e:
+        err.write("{}\n".format(e))
         return EXIT_INVALID
     json.dump(schema, out, ensure_ascii=False, indent=2)
     out.write("\n")
@@ -192,7 +173,8 @@ def _cmd_info(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
 
     out.write("cslope {}\n".format(cslope.__version__))
     out.write("Engine build: {}\n".format(cslope.ENGINE_BUILD))
-    out.write("Schema version: {}\n".format(getattr(cslope, "SCHEMA_VERSION", "not available")))
+    out.write("Schema version: {}\n".format(cslope.SCHEMA_VERSION))
+    out.write("Schemas: {}\n".format(", ".join(cslope.SCHEMA_NAMES)))
     out.write("Python: {}\n".format(sys.version.split()[0]))
     return EXIT_OK
 
@@ -213,8 +195,8 @@ def _parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate", help="check a document and list its issues")
     v.add_argument("document", help="an analysis document (JSON)")
     v.set_defaults(run=_cmd_validate)
-    s = sub.add_parser("schema", help="print the JSON schema of the input or the result")
-    s.add_argument("name", nargs="?", help="the schema's name (default: the analysis document)")
+    s = sub.add_parser("schema", help="print a JSON schema (cslope info lists the names)")
+    s.add_argument("name", nargs="?", help="the schema's name (default: analysis-document)")
     s.set_defaults(run=_cmd_schema)
     i = sub.add_parser("info", help="print the versions")
     i.set_defaults(run=_cmd_info)

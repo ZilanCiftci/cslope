@@ -16,10 +16,6 @@ from cslope import build, cli
 from cslope.build import Definition
 
 PYPROJECT = Path(__file__).resolve().parents[1] / "pyproject.toml"
-needs_validate = pytest.mark.skipif(
-    not hasattr(cslope, "validate"), reason="this binding has no cslope.validate yet (#55)"
-)
-needs_schema = pytest.mark.skipif(not hasattr(cslope, "schema"), reason="this binding has no cslope.schema yet (#55)")
 
 
 def run(*argv):
@@ -52,7 +48,8 @@ def test_analyse_prints_the_summary(doc_path):
     assert code == 0, err
     assert out.startswith("F 1.802: factor of safety on characteristic values\n")
     assert "Method: Morgenstern-Price" in out
-    assert "Critical surface: entry (" in out
+    assert "Critical surface: circle, center (" in out
+    assert "Entry / exit: (" in out
     assert "Warnings: none" in out
 
 
@@ -64,7 +61,7 @@ def test_analyse_json(doc_path):
     s = data["summary"]
     assert s["fos"] == pytest.approx(data["result"]["minFOS"])
     assert s["fos"] == pytest.approx(1.8020625879151726, abs=1e-6)
-    assert s["method"] == "Morgenstern-Price"
+    assert s["methodName"] == "Morgenstern-Price"
     assert s["fosLabel"] == "factor of safety"
     assert isinstance(s["warnings"], list)
     assert data["result"]["criticalSurface"]["entryPoint"]
@@ -80,7 +77,8 @@ def test_analyse_with_partial_factors_says_over_design_factor(tmp_path):
     code, out, _ = run("analyse", path)
     assert code == 0
     assert "over-design factor on design values" in out.splitlines()[0]
-    assert "Partial factors: γcu 1.5, γc′ 1.3, γφ′ 1.3, γQ 1.183" in out
+    assert "Partial factors: γcu = 1.5 (undrained strength)" in out
+    assert "safety class 2 (γd = 0.91)" in out
 
 
 def test_invalid_input_exits_2(tmp_path):
@@ -104,10 +102,10 @@ def test_invalid_input_exits_2(tmp_path):
 
 
 def test_analysis_error_exits_1(doc_path, monkeypatch):
-    def fail(doc, threads=None):
+    def fail(*args, **kwargs):
         raise cslope.EngineError("No valid slip surface was found.")
 
-    monkeypatch.setattr(build, "_analyse", fail)
+    monkeypatch.setattr(cslope, "analyse", fail)
     code, _, err = run("analyse", doc_path)
     assert code == 1
     assert "No valid slip surface was found." in err
@@ -120,18 +118,17 @@ def test_validation_errors_exit_2_with_their_paths(doc_path, monkeypatch):
         "message": "A region has no material.",
         "severity": "error",
     }
-    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: [issue], raising=False)
+    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: [issue])
     code, _, err = run("analyse", doc_path)
     assert code == 2
     assert "/definition/regionAssignments: A region has no material." in err
     code, out, _ = run("validate", doc_path)
     assert code == 2
     assert "/definition/regionAssignments" in out
-    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: [], raising=False)
+    monkeypatch.setattr(cslope, "validate", lambda doc, options=None: [])
     assert run("validate", doc_path)[:2] == (0, "Valid.\n")
 
 
-@needs_validate
 def test_a_missing_region_assignment_exits_2(tmp_path):
     doc = layered().to_dict()
     del doc["definition"]["regionAssignments"][1]
@@ -143,27 +140,23 @@ def test_a_missing_region_assignment_exits_2(tmp_path):
     assert run("analyse", path)[0] == 2
 
 
-@needs_validate
 def test_validate_a_valid_document(doc_path):
     assert run("validate", doc_path)[0] == 0
 
 
-def test_validate_without_the_engine_function(doc_path, monkeypatch):
-    monkeypatch.delattr(cslope, "validate", raising=False)
-    code, _, err = run("validate", doc_path)
-    assert code == 1 and "cannot validate" in err
-
-
-@needs_schema
 def test_schema():
     code, out, _ = run("schema")
     assert code == 0
     assert isinstance(json.loads(out), dict)
 
 
-def test_schema_with_a_fake(monkeypatch):
-    monkeypatch.setattr(cslope, "schema", lambda name=None: {"title": name or "document"}, raising=False)
-    assert json.loads(run("schema", "result")[1]) == {"title": "result"}
+def test_schema_by_name():
+    for name in cslope.SCHEMA_NAMES:
+        code, out, _ = run("schema", name)
+        assert code == 0
+        assert cslope.SCHEMA_VERSION in json.loads(out)["$id"]
+    code, _, err = run("schema", "no-such-schema")
+    assert code == 2 and "analysis-document" in err
 
 
 def test_info():
