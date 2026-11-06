@@ -1,2 +1,2 @@
-// Parameters: lucide's SlidersHorizontal, kept as it is.
-export { SlidersHorizontal as ParametersIcon } from "lucide-react";
+// Parameters: lucide's Variable, the (x) of a variable.
+export { Variable as ParametersIcon } from "lucide-react";

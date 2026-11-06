@@ -1,2 +1,2 @@
-// Settings: lucide's SlidersHorizontal, kept as it is.
-export { SlidersHorizontal as SettingsIcon } from "lucide-react";
+// Settings (Sheet settings): lucide's Settings, the gear, as Options.
+export { Settings as SettingsIcon } from "lucide-react";
