@@ -438,6 +438,7 @@ pub fn analysis_result(
         sgi3d_error: None,
         fem_error: None,
         custom_surfaces,
+        partial_factors: slope.partial_factors().cloned(),
     };
 
     // 3D effects after SGI's guidance, over this analysis's circular surfaces

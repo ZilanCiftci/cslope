@@ -395,3 +395,124 @@ pub fn engine_constants() -> JsResult<JsValue> {
         MATERIAL_COLORS: cslope_engine::math::MATERIAL_COLORS.to_vec(),
     })
 }
+
+// ── Schema, validation, result summary (issue #55) ──────────────
+
+/// The version of the schemas (the engine's version).
+#[wasm_bindgen]
+pub fn schema_version() -> String {
+    t::schema::SCHEMA_VERSION.to_string()
+}
+
+/// Step 2 of the validation in the engine: the JavaScript values read as
+/// the engine reads them for an analysis (see `EngineReader`).
+struct JsReader {
+    definition: JsValue,
+    options: JsValue,
+}
+
+impl JsReader {
+    fn read<T: serde::de::DeserializeOwned>(
+        v: &JsValue,
+        what: &str,
+        prefix: &str,
+        issues: &mut Vec<t::validate_definition::Issue>,
+    ) -> Option<T> {
+        match from_js::<T>(v.clone(), what) {
+            Ok(t) => Some(t),
+            Err(e) => {
+                issues.push(t::validate_definition::Issue {
+                    path: prefix.to_string(),
+                    code: "invalid-value".into(),
+                    message: format!(
+                        "The engine cannot read this value: {}",
+                        e.as_string().unwrap_or_default()
+                    ),
+                    severity: t::validate_definition::Severity::Error,
+                });
+                None
+            }
+        }
+    }
+}
+
+impl t::validate_definition::EngineReader for JsReader {
+    fn definition(
+        &self,
+        _: &serde_json::Value,
+        prefix: &str,
+        issues: &mut Vec<t::validate_definition::Issue>,
+    ) -> Option<t::SlopeDefinition> {
+        Self::read(&self.definition, "slope definition", prefix, issues)
+    }
+    fn options(
+        &self,
+        _: &serde_json::Value,
+        prefix: &str,
+        issues: &mut Vec<t::validate_definition::Issue>,
+    ) -> Option<cslope_engine::model::slope::AnalysisOptionsPatch> {
+        Self::read(&self.options, "analysis options", prefix, issues)
+    }
+}
+
+/// `validate`: the issues of an analysis document or of a definition and
+/// its options (`options` undefined or null: none given).
+#[wasm_bindgen]
+pub fn validate_definition(doc_or_definition: JsValue, options: JsValue) -> JsResult<JsValue> {
+    let v: serde_json::Value = from_js(doc_or_definition.clone(), "definition")?;
+    let given = !(options.is_undefined() || options.is_null());
+    let o: Option<serde_json::Value> = if given {
+        Some(from_js(options.clone(), "analysis options")?)
+    } else {
+        None
+    };
+    let get = |key: &str| {
+        js_sys::Reflect::get(&doc_or_definition, &JsValue::from_str(key))
+            .unwrap_or(JsValue::UNDEFINED)
+    };
+    let reader = if t::validate_definition::is_document(&v) {
+        JsReader {
+            definition: get("definition"),
+            options: if given { options } else { get("options") },
+        }
+    } else {
+        JsReader {
+            definition: doc_or_definition,
+            options,
+        }
+    };
+    to_js(&t::validate_definition::validate_with(
+        &v,
+        o.as_ref(),
+        &reader,
+    ))
+}
+
+/// `summarizeResult`: what F is, the method, the critical surface and the
+/// warnings of a result run with `options` (merged with the defaults it ran
+/// with).
+#[wasm_bindgen]
+pub fn summarize_result(
+    result: JsValue,
+    options: JsValue,
+    engine_build: &str,
+) -> JsResult<JsValue> {
+    let r: t::AnalysisResult = from_js(result, "analysis result")?;
+    let o: cslope_engine::model::slope::AnalysisOptionsPatch =
+        if options.is_undefined() || options.is_null() {
+            Default::default()
+        } else {
+            from_js(options, "analysis options")?
+        };
+    to_js(&cslope_engine::api::summary::summarize_result(
+        &r,
+        &o,
+        engine_build,
+    ))
+}
+
+/// The public defaults of Python and the command line (D-23).
+#[wasm_bindgen]
+pub fn public_default_options() -> JsResult<JsValue> {
+    to_js(&t::public_default_options())
+}

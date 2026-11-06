@@ -55,6 +55,16 @@ export type {
 } from "./types/geometry";
 
 export type { SlopeDefinition, SlopeMaterialDefinition } from "./types/slope-definition";
+
+// ── Schemas, validation and the result summary (issue #55) ───────
+export {
+  SCHEMA_NAMES,
+  schemaVersion,
+  validateDefinition,
+  summarizeResult,
+  publicDefaultOptions,
+} from "./api/validate";
+export type { SchemaName, ValidationIssue, ResultSummary } from "./api/validate";
 export { materialModelOf, withMaterialModel } from "./types/slope-definition";
 
 export type {

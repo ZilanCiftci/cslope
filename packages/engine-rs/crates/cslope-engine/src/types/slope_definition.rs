@@ -15,7 +15,7 @@ use crate::types::reinforcement::{Pile, Reinforcement};
 use serde::{Deserialize, Serialize};
 
 /// A material of a slope definition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SlopeMaterialDefinition {
     pub name: String,
@@ -164,12 +164,13 @@ pub fn with_material_model(m: &SlopeMaterialDefinition) -> Result<SlopeMaterialD
 /// Water table mode (`SlopeDefinition.waterTable.mode`). Another value
 /// (`null` and a missing mode included: `Missing`) is kept, and the water
 /// table is then left out, as `buildSlope` leaves it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum WaterTableMode {
     Height,
     Depth,
     Custom,
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
@@ -190,11 +191,12 @@ impl WaterTableMode {
 /// not of points, a missing value) is kept, and the water table is then
 /// left out, as `buildSlope` leaves it where the value does not fit the
 /// mode.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum WaterTableValue {
     Level(f64),
     Points(Vec<[f64; 2]>),
+    #[schemars(skip)]
     Other(serde_json::Value),
 }
 
@@ -210,49 +212,115 @@ impl WaterTableValue {
 }
 
 /// Water table definition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaterTableDefinition {
     #[serde(
         default = "WaterTableMode::missing",
         skip_serializing_if = "WaterTableMode::is_missing"
     )]
+    #[schemars(extend("x-required" = true))]
     pub mode: WaterTableMode,
     #[serde(
         default = "WaterTableValue::missing",
         skip_serializing_if = "WaterTableValue::is_missing"
     )]
+    #[schemars(extend("x-required" = true))]
     pub value: WaterTableValue,
-    /// `setWaterTable`'s `followBoundary ?? true`: `null` is the default
-    /// (true), another value its truthiness.
+    /// Deprecated (D-24): the inverse of `free_water`, under a name that
+    /// reads the wrong way round (true: no free water). `setWaterTable`'s
+    /// `followBoundary ?? true`: `null` is the default (true), another value
+    /// its truthiness. Read only when `free_water` is absent.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::nullish_truthy"
     )]
+    #[schemars(
+        description = "Deprecated: use freeWater (followBoundary = !freeWater). true: the line is clipped to the ground (no free water).",
+        extend("deprecated" = true)
+    )]
     pub follow_boundary: Option<bool>,
+    /// Whether water above the ground surface is free water: its weight acts
+    /// on the ground (true), or the line is clipped to the ground (false,
+    /// the default). Takes precedence over `follow_boundary` (D-24).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::nullish_truthy"
+    )]
+    #[schemars(
+        description = "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false, the default)."
+    )]
+    pub free_water: Option<bool>,
+}
+
+impl WaterTableDefinition {
+    /// The engine's `followBoundary` of this water table: `!free_water`
+    /// when given, else `follow_boundary` (None: the default, true).
+    pub fn follows_boundary(&self) -> Option<bool> {
+        match self.free_water {
+            Some(free) => Some(!free),
+            None => self.follow_boundary,
+        }
+    }
 }
 
 /// An additional water table (piezometric line) that materials can refer
 /// to with `water_table_id`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct WaterTableEntry {
     pub id: String,
     pub coordinates: Vec<[f64; 2]>,
+    /// Deprecated (D-24): the inverse of `free_water`.
     /// `setWaterTableById`'s default parameter `followBoundary = true`
     /// applies only when it is absent: `null` is false (no clipping), another
-    /// value its truthiness.
+    /// value its truthiness. Read only when `free_water` is absent.
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::truthy"
     )]
+    #[schemars(
+        description = "Deprecated: use freeWater (followBoundary = !freeWater). true: the line is clipped to the ground (no free water).",
+        extend("deprecated" = true)
+    )]
     pub follow_boundary: Option<bool>,
+    /// Whether water above the ground surface is free water (true) or the
+    /// line is clipped to the ground (false). Takes precedence over
+    /// `follow_boundary` (D-24); without either, the main water table's
+    /// `freeWater` applies, else false.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::nullish_truthy"
+    )]
+    #[schemars(
+        description = "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false). Without it (and without followBoundary) the line takes waterTable.freeWater, else false."
+    )]
+    pub free_water: Option<bool>,
+}
+
+impl WaterTableEntry {
+    /// The engine's `followBoundary` of this line: `!free_water` when
+    /// given, else `follow_boundary`, else the main water table's
+    /// `free_water` (`main_free_water`, D-24: a line that says nothing
+    /// follows the main line's free water), else true. (The app writes
+    /// `followBoundary` on every line and never `freeWater`, so what it
+    /// writes reads as before.)
+    pub fn follows_boundary(&self, main_free_water: Option<bool>) -> bool {
+        match (self.free_water, self.follow_boundary, main_free_water) {
+            (Some(free), _, _) => !free,
+            (None, Some(follow), _) => follow,
+            (None, None, Some(free)) => !free,
+            (None, None, None) => true,
+        }
+    }
 }
 
 /// A UDL of a definition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UdlDefinition {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -271,7 +339,7 @@ pub struct UdlDefinition {
 /// A line load of a definition; `angle`: inclination from the downward
 /// vertical (°), positive towards +x; `y`: the elevation of the load point
 /// (a point on a wall face; default the ground at x).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LineLoadDefinition {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -294,22 +362,31 @@ pub struct LineLoadDefinition {
 
 /// Rapid drawdown (three-stage, model/drawdown.ts): the water table before
 /// drawdown, for all materials.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RapidDrawdown {
     pub water_before: Vec<[f64; 2]>,
 }
 
 /// A material boundary polyline.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MaterialBoundary {
     pub coordinates: Vec<[f64; 2]>,
+    /// Deprecated (D-24): a material for the region below the boundary's
+    /// midpoint, used only when the definition has no `region_assignments`
+    /// (older definitions). Absent is "" (none); give the materials of the
+    /// regions with `region_assignments`.
+    #[serde(default)]
+    #[schemars(
+        description = "Deprecated: assign the materials of the regions with regionAssignments. Used only without regionAssignments (the region below the boundary's midpoint).",
+        extend("deprecated" = true)
+    )]
     pub material_name: String,
 }
 
 /// A point-based region material assignment.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RegionAssignment {
     pub point: [f64; 2],
@@ -317,7 +394,7 @@ pub struct RegionAssignment {
 }
 
 /// A user-specified circular search plane.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CustomSearchPlane {
     #[serde(deserialize_with = "crate::types::json::num")]
     pub cx: f64,
@@ -328,7 +405,7 @@ pub struct CustomSearchPlane {
 }
 
 /// A user-specified non-circular surface.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct CustomSurface {
     pub points: Vec<[f64; 2]>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -336,14 +413,17 @@ pub struct CustomSurface {
 }
 
 /// A block search object: one point, a line or a window.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct BlockSearchObject {
     pub points: Vec<[f64; 2]>,
 }
 
 /// Slope definition sent from the UI to the engine / worker.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[schemars(
+    description = "A slope model: the outline (coordinates), the materials and their regions (materialBoundaries, regionAssignments), water, loads, structures and the search limits. Coordinates in metres, y up; the model slides towards +x unless orientation is \"rtl\"."
+)]
 pub struct SlopeDefinition {
     /// Model orientation used for canonical mirroring.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -353,6 +433,7 @@ pub struct SlopeDefinition {
     /// Material assignments. Absent reads as none, which `build_slope`
     /// rejects with TypeScript's message (TypeScript's `!def.materials`).
     #[serde(default)]
+    #[schemars(extend("x-required" = true))]
     pub materials: Vec<SlopeMaterialDefinition>,
     /// Water table definition (optional).
     #[serde(default, skip_serializing_if = "Option::is_none")]

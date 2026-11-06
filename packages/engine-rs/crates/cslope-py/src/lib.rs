@@ -14,14 +14,21 @@ mod slope;
 use crate::errors::IntoPyResult;
 use crate::run::{from_py, run, to_py, PyCancelToken, RunArgs};
 use cslope_engine::api::run_analysis::run_analysis;
+use cslope_engine::api::summary::summarize_result;
 use cslope_engine::fem::summary::{run_fem_summary, run_fem_summary_with_bounds};
 use cslope_engine::model::canonical::to_canonical_slope_definition;
 use cslope_engine::model::reliability::{
     analyse_reliability, reliability_surface_to_model_space, RandomVariable, ReliabilityOptions,
 };
 use cslope_engine::model::slope::AnalysisOptionsPatch;
-use cslope_engine::types::{FemAnalysisSettings, MaterialModel, SlopeDefinition};
+use cslope_engine::types::schema::{SCHEMA_NAMES, SCHEMA_VERSION};
+use cslope_engine::types::{
+    public_default_options, validate_definition, AnalysisResult, FemAnalysisSettings,
+    MaterialModel, SlopeDefinition, SwedishFactorBasis,
+};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+use pyo3::types::PyDict;
 
 fn definition(value: &Bound<'_, PyAny>) -> PyResult<SlopeDefinition> {
     from_py(value, "slope definition")
@@ -38,8 +45,42 @@ fn options(value: Option<&Bound<'_, PyAny>>) -> PyResult<AnalysisOptionsPatch> {
     }
 }
 
+/// An analysis document (`{"format": "cslope-analysis", "formatVersion":
+/// 1, "definition", "options"}`) as its definition and options; another
+/// value as itself and no options.
+fn split_document<'py>(
+    value: &Bound<'py, PyAny>,
+) -> PyResult<(Bound<'py, PyAny>, Option<Bound<'py, PyAny>>)> {
+    if let Ok(d) = value.cast::<PyDict>() {
+        if !d.contains("coordinates")? && (d.contains("format")? || d.contains("definition")?) {
+            let Some(def) = d.get_item("definition")? else {
+                return Err(PyValueError::new_err(
+                    "Invalid analysis document: it has no \"definition\".",
+                ));
+            };
+            let opts = d.get_item("options")?.filter(|o| !o.is_none());
+            return Ok((def, opts));
+        }
+    }
+    Ok((value.clone(), None))
+}
+
+/// The options of a run from Python (D-23): the public defaults (the
+/// app's: Morgenstern-Price, 30 slices, 1000 + 500 trial surfaces,
+/// composite surfaces), then the document's options, then `options`.
+fn public_options(
+    document: Option<&Bound<'_, PyAny>>,
+    given: Option<&Bound<'_, PyAny>>,
+) -> PyResult<AnalysisOptionsPatch> {
+    Ok(public_default_options()
+        .merged(&self::options(document)?)
+        .merged(&self::options(given)?))
+}
+
 /// Limit equilibrium analysis of a slope: the result the app shows
-/// (``AnalysisResult``), in the model's coordinates.
+/// (``AnalysisResult``), in the model's coordinates. ``definition`` is a
+/// definition or an analysis document; the options are the public defaults
+/// (D-23), the document's options and ``options``, in that order.
 #[pyfunction]
 #[pyo3(signature = (definition, options=None, *, both_directions=false, progress=None, threads=None, cancel=None))]
 fn analyse<'py>(
@@ -51,8 +92,9 @@ fn analyse<'py>(
     threads: Option<usize>,
     cancel: Option<&Bound<'py, PyCancelToken>>,
 ) -> PyResult<Bound<'py, PyAny>> {
-    let def = canonical(definition)?;
-    let mut o = self::options(options)?;
+    let (definition, doc_options) = split_document(definition)?;
+    let def = canonical(&definition)?;
+    let mut o = public_options(doc_options.as_ref(), options)?;
     if both_directions {
         o.both_directions = Some(true);
     }
@@ -133,6 +175,141 @@ fn validate_material_model(model: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     cslope_engine::types::validation::try_validate_material_model(&m).py()
 }
 
+/// The issues of an analysis document, or of a definition and its options
+/// (``validate_definition``): a list of ``{"path", "code", "message",
+/// "severity"}``, empty when valid.
+#[pyfunction]
+#[pyo3(signature = (doc_or_definition, options=None))]
+fn validate<'py>(
+    py: Python<'py>,
+    doc_or_definition: &Bound<'py, PyAny>,
+    options: Option<&Bound<'py, PyAny>>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let v: serde_json::Value = from_py(doc_or_definition, "definition")?;
+    let o: Option<serde_json::Value> = match options {
+        Some(o) if !o.is_none() => Some(from_py(o, "analysis options")?),
+        _ => None,
+    };
+    to_py(py, &validate_definition::validate(&v, o.as_ref()))
+}
+
+/// What a result means (``summarize_result``): F and whether it is a
+/// factor of safety or an over-design factor, the method, the critical
+/// surface, the warnings. ``options``: those of the run, over the public
+/// defaults as ``analyse`` takes them.
+#[pyfunction]
+#[pyo3(signature = (result, options=None))]
+fn summarize<'py>(
+    py: Python<'py>,
+    result: &Bound<'py, PyAny>,
+    options: Option<&Bound<'py, PyAny>>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let r: AnalysisResult = from_py(result, "analysis result")?;
+    // options or an analysis document (its options; one without a
+    // definition is an error, as for `analyse`)
+    let o = match options.filter(|o| !o.is_none()) {
+        Some(o) if is_document(o) => public_options(split_document(o)?.1.as_ref(), None)?,
+        given => public_options(None, given)?,
+    };
+    to_py(py, &summarize_result(&r, &o, env!("CSLOPE_ENGINE_BUILD")))
+}
+
+fn is_document(v: &Bound<'_, PyAny>) -> bool {
+    v.cast::<PyDict>().is_ok_and(|d| {
+        !d.contains("coordinates").unwrap_or(false)
+            && (d.contains("format").unwrap_or(false) || d.contains("definition").unwrap_or(false))
+    })
+}
+
+/// Swedish partial factors from the safety class and the conversion
+/// factors (``swedish_partial_factors``): the ``partialFactors`` dict of the
+/// options, with its ``basis``.
+#[pyfunction]
+fn swedish_partial_factors<'py>(
+    py: Python<'py>,
+    safety_class: u8,
+    eta_cu: f64,
+    eta_drained: f64,
+    variable_load_base: f64,
+) -> PyResult<Bound<'py, PyAny>> {
+    let f = cslope_engine::types::swedish_partial_factors(&SwedishFactorBasis {
+        safety_class,
+        eta_cu,
+        eta_drained,
+        variable_load_base,
+    })
+    .py()?;
+    to_py(py, &f)
+}
+
+/// The JSON schemas (packages/engine/schema, written by tools/schema.ts),
+/// built into the package.
+const SCHEMA_FILES: [(&str, &str); 10] = [
+    (
+        "analysis-document",
+        include_str!("../../../../engine/schema/analysis-document.json"),
+    ),
+    (
+        "slope-definition",
+        include_str!("../../../../engine/schema/slope-definition.json"),
+    ),
+    (
+        "analysis-options",
+        include_str!("../../../../engine/schema/analysis-options.json"),
+    ),
+    (
+        "analysis-result",
+        include_str!("../../../../engine/schema/analysis-result.json"),
+    ),
+    (
+        "material-model",
+        include_str!("../../../../engine/schema/material-model.json"),
+    ),
+    (
+        "fem-analysis-settings",
+        include_str!("../../../../engine/schema/fem-analysis-settings.json"),
+    ),
+    (
+        "reliability-options",
+        include_str!("../../../../engine/schema/reliability-options.json"),
+    ),
+    (
+        "random-variables",
+        include_str!("../../../../engine/schema/random-variables.json"),
+    ),
+    (
+        "result-summary",
+        include_str!("../../../../engine/schema/result-summary.json"),
+    ),
+    (
+        "validation-issues",
+        include_str!("../../../../engine/schema/validation-issues.json"),
+    ),
+];
+
+/// The JSON schema of ``name`` (``SCHEMA_NAMES``).
+#[pyfunction]
+#[pyo3(signature = (name="analysis-document"))]
+fn schema<'py>(py: Python<'py>, name: &str) -> PyResult<Bound<'py, PyAny>> {
+    match SCHEMA_FILES.iter().find(|(n, _)| *n == name) {
+        Some((_, text)) => {
+            let v: serde_json::Value = serde_json::from_str(text)
+                .map_err(|e| PyValueError::new_err(format!("Schema \"{name}\": {e}")))?;
+            to_py(py, &v)
+        }
+        None => Err(PyValueError::new_err(format!(
+            "No schema \"{name}\": one of {}.",
+            SCHEMA_NAMES.join(", ")
+        ))),
+    }
+}
+
+/// The public default options (D-23), a new dict.
+#[pyfunction]
+fn default_options<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    to_py(py, &public_default_options())
+}
+
 #[pymodule]
 #[pyo3(name = "_native")]
 fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -151,5 +328,12 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(reliability, m)?)?;
     m.add_function(wrap_pyfunction!(to_canonical, m)?)?;
     m.add_function(wrap_pyfunction!(validate_material_model, m)?)?;
+    m.add("SCHEMA_VERSION", SCHEMA_VERSION)?;
+    m.add("SCHEMA_NAMES", SCHEMA_NAMES.to_vec())?;
+    m.add_function(wrap_pyfunction!(validate, m)?)?;
+    m.add_function(wrap_pyfunction!(summarize, m)?)?;
+    m.add_function(wrap_pyfunction!(swedish_partial_factors, m)?)?;
+    m.add_function(wrap_pyfunction!(schema, m)?)?;
+    m.add_function(wrap_pyfunction!(default_options, m)?)?;
     Ok(())
 }

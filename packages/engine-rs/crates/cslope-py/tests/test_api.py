@@ -31,6 +31,10 @@ EXPECTED = {
     ("two_layer_cut_left", "Morgenstern-Price"): 1.8046299932421586,
 }
 
+# The engine's own defaults where the public ones (D-23, analyse without
+# options) differ: the values above were computed with them.
+ENGINE_DEFAULTS = {"slices": 25, "compositeSurfaces": False}
+
 # A longer search (more batches) for the progress and cancellation tests.
 LONG = {"method": "Morgenstern-Price", "iterations": 3000, "refinedIterations": 3000, "slices": 60}
 
@@ -48,7 +52,7 @@ def test_version():
 
 @pytest.mark.parametrize("name,method", sorted(EXPECTED))
 def test_examples(name, method):
-    r = cslope.analyse(getattr(examples, name)(), {"method": method})
+    r = cslope.analyse(getattr(examples, name)(), {"method": method, **ENGINE_DEFAULTS})
     assert r["method"] == method
     assert math.isclose(r["minFOS"], EXPECTED[(name, method)], rel_tol=1e-6, abs_tol=0)
     assert r["criticalSurface"]["fos"] == r["minFOS"]
@@ -134,7 +138,7 @@ def test_progress_false_cancels():
 
 
 def test_progress_none_or_true_continues():
-    r = cslope.analyse(examples.simple_slope(), {"method": "Bishop"}, progress=lambda e: True)
+    r = cslope.analyse(examples.simple_slope(), {"method": "Bishop", **ENGINE_DEFAULTS}, progress=lambda e: True)
     assert math.isclose(r["minFOS"], EXPECTED[("simple_slope", "Bishop")], rel_tol=1e-6)
 
 
@@ -262,7 +266,9 @@ def test_fem_summary_arrays():
     }
     trials = []
     s = cslope.fem_summary(examples.simple_slope(), settings, progress=trials.append)
-    assert trials and all(t["kind"] == "femTrial" for t in trials)
+    # (the stages, femStage, come between the trials since a720fdc1)
+    assert any(t["kind"] == "femTrial" for t in trials)
+    assert all(t["kind"] in ("femTrial", "femStage") for t in trials)
     lem = EXPECTED[("simple_slope", "Bishop")]
     assert abs(s["factorOfSafety"] - lem) < 0.15 * lem
     assert isinstance(s["x"], array.array) and s["x"].typecode == "d"

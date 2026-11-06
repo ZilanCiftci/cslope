@@ -318,6 +318,11 @@ export function polyline_crossings_x(points: any, px: Float64Array | number[], p
 
 export function polyline_y_at(points: any, x: number): number;
 
+/**
+ * The public defaults of Python and the command line (D-23).
+ */
+export function public_default_options(): any;
+
 export function pullout_beyond(env: any, s: number): number;
 
 export function rankine_crack_depth(handle: number, x: number): number;
@@ -371,6 +376,11 @@ export function run_fem_summary(definition: any, settings: any, on_trial: any, o
  * (Clarabel is linked in: the facade's `solvers` loader is not called).
  */
 export function run_fem_summary_with_bounds(definition: any, settings: any, on_trial: any, on_stage: any): any;
+
+/**
+ * The version of the schemas (the engine's version).
+ */
+export function schema_version(): string;
 
 export function select_entry_exit(handle: number, cx: number, cy: number, radius: number): any;
 
@@ -581,6 +591,13 @@ export function suction_angle(model_js: any): number;
 
 export function suction_strength(model_js: any, suction: number): number;
 
+/**
+ * `summarizeResult`: what F is, the method, the critical surface and the
+ * warnings of a result run with `options` (merged with the defaults it ran
+ * with).
+ */
+export function summarize_result(result: any, options: any, engine_build: string): any;
+
 export function supports_anisotropy(kind: string): boolean;
 
 export function supports_suction_strength(kind: string): boolean;
@@ -605,6 +622,12 @@ export function udl_new(params: any): any;
  * `upperBound(slope, options)`.
  */
 export function upper_bound(slope: any, options: any, size_field?: number | null): any;
+
+/**
+ * `validate`: the issues of an analysis document or of a definition and
+ * its options (`options` undefined or null: none given).
+ */
+export function validate_definition(doc_or_definition: any, options: any): any;
 
 export function validate_material_model(model_js: any): string[];
 
@@ -752,6 +775,7 @@ export interface InitOutput {
     readonly polygonize_regions: (a: number, b: number, c: number, d: number, e: any) => [number, number, number];
     readonly polyline_crossings_x: (a: any, b: number, c: number, d: number, e: number, f: number) => [number, number, number, number];
     readonly polyline_y_at: (a: any, b: number) => [number, number, number];
+    readonly public_default_options: () => [number, number, number];
     readonly pullout_beyond: (a: any, b: number) => [number, number, number];
     readonly rankine_crack_depth: (a: number, b: number) => [number, number, number];
     readonly ray_to_ground: (a: any, b: number, c: number, d: number, e: number) => [number, number, number];
@@ -767,6 +791,7 @@ export interface InitOutput {
     readonly run_analysis: (a: any, b: any, c: number) => [number, number, number];
     readonly run_fem_summary: (a: any, b: any, c: any, d: any) => [number, number, number];
     readonly run_fem_summary_with_bounds: (a: any, b: any, c: any, d: any) => [number, number, number];
+    readonly schema_version: () => [number, number];
     readonly select_entry_exit: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly set_entry_exit_planes: (a: number) => [number, number];
     readonly set_morgenstern_price_solver: (a: number, b: number) => void;
@@ -840,6 +865,7 @@ export interface InitOutput {
     readonly steps_resume: (a: number, b: any) => [number, number, number];
     readonly suction_angle: (a: any) => [number, number, number];
     readonly suction_strength: (a: any, b: number) => [number, number, number];
+    readonly summarize_result: (a: any, b: any, c: number, d: number) => [number, number, number];
     readonly supports_anisotropy: (a: number, b: number) => number;
     readonly supports_suction_strength: (a: number, b: number) => number;
     readonly surface_slide_message: (a: any, b: number) => [number, number, number, number];
@@ -848,6 +874,7 @@ export interface InitOutput {
     readonly trapezoidal: (a: number, b: number, c: number) => number;
     readonly udl_new: (a: any) => [number, number, number];
     readonly upper_bound: (a: any, b: any, c: number) => [number, number, number];
+    readonly validate_definition: (a: any, b: any) => [number, number, number];
     readonly validate_material_model: (a: any) => [number, number, number, number];
     readonly vertical_stress: (a: number, b: number, c: number, d: number) => [number, number, number];
     readonly waternet_count: () => number;

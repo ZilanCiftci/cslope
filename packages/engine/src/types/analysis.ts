@@ -619,6 +619,12 @@ export interface AnalysisResult {
    * own direction (with `bothDirections` too).
    */
   customSurfaces?: CustomSurfaceResult[];
+  /**
+   * The partial factors the analysis applied (with their basis): the
+   * strengths were design values and `minFOS` is an over-design factor.
+   * Absent: characteristic values.
+   */
+  partialFactors?: PartialFactors;
 }
 
 /**

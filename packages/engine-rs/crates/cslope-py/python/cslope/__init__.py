@@ -7,38 +7,57 @@ for models to start from.
 
     >>> import cslope
     >>> from cslope.examples import simple_slope
+    >>> cslope.validate(simple_slope())                     # [] when valid
+    []
     >>> result = cslope.analyse(simple_slope(), {"method": "Bishop"})
-    >>> round(result["minFOS"], 3)  # doctest: +SKIP
+    >>> cslope.summarize(result)["fosLabel"]                # doctest: +SKIP
+    'factor of safety'
+
+``analyse`` takes the app's default options (Morgenstern-Price, 30 slices,
+1000 + 500 trial surfaces, composite surfaces; ``default_options()``), not
+the engine's own, and also an analysis document ``{"format":
+"cslope-analysis", "formatVersion": 1, "definition": ..., "options": ...}``.
 """
 
 from __future__ import annotations
 
 import array as _array
-from typing import Any, Callable, Literal, Optional
+from typing import Any, Callable, List, Literal, Optional
 
 from . import _native
 from ._native import (
     ENGINE_BUILD,
+    SCHEMA_NAMES,
+    SCHEMA_VERSION,
     AnalysisCancelled,
     CancelToken,
     EngineError,
     __version__,
+    default_options,
     reliability,
+    swedish_partial_factors,
     to_canonical,
     validate_material_model,
 )
 
 __all__ = [
     "ENGINE_BUILD",
+    "SCHEMA_NAMES",
+    "SCHEMA_VERSION",
     "AnalysisCancelled",
     "CancelToken",
     "EngineError",
     "Slope",
     "__version__",
     "analyse",
+    "default_options",
     "fem_summary",
     "reliability",
+    "schema",
+    "summarize",
+    "swedish_partial_factors",
     "to_canonical",
+    "validate",
     "validate_material_model",
 ]
 
@@ -80,6 +99,50 @@ def _convert(d: dict, fields: dict, kind: ArrayKind) -> None:
             d[k] = _array.array(code, d[k])
 
 
+def validate(doc_or_definition: Any, options: Optional[Any] = None) -> List[dict]:
+    """The issues of an analysis document or of a definition (and options).
+
+    Returns a list of ``{"path", "code", "message", "severity"}`` dicts,
+    empty when the input is valid. ``path`` is a JSON pointer: under
+    ``/definition`` and ``/options`` for a document
+    (``{"format": "cslope-analysis", "formatVersion": 1, "definition",
+    "options"}``), from the definition's root for a bare definition (its
+    ``options`` under ``/options``). ``severity`` is ``"error"`` (a wrong
+    answer or none) or ``"warning"`` (often a mistake). Checked: the JSON
+    schema (unknown keys, types, values), and the model's rules: every
+    region assigned once, interior boundaries that reach the outline,
+    loads, search limits and water lines within the model, ``unitWeightSat``
+    below the water, the deprecated ``materialName`` and ``followBoundary``.
+    """
+    return _native.validate(doc_or_definition, options)
+
+
+def summarize(result: Any, options: Optional[Any] = None) -> dict:
+    """What a result means, as the app's report states it.
+
+    ``options`` are those the analysis ran with (as given to ``analyse``,
+    over the same defaults; or the analysis document). Returns a dict with
+    ``fos``, ``fosLabel`` ("factor of safety" on characteristic values,
+    "over-design factor" on design values), ``valueBasis``,
+    ``partialFactors`` (with their ``basis``, or None), ``method`` (the text
+    the app shows), ``criticalSurface`` (shape, entry and exit, or None),
+    ``warnings`` (``{code, message}``), ``nonConverged``,
+    ``bothDirections`` (or None), ``engineBuild`` and more.
+    """
+    return _native.summarize(result, options)
+
+
+def schema(name: str = "analysis-document") -> dict:
+    """The JSON schema ``name`` (one of ``SCHEMA_NAMES``), as a new dict.
+
+    The schemas are built into the package (the same as
+    packages/engine/schema in the repository); their ``$id`` carries
+    ``SCHEMA_VERSION``. They are stricter than the engine: no unknown keys,
+    JSON numbers, integers for counts.
+    """
+    return _native.schema(name)
+
+
 def analyse(
     definition: Any,
     options: Optional[Any] = None,
@@ -91,8 +154,14 @@ def analyse(
 ) -> Any:
     """Limit equilibrium analysis of a slope.
 
-    ``definition`` is a ``SlopeDefinition`` dict and ``options`` a partial
-    ``AnalysisOptions`` dict (``method``, ``slices``, ``searchMethod``, ...).
+    ``definition`` is a ``SlopeDefinition`` dict, or an analysis document
+    (``{"format": "cslope-analysis", "formatVersion": 1, "definition",
+    "options"}``), and ``options`` a partial ``AnalysisOptions`` dict
+    (``method``, ``slices``, ``searchMethod``, ...). The options are the
+    app's defaults (``default_options()``: Morgenstern-Price, 30 slices,
+    1000 + 500 trial surfaces, composite surfaces), then the document's
+    options, then ``options``. (Earlier versions used the engine's own
+    defaults, Bishop with 25 slices and circles; ``Slope`` still does.)
     Returns the ``AnalysisResult`` dict: ``minFOS``, ``criticalSurface``,
     ``criticalSlices``, ``allSurfaces``, ``warnings``, ... in the model's
     coordinates.

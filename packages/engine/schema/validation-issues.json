@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "Issue": {
+      "additionalProperties": false,
+      "description": "One finding of the validation.",
+      "properties": {
+        "code": {
+          "description": "A stable code, e.g. \"unknown-key\", \"missing-region-assignments\".",
+          "type": "string"
+        },
+        "message": {
+          "description": "What is wrong, in a sentence.",
+          "type": "string"
+        },
+        "path": {
+          "description": "JSON pointer to the value (\"\" for the whole document).",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        }
+      },
+      "required": [
+        "path",
+        "code",
+        "message",
+        "severity"
+      ],
+      "type": "object"
+    },
+    "Severity": {
+      "description": "How serious an issue is.",
+      "oneOf": [
+        {
+          "const": "error",
+          "description": "The model gives a wrong answer or none.",
+          "type": "string"
+        },
+        {
+          "const": "warning",
+          "description": "Often a mistake, but it may be meant.",
+          "type": "string"
+        }
+      ]
+    }
+  },
+  "$id": "urn:cslope:schema:validation-issues:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "items": {
+    "$ref": "#/$defs/Issue"
+  },
+  "title": "cSlope validation issues",
+  "type": "array",
+  "x-cslope-schema-version": "0.1.0"
+}

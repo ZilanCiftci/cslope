@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Supported analysis methods.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum AnalysisMethod {
     Bishop,
     Janbu,
@@ -32,7 +32,7 @@ impl AnalysisMethod {
 }
 
 /// Supported interslice force functions for Morgenstern-Price.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum IntersliceFunctionType {
     Constant,
@@ -43,7 +43,7 @@ pub enum IntersliceFunctionType {
 }
 
 /// Pore pressure head below an inclined piezometric line.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PorePressureHead {
     PhreaticCorrection,
@@ -51,7 +51,7 @@ pub enum PorePressureHead {
 }
 
 /// How trial surfaces are generated.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum SearchMethod {
     Circular,
@@ -59,20 +59,23 @@ pub enum SearchMethod {
 }
 
 /// Analysis configuration options.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisOptions {
     /// Number of slices (10–500, default: 25).
     #[serde(deserialize_with = "crate::types::json::num")]
+    #[schemars(with = "u32", range(min = 10, max = 500))]
     pub slices: f64,
     /// Number of search iterations (500–100,000, default: 1000). The grid of
     /// entry/exit pairs and circles is sized by it; the circles tangent to the
     /// model base and to each material interface come on top, so a layered
     /// model evaluates more surfaces than this.
     #[serde(deserialize_with = "crate::types::json::num")]
+    #[schemars(with = "u32", range(min = 500, max = 100000))]
     pub iterations: f64,
     /// Extra second-pass refinement iterations around critical candidates (0–100,000, default: 500).
     #[serde(deserialize_with = "crate::types::json::num")]
+    #[schemars(with = "u32", range(min = 0, max = 100000))]
     pub refined_iterations: f64,
     /// Minimum horizontal distance between entry and exit points (m).
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -82,6 +85,7 @@ pub struct AnalysisOptions {
     pub tolerance: f64,
     /// Max inner-loop FOS iterations (default: 15).
     #[serde(deserialize_with = "crate::types::json::num")]
+    #[schemars(with = "u32")]
     pub max_iterations: f64,
     /// Analysis method.
     pub method: AnalysisMethod,
@@ -249,7 +253,7 @@ pub struct AnalysisOptions {
 }
 
 /// Partial factors applied to characteristic values.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PartialFactors {
     /// γcu on undrained shear strength.
@@ -287,7 +291,7 @@ pub fn safety_class_gamma_d(class: SafetyClass) -> Option<f64> {
 }
 
 /// The input of a set of Swedish partial factors (`swedish_partial_factors`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SwedishFactorBasis {
     /// Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads.
@@ -382,8 +386,24 @@ pub fn default_analysis_options() -> AnalysisOptions {
     }
 }
 
+/// The public defaults of Python's `cslope.analyse` and the command line
+/// (D-23): the app's options for a new model (APP_DEFAULT_ANALYSIS_OPTIONS
+/// in packages/desktop/src/store/defaults.ts), Morgenstern-Price with 30
+/// slices, 1000 + 500 trial surfaces and composite surfaces, as a patch
+/// over the engine's own defaults (`default_analysis_options`, unchanged).
+pub fn public_default_options() -> crate::model::slope::AnalysisOptionsPatch {
+    crate::model::slope::AnalysisOptionsPatch {
+        method: Some(AnalysisMethod::MorgensternPrice.into()),
+        slices: Some(30.0),
+        iterations: Some(1000.0),
+        refined_iterations: Some(500.0),
+        composite_surfaces: Some(true),
+        ..Default::default()
+    }
+}
+
 /// Water table input — one of three modes.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(
     tag = "mode",
     rename_all = "lowercase",
@@ -410,7 +430,7 @@ pub enum WaterTableInput {
 }
 
 /// Analysis limit bounds for search area.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisLimits {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -424,7 +444,7 @@ pub struct AnalysisLimits {
 }
 
 /// The tension crack a surface was cut off at (`SlipSurfaceResult.crack`).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Crack {
     #[serde(deserialize_with = "crate::types::json::num")]
     pub x: f64,
@@ -435,7 +455,7 @@ pub struct Crack {
 }
 
 /// A single slip surface with its computed FOS.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SlipSurfaceResult {
     /// Circle center x (m).
@@ -507,7 +527,9 @@ pub struct SlipSurfaceResult {
 }
 
 /// Which list of the definition a custom search plane is in.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum CustomPlaneKind {
     /// `SlopeDefinition.customSearchPlanes` (cx, cy, radius).
@@ -517,7 +539,9 @@ pub enum CustomPlaneKind {
 }
 
 /// A custom search plane of the definition: its list and its index there.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomPlaneRef {
     pub kind: CustomPlaneKind,
@@ -526,7 +550,7 @@ pub struct CustomPlaneRef {
 
 /// Why a trial surface has no factor of safety (`SearchPlane.rejection`).
 /// Reported for the custom search planes (`CustomSurfaceResult.reason`).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum SurfaceRejection {
     /// A custom circle that does not cut the ground twice.
@@ -579,7 +603,7 @@ impl SurfaceRejection {
 
 /// The result of one custom search plane of the definition: its surface
 /// with its factor of safety (also in `allSurfaces`), or why it has none.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomSurfaceResult {
     pub kind: CustomPlaneKind,
@@ -593,7 +617,7 @@ pub struct CustomSurfaceResult {
 }
 
 /// Slice data for detailed output.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SliceData {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -642,6 +666,7 @@ pub struct SliceData {
         default = "crate::types::json::nan",
         deserialize_with = "crate::types::json::num"
     )]
+    #[schemars(extend("x-required" = true))]
     pub shear_force: f64,
     /// Pore water pressure at the base (kPa): negative above the water line
     /// in a material with φb (the matric suction, see Slice.suction), else
@@ -654,7 +679,7 @@ pub struct SliceData {
 }
 
 /// Kind of a result warning (see analysisWarnings).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum AnalysisWarningCode {
     DanglingBoundary,
@@ -669,7 +694,7 @@ pub enum AnalysisWarningCode {
 
 /// Something about the input or the critical surface that the factor of
 /// safety alone does not show, in English for display.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisWarning {
     pub code: AnalysisWarningCode,
@@ -683,7 +708,7 @@ pub struct AnalysisWarning {
 }
 
 /// Flow rule of the finite element analysis.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum FlowRule {
     DavisB,
@@ -692,7 +717,7 @@ pub enum FlowRule {
 }
 
 /// Pore pressures of the finite element analysis.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum FemPorePressure {
     WaterTable,
@@ -700,7 +725,7 @@ pub enum FemPorePressure {
 }
 
 /// Solver of non-associated flow.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum NonAssociatedSolver {
     Viscoplastic,
@@ -708,7 +733,7 @@ pub enum NonAssociatedSolver {
 }
 
 /// Convergence test of the viscoplastic iteration.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum FemConvergence {
     Increment,
@@ -716,7 +741,7 @@ pub enum FemConvergence {
 }
 
 /// Initial stresses of the finite element analysis.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum InitialStress {
     Gravity,
@@ -726,7 +751,7 @@ pub enum InitialStress {
 /// Strength reduction by finite elements, run after the limit equilibrium
 /// analysis when enabled (src/fem). Stiffness barely affects the factor of
 /// safety; it scales the displacements.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FemAnalysisSettings {
     pub enabled: bool,
@@ -754,6 +779,7 @@ pub struct FemAnalysisSettings {
     /// refined (it falls on every refinement, Sysala et al. 2021), so it is
     /// computed on the initial mesh only.
     #[serde(deserialize_with = "crate::types::json::num")]
+    #[schemars(with = "u32")]
     pub refinement_levels: f64,
     /// Pore pressures: hydrostatic below the water table ("water-table"), or
     /// from steady seepage with the water table as reservoir and tail water
@@ -832,7 +858,7 @@ pub fn default_fem_settings() -> FemAnalysisSettings {
 }
 
 /// Elements and F of one mesh (`FemResultSummary.levels`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FemLevel {
     pub elements: usize,
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -840,7 +866,7 @@ pub struct FemLevel {
 }
 
 /// One point of the F–displacement curve (`FemResultSummary.curve`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FemCurvePoint {
     #[serde(rename = "F", deserialize_with = "crate::types::json::num")]
     pub f: f64,
@@ -849,7 +875,7 @@ pub struct FemCurvePoint {
 }
 
 /// A pile's largest forces (`FemResultSummary.piles`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FemPileForces {
     pub pile: usize,
@@ -862,7 +888,7 @@ pub struct FemPileForces {
 }
 
 /// Bounds with Davis B's reduced strength (`FemBounds.davis`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct FemDavisBounds {
     #[serde(default, deserialize_with = "crate::types::json::opt_num")]
     pub lower: Option<f64>,
@@ -871,7 +897,7 @@ pub struct FemDavisBounds {
 }
 
 /// Lower and upper bounds of limit analysis (`FemResultSummary.bounds`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FemBounds {
     #[serde(default, deserialize_with = "crate::types::json::opt_num")]
@@ -894,7 +920,7 @@ pub struct FemBounds {
 }
 
 /// Result of the finite element analysis in model coordinates, as plain arrays (JSON).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct FemResultSummary {
     /// Factor of safety by strength reduction (largest converged F).
@@ -936,7 +962,7 @@ pub struct FemResultSummary {
 }
 
 /// Full analysis result.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalysisResult {
     /// Minimum Factor of Safety found.
@@ -1027,4 +1053,9 @@ pub struct AnalysisResult {
     /// the model's own direction (with `bothDirections` too).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_surfaces: Option<Vec<CustomSurfaceResult>>,
+    /// The partial factors the analysis applied (with their basis): the
+    /// strengths were design values and `min_fos` is an over-design factor.
+    /// Absent: characteristic values (and in results of earlier versions).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub partial_factors: Option<PartialFactors>,
 }

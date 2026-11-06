@@ -1,0 +1,606 @@
+{
+  "$defs": {
+    "AnalysisMethod": {
+      "description": "Supported analysis methods.",
+      "enum": [
+        "Bishop",
+        "Janbu",
+        "Morgenstern-Price"
+      ],
+      "type": "string"
+    },
+    "AngleRange": {
+      "items": {
+        "format": "double",
+        "type": "number"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "FemAnalysisSettings": {
+      "additionalProperties": false,
+      "description": "Strength reduction by finite elements, run after the limit equilibrium\nanalysis when enabled (src/fem). Stiffness barely affects the factor of\nsafety; it scales the displacements.",
+      "properties": {
+        "convergence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FemConvergence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Convergence test of the viscoplastic iteration: the displacement\nincrement (\"increment\"), or in addition the out-of-balance force of the\nstresses returned to the yield surface, at most 0.1 % of the load\n(\"equilibrium\", with Anderson acceleration of the iteration). Not set:\nincrement."
+        },
+        "dilationAngle": {
+          "description": "Dilation angle ψ (°), used by Davis B and non-associated flow.",
+          "format": "double",
+          "type": "number"
+        },
+        "elementSize": {
+          "default": null,
+          "description": "Initial element size (m); null: a twentieth of the model height.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "flowRule": {
+          "$ref": "#/$defs/FlowRule",
+          "description": "Davis B (default), associated, or non-associated with the dilation angle."
+        },
+        "initialStress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InitialStress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Initial stresses: gravity applied in one increment (\"gravity\", default)\nor the K0 procedure (\"k0\"): σ′h = K0 σ′v from the overburden\n(fem/initial-stress.ts). With associated flow F does not depend on them."
+        },
+        "k0": {
+          "description": "K0 of every soil for the K0 procedure; null or not set: 1 − sin φ′ (Jaky).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "limitAnalysis": {
+          "description": "The lower and upper bounds of limit analysis (perfect plasticity,\nassociated flow, and with Davis B's reduced strength), which bracket\nthe factor of safety and converge as the mesh is refined: the finite\nelement factor of safety, the strength reduction a comparison; minutes\nof run time. Not set: off (files from before; on for new projects).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "materialStages": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "description": "Construction stage per material name (0 by default); later stages are built after the earlier ones.",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "nonAssociatedSolver": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NonAssociatedSolver"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Solver of non-associated flow: the viscoplastic iteration of Griffiths\n& Lane (\"viscoplastic\", default) or Newton's method with the\nunsymmetric consistent tangent, F raised in increments (\"newton\", the\nimplicit method of most finite element programs; similar F, usually\nslower). Not set: viscoplastic."
+        },
+        "originalGroundLevel": {
+          "description": "Ground level before excavation (m) for the K0 procedure; null or not set: the present ground.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "poissonsRatio": {
+          "description": "Poisson's ratio ν of every soil.",
+          "format": "double",
+          "type": "number"
+        },
+        "porePressure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FemPorePressure"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pore pressures: hydrostatic below the water table (\"water-table\"), or\nfrom steady seepage with the water table as reservoir and tail water\nwhere it lies at or above the ground (\"seepage\"). Not set: water table."
+        },
+        "refinementLevels": {
+          "description": "Adaptive refinements of the mesh (0–3), for associated flow and Davis B.\nNot with non-associated flow: its factor has no limit as the mesh is\nrefined (it falls on every refinement, Sysala et al. 2021), so it is\ncomputed on the initial mesh only.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tensionCutoff": {
+          "description": "Rankine tension cut-off at zero effective stress; default on for new\nprojects (soil carries no tension, the usual default of finite element\nprograms; it brought cSlope closer to a commercial program's verification\nvalues, RMS 4.6 % to 3.0 %).",
+          "type": "boolean"
+        },
+        "youngsModulus": {
+          "description": "Young's modulus E (kPa) of every soil.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "enabled",
+        "flowRule",
+        "youngsModulus",
+        "poissonsRatio",
+        "dilationAngle",
+        "tensionCutoff",
+        "refinementLevels"
+      ],
+      "type": "object"
+    },
+    "FemConvergence": {
+      "description": "Convergence test of the viscoplastic iteration.",
+      "enum": [
+        "increment",
+        "equilibrium"
+      ],
+      "type": "string"
+    },
+    "FemPorePressure": {
+      "description": "Pore pressures of the finite element analysis.",
+      "enum": [
+        "water-table",
+        "seepage"
+      ],
+      "type": "string"
+    },
+    "FlowRule": {
+      "description": "Flow rule of the finite element analysis.",
+      "enum": [
+        "davis-b",
+        "associated",
+        "non-associated"
+      ],
+      "type": "string"
+    },
+    "InitialStress": {
+      "description": "Initial stresses of the finite element analysis.",
+      "enum": [
+        "gravity",
+        "k0"
+      ],
+      "type": "string"
+    },
+    "IntersliceDataPoints": {
+      "items": {
+        "items": {
+          "format": "double",
+          "type": "number"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "IntersliceFunctionType": {
+      "description": "Supported interslice force functions for Morgenstern-Price.",
+      "enum": [
+        "constant",
+        "half-sine",
+        "clipped-sine",
+        "trapezoidal",
+        "data-point-specified"
+      ],
+      "type": "string"
+    },
+    "NonAssociatedSolver": {
+      "description": "Solver of non-associated flow.",
+      "enum": [
+        "viscoplastic",
+        "newton"
+      ],
+      "type": "string"
+    },
+    "PartialFactors": {
+      "additionalProperties": false,
+      "description": "Partial factors applied to characteristic values.",
+      "properties": {
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SwedishFactorBasis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How the factors were formed in Swedish practice, for display and\nediting (`swedish_partial_factors`); the analyses use the factors above\nonly. Not set: the factors were entered or taken from another set."
+        },
+        "cohesion": {
+          "description": "γc' on effective cohesion.",
+          "format": "double",
+          "type": "number"
+        },
+        "cu": {
+          "description": "γcu on undrained shear strength.",
+          "format": "double",
+          "type": "number"
+        },
+        "tanPhi": {
+          "description": "γφ' on tan φ'.",
+          "format": "double",
+          "type": "number"
+        },
+        "variableLoad": {
+          "description": "γQ on variable loads (distributed and line loads).",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cu",
+        "cohesion",
+        "tanPhi",
+        "variableLoad"
+      ],
+      "type": "object"
+    },
+    "PorePressureHead": {
+      "description": "Pore pressure head below an inclined piezometric line.",
+      "enum": [
+        "phreatic-correction",
+        "vertical"
+      ],
+      "type": "string"
+    },
+    "SearchMethod": {
+      "description": "How trial surfaces are generated.",
+      "enum": [
+        "circular",
+        "block"
+      ],
+      "type": "string"
+    },
+    "Sgi3dSettings": {
+      "additionalProperties": false,
+      "description": "The analysis option: 3D effects after the 2D analysis (AnalysisOptions.sgi3d).",
+      "properties": {
+        "cellSize": {
+          "description": "Size of the integration cells (m) (`Sgi3dOptions.cellSize`).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "excludeMaterials": {
+          "description": "Materials not counted in the end faces, by name.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "length": {
+          "description": "Length of the critical stretch L (m) (`Sgi3dOptions.length`).",
+          "format": "double",
+          "type": "number"
+        },
+        "overstrongF2D": {
+          "default": null,
+          "description": "F_2D,överstark,min (eq. 2-4); null: infinitely overstrong (eq. 2-3).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "length",
+        "excludeMaterials"
+      ],
+      "type": "object"
+    },
+    "SwedishFactorBasis": {
+      "additionalProperties": false,
+      "description": "The input of a set of Swedish partial factors (`swedish_partial_factors`).",
+      "properties": {
+        "etaCu": {
+          "description": "Conversion factor η on the undrained shear strength: γcu = 1.5 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "etaDrained": {
+          "description": "Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "safetyClass": {
+          "description": "Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variableLoadBase": {
+          "description": "γQ before γd: γQ = variableLoadBase · γd. 1.3 gives the EN 1997-1 DA3\nload factor in safety class 3; some Swedish guidance uses 1.4 (for\nexample for traffic loads). The governing document decides.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "safetyClass",
+        "etaCu",
+        "etaDrained",
+        "variableLoadBase"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:cslope:schema:analysis-options:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Analysis options: the method, the search and the loads' factors. Every field is optional; an absent one takes the default.\n\nThe schema is stricter than the engine: the engine also reads values of another type as the app's earlier TypeScript engine did (a number of another type as no number, an unknown option as the default) and ignores unknown keys, while this schema accepts only JSON numbers, the documented strings, integers for counts, and known keys. cslope.validate (validate_definition) checks a document against it and adds the rules of the model (regions, boundaries, ranges).",
+  "properties": {
+    "blockActiveAngle": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AngleRange"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "blockPassiveAngle": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AngleRange"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "bothDirections": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "compositeBase": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "compositeSurfaces": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "fem": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FemAnalysisSettings"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "intersliceDataPoints": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntersliceDataPoints"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "intersliceFunction": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/IntersliceFunctionType"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "iterations": {
+      "format": "uint32",
+      "maximum": 100000,
+      "minimum": 500,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "janbuCorrection": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "maxIterations": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "method": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AnalysisMethod"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "minFailureDist": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "minSlipArea": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "minSlipDepth": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "nonCircularOptimization": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "partialFactors": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialFactors"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "porePressureHead": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PorePressureHead"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "refinedIterations": {
+      "format": "uint32",
+      "maximum": 100000,
+      "minimum": 0,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "searchMethod": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SearchMethod"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "seismicHorizontal": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "seismicVertical": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "sgi3d": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Sgi3dSettings"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "slices": {
+      "format": "uint32",
+      "maximum": 500,
+      "minimum": 10,
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "tensionCrackAngle": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "tensionCrackAuto": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "tensionCrackDepth": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "tensionCrackWater": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "tolerance": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  },
+  "title": "cSlope analysis options",
+  "type": "object",
+  "x-cslope-schema-version": "0.1.0"
+}

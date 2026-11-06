@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "Correlation": {
+      "additionalProperties": false,
+      "description": "A correlation coefficient between two variables (indices into the list).",
+      "properties": {
+        "a": {
+          "format": "double",
+          "type": "number"
+        },
+        "b": {
+          "format": "double",
+          "type": "number"
+        },
+        "rho": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "a",
+        "b",
+        "rho"
+      ],
+      "type": "object"
+    },
+    "ReliabilityMethod": {
+      "description": "The method of a reliability analysis.",
+      "enum": [
+        "taylor",
+        "monte-carlo"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "urn:cslope:schema:reliability-options:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "TypeScript's `ReliabilityOptions` (its `onProgress` is the run\ncontext's progress, `ProgressEvent::Reliability`).\n\nThe schema is stricter than the engine: the engine also reads values of another type as the app's earlier TypeScript engine did (a number of another type as no number, an unknown option as the default) and ignores unknown keys, while this schema accepts only JSON numbers, the documented strings, integers for counts, and known keys. cslope.validate (validate_definition) checks a document against it and adds the rules of the model (regions, boundaries, ranges).",
+  "properties": {
+    "correlations": {
+      "description": "Correlation coefficients between variables (indices into the list).",
+      "items": {
+        "$ref": "#/$defs/Correlation"
+      },
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "method": {
+      "$ref": "#/$defs/ReliabilityMethod"
+    },
+    "samples": {
+      "description": "Monte Carlo: number of samples (default 1000) and random seed (default 1).",
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "search": {
+      "description": "Taylor series: search the critical surface again for each evaluation. Default true.",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "seed": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "method"
+  ],
+  "title": "cSlope reliability options",
+  "type": "object",
+  "x-cslope-schema-version": "0.1.0"
+}
