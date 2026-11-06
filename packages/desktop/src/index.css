@@ -10,10 +10,15 @@
   --color-vsc-titlebar: #323233;
   --color-vsc-border: #3c3c3c;
   --color-vsc-text: #cccccc;
-  --color-vsc-text-muted: #8c8c8c;
+  /* 4.5:1 or more on every surface it is used on (title bar, tabs, menus,
+     table heads, selected rows). */
+  --color-vsc-text-muted: #a0a0a0;
   --color-vsc-text-bright: #e8e8e8;
   --color-vsc-accent: #0078d4;
   --color-vsc-accent-hover: #1a8adb;
+  /* The accent as text ("+ Add …" links, "Run all"): the accent itself is a
+     fill colour and below 4.5:1 as text. */
+  --color-vsc-link: #4daafc;
   --color-vsc-selection: #264f78;
   --color-vsc-list-hover: rgba(255, 255, 255, 0.04);
   --color-vsc-list-active: rgba(255, 255, 255, 0.08);
@@ -23,7 +28,7 @@
   --color-vsc-tab-active: #1e1e1e;
   --color-vsc-tab-inactive: #2d2d2d;
   --color-vsc-status: #181818;
-  --color-vsc-error: #f14c4c;
+  --color-vsc-error: #f47070;
   --color-vsc-warning: #cca700;
   /* Warning text: the icon/border colour is below 4.5:1 as body text. */
   --color-vsc-warning-text: #e5c07b;
@@ -34,7 +39,9 @@
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.15);
   /* The dimmed window behind a modal dialog. */
   --color-vsc-backdrop: rgba(0, 0, 0, 0.3);
-  /* Shadow of floating things (menus, popups, modal dialogs). */
+  /* The shadow of floating things (menus, popups, the floating toolbar,
+     banners, modal dialogs): a whole box-shadow value,
+     boxShadow: var(--color-vsc-shadow-float). */
   --color-vsc-shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
 
   /* Form controls (fields, selects, buttons): flat, 1 px borders, 2 px
@@ -48,7 +55,7 @@
   --color-vsc-field-placeholder: #8a8a8a;
   --color-vsc-field-disabled-bg: #262626;
   --color-vsc-field-disabled-border: #363636;
-  --color-vsc-field-disabled-text: #6e6e6e;
+  --color-vsc-field-disabled-text: #7a7a7a;
   --color-vsc-button-bg: #333333;
   --color-vsc-button-bg-hover: #3d3d3d;
   --color-vsc-button-bg-active: #2a2a2a;
@@ -137,10 +144,11 @@
   --color-vsc-titlebar: #dddddd;
   --color-vsc-border: #d4d4d4;
   --color-vsc-text: #333333;
-  --color-vsc-text-muted: #6a6a6a;
+  --color-vsc-text-muted: #616161;
   --color-vsc-text-bright: #1e1e1e;
   --color-vsc-accent: #0078d4;
   --color-vsc-accent-hover: #005a9e;
+  --color-vsc-link: #005fb8;
   --color-vsc-selection: #add6ff;
   --color-vsc-list-hover: rgba(0, 0, 0, 0.04);
   --color-vsc-list-active: rgba(0, 0, 0, 0.06);
@@ -150,17 +158,16 @@
   --color-vsc-tab-active: #ffffff;
   --color-vsc-tab-inactive: #ececec;
   --color-vsc-status: #f3f3f3;
-  --color-vsc-error: #d32f2f;
+  --color-vsc-error: #c62828;
   --color-vsc-warning: #bf8803;
   --color-vsc-warning-text: #8a6100;
-  --color-vsc-success: #388e3c;
+  --color-vsc-success: #2e7d32;
   --color-vsc-surface-tint: rgba(0,0,0,0.03);
   --color-vsc-surface-tint-strong: rgba(0,0,0,0.04);
   --color-vsc-swatch-border: rgba(0,0,0,0.2);
   --color-vsc-selected-bg: rgba(0, 120, 212, 0.12);
   /* The dimmed window behind a modal dialog. */
   --color-vsc-backdrop: rgba(0, 0, 0, 0.3);
-  /* Shadow of floating things (menus, popups, modal dialogs). */
   --color-vsc-shadow-float: 0 8px 24px rgba(0, 0, 0, 0.16);
 
   --color-vsc-field-bg: #ffffff;
@@ -171,7 +178,7 @@
   --color-vsc-field-placeholder: #8a8a8a;
   --color-vsc-field-disabled-bg: #f3f3f3;
   --color-vsc-field-disabled-border: #dcdcdc;
-  --color-vsc-field-disabled-text: #a0a0a0;
+  --color-vsc-field-disabled-text: #8a8a8a;
   --color-vsc-button-bg: #f7f7f7;
   --color-vsc-button-bg-hover: #ebebeb;
   --color-vsc-button-bg-active: #dedede;
@@ -197,7 +204,7 @@
   --color-canvas-tooltip-shadow: rgba(0,0,0,0.15);
   --color-canvas-hint-text: rgba(0,0,0,0.3);
   --color-canvas-paper-outside: #d9d9d9;
-  --color-canvas-paper: #f4f4f4;
+  --color-canvas-paper: #ffffff;
   --color-canvas-paper-shadow: rgba(0,0,0,0.35);
   --color-canvas-paper-ticks: #2e2e2e;
   --color-canvas-paper-border: #111111;

@@ -28,7 +28,7 @@ interface Props {
   selectionStatus?: ReactNode;
 }
 
-/** "Run All 7/20" and a small bar while the batch runs, then its outcome. */
+/** "Run all 7/20" and a small bar while the batch runs, then its outcome. */
 function RunAllProgress({ status }: { status: RunAllStatus }) {
   const { total, finished, failed, progress, running } = status;
   return (
@@ -38,7 +38,7 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
         <span
           data-testid="status-run-all"
           className="flex items-center gap-1.5"
-          style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}
+          style={{ fontWeight: 600 }}
         >
           Run all {finished}/{total}
           <span
@@ -126,7 +126,7 @@ export function StatusBar({
                   : "var(--color-vsc-success)",
             }}
           />
-          {mode === "edit" ? "EDIT" : "RESULT"}
+          {mode === "edit" ? "Edit" : "Result"}
         </span>
         <span style={{ color: "var(--color-vsc-border)" }}>|</span>
         <span>Points: {coordinateCount}</span>
@@ -149,7 +149,7 @@ export function StatusBar({
         {runState === "running" && !runAll?.running && (
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>
-            <span style={{ color: "var(--color-vsc-accent)", fontWeight: 600 }}>
+            <span style={{ fontWeight: 600 }}>
               Analyzing...
             </span>
             {runStage && (
@@ -182,7 +182,7 @@ export function StatusBar({
             type="checkbox"
             checked={snapToGrid}
             onChange={(e) => setSnapToGrid(e.target.checked)}
-            className="accent-blue-500 w-3 h-3"
+            className="w-3 h-3"
           />
           <span>Snap</span>
         </label>

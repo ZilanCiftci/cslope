@@ -52,6 +52,9 @@ describe("AnalysisErrorBanner", () => {
     render(<AnalysisErrorBanner />);
     fail(NO_SURFACE);
     expect(screen.getByTestId("limits-direction-hint")).toHaveTextContent("left of the exit range");
+    // The specific cause comes before the general message.
+    const text = screen.getByRole("alert").textContent ?? "";
+    expect(text.indexOf("left of the exit range")).toBeLessThan(text.indexOf("No valid slip surface"));
     fireEvent.click(screen.getByRole("button", { name: "Use left to right" }));
     expect(useAppStore.getState().orientation).toBe("ltr");
     expect(screen.queryByTestId("limits-direction-hint")).toBeNull();

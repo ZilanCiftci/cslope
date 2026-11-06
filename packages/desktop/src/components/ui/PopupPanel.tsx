@@ -97,7 +97,7 @@ export function PopupPanel({
 
   return createPortal(
     <div
-      className="fixed z-50 rounded-md shadow-xl flex flex-col overflow-hidden"
+      className="fixed z-50 rounded-md flex flex-col overflow-hidden"
       style={{
         left: pos.x,
         top: pos.y,
@@ -105,7 +105,7 @@ export function PopupPanel({
         maxHeight,
         background: "var(--color-vsc-input-bg)",
         border: "1px solid var(--color-vsc-border)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        boxShadow: "var(--color-vsc-shadow-float)",
       }}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
