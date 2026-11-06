@@ -363,20 +363,23 @@ describe("ProjectInfoDialog", () => {
 
   const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 
-  it("saves only the fields that were changed, numbers as numbers", async () => {
+  it("saves only the fields that were changed", async () => {
     const onSave = vi.fn();
     render(<ProjectInfoDialog initialInfos={[info()]} onSave={onSave} onClose={() => {}} />);
     expect(input("Client")).toHaveValue("ACME");
     await userEvent.type(input("Author"), "ZC");
-    await userEvent.clear(input("Canvas width (m)"));
-    await userEvent.type(input("Canvas width (m)"), "1500");
     await userEvent.type(input("Description"), "Notes");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({
       author: "ZC",
-      canvasWidth: 1500,
       description: "Notes",
     });
+  });
+
+  it("has no canvas width or height fields (D-21: the app never reads them)", () => {
+    render(<ProjectInfoDialog initialInfos={[info()]} onSave={() => {}} onClose={() => {}} />);
+    expect(screen.queryByLabelText(/canvas width/i)).toBeNull();
+    expect(screen.queryByLabelText(/canvas height/i)).toBeNull();
   });
 
   it("shows mixed values when editing several models", async () => {
