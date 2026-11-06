@@ -9,7 +9,7 @@ Open **Model › Materials**. The table at the top lists the materials with thei
 
 Every numeric property accepts a number or an expression with [parameters](/docs/geometry#parameters), and a comma as the decimal separator. Problems with the input are listed in red under the form.
 
-<Figure src="/media/tutorials/layered/03-materials.png" alt="The Define materials window with three Mohr-Coulomb materials" caption="Define materials: the list of materials, and the properties of the selected one." />
+<Figure src="/media/tutorials/layered/03-materials.png" alt="The Materials window with three Mohr-Coulomb materials" caption="The Materials window: the list of materials, and the properties of the selected one." />
 
 ## Material models
 
@@ -102,9 +102,9 @@ $$
 
 **S** is $S_u/\sigma'_v$ of the normally consolidated soil and **m** the exponent (often 0.8). **OCR** is a constant or a table against elevation; alternatively **Su against σ′v** gives the strength directly from the stress. $\sigma'_v$ is the weight of the slice and the loads on it per meter of width less the pore pressure at its base, so a fill on the clay raises the strength under it and a higher water table lowers it. **Min Su** is a lower limit. The tables are interpolated linearly, or with a cubic spline when the model is imported with one.
 
-Instead of OCR the stress history can be a **POP** (pre-overburden pressure, $\mathrm{OCR} = (\sigma'_v + \mathrm{POP})/\sigma'_v$) or a **yield stress** ($\mathrm{OCR} = \sigma'_y/\sigma'_v$, at least 1). With an earlier stage (imported from .stix files), the yield stress is the effective vertical stress of that stage at the base plus the POP: the stress history the soil kept from it. An imported POP, yield stress or earlier stage overrides OCR: the OCR fields are then disabled, with a note such as "Overridden by imported POP 20 kPa", and **Use OCR instead** clears the stress history so that the OCR fields apply (one step to undo). The Define materials window says when a model has an earlier stage and which materials take their yield stress from it (marked "stage" in the material list); **Remove earlier stage** drops it, and those materials then use their POP or OCR.
+Instead of OCR the stress history can be a **POP** (pre-overburden pressure, $\mathrm{OCR} = (\sigma'_v + \mathrm{POP})/\sigma'_v$) or a **yield stress** ($\mathrm{OCR} = \sigma'_y/\sigma'_v$, at least 1). With an earlier stage (imported from .stix files), the yield stress is the effective vertical stress of that stage at the base plus the POP: the stress history the soil kept from it. An imported POP, yield stress or earlier stage overrides OCR: the OCR fields are then disabled, with a note such as "Overridden by imported POP 20 kPa", and **Use OCR instead** clears the stress history so that the OCR fields apply (one step to undo). The Materials window says when a model has an earlier stage and which materials take their yield stress from it (marked "stage" in the material list); **Remove earlier stage** drops it, and those materials then use their POP or OCR.
 
-A material can have its own **strength above its water line** (for example drained above and undrained below the phreatic level); it applies to slice bases above the line, and everywhere when the material has no line. It is imported from .stix files. The Define materials window shows it read-only (its model and main values) under the fields, which set the strength below the line; **Remove** drops it, so that one strength applies throughout.
+A material can have its own **strength above its water line** (for example drained above and undrained below the phreatic level); it applies to slice bases above the line, and everywhere when the material has no line. It is imported from .stix files. The Materials window shows it read-only (its model and main values) under the fields, which set the strength below the line; **Remove** drops it, so that one strength applies throughout.
 
 ### Shear-normal function
 

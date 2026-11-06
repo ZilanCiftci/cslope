@@ -314,6 +314,8 @@ export const scenes: Scene[] = [
       setup: { runAnalysis: true, click: ["Results", "Results plot"], windowSelect: [["Y axis", "Pore pressure"]] },
       crop: "window",
       window: "Results plot",
+      // The chart fills the window: fitting the height would shrink it away.
+      fitHeight: false,
     },
   ]),
 
@@ -359,9 +361,11 @@ export const scenes: Scene[] = [
     {
       id: "04-lambda",
       title: "Fm and Ff against lambda",
-      setup: { runAnalysis: true, click: ["Results", "Results plot"], windowSelect: [["Plot", "Lambda vs Fm/Ff"]] },
+      setup: { runAnalysis: true, click: ["Results", "Results plot"], windowSelect: [["Plot", "F against λ"]] },
       crop: "window",
       window: "Results plot",
+      // The chart fills the window: fitting the height would shrink it away.
+      fitHeight: false,
     },
   ]),
 
@@ -419,7 +423,7 @@ export const scenes: Scene[] = [
       {
         id: "01-options",
         title: "Options with partial factors",
-        setup: { mode: "edit", click: ["Model", "Options"] },
+        setup: { mode: "edit", click: ["Model", "Options"], windowScrollTo: "Partial factors (design values)" },
         crop: "window",
         window: "Options",
       },
@@ -466,7 +470,7 @@ export const scenes: Scene[] = [
     {
       id: "01-sensitivity",
       title: "Sensitivity analysis",
-      setup: { click: ["Results", "Sensitivity"], windowClick: ["Run"], windowWaitForText: "values gave a FOS" },
+      setup: { click: ["Results", "Sensitivity"], windowClick: ["Run"], windowWaitForText: "values gave an F" },
       crop: "window",
       window: "Sensitivity analysis",
     },

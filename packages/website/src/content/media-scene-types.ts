@@ -53,6 +53,12 @@ export interface SceneSetup {
   windowClick?: string[];
   /** In the captured dialog window: wait until this text appears (e.g. the end of a run). */
   windowWaitForText?: string;
+  /**
+   * In the captured dialog window, last: scroll the element whose text is
+   * exactly this to the middle of its scrolling area (for a part of a long
+   * form, such as a section of the Options window).
+   */
+  windowScrollTo?: string;
 }
 
 export interface SceneOutput {

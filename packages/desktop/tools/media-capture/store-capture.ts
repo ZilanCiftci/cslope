@@ -125,14 +125,25 @@ const WINDOW_HASH: Record<string, string> = {
   "Probabilistic analysis": "reliability-dialog",
 };
 
+/** The height a dialog window opens at (DIALOG_HEIGHT in electron/main.ts). */
+const DIALOG_OPEN_HEIGHT = 760;
+
 /**
- * Shrink a dialog window to the height its content needs, so that the
- * image has no empty space at the bottom: the smallest height at which no
- * scrolling area overflows (dialogs fill their window and scroll inside).
+ * Fit a dialog window to the height its content needs, so that the image
+ * has no empty space at the bottom: the smallest height at which no
+ * scrolling area overflows (dialogs fill their window and scroll inside),
+ * up to the height a dialog opens at. A window the app fitted to its
+ * content when it opened (an analysis window before its run) may grow to
+ * that height, as it does in the app once the results are there.
  */
 async function fitWindowHeight(win: Page) {
   const width = await win.evaluate(() => window.innerWidth);
   let high = await win.evaluate(() => window.innerHeight);
+  if (high < DIALOG_OPEN_HEIGHT) {
+    high = DIALOG_OPEN_HEIGHT;
+    await setPixelRatio(win, width, high);
+    await win.waitForTimeout(RENDER_SETTLE_MS);
+  }
   let low = 200;
   const overflows = () =>
     win.evaluate(() =>
@@ -276,6 +287,13 @@ export async function captureScene(page: Page, scene: Scene): Promise<Buffer> {
     }
     if (setup.windowWaitForText) {
       await win.getByText(setup.windowWaitForText, { exact: false }).first().waitFor({ timeout: ANALYSIS_TIMEOUT_MS * 2 });
+      await win.waitForTimeout(RENDER_SETTLE_MS);
+    }
+    if (setup.windowScrollTo) {
+      await win
+        .getByText(setup.windowScrollTo, { exact: true })
+        .first()
+        .evaluate((e) => e.scrollIntoView({ block: "center" }));
       await win.waitForTimeout(RENDER_SETTLE_MS);
     }
     if (output.fitHeight !== false) await fitWindowHeight(win);
