@@ -95,33 +95,33 @@ describe("FloatingToolbar", () => {
   it("offers Run all and clearing the results of this model or all models in the run menu", () => {
     const { props } = setup();
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Run all" }));
+    click(screen.getByRole("menuitem", { name: "Run all" }));
     expect(props.onRunAll).toHaveBeenCalled();
     // The menu closes after a choice.
-    expect(screen.queryByRole("button", { name: "Run all" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Run all" })).toBeNull();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Clear results of this model" }));
+    click(screen.getByRole("menuitem", { name: "Clear results of this model" }));
     expect(props.onReset).toHaveBeenCalled();
 
     click(screen.getByTitle("More run options"));
-    click(screen.getByRole("button", { name: "Clear results of all models" }));
+    click(screen.getByRole("menuitem", { name: "Clear results of all models" }));
     expect(props.onResetAll).toHaveBeenCalled();
   });
 
   it("disables Reset without a result and closes the menu on an outside click", () => {
     setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    expect(screen.getByRole("button", { name: "Clear results of this model" }).style.pointerEvents).toBe("none");
+    expect(screen.getByRole("menuitem", { name: "Clear results of this model" })).toHaveAttribute("aria-disabled", "true");
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole("button", { name: "Clear results of all models" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Clear results of all models" })).toBeNull();
   });
 
   it("does not reset from the keyboard while Reset is disabled", async () => {
     const { props } = setup({ hasResult: false });
     click(screen.getByTitle("More run options"));
-    const reset = screen.getByRole("button", { name: "Clear results of this model" });
-    expect(reset).toBeDisabled();
+    const reset = screen.getByRole("menuitem", { name: "Clear results of this model" });
+    expect(reset).toHaveAttribute("aria-disabled", "true");
     reset.focus();
     await userEvent.keyboard("{Enter}");
     fireEvent.click(reset);
