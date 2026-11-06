@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import type { TooltipContentProps } from "recharts";
 
-type Props = Partial<TooltipContentProps<number | string, string>>;
+// recharts' own value and name types (its defaults): what <Tooltip content> passes.
+type Props = Partial<TooltipContentProps>;
 
 /**
  * The tooltip of a chart in the result windows: the label, then one line
