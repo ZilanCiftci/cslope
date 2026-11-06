@@ -777,12 +777,15 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
     let finished = 0;
     let failed = 0;
     /** The batch for the status bar. */
+    /** When the batch started, for its total run time in the summary. */
+    const batchStart = performance.now();
     const batchStatus = (running = true): RunAllStatus => ({
       total: models.length,
       finished,
       failed,
       progress: running ? batchProgress() : 1,
       running,
+      ...(running ? {} : { elapsedMs: performance.now() - batchStart }),
     });
     /** A model's analysis ended (the caller shows it with batchStatus()). */
     const finishModel = (modelId: string, outcome: "done" | "failed") => {

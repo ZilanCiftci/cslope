@@ -237,6 +237,11 @@ describe("StatusBar", () => {
     expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run all done: 1 model$/);
   });
 
+  it("shows the total run time of an ended Run All in seconds with one decimal", () => {
+    render(<StatusBar {...defaultProps} runAll={{ total: 6, finished: 6, failed: 0, progress: 1, running: false, elapsedMs: 12345 }} />);
+    expect(screen.getByTestId("status-run-all")).toHaveTextContent(/^Run all done: 6 models, 12\.3 s$/);
+  });
+
   it("shows no Run All without a batch", () => {
     render(<StatusBar {...defaultProps} runState="running" runAll={null} />);
     expect(screen.queryByTestId("status-run-all")).toBeNull();

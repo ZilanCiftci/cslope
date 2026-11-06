@@ -854,6 +854,8 @@ export interface RunAllStatus {
   progress: number;
   /** False once the batch has ended (its summary). */
   running: boolean;
+  /** Wall-clock time of the whole batch (ms), set once it has ended. */
+  elapsedMs?: number;
 }
 
 export interface AnalysisSlice {

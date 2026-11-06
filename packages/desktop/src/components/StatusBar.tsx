@@ -66,6 +66,7 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
           {failed > 0 && (
             <span style={{ color: "var(--color-vsc-error)", fontWeight: 600 }}>, {failed} failed</span>
           )}
+          {status.elapsedMs !== undefined && <>, {(status.elapsedMs / 1000).toFixed(1)} s</>}
         </span>
       )}
     </>
