@@ -7,6 +7,4 @@ export interface LatestRelease {
   url: string;
   /** Download URL of the Windows installer, if the release has one. */
   installer?: string;
-  /** Download URL of the verification report, if the release has one. */
-  report?: string;
 }

@@ -85,6 +85,14 @@ jobs:
       # Also fails when another product is named on the site.
       - name: Build website
         run: bun run --filter @cslope/website build
+      # The built site served as Vercel serves it (vercel.json's headers and
+      # rewrites), every page in Chromium in both themes: fails on a console
+      # error, a failed request or an accessibility violation (axe-core).
+      - name: Smoke test website
+        working-directory: packages/website
+        run: |
+          bunx playwright install --with-deps --only-shell chromium
+          bun run smoke
 
   # The engine's TypeScript API over the testing build of the WebAssembly
   # engine (internal functions the tests call): the quick set.

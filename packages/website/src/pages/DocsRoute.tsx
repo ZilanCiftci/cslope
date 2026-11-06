@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { useParams } from "react-router";
-import { DocsLoading } from "@/components/DocsLoading";
+import { Loading } from "@/components/Loading";
 import { isDocSlug } from "@/docs/slugs";
 import { NotFound } from "@/pages/NotFound";
 
@@ -17,7 +17,7 @@ export function DocsRoute() {
   const slug = useParams()["*"] ?? "";
   if (!isDocSlug(slug)) return <NotFound />;
   return (
-    <Suspense fallback={<DocsLoading />}>
+    <Suspense fallback={<Loading label="Loading the documentation" />}>
       <DocsPage />
     </Suspense>
   );

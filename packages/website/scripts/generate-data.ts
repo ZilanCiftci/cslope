@@ -1,7 +1,8 @@
 /**
  * Runs every published verification problem through the engine and writes
  * src/content/generated/verification.json for the site: the verification
- * table, the key figures on the home page and the examples there. Per
+ * table, the key figures on the home page and the examples there (with
+ * generated/home.json, the home page's extract; see generate-home.ts). Per
  * problem: the values its sources publish, and for each analysis cSlope
  * runs, cSlope's result and the range of other programs' results, without
  * naming any program and without marking results as passed. The result is
@@ -38,6 +39,7 @@ import {
 } from "@cslope/engine/verification";
 import { initEngine } from "@cslope/engine";
 import { findForbiddenNames } from "./forbidden-names";
+import { writeHome } from "./generate-home";
 import type { ReliabilityProblem, VerificationData, VerificationProblem } from "../src/content/verification-types";
 
 // The table is published: it uses the full search, like the verification
@@ -332,6 +334,7 @@ if (import.meta.main) {
     }
     mkdirSync(join(OUT, ".."), { recursive: true });
     writeFileSync(OUT, json);
+    writeHome();
     const s = JSON.parse(json).summary;
     const a = agreement(fos);
     const fa = femAgreement(fem);

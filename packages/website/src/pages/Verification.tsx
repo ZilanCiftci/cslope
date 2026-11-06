@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { Section, SectionHeading } from "@/components/Section";
 import { Button } from "@/components/ui/button";
 import {
-  VERIFICATION,
   filterProblems,
   formatPublished,
   formatRange,
@@ -13,6 +12,7 @@ import {
   type MethodFilter,
   type PublishedFilter,
 } from "@/content/verification";
+import { VERIFICATION } from "@/content/verification-data";
 import type { PublishedValue } from "@/content/verification-types";
 import { REPORT } from "@/content/report";
 import { usePageMeta } from "@/lib/page-meta";
@@ -20,6 +20,19 @@ import { cn } from "@/lib/utils";
 
 const num = (x: number | null, digits = 3) => (x == null ? "–" : x.toFixed(digits));
 
+/**
+ * Below the sm breakpoint a results table stacks, so that a phone shows
+ * the values without scrolling sideways: the column headings go, each row
+ * wraps (the problem and the analysis on lines of their own, the values
+ * side by side under them) and each value carries its column's name.
+ */
+const STACKED_TABLE = "max-sm:block max-sm:[&_tbody]:block max-sm:[&_thead]:hidden";
+const STACKED_ROW = "max-sm:flex max-sm:flex-wrap max-sm:items-end";
+
+/** A value's column name, shown only where the table stacks. */
+function StackedLabel({ children }: { children: string }) {
+  return <span className="block font-sans text-xs text-muted-foreground sm:hidden">{children}</span>;
+}
 
 function Select<T extends string>({
   label,
@@ -119,7 +132,7 @@ function ProblemTable() {
             ["Bishop", "Bishop simplified"],
             ["Janbu", "Janbu"],
             ["Spencer", "Spencer"],
-            ["Morgenstern-Price", "Morgenstern–Price"],
+            ["Morgenstern-Price", "Morgenstern-Price"],
             ["Finite elements", "Strength reduction (FE, experimental)"],
           ]}
         />
@@ -144,7 +157,8 @@ function ProblemTable() {
         role="region"
         aria-label="Verification problems"
       >
-        <table className="w-full min-w-[40rem] text-left text-sm">
+        {/* Below sm the table stacks: the problem, then one block per analysis (stackedTable). */}
+        <table className={cn("w-full text-left text-sm sm:min-w-[40rem]", STACKED_TABLE)}>
           <caption className="sr-only">
             Verification problems: the sources' values, other programs' results and cSlope's results
           </caption>
@@ -167,9 +181,13 @@ function ProblemTable() {
           {visible.map((p) => (
             <tbody key={p.id} className="border-b last:border-b-0">
               {p.results.map((r, i) => (
-                <tr key={i} className={cn(i > 0 && "border-t border-dashed")}>
+                <tr key={i} className={cn(i > 0 && "border-t border-dashed", STACKED_ROW)}>
                   {i === 0 && (
-                    <th scope="rowgroup" rowSpan={p.results.length} className="w-[42%] px-4 py-3 align-top font-normal">
+                    <th
+                      scope="rowgroup"
+                      rowSpan={p.results.length}
+                      className="px-4 py-3 align-top font-normal max-sm:basis-full max-sm:pb-1 sm:w-[42%]"
+                    >
                       <div className="font-medium">{p.title}</div>
                       <div className="mt-1 text-xs leading-relaxed text-muted-foreground">{p.reference}</div>
                       <div className="mt-1 font-mono text-[11px] text-muted-foreground">{p.id}</div>
@@ -179,11 +197,15 @@ function ProblemTable() {
                       {p.note && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{p.note}</p>}
                     </th>
                   )}
-                  <td className="px-4 py-3 align-top">{r.method}</td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap text-muted-foreground">
+                  <td className="px-4 py-3 align-top max-sm:basis-full max-sm:pb-0 max-sm:font-medium">{r.method}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular whitespace-nowrap text-muted-foreground max-sm:flex-1 max-sm:pt-1 max-sm:text-left">
+                    <StackedLabel>Other programs</StackedLabel>
                     {formatRange(r.programs)}
                   </td>
-                  <td className="px-4 py-3 text-right align-top font-mono tabular">{num(r.computed)}</td>
+                  <td className="px-4 py-3 text-right align-top font-mono tabular max-sm:pt-1">
+                    <StackedLabel>cSlope</StackedLabel>
+                    {num(r.computed)}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -222,7 +244,7 @@ function ReliabilityTable() {
       role="region"
       aria-label="Probabilistic verification problems"
     >
-      <table className="w-full min-w-[40rem] text-left text-sm">
+      <table className={cn("w-full text-left text-sm sm:min-w-[40rem]", STACKED_TABLE)}>
         <caption className="sr-only">Probabilistic verification problems</caption>
         <thead className="border-b bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
@@ -242,9 +264,9 @@ function ReliabilityTable() {
         </thead>
         <tbody className="divide-y">
           {rows.map(({ r, k }, i) => (
-            <tr key={`${r.id}-${i}`}>
-              <td className="px-4 py-3 align-top">{r.title}</td>
-              <td className="px-4 py-3 align-top">
+            <tr key={`${r.id}-${i}`} className={STACKED_ROW}>
+              <td className="px-4 py-3 align-top max-sm:basis-full max-sm:pb-0 max-sm:font-medium">{r.title}</td>
+              <td className="px-4 py-3 align-top max-sm:basis-full max-sm:pb-0">
                 <div>{QUANTITY[k.quantity] ?? k.quantity}</div>
                 {k.published.map((v, j) => (
                   <div key={j} className="text-xs text-muted-foreground">
@@ -252,10 +274,14 @@ function ReliabilityTable() {
                   </div>
                 ))}
               </td>
-              <td className="px-4 py-3 text-right align-top font-mono tabular text-muted-foreground">
+              <td className="px-4 py-3 text-right align-top font-mono tabular text-muted-foreground max-sm:flex-1 max-sm:pt-1 max-sm:text-left">
+                <StackedLabel>Other programs</StackedLabel>
                 {formatRange(k.programs, 4)}
               </td>
-              <td className="px-4 py-3 text-right align-top font-mono tabular">{num(k.computed, 4)}</td>
+              <td className="px-4 py-3 text-right align-top font-mono tabular max-sm:pt-1">
+                <StackedLabel>cSlope</StackedLabel>
+                {num(k.computed, 4)}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -301,7 +327,7 @@ export function Verification() {
       <Section>
         <SectionHeading
           title="What the table shows"
-          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyses the surface the source gives, or searches for the critical one where the source did."
+          lead="Each problem is entered from its source: geometry, materials, water and loads. cSlope then analyzes the surface the source gives, or searches for the critical one where the source did."
         />
         <ul className="mt-8 grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
           <li className="rounded-lg border bg-card p-4">

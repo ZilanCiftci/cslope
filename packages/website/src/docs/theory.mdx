@@ -13,7 +13,7 @@ $$
 
 where $\ell$ is the length of the slice base, $N$ the normal force on it, $u$ the pore pressure at its midpoint, and $c'$, $\varphi'$ the strength of the material at the base. For an undrained material $\varphi' = 0$ and $c'$ is the undrained strength $S_u$.
 
-On a circle the base of a slice is its arc: $\ell$ is the arc length, $\alpha$ the inclination at the middle of the arc, and the weight that of the soil above the arc. Where the circle turns steep towards its ends, the slices are cut narrower, so that none spans more than twice the arc of a slice at the bottom of the circle (and at least 2°): a single base inclination cannot follow an arc that turns 20–30° within one slice.
+On a circle the base of a slice is its arc: $\ell$ is the arc length, $\alpha$ the inclination at the middle of the arc, and the weight that of the soil above the arc. Where the circle turns steep toward its ends, the slices are cut narrower, so that none spans more than twice the arc of a slice at the bottom of the circle (and at least 2°): a single base inclination cannot follow an arc that turns 20–30° within one slice.
 
 The methods differ in which equilibrium conditions they satisfy and in what they assume about the forces between slices.
 
@@ -27,7 +27,7 @@ F = \frac{\sum \left[c' b + (W - u b)\tan\varphi'\right] / m_\alpha}{\sum W \sin
 m_\alpha = \cos\alpha + \frac{\sin\alpha \tan\varphi'}{F}
 $$
 
-with $b$ the slice width, $W$ its weight and $\alpha$ the inclination of its base. External loads, water forces and reinforcement add their moments to the numerator or denominator. On a non-circular surface cSlope takes moments about an axis point above the surface, with the moment arms of the base normal forces included (Fredlund and Krahn 1977). With no interslice shear force the slices are then not in horizontal equilibrium, so $F$ depends on the axis point; the result carries a warning, and Spencer or Morgenstern–Price is the method to use there.
+with $b$ the slice width, $W$ its weight and $\alpha$ the inclination of its base. External loads, water forces and reinforcement add their moments to the numerator or denominator. On a non-circular surface cSlope takes moments about an axis point above the surface, with the moment arms of the base normal forces included (Fredlund and Krahn 1977). With no interslice shear force the slices are then not in horizontal equilibrium, so $F$ depends on the axis point; the result carries a warning, and Spencer or Morgenstern-Price is the method to use there.
 
 ## Janbu simplified
 
@@ -39,9 +39,9 @@ $$
 
 where $L$ is the length of the chord between the ends of the slip surface and $d$ the largest depth of the surface below that chord, measured perpendicular to the chord. $b_1 = 0.69$ for purely cohesive soil ($\varphi = 0$), $0.31$ for purely frictional soil ($c = 0$) and $0.50$ when both contribute. With the correction switched on, the reported factor of safety is $f_0 F$.
 
-## Morgenstern–Price
+## Morgenstern-Price
 
-The Morgenstern–Price method satisfies both force and moment equilibrium. It relates the shear force $X$ between slices to the normal force $E$ through an interslice function $f(x)$ and a scale factor $\lambda$:
+The Morgenstern-Price method satisfies both force and moment equilibrium. It relates the shear force $X$ between slices to the normal force $E$ through an interslice function $f(x)$ and a scale factor $\lambda$:
 
 $$
 X = \lambda\, f(x)\, E
@@ -53,15 +53,15 @@ For a given $\lambda$, cSlope computes one factor of safety from moment equilibr
 
 $f(x)$ is defined between the two ends of the slip surface, with $\xi$ the normalized position from 0 at one end to 1 at the other:
 
-| Function | $f(\xi)$ |
+| Function | Value of $f(\xi)$ |
 | --- | --- |
 | Constant | 1. This is **Spencer's method**: the interslice forces are all inclined at the same angle. |
 | Half-sine | $\sin(\pi\xi)$. The default. |
-| Clipped-sine | $\max(0.35,\ \sin(\pi\xi))$: a half-sine that does not fall below 0.35 towards the ends. |
+| Clipped sine | $\max(0.35,\ \sin(\pi\xi))$: a half-sine that does not fall below 0.35 toward the ends. |
 | Trapezoidal | Rises linearly from 0 to 1 over the first 20 %, is 1 in the middle and falls to 0 over the last 20 %. |
-| Data points | A piecewise-linear function through points you enter, with $\xi$ and $f$ between 0 and 1. |
+| Specified by data points | A piecewise-linear function through points you enter, with $\xi$ between 0 and 1 and $f \ge 0$. |
 
-For most slopes the choice of function changes $F$ by only a few per cent. Spencer's method is the usual reference when results from different programs are compared.
+For most slopes the choice of function changes $F$ by only a few percent. Spencer's method is the usual reference when results from different programs are compared.
 
 ## Pore pressure
 

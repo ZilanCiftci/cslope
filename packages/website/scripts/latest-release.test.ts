@@ -10,7 +10,7 @@ const answer = (status: number, body: unknown = {}) =>
 const cacheFile = () => join(mkdtempSync(join(tmpdir(), "release-")), "cache.json");
 
 describe("latest release", () => {
-  it("finds the installer and the report among the assets", () => {
+  it("finds the installer among the assets", () => {
     const r = toLatestRelease({
       tag_name: "v0.1.0",
       html_url: "https://github.com/x/y/releases/tag/v0.1.0",
@@ -25,14 +25,12 @@ describe("latest release", () => {
       version: "0.1.0",
       url: "https://github.com/x/y/releases/tag/v0.1.0",
       installer: "https://dl/setup.exe",
-      report: "https://dl/report.pdf",
     });
   });
 
   it("leaves out files the release does not have", () => {
     const r = toLatestRelease({ tag_name: "v0.2.0", html_url: "u", assets: [] });
     expect(r.installer).toBeUndefined();
-    expect(r.report).toBeUndefined();
   });
 
   it("fails a production build when GitHub cannot be asked (#63)", async () => {

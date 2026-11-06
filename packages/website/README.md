@@ -11,7 +11,12 @@ bun run build      # typecheck, build to dist/, check for forbidden names
 bun run test       # unit tests
 bun run lint
 bun run typecheck
+bun run preview    # serve dist/ as Vercel does (vercel.json's rewrites and headers)
+bun run smoke      # after a build: every page in Chromium, fails on console errors and axe violations
 ```
+
+`bun run smoke` uses Playwright's Chromium; `CHROMIUM_PATH` points it at
+another installed Chromium. CI runs it after the build.
 
 ## Deployment
 
@@ -77,8 +82,11 @@ The images are deterministic, so a `git diff` shows when the UI changed.
 
 `src/content/generated/verification.json` holds every published
 verification problem with the engine's result, for the verification
-table and the figures on the home page. Regenerate it after changing the
-engine or the problems:
+table. `src/content/generated/home.json` is its small extract for the
+home page (the summary and the examples in `src/content/home-examples.ts`),
+so that the home page does not load the table. Regenerate them after
+changing the engine or the problems (`bun scripts/generate-home.ts`
+rewrites only home.json, after changing the examples):
 
 ```bash
 bun scripts/generate-data.ts            # runs the engine (about 2 minutes)

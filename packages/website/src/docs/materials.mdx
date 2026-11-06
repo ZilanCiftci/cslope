@@ -19,8 +19,8 @@ Choose the model in the **Material model** list. Changing the model resets the s
 | --- | --- | --- |
 | **Mohr-Coulomb** | γ (kN/m³), φ (°), c (kPa), φb, Max suction | Drained analyses with effective strength parameters. |
 | **Undrained** | γ, Su (kPa), Max Su (cutoff) | Clay with a constant undrained shear strength. |
-| **S = f(depth)** | γ, Su ref, Depth ref, Rate (kPa/m), Depth measured from, Max Su; combined: c′, c′ rate, φ′, φb, Max suction | Undrained strength increasing with depth below the ground or below the top of the layer, alone or combined with a drained strength. |
-| **S = f(datum)** | γ, Su ref, Y ref, Rate, Max Su | Undrained strength that varies with elevation. |
+| **S = f(depth)** | γ, Su at reference depth (kPa), Reference depth (m), Su increase rate (kPa/m), Depth measured from, Max Su (cutoff); combined: c′ at reference depth, c′ increase rate, φ′, φb, Max suction | Undrained strength increasing with depth below the ground or below the top of the layer, alone or combined with a drained strength. |
+| **S = f(datum)** | γ, Su at reference level (kPa), Reference level y (m), Su increase rate (kPa/m), Max Su (cutoff) | Undrained strength that varies with elevation. |
 | **Anisotropic function** | γ, φ, c, φb, Max suction, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
 | **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
@@ -45,9 +45,9 @@ $$
 S_u = S_{u,\text{ref}} + (z - z_\text{ref}) \cdot \text{rate}
 $$
 
-where $z$ is the depth of the point and $z_\text{ref}$ the **Depth ref**. **Depth measured from** chooses where the depth starts:
+where $z$ is the depth of the point and $z_\text{ref}$ the **Reference depth (m)**; $S_{u,\text{ref}}$ is **Su at reference depth (kPa)** and rate the **Su increase rate (kPa/m)**. **Depth measured from** chooses where the depth starts:
 
-- **Top of layer** (default): the depth below the top of this material's layer above the slice. A layer that lies below other layers then starts at Su ref at its own top.
+- **Top of layer** (default): the depth below the top of this material's layer above the slice. A layer that lies below other layers then starts at its Su at reference depth at its own top.
 - **Ground surface**: the depth below the ground surface.
 
 **Combined analysis (drained limit)** adds a drained strength, for clay in a combined analysis. The strength at the base of a slice is then the lesser of the two:
@@ -64,11 +64,11 @@ $$
 S_u = S_{u,\text{ref}} + (Y_\text{ref} - y) \cdot \text{rate}
 $$
 
-where $y$ is the elevation of the point and $Y_\text{ref}$ the datum. A positive rate makes $S_u$ increase with depth below the datum.
+where $y$ is the elevation of the point, $Y_\text{ref}$ the datum, **Reference level y (m)**, $S_{u,\text{ref}}$ the **Su at reference level (kPa)** and rate the **Su increase rate (kPa/m)**. A positive rate makes $S_u$ increase with depth below the datum.
 
 ### Strength cutoff
 
-The undrained models and lime-cement columns have a **Max Su (cutoff)**. Leave it empty for no cutoff. When the strength is constant or increases with depth, the cutoff is a maximum; when the rate is negative, it is a minimum, so that the strength never falls below it.
+The undrained models and lime-cement columns have a **Max Su (cutoff) (kPa)**. Leave it empty for no cutoff. When the strength is constant or increases with depth, the cutoff is a maximum; when the rate is negative, it is a minimum, **Min Su (cutoff) (kPa)**, so that the strength never falls below it.
 
 ### Anisotropy of the undrained strength
 
@@ -90,7 +90,7 @@ $$
 \tau = a\,\tau_\text{col} + (1 - a)\,c_{u,\text{soil}}
 $$
 
-where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil**, increasing by **Su soil increase** per meter below **Su soil at level**; the column strength is **Su columns**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns** and **φ′ columns**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
+where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil at reference level (kPa)** at **Reference level y (m)**, increasing by **Su soil increase rate (kPa/m)** per meter below it; the column strength is **Su columns (kPa)**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns (kPa)** and **φ′ columns (°)**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
 
 ### SHANSEP
 

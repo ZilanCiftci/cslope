@@ -1,5 +1,5 @@
 import "katex/dist/katex.min.css";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link, NavLink, useParams } from "react-router";
 import { ChevronLeft, ChevronRight, Menu, Pencil } from "lucide-react";
 
@@ -51,25 +51,31 @@ interface Heading {
   level: 2 | 3;
 }
 
-/** The h2 and h3 headings of the rendered article, for the page contents. */
-function useHeadings(article: React.RefObject<HTMLElement | null>, key: string): Heading[] {
+/**
+ * The h2 and h3 headings of the rendered article, for the page contents,
+ * and a function that reads them again: the article's content loads
+ * lazily, so it is read when the content is on the page (<Rendered>).
+ */
+function useHeadings(article: React.RefObject<HTMLElement | null>): [Heading[], () => void] {
   const [headings, setHeadings] = useState<Heading[]>([]);
-  useEffect(() => {
-    // Read the rendered article once it is on the page.
-    const frame = requestAnimationFrame(() => {
-      const el = article.current;
-      if (!el) return;
-      setHeadings(
-        [...el.querySelectorAll<HTMLHeadingElement>("h2[id], h3[id]")].map((h) => ({
-          id: h.id,
-          text: h.textContent ?? "",
-          level: h.tagName === "H2" ? 2 : 3,
-        })),
-      );
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [article, key]);
-  return headings;
+  const read = useCallback(() => {
+    const el = article.current;
+    if (!el) return;
+    setHeadings(
+      [...el.querySelectorAll<HTMLHeadingElement>("h2[id], h3[id]")].map((h) => ({
+        id: h.id,
+        text: h.textContent ?? "",
+        level: h.tagName === "H2" ? 2 : 3,
+      })),
+    );
+  }, [article]);
+  return [headings, read];
+}
+
+/** Calls `onRendered` once its Suspense boundary's content is on the page. */
+function Rendered({ onRendered }: { onRendered: () => void }) {
+  useEffect(onRendered, [onRendered]);
+  return null;
 }
 
 function PageContents({ headings }: { headings: Heading[] }) {
@@ -94,7 +100,7 @@ export function DocsPage() {
   const slug = useParams()["*"] ?? "";
   const doc = findDoc(slug);
   const article = useRef<HTMLElement>(null);
-  const headings = useHeadings(article, slug);
+  const [headings, readHeadings] = useHeadings(article);
   const [menuOpen, setMenuOpen] = useState(false);
   useEscape(menuOpen, () => setMenuOpen(false));
   // Tutorials share titles with reference pages ("Reporting"): say which.
@@ -143,7 +149,10 @@ export function DocsPage() {
           >
             <h1>{doc.title}</h1>
             <p className="lead">{doc.description}</p>
-            <doc.Component components={MDX_COMPONENTS} />
+            <Suspense fallback={<p role="status">Loading the documentation</p>}>
+              <doc.Component components={MDX_COMPONENTS} />
+              <Rendered key={doc.slug} onRendered={readHeadings} />
+            </Suspense>
           </article>
 
           <div className="mt-12 flex flex-col gap-4 border-t pt-6 sm:flex-row sm:justify-between">

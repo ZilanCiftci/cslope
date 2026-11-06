@@ -27,7 +27,7 @@ const AREAS: Area[] = [
     points: [
       "Bishop simplified (moment equilibrium).",
       "Janbu simplified, with or without the f₀ correction factor.",
-      "Morgenstern–Price (full equilibrium) with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
+      "Morgenstern-Price (full equilibrium) with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
       "Plots of the moment and force factors of safety against λ, and of slice data along any analyzed surface.",
     ],
     media: MEDIA.criticalSurface,
