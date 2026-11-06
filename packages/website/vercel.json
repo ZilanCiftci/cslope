@@ -1,4 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "ignoreCommand": "exit 0"
+  "ignoreCommand": "exit 0",
+  "git": {
+    "deploymentEnabled": false
+  }
 }
