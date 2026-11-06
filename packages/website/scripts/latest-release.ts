@@ -35,27 +35,45 @@ export function toLatestRelease(r: GitHubRelease): LatestRelease {
   };
 }
 
-/** The latest release, or null when there is none or GitHub cannot be reached. */
-export async function latestRelease(): Promise<LatestRelease | null> {
-  if (existsSync(CACHE)) {
-    const cached = JSON.parse(readFileSync(CACHE, "utf8")) as { at: number; release: LatestRelease | null };
+/**
+ * The latest release, or null when there is none. When GitHub cannot be
+ * asked (a rate limit, a bad token, a timeout) a production build fails:
+ * the site would otherwise go out without its download links and nothing
+ * would say so (#63). Other builds go on without the links, with a warning.
+ * Only an answer is cached, never a failure.
+ */
+export async function latestRelease(
+  env: Record<string, string | undefined> = process.env,
+  fetchRelease: typeof fetch = fetch,
+  cache: string = CACHE,
+): Promise<LatestRelease | null> {
+  if (existsSync(cache)) {
+    const cached = JSON.parse(readFileSync(cache, "utf8")) as { at: number; release: LatestRelease | null };
     if (Date.now() - cached.at < CACHE_MS) return cached.release;
   }
   let release: LatestRelease | null = null;
+  let failure: string | undefined;
   try {
     const headers: Record<string, string> = { Accept: "application/vnd.github+json" };
-    if (process.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-    const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+    if (env.GITHUB_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_TOKEN}`;
+    const res = await fetchRelease(`https://api.github.com/repos/${REPO}/releases/latest`, {
       headers,
       signal: AbortSignal.timeout(8000),
     });
     // 404: no release yet.
     if (res.ok) release = toLatestRelease((await res.json()) as GitHubRelease);
-    else if (res.status !== 404) console.warn(`GitHub answered ${res.status}; building without release links.`);
+    else if (res.status !== 404) failure = `GitHub answered ${res.status}`;
   } catch (e) {
-    console.warn(`GitHub could not be reached (${(e as Error).message}); building without release links.`);
+    failure = `GitHub could not be reached (${(e as Error).message})`;
   }
-  mkdirSync(dirname(CACHE), { recursive: true });
-  writeFileSync(CACHE, JSON.stringify({ at: Date.now(), release }));
+  if (failure !== undefined) {
+    if (env.VERCEL_ENV === "production") {
+      throw new Error(`${failure}; a production build needs the latest release for the download links.`);
+    }
+    console.warn(`${failure}; building without release links.`);
+    return null;
+  }
+  mkdirSync(dirname(cache), { recursive: true });
+  writeFileSync(cache, JSON.stringify({ at: Date.now(), release }));
   return release;
 }
