@@ -152,6 +152,44 @@ describe("Explorer — list and selection", () => {
       })),
     );
     expect(running()).toEqual(["Alpha"]);
+    expect(within(row("Alpha")).getByRole("img", { name: "Analyzing" })).toBeInTheDocument();
+  });
+
+  it("shows a selected drawing, not its model, as the selection; a click on the model selects it again", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      store().addBackground({
+        id: "d1",
+        assetId: "none",
+        name: "Section A-A",
+        page: 1,
+        crop: { x0: 0, y0: 0, x1: 10, y1: 10 },
+        calibration: { mode: "points", points: [] },
+        transform: { a: 1, b: 0, c: 0, d: -1, e: 0, f: 0 },
+        opacity: 1,
+        visible: true,
+        order: 0,
+      });
+    });
+    render(<Explorer />);
+    await user.keyboard("{Control>}");
+    await user.click(row("Beta"));
+    await user.keyboard("{/Control}");
+    await user.click(row("Alpha"));
+    await user.keyboard("{Control>}");
+    await user.click(row("Gamma"));
+    await user.keyboard("{/Control}");
+    act(() => store().switchModel(store().models[0].id));
+    act(() => store().selectCanvasObject({ type: "background", id: "d1" }));
+    expect(row("Section A-A")).toHaveAttribute("aria-selected", "true");
+    // The active model stays the current one (semibold), but is not selected; nor the others.
+    expect(row("Alpha")).toHaveAttribute("aria-current", "true");
+    for (const n of ["Alpha", "Beta", "Gamma"]) expect(row(n)).toHaveAttribute("aria-selected", "false");
+
+    await user.click(row("Alpha"));
+    expect(store().canvasSelection).toBeNull();
+    expect(row("Alpha")).toHaveAttribute("aria-selected", "true");
+    expect(row("Gamma")).toHaveAttribute("aria-selected", "false");
   });
 
   it("extends the selection with Ctrl and Shift", async () => {
@@ -163,6 +201,12 @@ describe("Explorer — list and selection", () => {
     expect(row("Alpha")).toHaveAttribute("aria-selected", "true");
     expect(row("Gamma")).toHaveAttribute("aria-selected", "true");
     expect(row("Beta")).toHaveAttribute("aria-selected", "false");
+    // Every selected row in the same light blue (not the hover grey); the
+    // active model (Gamma, the last clicked) is the current one.
+    expect(row("Alpha").style.background).toBe("var(--color-vsc-selected-bg)");
+    expect(row("Gamma").style.background).toBe("var(--color-vsc-selected-bg)");
+    expect(row("Gamma")).toHaveAttribute("aria-current", "true");
+    expect(row("Alpha")).not.toHaveAttribute("aria-current");
 
     await user.click(row("Alpha"));
     await user.keyboard("{Shift>}");
@@ -363,20 +407,23 @@ describe("ProjectInfoDialog", () => {
 
   const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 
-  it("saves only the fields that were changed, numbers as numbers", async () => {
+  it("saves only the fields that were changed", async () => {
     const onSave = vi.fn();
     render(<ProjectInfoDialog initialInfos={[info()]} onSave={onSave} onClose={() => {}} />);
     expect(input("Client")).toHaveValue("ACME");
     await userEvent.type(input("Author"), "ZC");
-    await userEvent.clear(input("Canvas width (m)"));
-    await userEvent.type(input("Canvas width (m)"), "1500");
     await userEvent.type(input("Description"), "Notes");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({
       author: "ZC",
-      canvasWidth: 1500,
       description: "Notes",
     });
+  });
+
+  it("has no canvas width or height fields (D-21: the app never reads them)", () => {
+    render(<ProjectInfoDialog initialInfos={[info()]} onSave={() => {}} onClose={() => {}} />);
+    expect(screen.queryByLabelText(/canvas width/i)).toBeNull();
+    expect(screen.queryByLabelText(/canvas height/i)).toBeNull();
   });
 
   it("shows mixed values when editing several models", async () => {

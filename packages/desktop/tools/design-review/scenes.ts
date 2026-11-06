@@ -215,7 +215,7 @@ const mainEdit: Scene[] = [
   { id: "main-edit-empty", title: "Main window after File › New (empty model)", area: "main-edit", data: "empty", open: async () => {} },
   { id: "ribbon-file", title: "Ribbon, File tab", area: "main-edit", open: async (ctx) => { await ctx.tab("File"); } },
   { id: "ribbon-model", title: "Ribbon, Model tab", area: "main-edit", open: async (ctx) => { await ctx.tab("Model"); } },
-  { id: "ribbon-results-edit", title: "Ribbon, Results tab before a run (commands disabled)", area: "main-edit", open: async (ctx) => { await ctx.tab("Results"); } },
+  { id: "ribbon-results-edit", title: "Ribbon, Results tab before a run (display commands enabled, a hint in their tooltips)", area: "main-edit", open: async (ctx) => { await ctx.tab("Results"); } },
   { id: "ribbon-help", title: "Ribbon, Help tab", area: "main-edit", open: async (ctx) => { await ctx.tab("Help"); } },
   { id: "ribbon-model-narrow", title: "Ribbon, Model tab at 1100 px", area: "main-edit", size: { width: 1100, height: 800 }, open: async (ctx) => { await ctx.tab("Model"); } },
   { id: "ribbon-file-narrow", title: "Ribbon, File tab at 1100 px", area: "main-edit", size: { width: 1100, height: 800 }, open: async (ctx) => { await ctx.tab("File"); } },
@@ -253,7 +253,7 @@ const mainEdit: Scene[] = [
   },
   {
     id: "banner-error-result",
-    title: "Analysis error banner in the result view (sidebar summary repeats it)",
+    title: "Analysis error banner in the result view (the summary says only \"Analysis failed.\")",
     area: "main-edit",
     open: async (ctx) => {
       await ctx.store(`(s, store) => { s.setMode("result"); store.setState({ runState: "error", errorMessage: "No valid slip surface was found. Check the search limits, the geometry and the material strengths." }); }`);
@@ -414,6 +414,16 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "models-drawing-hover",
+    title: "Models panel, a drawing row under the pointer (grip and ×)",
+    area: "sidebar",
+    data: "drawings",
+    open: async (ctx) => {
+      await ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first().hover();
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
     id: "models-drawing-hidden-unlocked",
     title: "Models panel, a drawing hidden and unlocked",
     area: "sidebar",
@@ -526,7 +536,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "result-sheet",
-    title: "Result sidebar, Properties · Sheet (Results › Sheet settings)",
+    title: "Result sidebar, Sheet section (Results › Sheet settings)",
     area: "sidebar",
     result: true,
     open: async (ctx) => {
@@ -1257,16 +1267,15 @@ const dialogs: Scene[] = [
   },
   {
     id: "dlg-about",
-    title: "About cSlope (native message box)",
+    title: "About cSlope (Help › About)",
     area: "dialogs",
     open: async (ctx) => {
       await ctx.tab("Help");
       await ctx.click("About");
-      await ctx.wait(1500);
-      if (!(await ctx.grabScreen())) throw new Error("The About box is a native message box; the X screen could not be grabbed");
-      await ctx.page.keyboard.press("Enter").catch(() => {});
+      const dialog = ctx.page.getByRole("dialog", { name: "About cSlope" });
+      await dialog.waitFor({ timeout: 10_000 });
+      return { focus: dialog };
     },
-    restartAfter: true,
   },
   {
     id: "dlg-confirm-delete-model",

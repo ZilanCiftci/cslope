@@ -58,6 +58,18 @@ describe("useDragDrop", () => {
     expect(drop(null, "dragleave").event.defaultPrevented).toBe(true);
   });
 
+  it("leaves a drag an element took alone (a layer row's move is not turned into a copy)", () => {
+    renderHook(() => useDragDrop());
+    const event = new Event("dragover", { cancelable: true, bubbles: true }) as Event & { dataTransfer: unknown };
+    const dataTransfer = { files: [], dropEffect: "move" };
+    Object.defineProperty(event, "dataTransfer", { value: dataTransfer });
+    event.preventDefault();
+    act(() => {
+      window.dispatchEvent(event);
+    });
+    expect(dataTransfer.dropEffect).toBe("move");
+  });
+
   it("opens a dropped project file read in the browser", async () => {
     renderHook(() => useDragDrop());
     const text = projectText(-77);

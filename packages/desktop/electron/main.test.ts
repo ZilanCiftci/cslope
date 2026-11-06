@@ -186,7 +186,7 @@ const fake = vi.hoisted(() => {
     },
   };
   const Menu = { setApplicationMenu: vi.fn() };
-  const shell = { openExternal: vi.fn(async () => {}) };
+  const shell = { openExternal: vi.fn(async () => {}), openPath: vi.fn<(file: string) => Promise<string>>(async () => "") };
   // Preload side, for the channel contract test.
   const ipcRenderer = {
     send: vi.fn(),
@@ -513,20 +513,35 @@ describe("window controls", () => {
     expect(win.webContents.toggleDevTools).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the About box unparented once the main window is gone", async () => {
+  it("opens About's source code link for the main window only", async () => {
     await loadMain();
-    const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
-    try {
-      Object.defineProperty(process, "platform", { value: "linux" });
-      fake.state.appListeners.get("window-all-closed")![0]();
-    } finally {
-      Object.defineProperty(process, "platform", platform);
-    }
-    send("menu:about", stranger());
-    expect(fake.dialog.showMessageBox).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "About cSlope" }),
-    );
-    expect(fake.dialog.showMessageBox.mock.calls[0]).toHaveLength(1);
+    send("help:openAboutLink", stranger(), "source");
+    expect(fake.shell.openExternal).not.toHaveBeenCalled();
+    send("help:openAboutLink", mainWin().webContents, "source");
+    expect(fake.shell.openExternal).toHaveBeenCalledWith("https://github.com/ZilanCiftci/cslope");
+    // Nothing else can be opened through it.
+    send("help:openAboutLink", mainWin().webContents, "https://example.com");
+    expect(fake.shell.openExternal).toHaveBeenCalledTimes(1);
+    expect(fake.dialog.showMessageBox).not.toHaveBeenCalled();
+  });
+
+  it("opens the installed third-party notices, else the repository's copy", async () => {
+    await loadMain();
+    const notices = "https://github.com/ZilanCiftci/cslope/blob/main/packages/desktop/THIRD-PARTY-NOTICES.txt";
+    send("help:openAboutLink", mainWin().webContents, "licenses");
+    await vi.waitFor(() => expect(fake.shell.openExternal).toHaveBeenCalledWith(notices));
+    expect(fake.shell.openPath).not.toHaveBeenCalled();
+
+    fake.shell.openExternal.mockClear();
+    fake.app.isPackaged = true;
+    (process as { resourcesPath?: string }).resourcesPath = "/opt/cslope/resources";
+    send("help:openAboutLink", mainWin().webContents, "licenses");
+    await vi.waitFor(() => expect(fake.shell.openPath).toHaveBeenCalledWith(expect.stringContaining("THIRD-PARTY-NOTICES.txt")));
+    expect(fake.shell.openExternal).not.toHaveBeenCalled();
+
+    fake.shell.openPath.mockResolvedValueOnce("No application");
+    send("help:openAboutLink", mainWin().webContents, "licenses");
+    await vi.waitFor(() => expect(fake.shell.openExternal).toHaveBeenCalledWith(notices));
   });
 
   it("opens the documentation in the browser, for the main window only", async () => {
@@ -551,15 +566,6 @@ describe("window controls", () => {
     }
   });
 
-  it("shows the About box modal to the main window", async () => {
-    await loadMain();
-    const win = mainWin();
-    send("menu:about", win.webContents);
-    expect(fake.dialog.showMessageBox).toHaveBeenCalledWith(
-      win,
-      expect.objectContaining({ message: "cSlope v1.2.3" }),
-    );
-  });
 });
 
 // ── Dialog windows ────────────────────────────────────────────────

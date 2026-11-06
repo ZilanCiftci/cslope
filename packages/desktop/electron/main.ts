@@ -1577,20 +1577,22 @@ ipcMain.on("menu:new", (event) => {
   sendFileName(null);
 });
 
-ipcMain.on("menu:about", () => {
-  const version = app.getVersion();
-  const options = {
-    type: "info" as const,
-    title: "About cSlope",
-    message: `cSlope v${version}`,
-    detail:
-      "Slope stability analysis\nOpen-source geotechnical engineering software.\nhttps://cslope.com\n\n" +
-      "DWG import uses acadrust (MPL-2.0, https://github.com/hakanaktt/acadrust). " +
-      "Third-party licenses: THIRD-PARTY-NOTICES.txt in the app's resources folder.",
-  };
-  // Modal to the main window so it cannot open behind it.
-  if (win) dialog.showMessageBox(win, options);
-  else dialog.showMessageBox(options);
+// Help › About is a dialog in the main window (AboutDialog.tsx); its links
+// lead to fixed places only: the third-party notices the installer puts in
+// the resources folder (the repository's copy when they are not there, as
+// in development) and the source code repository.
+const SOURCE_URL = "https://github.com/ZilanCiftci/cslope";
+const NOTICES_URL = `${SOURCE_URL}/blob/main/packages/desktop/THIRD-PARTY-NOTICES.txt`;
+ipcMain.on("help:openAboutLink", async (event, target: unknown) => {
+  if (!win || event.sender !== win.webContents) return;
+  if (target === "source") {
+    void shell.openExternal(SOURCE_URL);
+  } else if (target === "licenses") {
+    const failed = app.isPackaged
+      ? await shell.openPath(path.join(process.resourcesPath, "THIRD-PARTY-NOTICES.txt"))
+      : "not installed";
+    if (failed) void shell.openExternal(NOTICES_URL);
+  }
 });
 
 // Help › Documentation, and the "?" buttons of the dialog windows: the
