@@ -3283,7 +3283,7 @@ export function drawCanvas(
         // Title
         ctx.font = `bold ${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textBaseline = "bottom";
-        ctx.fillText("FOS", barX, barY - 4 * annoScale);
+        ctx.fillText("F", barX, barY - 4 * annoScale);
         ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
         ctx.textBaseline = "middle";
 

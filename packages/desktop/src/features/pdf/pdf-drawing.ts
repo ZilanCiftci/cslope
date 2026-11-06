@@ -6,6 +6,7 @@ import type { ModelWaternet, PileRow, ReinforcementRow } from "../../store/types
 import {
   bondedSpan,
   divideSign,
+  FACTOR_SYMBOL,
   elementNumberLayout,
   forceLabelPieces,
   layoutReinforcementForces,
@@ -789,7 +790,7 @@ export function drawReinforcementForcesPdf(
       pdf.setLineWidth(d.width);
       pdf.line(d.bar[0], d.bar[1], d.bar[2], d.bar[3]);
       for (const [dx, dy] of d.dots) pdf.circle(dx, dy, d.r, "F");
-      pdf.text("FOS", p.fosX, cy, { baseline: "middle" });
+      pdf.text(FACTOR_SYMBOL, p.fosX, cy, { baseline: "middle" });
     }
   }
 }
@@ -1732,7 +1733,7 @@ function drawColorBarAnnotation(
   pdf.setFontSize(labelPt);
   setSansFont(pdf, "bold");
   pdf.setTextColor(...MARKER_COLOR.rgb);
-  pdf.text("FOS", x, barY - 4 * scale, { baseline: "bottom" });
+  pdf.text("F", x, barY - 4 * scale, { baseline: "bottom" });
 
   setSansFont(pdf, "normal");
   const labelX = x + barW + 5 * scale;

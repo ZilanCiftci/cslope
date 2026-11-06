@@ -578,7 +578,7 @@ export function ResultSidebar() {
                     : undefined
                 }
               >
-                {designValues ? "Min FOS (design values)" : "Min FOS"}
+                {designValues ? "Over-design factor (design values)" : "Min F"}
               </Label>
               <span
                 className="font-bold tabular-nums"
@@ -1607,7 +1607,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
           <Label
             title={`Limit analysis on ${fem.bounds.elements} elements${fem.bounds.refinements ? `, ${fem.bounds.refinements} refinement${fem.bounds.refinements > 1 ? "s" : ""}` : ""}, ${(fem.bounds.elapsedMs / 1000).toFixed(0)} s: lower and upper bounds of rigid–plastic soil with associated flow. The factor of safety lies between them.`}
           >
-            FOS, limit analysis (FE)
+            F, limit analysis (FE)
           </Label>
           <span className="font-bold tabular-nums">{boundsText(fem.bounds.lower, fem.bounds.upper)}</span>
         </div>
@@ -1621,7 +1621,7 @@ function FemSummaryRows({ fem, designValues }: { fem: FemResultSummary; designVa
         </div>
       )}
       <div className="flex justify-between">
-        <Label title={srfTitle}>{headline ? "Strength reduction (comparison)" : "FOS, strength reduction (FE)"}</Label>
+        <Label title={srfTitle}>{headline ? "Strength reduction (comparison)" : "F, strength reduction (FE)"}</Label>
         <span className={headline ? "tabular-nums" : "font-bold tabular-nums"}>{srf}</span>
       </div>
       <div className="flex justify-between">

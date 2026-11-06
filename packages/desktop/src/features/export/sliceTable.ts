@@ -48,7 +48,7 @@ export function buildSliceTable(
   const rows: XlsxCell[][] = [
     ["Model", meta.modelName],
     ["Method", result.method],
-    [pf ? "Over-design factor (design values)" : "Minimum FOS", round(result.minFOS, 4)],
+    [pf ? "Over-design factor (design values)" : "Min F", round(result.minFOS, 4)],
   ];
   if (pf) {
     rows.push(

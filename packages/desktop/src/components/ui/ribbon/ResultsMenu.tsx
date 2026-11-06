@@ -369,7 +369,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         [
                           { value: "critical", label: "Critical only" },
                           { value: "all", label: "All surfaces" },
-                          { value: "filter", label: "Filter by FOS" },
+                          { value: "filter", label: "Filter by F" },
                         ] as { value: SurfaceDisplayMode; label: string }[]
                       ).map((item) => (
                         // The current mode has a check mark.
@@ -402,7 +402,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       )}
                       {rvs.surfaceDisplay === "filter" && (
                         <MenuField separator>
-                          FOS ≤
+                          F ≤
                           <DraftNumberInput
                             min={0.01}
                             step={0.05}
@@ -410,7 +410,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             onValueChange={(value) => {
                               if (value > 0) setRvs({ fosFilterMax: value });
                             }}
-                            aria-label="Maximum FOS shown"
+                            aria-label="Maximum F shown"
                             className="w-16 tabular-nums"
                           />
                         </MenuField>
@@ -427,8 +427,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 <RibbonSmallButton
                   icon={<FosLabelIcon {...SMALL_ICON} />}
-                  label="FOS label"
-                  title={displayTip("Show FOS label")}
+                  label="F label"
+                  title={displayTip("Show F label")}
                   onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
                   active={rvs.showFosLabel}
                 />

@@ -45,7 +45,7 @@ export const DISPLAY_LAYER_NAMES: Record<DisplayLayerKey, string> = {
   criticalSurface: "Critical surface",
   slices: "Slices",
   center: "Center",
-  fosLabel: "FOS label",
+  fosLabel: "F label",
 };
 
 /** The prefix of a drawing's layer key. */

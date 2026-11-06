@@ -533,7 +533,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "result-layer-properties",
-    title: "Result sidebar, a display layer (FOS label) selected in Layers: its properties",
+    title: "Result sidebar, a display layer (F label) selected in Layers: its properties",
     area: "sidebar",
     result: true,
     open: async (ctx) => {
@@ -543,7 +543,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "main-result-layer-styles",
-    title: "Result view with styled display layers (FOS label, critical surface, slices, center, soil at 50 %)",
+    title: "Result view with styled display layers (F label, critical surface, slices, center, soil at 50 %)",
     area: "main-result",
     result: true,
     open: async (ctx) => {
@@ -692,7 +692,7 @@ const menus: Scene[] = [
   { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) }; } },
   {
     id: "menu-results-surfaces-filter",
-    title: "Results › Surfaces ▾ menu, Filter by FOS (with the FOS field)",
+    title: "Results › Surfaces ▾ menu, Filter by F (with the F field)",
     area: "menus",
     result: true,
     open: async (ctx) => {

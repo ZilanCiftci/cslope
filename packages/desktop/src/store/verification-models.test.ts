@@ -68,7 +68,7 @@ describe("benchmarks from the Help menu: the title block", () => {
     expect(m.projectInfo).toMatchObject({ title: "V001 Arai & Tagyo (1985) example 1", subtitle: "Arai & Tagyo (1985), example 1" });
     expect(text(m, "title")).toBe("#Title");
     expect(text(m, "subtitle")).toBe("#Subtitle");
-    expect(text(m, "fos")).toBe("Calculated FOS: #FOS");
+    expect(text(m, "fos")).toBe("Calculated F: #FOS");
     // The published value and the other programs' range, the programs unnamed.
     expect(text(m, "reference")).toBe("Reference for Bishop simplified: 1.451 Arai & Tagyo (1985)\n    other programs 1.409–1.417 (2)");
     expect(m.resultViewSettings!.annotations.some((a) => a.type === "material-table")).toBe(true);

@@ -182,10 +182,10 @@ export function ColorBarProperties({
         {modeValue === "filter" && (
           <p className="text-[10px] mt-0.5" style={MUTED}>
             {result && filterSpan
-              ? `F ${result.minFOS.toFixed(2)} to ${fosFilterMax.toFixed(2)}, the span of Surfaces › Filter by FOS.`
+              ? `F ${result.minFOS.toFixed(2)} to ${fosFilterMax.toFixed(2)}, the span of Surfaces › Filter by F.`
               : result
                 ? `The filter limit (${fosFilterMax.toFixed(2)}) is not above the minimum F; the automatic range is used.`
-                : "The span of Surfaces › Filter by FOS."}
+                : "The span of Surfaces › Filter by F."}
           </p>
         )}
       </div>

@@ -67,7 +67,7 @@ afterEach(cleanup);
 describe("ResultSidebar summary", () => {
   it("summarises the result: FOS, method, surfaces below 1.0 and time", () => {
     render(<ResultSidebar />);
-    expect(screen.getByText("Min FOS").nextSibling!.textContent).toBe("1.234");
+    expect(screen.getByText("Min F").nextSibling!.textContent).toBe("1.234");
     expect(screen.getByText("Spencer")).toBeInTheDocument();
     expect(screen.getAllByText("Surfaces")[0].nextSibling!.textContent).toBe("3 (1 below 1.0)");
     expect(screen.getByText("42 ms")).toBeInTheDocument();
@@ -93,7 +93,7 @@ describe("ResultSidebar summary", () => {
       })),
     );
     render(<ResultSidebar />);
-    expect(screen.getByText("Min FOS (design values)")).toBeInTheDocument();
+    expect(screen.getByText("Over-design factor (design values)")).toBeInTheDocument();
     expect(screen.getByText("← left")).toBeInTheDocument();
     expect(screen.getByText("Other direction").nextSibling!.textContent).toBe("no surface");
     // The notes are folded into one line; unfolded, each is a line, and the
@@ -167,7 +167,7 @@ describe("ResultSidebar summary", () => {
       "title",
       expect.stringMatching(/experimental: fewer verification problems than limit equilibrium/),
     );
-    expect(screen.getByText("FOS, limit analysis (FE)").nextSibling!.textContent).toBe("1.350 – 1.450");
+    expect(screen.getByText("F, limit analysis (FE)").nextSibling!.textContent).toBe("1.350 – 1.450");
     expect(screen.getByText("Strength reduction (comparison)").nextSibling!.textContent).toBe("1.400");
   });
 
