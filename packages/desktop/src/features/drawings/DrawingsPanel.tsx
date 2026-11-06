@@ -551,8 +551,9 @@ function LayerList({
   const shown = layers.filter((l) => !hidden.includes(l)).length;
   return (
     <div className="mt-1">
-      {/* The heading row; with the list open, Show all and Hide all as text links at its end. */}
-      <div className="flex items-center gap-2 min-w-0">
+      {/* The heading; with the list open, Show all and Hide all as text links
+          (on the heading's line where the panel is wide enough, else below it). */}
+      <div className="flex items-center flex-wrap gap-x-2 gap-y-0.5 min-w-0">
         <button className="flex items-center gap-1 text-[11px] min-w-0" onClick={() => setOpen(!open)} aria-expanded={open} aria-label={`Layers of ${label}`}>
           <FoldChevron open={open} />
           <span className="truncate">
@@ -560,7 +561,7 @@ function LayerList({
           </span>
         </button>
         {open && (
-          <span className="ml-auto flex items-center gap-2 shrink-0">
+          <span className="ml-auto flex items-center gap-2 shrink-0 pl-4">
             <button className={textLink} style={linkColor(hidden.length === 0)} onClick={() => onChange([])} disabled={hidden.length === 0}>
               Show all
             </button>
