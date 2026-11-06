@@ -23,7 +23,9 @@
  *
  *   DESIGN_REVIEW_SCALE=1.5 xvfb-run -a -s "-screen 0 1920x1080x24" bun packages/desktop/tools/design-review/run.ts
  *
- * which can also be run alone (it then reuses the last build).
+ * which can also be run alone (it then reuses the last build). It
+ * simulates a 48 DIP taskbar: the app sizes its windows to a work area that
+ * much lower than the screen (CSLOPE_CAPTURE_TASKBAR).
  * DESIGN_REVIEW_NO_150=1 leaves the 150 % pass out. Every capture records
  * the device pixel ratio measured in the page and in the PNG; one that
  * differs from the pass's scale is an error.
@@ -81,6 +83,12 @@ const PASS_150 = SCALE === 1.5;
 if (SCALE !== DPR && !PASS_150) throw new Error(`DESIGN_REVIEW_SCALE must be ${DPR} or 1.5, not ${process.env.DESIGN_REVIEW_SCALE}`);
 /** The 150 % screen in DIPs: 1920 × 1080 at 150 % (no taskbar under the virtual display). */
 const SCREEN_150 = { width: 1280, height: 720 };
+/**
+ * The taskbar the 150 % pass simulates (DIPs; Windows' is 48 at 150 %): the
+ * app takes it off the work area it sizes windows to (CSLOPE_CAPTURE_TASKBAR,
+ * #48), as the virtual screen has none.
+ */
+const TASKBAR_150 = 48;
 
 export interface IndexEntry {
   id: string;
@@ -204,7 +212,7 @@ class App {
   confirmAnswer = false;
 
   async start() {
-    const { browser, page, proc } = await launchApp(PORT, SCALE);
+    const { browser, page, proc } = await launchApp(PORT, SCALE, PASS_150 ? { CSLOPE_CAPTURE_TASKBAR: String(TASKBAR_150) } : {});
     this.browser = browser;
     this.page = page;
     this.proc = proc;
