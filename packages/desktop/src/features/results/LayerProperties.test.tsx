@@ -64,7 +64,7 @@ describe("display layer properties", () => {
     // (an empty canvas click clears the selected sheet object)
     act(() => useAppStore.getState().setSelectedResultObject(null));
     expect(useAppStore.getState().selectedResultLayer).toBeNull();
-    expect(screen.getByRole("button", { name: "Properties" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Selection" })).toBeInTheDocument();
   });
 
   it("changes the FOS label's color, size, decimals, font and bold, each one undo step", () => {

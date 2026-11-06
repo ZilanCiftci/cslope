@@ -355,13 +355,13 @@ describe("Compact ribbon", () => {
     await userEvent.click(tab("Results"));
     expect(screen.getByRole("button", { name: "Results plot" })).toHaveAttribute("data-size", "large");
     expect(screen.getByRole("button", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByTitle("Sheet settings")).toHaveAttribute("data-size", "small");
+    expect(screen.getByRole("button", { name: "Sheet settings" })).toHaveAttribute("data-size", "small");
   });
 
   it("marks a pressed toggle with aria-pressed", async () => {
     render(<MenuBar />);
     await userEvent.click(tab("Results"));
-    const slices = screen.getByTitle("Show slices");
+    const slices = screen.getByRole("button", { name: "Slices" });
     const before = store().resultViewSettings.showSlices;
     expect(slices).toHaveAttribute("aria-pressed", String(before));
     await userEvent.click(slices);
