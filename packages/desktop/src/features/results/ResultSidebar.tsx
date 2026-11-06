@@ -33,6 +33,8 @@ import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/reference";
 import { ReferenceProperties } from "./ReferenceProperties";
 import { LayersList } from "./LayersList";
+import { LayerProperties } from "./LayerProperties";
+import { DISPLAY_LAYER_NAMES, displayLayerShown } from "./layers";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
@@ -133,6 +135,8 @@ export function ResultSidebar() {
   const updateAnnotation = useAppStore((s) => s.updateAnnotation);
   const selectedAnnotationIds = useAppStore((s) => s.selectedAnnotationIds);
   const selectedResultObject = useAppStore((s) => s.selectedResultObject);
+  const selectedResultLayer = useAppStore((s) => s.selectedResultLayer);
+  const backgrounds = useAppStore((s) => s.backgrounds);
   const projectInfo = useAppStore((s) => s.projectInfo);
   const parameters = useAppStore((s) => s.parameters);
   // Text as the sheet shows it: #Title, {{expressions}} and \n resolved.
@@ -471,6 +475,11 @@ export function ResultSidebar() {
   }, [selectedMaterialTableAnnotations]);
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
+  // A display layer selected in Layers, while it is drawn: its properties.
+  const selectedLayer =
+    selectedResultLayer && displayLayerShown(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds })
+      ? selectedResultLayer
+      : null;
 
   // Results › Sheet settings: open Properties, bring the paper's fields
   // into view and put the cursor in the first one.
@@ -674,11 +683,13 @@ export function ResultSidebar() {
 
       <Section
         // Names what the fields are of when the sheet itself is selected.
-        title={paperFrameSelected ? "Properties · Sheet" : "Properties"}
+        title={paperFrameSelected ? "Properties · Sheet" : selectedLayer ? DISPLAY_LAYER_NAMES[selectedLayer] : "Properties"}
         open={openSections.properties}
         onToggle={() => toggleSection("properties")}
       >
-        {selectedAnnotations.length === 0 && !paperFrameSelected && (
+        {selectedLayer && <LayerProperties layer={selectedLayer} />}
+
+        {selectedAnnotations.length === 0 && !paperFrameSelected && !selectedLayer && (
           <p
             className="text-[11px]"
             style={{ color: "var(--color-vsc-text-muted)" }}

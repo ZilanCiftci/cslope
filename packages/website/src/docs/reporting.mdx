@@ -63,12 +63,26 @@ The **Layers** list in the result sidebar shows what the sheet draws, topmost fi
 
 - Drag a row by its grip, or focus it and press <Kbd>Alt</Kbd>+<Kbd>↑</Kbd> or <Kbd>Alt</Kbd>+<Kbd>↓</Kbd>, to draw it above or below the others, for example the soil colors over the slices, or a text under the material table. The result view and the PDF export follow the order. The order is saved with the model and each change is one undo step; a display option turned off and on again comes back at its place, and a new annotation goes on top.
 - Click an annotation to select it (<Kbd>Ctrl</Kbd>+click adds it to the selection). The button at the end of the row removes an annotation, turns a display option off as the ribbon does, or takes a drawing out of the results (*Show in results*). The critical surface is always drawn.
+- Click a display option (or focus it and press <Kbd>Enter</Kbd>) to set how it is drawn; its properties open in the last section of the sidebar, headed with its name:
+
+  | Layer | Properties |
+  | --- | --- |
+  | FOS label | Font, size, bold, decimals, color (custom surfaces' labels use the same font) |
+  | Soil colors | Opacity |
+  | Critical surface, slices | Color, line width |
+  | Center | Color, dot radius, radius lines on or off |
+  | Surfaces | Line width, opacity |
+  | Custom surfaces | Color, line width, label size |
+  | FE mesh | Color, line width, opacity (result view only, as the PDF has no finite element layers) |
+  | Plastic zone | Color, opacity (result view only) |
+
+  An empty field or **Default** draws the layer as by default: the theme's ink on screen, black in the PDF. A chosen color is drawn as chosen in both themes and in the PDF. **Reset to default** clears the layer's settings. Each change is one undo step; the settings are saved with the model and in templates.
 
 A model without an order of its own draws in the default order: the soil colors and drawings at the bottom, then the finite element layers, the reference lines, the surfaces, the critical surface with its slices, center and FOS label, and the annotations on the sheet on top. The labels of the reference lines and the reinforcement forces stay over the model's layers.
 
 ## Templates
 
-A template stores the layout of the sheet: annotations, display options, paper and extents. Reference lines are not part of it.
+A template stores the layout of the sheet: annotations, display options and their layer settings, paper and extents. Reference lines are not part of it.
 
 - **Results › Templates › Export template** saves the layout of the active model as `view-template.json`.
 - **Results › Templates › Import template** applies a saved layout to the active model.
