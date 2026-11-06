@@ -3,6 +3,7 @@ import { GeometrySection } from "./sections/GeometrySection";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
 import type { ParameterDef } from "../../store/types";
+import { DialogHeader } from "./DialogHeader";
 
 interface GeometryStatePayload {
   coordinates: [number, number][];
@@ -70,9 +71,10 @@ export function GeometryDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Exterior boundary</h2>
-      </div>
+      <DialogHeader
+        title="Exterior boundary"
+        description="The ground surface and the bottom of the model, as points around the outline."
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <GeometrySection plain />
       </div>

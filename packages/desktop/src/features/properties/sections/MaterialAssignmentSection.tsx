@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useAppStore } from "../../../store/app-store";
 import { computeRegions, regionInteriorPoint } from "../../../utils/regions";
 import { Section } from "../../../components/ui/Section";
@@ -19,6 +19,11 @@ export function MaterialAssignmentSection({
   const setSelectedRegionKey = useAppStore((s) => s.setSelectedRegionKey);
 
   const defaultMatId = materials[0]?.id ?? "";
+  // A region picked on the canvas is scrolled into view in the list.
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  useEffect(() => {
+    if (selectedRegionKey) cardRefs.current.get(selectedRegionKey)?.scrollIntoView?.({ block: "nearest" });
+  }, [selectedRegionKey]);
 
   const regions = useMemo(
     () =>
@@ -44,12 +49,6 @@ export function MaterialAssignmentSection({
       </div>
     ) : (
       <div className="space-y-2">
-        <div
-          className="text-[11px] mb-1"
-          style={{ color: "var(--color-vsc-text-muted)" }}
-        >
-          Click a region on the canvas to select it.
-        </div>
         {regions.map((r) => {
           const currentMatId = r.materialId;
           const currentMat = materials.find((m) => m.id === currentMatId);
@@ -57,6 +56,11 @@ export function MaterialAssignmentSection({
           return (
             <div
               key={r.regionKey}
+              ref={(el) => {
+                if (el) cardRefs.current.set(r.regionKey, el);
+                else cardRefs.current.delete(r.regionKey);
+              }}
+              aria-current={isSelected || undefined}
               className="p-2 rounded-md flex items-center gap-2 cursor-pointer transition-colors"
               style={{
                 background: isSelected

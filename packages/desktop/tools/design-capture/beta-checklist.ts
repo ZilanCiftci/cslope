@@ -935,7 +935,7 @@ async function partA() {
     const d = await udlDialog();
     await growToContent(d);
     const n = await notes(d);
-    const label = 'Excess pore pressure ratio of UDL 1 in material "Clay"';
+    const label = 'Excess pore pressure ratio of load 1 in material "Clay"';
     const field = d.getByLabel(label, { exact: true });
     const ratio = (await field.count()) ? await field.inputValue() : null;
     await rig.shot(d, "a8-udl", "05 Distributed loads: excess pore pressure", `${n.join(" | ")}; ratio ${ratio ?? "no field"}`);

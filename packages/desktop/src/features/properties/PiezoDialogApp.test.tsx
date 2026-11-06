@@ -59,7 +59,7 @@ describe("PiezoDialogApp", () => {
     render(<PiezoDialogApp />);
     hydrate();
     expect(
-      screen.getByText("Add a piezometric line to start editing coordinates."),
+      screen.getByText("No piezometric lines."),
     ).toBeInTheDocument();
     const del = screen.getByRole("button", { name: "Delete" });
     expect(del).toHaveAttribute("aria-disabled", "true");
@@ -218,7 +218,7 @@ describe("PiezoDialogApp — imported head and reference lines", () => {
     bridge.emit("onPiezoChanged", { piezometricLine: pl(), coordinates: COORDS, materials: store().materials, waternet });
     expect(screen.getByTestId("waternet-notice")).toHaveTextContent("from 1 imported head line and 1 reference line.");
     expect(bridge.sentOf("sendPiezoChanged")).toEqual([]);
-    await userEvent.click(screen.getByRole("button", { name: "Remove the imported head and reference lines" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove head lines" }));
     expect(store().waternet).toBeUndefined();
     expect(screen.queryByTestId("waternet-notice")).toBeNull();
     const sent = bridge.sentOf<{ waternet: ModelWaternet | null }>("sendPiezoChanged");

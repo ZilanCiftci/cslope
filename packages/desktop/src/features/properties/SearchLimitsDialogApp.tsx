@@ -9,6 +9,7 @@ import type {
   ModelEntry,
   ModelOrientation,
 } from "../../store/types";
+import { DialogHeader } from "./DialogHeader";
 
 interface AnalysisStatePayload {
   coordinates: [number, number][];
@@ -95,9 +96,10 @@ export function SearchLimitsDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Search limits</h2>
-      </div>
+      <DialogHeader
+        title="Search limits"
+        description="Where slip surfaces may enter and leave the ground."
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <SearchLimitsSection plain />
       </div>

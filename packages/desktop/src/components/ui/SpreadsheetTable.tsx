@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode, useState } from "react";
+import { X } from "lucide-react";
 
 export interface SpreadsheetColumn<T> {
   header: ReactNode;
@@ -16,6 +17,13 @@ interface SpreadsheetTableProps<T> {
   selectedRowIndex?: number | null;
   onRowClick?: (row: T, rowIndex: number) => void;
   getRowStyle?: (row: T, rowIndex: number) => CSSProperties | undefined;
+  /** One muted sentence in the table body while there are no rows ("No distributed loads."). */
+  emptyText?: string;
+}
+
+/** The header of a remove column: no visible text, "Remove" for screen readers. */
+export function RemoveColumnHeader() {
+  return <span className="sr-only">Remove</span>;
 }
 
 function alignToClass(align?: "left" | "center" | "right") {
@@ -31,6 +39,7 @@ export function SpreadsheetTable<T>({
   selectedRowIndex = null,
   onRowClick,
   getRowStyle,
+  emptyText,
 }: SpreadsheetTableProps<T>) {
   return (
     <div
@@ -65,6 +74,17 @@ export function SpreadsheetTable<T>({
           </tr>
         </thead>
         <tbody>
+          {rows.length === 0 && emptyText && (
+            <tr>
+              <td
+                colSpan={columns.length}
+                className="py-1.5 px-2 text-[11px]"
+                style={{ color: "var(--color-vsc-text-muted)" }}
+              >
+                {emptyText}
+              </td>
+            </tr>
+          )}
           {rows.map((row, rowIndex) => {
             const clickable = Boolean(onRowClick);
             const selected = selectedRowIndex === rowIndex;
@@ -119,7 +139,7 @@ function SpreadsheetRow<T>({
       onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={clickable ? "cursor-pointer" : undefined}
+      className={`group${clickable ? " cursor-pointer" : ""}`}
       aria-selected={clickable ? selected : undefined}
       style={{
         background: bg,
@@ -193,8 +213,13 @@ export function SpreadsheetNumberInput({
   );
 }
 
-/** Small trash-can icon button for removing a spreadsheet row. */
-export function SpreadsheetRemoveButton({
+/**
+ * The remove control at the end of a table row: a muted lucide "×" in a
+ * 24 px icon button, shown while the row is hovered, selected or holds the
+ * focus; it turns to the error color on hover. The row needs the `group`
+ * class (SpreadsheetTable's rows have it).
+ */
+export function RowRemoveButton({
   ariaLabel,
   onClick,
 }: {
@@ -203,24 +228,13 @@ export function SpreadsheetRemoveButton({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="w-5 h-5 flex items-center justify-center rounded-sm opacity-40 hover:opacity-100 hover:bg-red-500/15 hover:text-red-500 cursor-pointer transition-all"
-      style={{ color: "var(--color-vsc-text-muted)" }}
+      className="w-6 h-6 inline-flex items-center justify-center rounded-xs cursor-pointer transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 group-aria-selected:opacity-100 focus-visible:opacity-100 text-[var(--color-vsc-text-muted)] hover:text-[var(--color-vsc-error)] hover:bg-[var(--color-vsc-list-hover)]"
       aria-label={ariaLabel}
       title={ariaLabel}
     >
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M5.5 2.5h5M3 4h10M12 4l-.5 8.5a1 1 0 0 1-1 .9H5.5a1 1 0 0 1-1-.9L4 4M6.5 6.5v4M9.5 6.5v4" />
-      </svg>
+      <X size={12} strokeWidth={1.75} aria-hidden />
     </button>
   );
 }

@@ -165,6 +165,23 @@ describe("MaterialAssignmentDialogApp", () => {
     expect(store().selectedRegionKey).toBeNull();
   });
 
+  it("highlights the region picked on the canvas of the main window", () => {
+    render(<MaterialAssignmentDialogApp />);
+    hydrate();
+    bridge.emit("onMaterialAssignmentChanged", {
+      coordinates: SQUARE,
+      materials: [mat("m1", "Sand"), mat("m2", "Clay", "#0000aa")],
+      materialBoundaries: [
+        { id: "b1", coordinates: [[0, 5], [20, 5]], coordinateExpressions: [{}, {}] },
+      ],
+      regionMaterials: [],
+      selectedRegionKey: "region-1",
+    });
+    expect(store().selectedRegionKey).toBe("region-1");
+    const current = screen.getByText(/^Region \d$/, { selector: "[aria-current] *" });
+    expect(current).toBeInTheDocument();
+  });
+
   it("asks for the exterior boundary when there is none", () => {
     useAppStore.setState({ coordinates: [] });
     render(<MaterialAssignmentSection plain />);
@@ -206,7 +223,7 @@ describe("MaterialsDialogApp", () => {
     bridge.emit("onMaterialsState", { materials: [mat("m1", "Sand")], earlierStage });
     expect(store().earlierStage).toEqual(earlierStage);
     expect(screen.getByTestId("earlier-stage-notice")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Remove the imported earlier stage" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove earlier stage" }));
     expect(store().earlierStage).toBeUndefined();
     const sent = bridge.sentOf<{ earlierStage: unknown }>("sendMaterialsChanged");
     expect(sent.at(-1)!.earlierStage).toBeNull();

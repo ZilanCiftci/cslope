@@ -279,7 +279,7 @@ describe("ReinforcementDialogApp — piles", () => {
     expect(screen.getAllByLabelText("Shear force per pile")).toHaveLength(1);
     // Ito & Matsui piles take the force from the soil.
     await userEvent.click(pilesRegion().getAllByRole("row")[1]);
-    expect(screen.getByText("From the soil (Ito & Matsui)")).toBeInTheDocument();
+    expect(screen.getByLabelText("Pile force")).toHaveValue("ito-matsui");
     expect(screen.queryByLabelText("Shear force per pile")).toBeNull();
   });
 

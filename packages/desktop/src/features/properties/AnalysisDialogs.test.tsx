@@ -324,7 +324,7 @@ describe("SearchLimitsDialogApp", () => {
     hydrate({ analysisLimits: { enabled: true }, orientation: "rtl" });
     expect(screen.getByText("Entry range (crest side — right)")).toBeInTheDocument();
     expect(screen.getByText("Exit range (toe side — left)")).toBeInTheDocument();
-    expect(screen.getByText("Model X range: 0 – 40 m")).toBeInTheDocument();
+    expect(screen.getByText("Model x range: 0 – 40 m")).toBeInTheDocument();
   });
 
   it("restricts the ranges and sends the limits", async () => {

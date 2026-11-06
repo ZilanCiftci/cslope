@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown, X } from "lucide-react";
 
 export type MultiSelectOption = {
   value: string;
@@ -15,58 +16,7 @@ type MultiSelectComboboxChipsProps = {
   ariaLabel?: string;
 };
 
-/* ── Inline SVG micro-icons (no deps needed) ──────────── */
-
-function ChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 16 16"
-      fill="none"
-      style={{
-        transition: "transform 150ms ease",
-        transform: open ? "rotate(180deg)" : "rotate(0deg)",
-        flexShrink: 0,
-      }}
-    >
-      <path
-        d="M4.5 6.5L8 10l3.5-3.5"
-        stroke="currentColor"
-        strokeWidth="1.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CloseIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M4 4l8 8M12 4l-8 8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-      <path
-        d="M3.5 8.5l3 3 6-6.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+/* ── Icons (lucide, strokeWidth 1.75) ──────────────── */
 
 /* ── Component ────────────────────────────────────────── */
 
@@ -277,14 +227,11 @@ export function MultiSelectComboboxChips({
                     e.stopPropagation();
                     onValueChange(value.filter((x) => x !== v));
                   }}
-                  className="inline-flex items-center justify-center rounded w-[14px] h-[14px] ml-0.5 cursor-pointer"
-                  style={{
-                    color: "var(--color-vsc-text-muted)",
-                    opacity: 0.6,
-                  }}
+                  // 16 px hit area inside the 20 px chip.
+                  className="inline-flex items-center justify-center rounded-xs w-4 h-4 cursor-pointer text-[var(--color-vsc-text-muted)] hover:text-[var(--color-vsc-text)] hover:bg-[var(--color-vsc-list-hover)]"
                   aria-label={`Remove ${opt.label}`}
                 >
-                  <CloseIcon />
+                  <X size={10} strokeWidth={1.75} aria-hidden />
                 </button>
               </span>
             );
@@ -322,11 +269,16 @@ export function MultiSelectComboboxChips({
                 return next;
               });
             }}
-            className="inline-flex items-center justify-center rounded w-5 h-5 shrink-0 cursor-pointer"
+            className="inline-flex items-center justify-center rounded-xs w-6 h-6 shrink-0 cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
             style={{ color: "var(--color-vsc-text-muted)" }}
             aria-label="Toggle options"
           >
-            <ChevronIcon open={open} />
+            <ChevronDown
+              size={12}
+              strokeWidth={1.75}
+              aria-hidden
+              style={{ transition: "transform 150ms ease", transform: open ? "rotate(180deg)" : "none" }}
+            />
           </button>
         </div>
       </div>
@@ -339,7 +291,7 @@ export function MultiSelectComboboxChips({
         style={{
           background: "var(--color-vsc-panel)",
           borderColor: "var(--color-vsc-border)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12)",
+          boxShadow: "var(--color-vsc-shadow-float)",
           opacity: open ? 1 : 0,
           transform: open
             ? "translateY(0) scaleY(1)"
@@ -386,7 +338,7 @@ export function MultiSelectComboboxChips({
                   color: selected ? "var(--color-vsc-accent)" : "transparent",
                 }}
               >
-                <CheckIcon />
+                <Check size={12} strokeWidth={1.75} aria-hidden />
               </span>
               <span className="truncate">{opt.label}</span>
             </button>

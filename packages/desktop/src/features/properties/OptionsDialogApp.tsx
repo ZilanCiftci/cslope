@@ -10,6 +10,7 @@ import type {
   ModelOrientation,
   PiezometricLineState,
 } from "../../store/types";
+import { DialogHeader } from "./DialogHeader";
 
 interface AnalysisStatePayload {
   coordinates: [number, number][];
@@ -104,9 +105,10 @@ export function OptionsDialogApp() {
         color: "var(--color-vsc-text)",
       }}
     >
-      <div className="pb-2">
-        <h2 className="text-[12px] font-semibold">Options</h2>
-      </div>
+      <DialogHeader
+        title="Options"
+        description="How the factor of safety is computed: method, search, water and other settings."
+      />
       <div className="flex-1 overflow-y-auto pr-1">
         <OptionsSection plain />
       </div>

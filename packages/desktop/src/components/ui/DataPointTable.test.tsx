@@ -38,7 +38,7 @@ describe("DataPointTable", () => {
     expect(screen.getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
       "Depth",
       "Su",
-      "",
+      "Remove",
     ]);
     expect(cell("Su row 2").value).toBe("20");
   });
@@ -80,21 +80,21 @@ describe("DataPointTable", () => {
   it("adds a row copying the last one, or zeros for an empty table", async () => {
     const onRows = vi.fn();
     const { unmount } = render(<Harness initial={[[1, 2]]} onRows={onRows} />);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(onRows).toHaveBeenLastCalledWith([
       [1, 2],
       [1, 2],
     ]);
     unmount();
     render(<Harness initial={[]} onRows={onRows} />);
-    await userEvent.click(screen.getByRole("button", { name: "+ Add row" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add point" }));
     expect(onRows).toHaveBeenLastCalledWith([[0, 0]]);
   });
 
   it("removes a row", async () => {
     const onRows = vi.fn();
     render(<Harness initial={[[1, 2], [3, 4]]} onRows={onRows} />);
-    await userEvent.click(screen.getByRole("button", { name: "Remove row 1" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove point 1" }));
     expect(onRows).toHaveBeenLastCalledWith([[3, 4]]);
     expect(cell("Depth row 1").value).toBe("3");
   });

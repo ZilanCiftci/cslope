@@ -6,14 +6,14 @@
 export function ImportedDataNotice({
   text,
   buttonLabel,
-  buttonAriaLabel,
+  buttonTitle,
   onRemove,
   testId,
 }: {
   text: string;
   buttonLabel: string;
-  /** What the button removes, for screen readers (the label alone can be terse). */
-  buttonAriaLabel?: string;
+  /** What the button removes, as its tooltip (the label alone can be terse). */
+  buttonTitle?: string;
   onRemove: () => void;
   testId?: string;
 }) {
@@ -32,7 +32,7 @@ export function ImportedDataNotice({
       <button
         type="button"
         onClick={onRemove}
-        aria-label={buttonAriaLabel ?? buttonLabel}
+        title={buttonTitle}
         className="btn flex-shrink-0"
       >
         {buttonLabel}
