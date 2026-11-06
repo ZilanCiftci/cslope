@@ -1791,6 +1791,18 @@ export function polyline_y_at(points, x) {
 }
 
 /**
+ * The public defaults of Python and the command line (D-23).
+ * @returns {any}
+ */
+export function public_default_options() {
+    const ret = wasm.public_default_options();
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {any} env
  * @param {number} s
  * @returns {number}
@@ -2003,6 +2015,23 @@ export function run_fem_summary_with_bounds(definition, settings, on_trial, on_s
         throw takeFromExternrefTable0(ret[1]);
     }
     return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * The version of the schemas (the engine's version).
+ * @returns {string}
+ */
+export function schema_version() {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.schema_version();
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
 }
 
 /**
@@ -2939,6 +2968,25 @@ export function suction_strength(model_js, suction) {
 }
 
 /**
+ * `summarizeResult`: what F is, the method, the critical surface and the
+ * warnings of a result run with `options` (merged with the defaults it ran
+ * with).
+ * @param {any} result
+ * @param {any} options
+ * @param {string} engine_build
+ * @returns {any}
+ */
+export function summarize_result(result, options, engine_build) {
+    const ptr0 = passStringToWasm0(engine_build, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.summarize_result(result, options, ptr0, len0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {string} kind
  * @returns {boolean}
  */
@@ -3043,6 +3091,21 @@ export function udl_new(params) {
  */
 export function upper_bound(slope, options, size_field) {
     const ret = wasm.upper_bound(slope, options, isLikeNone(size_field) ? Number.MAX_SAFE_INTEGER : (size_field) >>> 0);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * `validate`: the issues of an analysis document or of a definition and
+ * its options (`options` undefined or null: none given).
+ * @param {any} doc_or_definition
+ * @param {any} options
+ * @returns {any}
+ */
+export function validate_definition(doc_or_definition, options) {
+    const ret = wasm.validate_definition(doc_or_definition, options);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }

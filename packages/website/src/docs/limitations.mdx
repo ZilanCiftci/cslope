@@ -1,0 +1,46 @@
+---
+title: Limitations
+description: What cSlope does not do, or does only in part, and what to keep in mind before basing a design on a result.
+section: Getting started
+order: 3
+---
+
+cSlope is a beta: the version on the [changelog](/changelog) ends in *-beta*. Its results are checked against the published solutions on the [verification](/verification) page, but the engineer who uses them remains responsible for the design. This page lists what the program does not do, so that you can tell when another tool or a hand check is needed.
+
+## Two-dimensional limit equilibrium
+
+- **A cross-section, per meter run.** Every analysis is of one plane section of the slope, with the forces per meter of its length. The ends of a slide, a slope that curves in plan and a load of limited length are not taken into account, except by the 3D correction below.
+- **Three methods.** The factor of safety comes from Bishop simplified (moment equilibrium), Janbu simplified (force equilibrium, with or without the correction factor f0) or Morgenstern-Price (both; Spencer's method is Morgenstern-Price with a constant interslice function). See [Analysis options](/docs/analysis#method) and [Theory](/docs/theory).
+- **Rigid sliding mass.** Limit equilibrium gives a factor of safety, not deformations or the stresses in the slope.
+- **SI units only**: meters, kN, kPa, kN/m³ and degrees. Imported files in other units are converted.
+
+## Slip surfaces
+
+- **The search finds the lowest factor of the surfaces it tries**: circles between the entry and exit ranges, composite circles along bedrock, block surfaces through your search objects, and the non-circular surfaces the optimization makes from the best of them ([Slip surface search](/docs/search)). A mechanism outside these, or outside the search limits, is not found. Check that the critical surface does not end at a search limit, and that more iterations no longer lower the factor.
+- **Bishop on non-circular surfaces.** Bishop's simplified method is defined for circles. On a non-circular or composite surface cSlope computes it with moments about an axis point, and its factor then depends on that point; the result carries a warning. Use Spencer or Morgenstern-Price for such surfaces.
+- **Very thin slides** parallel to a cohesionless slope face are below what the slices can represent. The result warns when the face's infinite-slope factor tan φ′/tan β is lower than the critical surface's, or when the critical surface is a shallow slide in cohesionless soil ([Troubleshooting](/docs/troubleshooting#shallow-slides-in-cohesionless-soil)).
+- **Steep entries.** Where a surface enters steeper than 70°, cohesion can hold the slices only with tension at the base, which soil cannot take. The result warns, and a tension crack at a base angle removes the steep part.
+
+## Water
+
+- **Pore pressure from lines, not from a flow analysis.** The limit equilibrium analysis takes the pore pressure from piezometric lines (one per material if needed), the head and reference lines of an imported .stix model, rᵤ, B̄, the excess pore pressure of an imported load and the drawdown stages ([Water](/docs/water)). It does not compute seepage.
+- **Seepage only in the finite element analysis**, and there as an experimental option (*Pore pressures (FE)* › *Steady seepage*): one permeability for all soils and the unsaturated flow of a loam. Its pore pressures are not passed to the limit equilibrium analysis.
+- **Suction** adds strength only through φb on the drained models, with the pore pressure above the line from the same line ([Strength from suction](/docs/materials#strength-from-suction)).
+- Pore pressures from a groundwater flow mesh or a pressure grid in an imported file are not imported.
+
+## Three dimensions
+
+There is no three-dimensional analysis. The only 3D effect cSlope computes is the end-face correction of SGI Vägledning 8 for a **temporary excavation in clay opened in stages**: the undrained strength of the two end faces of a stage of length L added to the circular surfaces of the 2D search ([3D effects](/docs/analysis#3d-effects-temporary-slopes)). The guidance applies to total stress analysis of normally to lightly overconsolidated clay; it is not a 3D factor of safety for other slopes, and a 3D factor more than 25 % above the critical 2D factor is to be judged with care (the result warns).
+
+## Finite elements
+
+The finite element analyses (limit analysis bounds, Davis B and strength reduction) are **experimental**: still under development, with fewer verification problems than limit equilibrium; their results are not verified for design and may change between versions. The options, the result panel and the canvas mark them so. Some inputs are not taken: rᵤ and B̄, and the anisotropy of the undrained strength is taken at α = 0. Base the design on the limit equilibrium result ([Finite elements](/docs/analysis#finite-elements-experimental)).
+
+## Materials and probability
+
+- Each material model has its own limits, given on [Materials](/docs/materials). For example, Hoek-Brown rock and the shear-normal function enter the analysis as the tangent c′ and φ′ at the normal stress found, and the finite element analysis gives Hoek-Brown rock no tensile strength.
+- The [probabilistic analysis](/docs/sensitivity) varies material properties only, one value per material in each analysis: the variation of a property within a layer is not modeled. The Taylor series does not run when mean − σ of a strength or unit weight is negative.
+
+## Imported models
+
+An import from another program's file carries over what has a counterpart in cSlope and lists the rest in the import message ([Geometry](/docs/geometry#import-and-export-gsz-project-files)). Read the message, and check the model and its result against the original before relying on it.

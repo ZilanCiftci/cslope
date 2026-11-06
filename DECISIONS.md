@@ -51,6 +51,14 @@ Implemented in PRs #28–#30, #32–#35 and #37.
 
 ## Engine
 
+### 2026-11-06: D-23, the public defaults are the app's (issue #55)
+
+`cslope.analyse` in Python and the command line take the app's options for a new model (`APP_DEFAULT_ANALYSIS_OPTIONS` in packages/desktop/src/store/defaults.ts: Morgenstern-Price, 30 slices, 1000 + 500 trial surfaces, composite surfaces) as the defaults, under the options of an analysis document and those given; `public_default_options()` in the engine (types/analysis.rs) holds them, and `cslope.default_options()` returns them. The same model then gives the same F in the app and in Python. The engine's internal default (`default_analysis_options`: Bishop, 25 slices, circles) is unchanged, so the verification problems, the golden results and `cslope.Slope` keep it. Turned down: changing the engine's default (it would move every result that relies on it, and the verification options); keeping the engine's defaults in Python (an agent's run would differ from the app's without a word). Noted as a change in the Python README.
+
+### 2026-11-06: D-24, `freeWater` replaces `followBoundary`; a boundary's `materialName` is deprecated (issue #55)
+
+`waterTable.followBoundary` (and that of `waterTables` entries) reads the wrong way round: true means *no* free water. A `freeWater` field with the documented meaning is added (true: water above the ground is free water whose weight acts on the ground; false, the default: the line is clipped to the ground); it takes precedence, and `followBoundary` is read only without it. A `waterTables` entry with neither takes the main line's `freeWater` when that is given (the app writes `followBoundary` on every line and never `freeWater`, so its files read as before); the app reads `freeWater` when it opens a definition (store/definition-model.ts). `materialBoundaries[].materialName` is optional (absent is "") and deprecated: with a name and no `regionAssignments` the engine assigns the region below the boundary's midpoint. The engine reads both old fields as before, the schema marks them deprecated, the examples show only the new names, and `validate` reports `followBoundary: true` (a warning) and a `materialName` that the engine would use (an error). No app change: the app still writes `followBoundary` and `materialName: ""`. Turned down: removing the old names (older files and the app's own output use them); renaming without the engine reading both (a breaking change for the app).
+
 ### 2026-11: A slip surface may not leave through the model's side
 
 With "Both" directions and no search limits, a surface could exit through a vertical side of the model. `VERTICAL_SIDE_SLOPE` in `geometry_ops.rs` rejects it; the verification results did not move.

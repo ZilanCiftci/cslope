@@ -24,6 +24,7 @@ Choose the model in the **Material model** list. Changing the model resets the s
 | **Anisotropic function** | γ, φ, c, φb, Max suction, modifier table | Strength that depends on the inclination of the slip surface. |
 | **Spatial Mohr-Coulomb** | γ, interpolation, data points | Strength that varies from point to point in the section. |
 | **Lime-cement columns** | γ, area ratio, soil and column strengths | Ground improved with lime-cement columns. |
+| **Generalized Hoek-Brown** | γ, σci (kPa), GSI, mi, D | Jointed rock masses. |
 | **SHANSEP** | γ, S, m, OCR or OCR against elevation, or Su against σ′v, Min Su | Undrained strength from the effective vertical stress and the stress history. |
 | **Shear-normal function** | γ, points (σ′n, τ) | A curved strength envelope given as points. |
 | **High strength** | γ | Strong material that may lie in the sliding mass; slip surfaces may not run through it. |
@@ -91,6 +92,33 @@ $$
 $$
 
 where **Area ratio a** is the share of the area taken by columns (0–1). The soil strength is **Su soil at reference level (kPa)** at **Reference level y (m)**, increasing by **Su soil increase rate (kPa/m)** per meter below it; the column strength is **Su columns (kPa)**. Tick **Drained limit of the column strength** to also limit the column strength by drained parameters **c′ columns (kPa)** and **φ′ columns (°)**. The cutoff applies to the soil between the columns only. With [partial factors](/docs/analysis#partial-factors), each part takes its own factor: the undrained strength of soil and columns is divided by γcu, c′ columns by γc' and tan φ′ columns by γφ′.
+
+### Generalized Hoek-Brown
+
+The strength of a jointed rock mass after the generalized Hoek-Brown criterion (Hoek, Carranza-Torres & Corkum 2002), with compression positive:
+
+$$
+\sigma'_1 = \sigma'_3 + \sigma_{ci}\left(m_b \frac{\sigma'_3}{\sigma_{ci}} + s\right)^a
+$$
+
+$$
+m_b = m_i \exp\frac{\mathrm{GSI} - 100}{28 - 14D}, \qquad s = \exp\frac{\mathrm{GSI} - 100}{9 - 3D}, \qquad a = \frac{1}{2} + \frac{e^{-\mathrm{GSI}/15} - e^{-20/3}}{6}
+$$
+
+| Field | Meaning | Default |
+| --- | --- | --- |
+| **σci (kPa)** | Uniaxial compressive strength of the intact rock, more than 0 | 10 000 |
+| **GSI** | Geological Strength Index of the rock mass, 0–100 | 50 |
+| **mi** | Intact rock constant, more than 0 (for example 4–10 for mudstones and shales, 17–25 for sandstones, 25–33 for granites) | 10 |
+| **D** | Disturbance factor, 0 (undisturbed) to 1 (heavy blasting or stress relief) | 0 |
+
+The γ field and **γsat below water** are as for the other models. Under the fields the window shows the derived $m_b$, $s$ and $a$. A model imported with $m_b$, $s$ (and $a$, 0.5 when not given) of its own uses them instead of those from GSI, mi and D, and the line under the fields then says *given directly, not from GSI, mi and D*.
+
+The limit equilibrium analysis does not use the curve directly. Each slice base takes the instantaneous c′ and φ′ of the criterion at its effective normal stress $\sigma'_n$: the tangent to the Mohr envelope there (Balmer 1952; Hoek et al. 2002). The first estimate of $\sigma'_n$ is the overburden, $\gamma\, z \cos^2\alpha$ with $z$ the depth of the base below the ground and no pore pressure; after each solution cSlope takes the normal stress the method found, $N'/\ell$, moves c′ and φ′ halfway toward the tangent there, and solves again, until the factor of safety changes by less than 0.01 % (at most 30 passes). A surface whose factor has not settled after them counts as not converged. In tension (below the normal stress at $\sigma'_3 = 0$) the tangent at $\sigma'_3 = 0$ is used, and φ′ is at most 89.9°.
+
+- With [partial factors](/docs/analysis#partial-factors), the instantaneous c′ takes γc' and tan φ′ takes γφ′, at every pass.
+- Hoek-Brown has no [strength from suction](#strength-from-suction) (φb).
+- The finite element analyses take the instantaneous c′ and φ′ at the stress state, and turn the tension cut-off on: the tangent at $\sigma'_3 = 0$ would give the rock a tensile strength far above the rock mass's $s\,\sigma_{ci}/m_b$. With the cut-off turned off in the options, the result says that it is on.
 
 ### SHANSEP
 

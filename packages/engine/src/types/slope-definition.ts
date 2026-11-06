@@ -57,6 +57,13 @@ export interface SlopeDefinition {
   waterTable?: {
     mode: "height" | "depth" | "custom";
     value: number | [number, number][];
+    /**
+     * Whether water above the ground is free water whose weight acts on
+     * the ground (true), or the line is clipped to the ground (false, the
+     * default). Takes precedence over `followBoundary` (D-24).
+     */
+    freeWater?: boolean;
+    /** Deprecated (D-24): `!freeWater` (true: no free water). Read when `freeWater` is absent. */
     followBoundary?: boolean;
   };
   /**
@@ -66,6 +73,9 @@ export interface SlopeDefinition {
   waterTables?: Array<{
     id: string;
     coordinates: [number, number][];
+    /** As `waterTable.freeWater` (D-24). */
+    freeWater?: boolean;
+    /** Deprecated (D-24): `!freeWater`. */
     followBoundary?: boolean;
   }>;
   /** UDL loads. */
@@ -114,7 +124,12 @@ export interface SlopeDefinition {
   /** Material boundary polylines that divide the slope into layers. */
   materialBoundaries?: Array<{
     coordinates: [number, number][];
-    materialName: string;
+    /**
+     * Deprecated (D-24): absent is "". A name assigns that material to the
+     * region below the boundary's midpoint, only without
+     * `regionAssignments`; use `regionAssignments`.
+     */
+    materialName?: string;
   }>;
   /** Material name for the top region (above all boundaries).
    *  Only needed when it differs from the first (default) material. */

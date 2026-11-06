@@ -8,13 +8,13 @@ description is `README-PYPI.md`; this file is for developers.
 crates/cslope-py/
   Cargo.toml            cdylib `_native` (pyo3 abi3-py39, pythonize, rayon)
   build.rs              ENGINE_BUILD = version + git commit
-  src/lib.rs            module functions: analyse, fem_summary, reliability, to_canonical, validate_material_model
+  src/lib.rs            module functions: analyse, fem_summary, reliability, to_canonical, validate, summarize, schema, ...
   src/run.rs            pythonize in and out, GIL release, progress, cancellation, threads
   src/slope.rs          the Slope class
   src/errors.rs         EngineError / AnalysisCancelled, error mapping
   pyproject.toml        maturin (pinned), package metadata
   python/cslope/        __init__.py (wrappers, FE arrays), __init__.pyi (TypedDicts), py.typed, examples.py
-  tests/                pytest: test_api.py (self-contained; the wheels' smoke test)
+  tests/                pytest: test_api.py, test_schema.py (self-contained; the wheels' smoke test)
   examples/parameter_study.py
 ```
 
@@ -64,6 +64,11 @@ phi'             Bishop  Morgenstern-Price
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | `run_fem_summary` (`_with_bounds` with `bounds=True`): `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | `analyse_reliability`, the surface mapped to model coordinates |
 | `to_canonical(definition)` | `to_canonical_slope_definition` |
+| `validate(doc_or_definition, options=None)` | `validate_definition::validate`: the issues (`path`, `code`, `message`, `severity`) of an analysis document or a definition |
+| `summarize(result, options=None)` | `summarize_result`: F and what it is (factor of safety / over-design factor), method, critical surface, warnings |
+| `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | `swedish_partial_factors` |
+| `default_options()` | `public_default_options` (D-23) |
+| `schema(name)`, `SCHEMA_NAMES`, `SCHEMA_VERSION` | `types::schema`: the JSON schemas (also in packages/engine/schema) |
 | `validate_material_model(model)` | `try_validate_material_model`: list of messages |
 | `Slope(definition)` | `build_slope` of the canonical definition: `update_analysis_options`, `analysis_options`, `analyse(...)` (`analyse_slope`, every slice kept), `min_fos`, `search` (every trial surface, canonical coordinates), `result()` (the `AnalysisResult`), `fem(options, ...)` (`analyze_fem`), `orientation`, `definition` |
 | `CancelToken()` | `.cancel()` from another thread stops the analyses it was passed to |
@@ -71,6 +76,18 @@ phi'             Bishop  Morgenstern-Price
 | `project.read(path)` | a `.cslp` (or earlier `.json`) project file: its models as dicts (below) |
 
 Notes:
+
+- **Defaults (D-23, a change)**: `analyse` takes the app's defaults for a
+  new model (`public_default_options`: Morgenstern-Price, 30 slices, 1000 +
+  500 trial surfaces, composite surfaces), then the options of an analysis
+  document, then `options`. Earlier it took the engine's own defaults
+  (Bishop, 25 slices, circles), which `Slope` and `reliability` still use.
+- **Analysis documents**: `analyse`, `validate` and `summarize` take
+  `{"format": "cslope-analysis", "formatVersion": 1, "definition",
+  "options"}` as well as a bare definition.
+- **Schemas and stubs**: `__init__.pyi`'s TypedDicts between the GENERATED
+  markers come from the JSON schemas: `bun packages/engine-rs/tools/schema.ts`
+  writes both, CI checks they are fresh (`--check`).
 
 - **Data**: dicts in the TypeScript engine's JSON shapes (camelCase keys),
   read and written by pythonize, as the app's JSON is read (unknown keys

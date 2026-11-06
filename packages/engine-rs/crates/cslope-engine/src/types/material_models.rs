@@ -26,7 +26,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 /// kind, as a JavaScript object keeps them on any model: validation reports
 /// them on a model that does not take them, and `suction_angle` ignores
 /// them there.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MaterialModelBase {
     /// Material unit weight in kN/m³.
@@ -34,6 +34,7 @@ pub struct MaterialModelBase {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub unit_weight: f64,
     /// Saturated unit weight (kN/m³) for the soil below the material's water
     /// line. Not set: `unit_weight` throughout.
@@ -137,23 +138,25 @@ pub fn suction_angle(model: &MaterialModel) -> f64 {
 /// The drawdown (R) envelope of a soil that does not drain during rapid
 /// drawdown: the total-stress envelope of isotropically consolidated
 /// undrained tests (cR, φR), for the three-stage drawdown analysis.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawdownEnvelope {
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub cohesion: f64,
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub friction_angle: f64,
 }
 
 /// Standard Mohr-Coulomb effective-stress model.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MohrCoulombModel {
     #[serde(flatten)]
@@ -163,12 +166,14 @@ pub struct MohrCoulombModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub cohesion: f64,
     /// Friction angle φ (°).
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub friction_angle: f64,
     /// The drawdown (R) envelope: with a rapid drawdown analysis
     /// (SlopeDefinition.rapidDrawdown) the soil does not drain and takes the
@@ -211,7 +216,7 @@ pub struct MohrCoulombModel {
 }
 
 /// Undrained strength model (φ = 0).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct UndrainedModel {
     #[serde(flatten)]
@@ -237,6 +242,7 @@ pub struct UndrainedModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub undrained_shear_strength: f64,
     /// Rate of Su increase per metre below `suRefDepth` (kPa/m).
     #[serde(
@@ -269,7 +275,7 @@ pub struct UndrainedModel {
 /// Strength is treated as infinite — any slip surface passing through
 /// this material is considered very stable and effectively skipped.
 /// Only `unitWeight` is used (for overburden calculation).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HighStrengthModel {
     #[serde(flatten)]
     pub base: MaterialModelBase,
@@ -280,7 +286,7 @@ pub struct HighStrengthModel {
 /// The slip surface cannot enter this region. Any slice whose base
 /// falls inside this material causes the surface to be rejected.
 /// `unitWeight` is still needed for overburden on layers below.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ImpenetrableModel {
     #[serde(flatten)]
     pub base: MaterialModelBase,
@@ -289,7 +295,7 @@ pub struct ImpenetrableModel {
 /// Interpolation method of a spatial Mohr-Coulomb model. Another value
 /// (a string or of another type) is kept as it is (TypeScript falls back to
 /// inverse distance weighting).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum SpatialInterpolation {
     #[serde(rename = "nearest")]
     Nearest,
@@ -297,6 +303,7 @@ pub enum SpatialInterpolation {
     Linear,
     #[serde(rename = "idw")]
     Idw,
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
@@ -306,7 +313,7 @@ pub enum SpatialInterpolation {
 /// The user supplies a set of data points with known c, φ, γ values.
 /// At analysis time, the effective parameters are interpolated from
 /// the nearest data points.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SpatialMohrCoulombModel {
     #[serde(flatten)]
@@ -328,7 +335,7 @@ pub struct SpatialMohrCoulombModel {
 /// as an array of (α_deg, factor) pairs and linearly interpolated.
 /// The factor scales φ in degrees, not tan φ: 0.8 on φ = 30° gives
 /// 24.0°, where 0.8·tan 30° would give 24.8°.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AnisotropicFunctionModel {
     #[serde(flatten)]
@@ -338,12 +345,14 @@ pub struct AnisotropicFunctionModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub cohesion: f64,
     /// Base friction angle φ (°).
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub friction_angle: f64,
     /// Modifier vs base inclination: [[α_deg, factor], …].
     ///
@@ -357,12 +366,13 @@ pub struct AnisotropicFunctionModel {
 
 /// Where the depth of an `s-f-depth` material is measured from. Another
 /// string is kept as it is, for validation to report.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum DepthReference {
     #[serde(rename = "ground")]
     Ground,
     #[serde(rename = "layer-top")]
     LayerTop,
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(String),
 }
@@ -378,7 +388,7 @@ pub enum DepthReference {
 /// c′ + σ′·tan φ′, with c′ = drainedCohesion + (depth − depthRef) ×
 /// drainedCohesionRate at the same depth, as Swedish practice analyses
 /// clay ("kombinerad analys") and commercial programs offer it.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StrengthFromDepthModel {
     #[serde(flatten)]
@@ -395,18 +405,21 @@ pub struct StrengthFromDepthModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub su_ref: f64,
     /// Reference depth (m) below the depth reference.
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub depth_ref: f64,
     /// Rate of change of Su with depth (kPa/m); positive: Su increases downwards.
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub rate: f64,
     /// What the depth is measured from:
     /// - "ground": the ground surface above the slice base;
@@ -466,7 +479,7 @@ pub fn is_combined_depth_model(model: &MaterialModel) -> bool {
 /// φ = 0; Su = suRef + (yRef − y) × rate,
 /// where y is the elevation of the slice base: a positive rate increases
 /// Su with depth below the datum, as in commercial programs.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct StrengthFromDatumModel {
     #[serde(flatten)]
@@ -483,18 +496,21 @@ pub struct StrengthFromDatumModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub su_ref: f64,
     /// Reference elevation y (m).
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub y_ref: f64,
     /// Increase of Su per metre below yRef (kPa/m).
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub rate: f64,
     /// Strength cutoff (kPa), as commercial programs offer it.
     /// With `rate` ≥ 0 (Su constant or increasing below the datum) it is a
@@ -513,7 +529,7 @@ pub struct StrengthFromDatumModel {
 /// between them, τ = a·τcol + (1 − a)·cu,soil. Undrained by default; with a
 /// drained column strength (c′, φ′) the column part is limited to
 /// c′ + σ′·tan φ′ ≤ cu,col (combined analysis), as in Swedish practice.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct LimeCementColumnModel {
     #[serde(flatten)]
@@ -523,6 +539,7 @@ pub struct LimeCementColumnModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub soil_su: f64,
     /// Reference level (elevation, m) of soilSu. Default 0.
     #[serde(
@@ -553,12 +570,14 @@ pub struct LimeCementColumnModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub column_su: f64,
     /// Area ratio a = column area / improved area, 0–1.
     #[serde(
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub area_ratio: f64,
     /// Drained cohesion of the columns c′ (kPa); with columnFrictionAngle.
     #[serde(
@@ -581,7 +600,7 @@ pub struct LimeCementColumnModel {
 /// the Geological Strength Index and the disturbance factor D. The analyses
 /// use its instantaneous Mohr–Coulomb parameters at the normal stress on the
 /// slip surface (types/hoek_brown.rs).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HoekBrownModel {
     #[serde(flatten)]
@@ -591,6 +610,7 @@ pub struct HoekBrownModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub ucs: f64,
     /// Geological Strength Index, 0–100.
     #[serde(
@@ -640,7 +660,7 @@ pub struct HoekBrownModel {
 /// Su as a function of σ′v. σ′v is the slice's weight and surface loads per
 /// unit width less the pore pressure at its base (the overburden on the
 /// base in the analysis's pore pressures), as commercial programs take it.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShansepModel {
     #[serde(flatten)]
@@ -657,6 +677,7 @@ pub struct ShansepModel {
         deserialize_with = "crate::types::json::num",
         default = "crate::types::json::nan"
     )]
+    #[schemars(extend("x-required" = true))]
     pub ratio: f64,
     /// The exponent m. Default 0.8.
     #[serde(
@@ -735,7 +756,7 @@ pub struct ShansepModel {
 /// slice base takes the tangent c and φ of the segment at its normal
 /// stress, which the analysis updates from the stress it finds, as for
 /// Hoek-Brown.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ShearNormalModel {
     #[serde(flatten)]
@@ -755,7 +776,7 @@ pub struct ShearNormalModel {
 /// A cubic spline through a table's points: natural (zero curvature) at an
 /// end without a slope, clamped to the slope given; a straight line with
 /// the end slope beyond the ends (math/spline.rs).
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TableSpline {
     #[serde(
@@ -866,7 +887,8 @@ pub enum MaterialModel {
     Shansep(ShansepModel),
     #[serde(rename = "shear-normal")]
     ShearNormal(ShearNormalModel),
-    /// Serialized as it came, with its own `kind`.
+    /// Serialized as it came, with its own `kind`. (Not in the schema:
+    /// another kind is an error there.)
     #[serde(untagged)]
     Unknown(UnknownModel),
 }
@@ -876,6 +898,60 @@ impl<'de> Deserialize<'de> for MaterialModel {
         Ok(MaterialModel::from_json(
             crate::types::json::JsJson::deserialize(d)?.0,
         ))
+    }
+}
+
+/// One of the model kinds, each an object with its `kind` (`oneOf`, the
+/// `kind` decides): the variants' own schemas with the `kind` added, so
+/// that `additionalProperties: false` holds for the whole object. An
+/// unknown kind is not in the schema.
+impl schemars::JsonSchema for MaterialModel {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "MaterialModel".into()
+    }
+
+    fn json_schema(g: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        fn variant<T: schemars::JsonSchema>(
+            g: &mut schemars::SchemaGenerator,
+            kind: &str,
+        ) -> serde_json::Value {
+            let mut s = T::json_schema(g).to_value();
+            if let Some(o) = s.as_object_mut() {
+                o.insert("title".into(), T::schema_name().into_owned().into());
+                let props = o
+                    .entry("properties")
+                    .or_insert_with(|| serde_json::json!({}));
+                if let Some(p) = props.as_object_mut() {
+                    p.insert(
+                        "kind".into(),
+                        serde_json::json!({ "type": "string", "const": kind }),
+                    );
+                }
+                let req = o.entry("required").or_insert_with(|| serde_json::json!([]));
+                if let Some(r) = req.as_array_mut() {
+                    r.insert(0, "kind".into());
+                }
+            }
+            s
+        }
+        let variants = vec![
+            variant::<MohrCoulombModel>(g, "mohr-coulomb"),
+            variant::<UndrainedModel>(g, "undrained"),
+            variant::<HighStrengthModel>(g, "high-strength"),
+            variant::<ImpenetrableModel>(g, "impenetrable"),
+            variant::<SpatialMohrCoulombModel>(g, "spatial-mohr-coulomb"),
+            variant::<AnisotropicFunctionModel>(g, "anisotropic-function"),
+            variant::<StrengthFromDepthModel>(g, "s-f-depth"),
+            variant::<StrengthFromDatumModel>(g, "s-f-datum"),
+            variant::<LimeCementColumnModel>(g, "lime-cement-columns"),
+            variant::<HoekBrownModel>(g, "hoek-brown"),
+            variant::<ShansepModel>(g, "shansep"),
+            variant::<ShearNormalModel>(g, "shear-normal"),
+        ];
+        schemars::json_schema!({
+            "description": "A material model: unit weight and strength. `kind` names the model.",
+            "oneOf": variants,
+        })
     }
 }
 

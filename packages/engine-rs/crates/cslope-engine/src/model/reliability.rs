@@ -51,14 +51,14 @@ use std::f64::consts::PI;
 use std::sync::Arc;
 
 /// The distribution of a random variable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum Distribution {
     Normal,
     Lognormal,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RandomVariable {
     /// Index of the material in the definition's materials.
@@ -88,7 +88,7 @@ pub struct RandomVariable {
 }
 
 /// The method of a reliability analysis.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 pub enum ReliabilityMethod {
     #[serde(rename = "taylor")]
     Taylor,
@@ -97,7 +97,7 @@ pub enum ReliabilityMethod {
 }
 
 /// A correlation coefficient between two variables (indices into the list).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Correlation {
     #[serde(deserialize_with = "crate::types::json::num")]
     pub a: f64,
@@ -109,7 +109,7 @@ pub struct Correlation {
 
 /// TypeScript's `ReliabilityOptions` (its `onProgress` is the run
 /// context's progress, `ProgressEvent::Reliability`).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReliabilityOptions {
     pub method: ReliabilityMethod,
@@ -134,7 +134,7 @@ pub struct ReliabilityOptions {
     pub correlations: Option<Vec<Correlation>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct TaylorTerm {
     pub variable: usize,
@@ -149,7 +149,7 @@ pub struct TaylorTerm {
     pub f_minus: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CriticalSurface {
     #[serde(deserialize_with = "crate::types::json::num")]
@@ -164,7 +164,7 @@ pub struct CriticalSurface {
     pub points: Option<Vec<[f64; 2]>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReliabilityResult {
     pub method: ReliabilityMethod,
