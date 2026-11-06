@@ -98,7 +98,7 @@ export function PopupPanel({
 
   return createPortal(
     <div
-      className="fixed z-50 rounded-md shadow-xl flex flex-col overflow-hidden"
+      className="fixed z-50 rounded-md flex flex-col overflow-hidden"
       style={{
         left: pos.x,
         top: pos.y,
