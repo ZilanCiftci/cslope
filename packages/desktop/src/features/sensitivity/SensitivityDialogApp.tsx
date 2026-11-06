@@ -120,11 +120,9 @@ function SensitivityBody({
           disabled={points.length === 0 || running}
         />
       }
+      status={running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave an F` : ""}
       primary={
         <>
-          <span className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
-            {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave an F` : ""}
-          </span>
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel

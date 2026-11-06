@@ -127,11 +127,9 @@ function ReliabilityBody({
           disabled={!result || running}
         />
       }
+      status={running ? `${Math.round(progress * 100)} %` : ""}
       primary={
         <>
-          <span style={{ color: "var(--color-vsc-text-muted)" }}>
-            {running ? `${Math.round(progress * 100)} %` : ""}
-          </span>
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
               Cancel
