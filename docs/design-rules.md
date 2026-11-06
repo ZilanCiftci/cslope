@@ -9,6 +9,7 @@ Short rules for a uniform look and feel in packages/desktop. Follow them for eve
 - Tooltips (`title`) at most about 200 characters; one or two sentences. Longer explanations go to the documentation, linked with a `HelpButton` ("?") next to the group heading, never written out in the UI.
 - Units in parentheses in the label: "cx (m)", "q (kPa)", "Unit weight (kN/m³)".
 - Errors say what is wrong and what to do, in one sentence each: "No valid slip surface was found. Check the search limits, the geometry and the material strengths."
+- "…" only on a command that asks for something before it acts (a file, a file name, a calibration, lines to pick), in menus, small ribbon buttons, buttons in panels and windows, and tooltips: "Save as…", "Export as PDF…", "Recalibrate…". A command that shows a window (a tool, settings, information: "Materials", "Options", "Model properties", "About") has none: the window is the result, not a question. Large ribbon buttons have no "…" (their menu items or tooltip carry it). "…" is otherwise only for truncated text, never for progress ("Analyzing", not "Analyzing…"); never three periods.
 - No product names of other programs in the UI or the code (`bun packages/website/scripts/check-names.ts --repo`).
 - Results use the symbols F, Fm, Ff and λ (not "FOS", "factor of safety" in labels, or "Lambda"): "Critical – F 1.250" (en dash), "F against λ", "σ of F"; CSV headers too.
 
@@ -51,7 +52,7 @@ Short rules for a uniform look and feel in packages/desktop. Follow them for eve
 - A dialog shows only fields the app uses; a stored value with no function is kept in the file but not shown.
 - The properties sidebar holds settings of the selected thing, grouped in `Section`s with the 10 px uppercase heading; a `GroupHeading` with `help` links the documentation. In the result view it is the "Results" panel; its last section is named after the selection ("Sheet", "Text", "Material table", "Slices", …; "Selection" for nothing or a mix) and scrolls into view when something is selected.
 - Floating things over the canvas (toolbar, pick-lines bar, error banner) use the sidebar color, a 1 px border, `rounded-xs` and the float shadow (`--color-vsc-shadow-float`); never a saturated background. The result view fits the sheet above the floating toolbar's band (a screen-only reserve; exports are laid out without it).
-- An error of a run shows at once as a banner over the canvas in both modes, with a button that leads to the cause when there is one ("Search limits…", "Use left to right"). The banner is the only place with the whole sentence: the status bar says "Analysis failed" (red dot) and the result summary "Analysis failed." with the same button.
+- An error of a run shows at once as a banner over the canvas in both modes, with a button that leads to the cause when there is one ("Search limits", "Use left to right"). The banner is the only place with the whole sentence: the status bar says "Analysis failed" (red dot) and the result summary "Analysis failed." with the same button.
 
 ## Lists and trees
 

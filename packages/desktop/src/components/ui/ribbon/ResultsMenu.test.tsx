@@ -95,7 +95,7 @@ describe("ResultsMenu", () => {
     const plot = screen.getByRole("button", { name: "Results plot" });
     expect(plot).toHaveAttribute("aria-disabled", "true");
     expect(plot).toHaveAttribute("title", "Run the analysis first");
-    const pdf = screen.getByRole("button", { name: "Export PDF" });
+    const pdf = screen.getByRole("button", { name: "Export as PDF" });
     expect(pdf).toBeDisabled();
     expect(pdf).toHaveAttribute("title", "Run the analysis first");
     expect(screen.getByTitle("More export options")).toBeDisabled();
@@ -281,7 +281,7 @@ describe("ResultsMenu", () => {
 
   it("exports the view settings as a template", async () => {
     renderMenu();
-    await userEvent.click(screen.getByTitle("Export template"));
+    await userEvent.click(screen.getByTitle("Export template…"));
     expect(mocks.downloadFile).toHaveBeenCalledTimes(1);
     const [name, data, type] = mocks.downloadFile.mock.calls[0];
     expect(name).toBe("view-template.json");
@@ -311,7 +311,7 @@ describe("ResultsMenu", () => {
       });
     };
 
-    await userEvent.click(screen.getByTitle("Import template"));
+    await userEvent.click(screen.getByTitle("Import template…"));
     expect(pickers.at(-1)!.accept).toBe(".json");
     const template = { ...JSON.parse(JSON.stringify(rvs())), showGrid: !rvs().showGrid };
     delete template.gridSpacing;
@@ -327,11 +327,11 @@ describe("ResultsMenu", () => {
     expect(rvs().showCustomSurfaces).toBeUndefined();
     expect(rvs().minorTicks).toBeUndefined();
 
-    await userEvent.click(screen.getByTitle("Import template"));
+    await userEvent.click(screen.getByTitle("Import template…"));
     choose("{ not json");
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
     alert.mockClear();
-    await userEvent.click(screen.getByTitle("Import template"));
+    await userEvent.click(screen.getByTitle("Import template…"));
     choose(JSON.stringify({ version: 1 }));
     await waitFor(() => expect(alert).toHaveBeenCalledWith("Invalid template file."));
   });
@@ -345,7 +345,7 @@ describe("ResultsMenu", () => {
       pickers.push(this);
     });
     renderMenu();
-    await userEvent.click(screen.getByTitle("Import template"));
+    await userEvent.click(screen.getByTitle("Import template…"));
     const file = new File(["{}"], "t.json", { type: "application/json" });
     Object.defineProperty(file, "size", { value: 60 * 1024 * 1024 });
     Object.defineProperty(pickers.at(-1)!, "files", { value: [file], configurable: true });
@@ -364,7 +364,7 @@ describe("ResultsMenu", () => {
       }),
     );
     renderMenu();
-    await userEvent.click(screen.getByTitle("Export PDF"));
+    await userEvent.click(screen.getByTitle("Export as PDF…"));
     expect(mocks.exportVectorPdf).toHaveBeenCalledTimes(1);
     const arg = mocks.exportVectorPdf.mock.calls[0][0];
     expect(arg.viewBounds).toEqual({ xMin: -2, xMax: 40, yMin: -3, yMax: 20 });
@@ -386,7 +386,7 @@ describe("ResultsMenu", () => {
     } as DOMRect);
     renderMenu();
     await userEvent.click(screen.getByTitle("More export options"));
-    await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
+    await userEvent.click(screen.getByRole("button", { name: "Export as PDF…" }));
     const { viewBounds } = mocks.exportVectorPdf.mock.calls[0][0];
     // The frame is centred on the canvas above the floating toolbar's band:
     // symmetric about the origin across, half the band (at 10 px/m) higher.
@@ -409,7 +409,7 @@ describe("ResultsMenu", () => {
     expect(rvs().pdfSummaryPages).toBe(false);
     expect(rvs().pdfTitleLine).toBe(false);
     // The menu stays open for the export, which gets the choices.
-    await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
+    await userEvent.click(screen.getByRole("button", { name: "Export as PDF…" }));
     const arg = mocks.exportVectorPdf.mock.calls[0][0];
     expect(arg.resultViewSettings.pdfSummaryPages).toBe(false);
     expect(arg.resultViewSettings.pdfTitleLine).toBe(false);
@@ -421,13 +421,13 @@ describe("ResultsMenu", () => {
   it("closes the export menu on Escape and with its tab: it is not open when the tab is shown again", async () => {
     const { host, onActivate, rerender } = renderMenu();
     await userEvent.click(screen.getByTitle("More export options"));
-    expect(screen.getByRole("button", { name: "Export as PDF" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Export as PDF…" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
-    expect(screen.queryByRole("button", { name: "Export as PDF" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Export as PDF…" })).toBeNull();
     await userEvent.click(screen.getByTitle("More export options"));
     rerender(<ResultsMenu isOpen={false} onActivate={onActivate} panelHost={host} />);
     rerender(<ResultsMenu isOpen onActivate={onActivate} panelHost={host} />);
-    expect(screen.queryByRole("button", { name: "Export as PDF" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Export as PDF…" })).toBeNull();
     expect(screen.getByTitle("More export options")).toHaveAttribute("aria-expanded", "false");
   });
 
@@ -438,9 +438,9 @@ describe("ResultsMenu", () => {
       await userEvent.click(screen.getByTitle("More export options"));
       await userEvent.click(screen.getByRole("button", { name: label }));
     };
-    await pick("Slice data (Excel)");
-    await pick("Slice data (CSV)");
-    await pick("Slice data (CSV, decimal comma)");
+    await pick("Slice data (Excel)…");
+    await pick("Slice data (CSV)…");
+    await pick("Slice data (CSV, decimal comma)…");
     const calls = mocks.downloadFile.mock.calls;
     expect(calls.map((c) => c[0])).toEqual([
       `${name} slices.xlsx`,
@@ -504,7 +504,7 @@ describe("ResultsMenu", () => {
     act(() => useAppStore.setState({ selectedAnnotationIds: ["a1"] }));
     renderMenu();
     await userEvent.click(screen.getByTitle("More export options"));
-    await userEvent.click(screen.getByRole("button", { name: "Export as PNG" }));
+    await userEvent.click(screen.getByRole("button", { name: "Export as PNG…" }));
     expect(drawImage).toHaveBeenCalledTimes(1);
     // Drawn without the selection, which the view keeps.
     expect(selectionWhileDrawing).toEqual([]);
@@ -553,12 +553,12 @@ describe("ResultsMenu reference lines", () => {
       store().addReferenceAnnotation({ shape: "polyline", points: [[2, 10], [12, 4]], label: "mine" });
     });
     renderMenu();
-    await userEvent.click(screen.getByTitle("Export template"));
+    await userEvent.click(screen.getByTitle("Export template…"));
     const exported = JSON.parse(mocks.downloadFile.mock.calls[0][1] as string);
     expect(exported.resultViewSettings.annotations.some((a: { type: string }) => a.type === "reference")).toBe(false);
     expect(exported.resultViewSettings.annotations.length).toBe(rvs().annotations.length - 1);
 
-    await userEvent.click(screen.getByTitle("Import template"));
+    await userEvent.click(screen.getByTitle("Import template…"));
     const template = {
       ...JSON.parse(JSON.stringify(rvs())),
       annotations: [

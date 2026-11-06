@@ -74,7 +74,7 @@ export function PlaceDrawingDialogApp() {
         }
       >
         <p role="status" className="p-3 text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
-          Waiting for the main window…
+          Waiting for the main window
         </p>
       </WorkspaceWindowFrame>
     );
@@ -337,7 +337,7 @@ export function PlaceDrawingWindow({
               </p>
             ) : !source ? (
               <p className="p-4" style={muted}>
-                Opening the drawing…
+                Opening the drawing
               </p>
             ) : (
               <Viewer

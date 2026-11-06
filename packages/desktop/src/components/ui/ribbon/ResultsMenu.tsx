@@ -530,7 +530,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               <RibbonStack>
                 <RibbonSmallButton
                   icon={<ExportTemplateIcon {...SMALL_ICON} />}
-                  label="Export template"
+                  label="Export template…"
                   onClick={() => {
                     // A template carries the sheet's layout (paper space);
                     // reference annotations are the model's own geometry
@@ -548,7 +548,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 />
                 <RibbonSmallButton
                   icon={<ImportTemplateIcon {...SMALL_ICON} />}
-                  label="Import template"
+                  label="Import template…"
                   onClick={() => {
                     const input = document.createElement("input");
                     input.type = "file";
@@ -619,8 +619,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     background: "transparent",
                     border: "none",
                   }}
-                  title={hasResult ? "Export PDF" : "Run the analysis first"}
-                  aria-label="Export PDF"
+                  title={hasResult ? "Export as PDF…" : "Run the analysis first"}
+                  aria-label="Export as PDF"
                   data-size="large"
                 >
                   <span className="flex items-center justify-center">
@@ -669,7 +669,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         handleExportPdf();
                       }}
                     >
-                      Export as PDF
+                      Export as PDF…
                     </MenuItem>
                     {/* What the PDF holds besides the drawing; kept with the
                         model's result view (saved in the project file and
@@ -698,13 +698,13 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         handleExportPng();
                       }}
                     >
-                      Export as PNG
+                      Export as PNG…
                     </MenuItem>
                     {(
                       [
-                        ["xlsx", "Slice data (Excel)", "Slices of the critical surface as an Excel workbook"],
-                        ["csv", "Slice data (CSV)", "Slices of the critical surface; comma separator, decimal point"],
-                        ["csv-se", "Slice data (CSV, decimal comma)", "Slices of the critical surface; semicolon separator, decimal comma (Excel with a comma locale)"],
+                        ["xlsx", "Slice data (Excel)…", "Slices of the critical surface as an Excel workbook"],
+                        ["csv", "Slice data (CSV)…", "Slices of the critical surface; comma separator, decimal point"],
+                        ["csv-se", "Slice data (CSV, decimal comma)…", "Slices of the critical surface; semicolon separator, decimal comma (Excel with a comma locale)"],
                       ] as const
                     ).map(([format, label, tip]) => (
                       <MenuItem

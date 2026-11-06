@@ -29,7 +29,7 @@ The review is in `packages/desktop/tools/design-review`; each decision had two o
 | D-03 | Lists of records in windows | One `RecordTable`: editable cells (22 px editor in a 24 px row) or read-only rows with a detail form | Keep the components, shared cell style, a toolbar above |
 | D-04 | Frames of the drawing windows | The standard frame: heading and sentence, workspace, full-width `.dialog-buttons` | A documented exception with buttons in the side panel |
 | D-05 | The error after a failed run | The whole sentence only in the banner; "Analysis failed" in the status bar and the summary | Only the banner |
-| D-06 | The "…" convention | **Pending** | |
+| D-06 | The "…" convention (decided 2026-11-06, issue #39) | D: "…" only on a command that asks for something before it acts (a file, a file name, a calibration, lines to pick), in menus, small ribbon buttons and tooltips; a command that shows a window has none; large ribbon buttons never (their menu items or tooltip carry it); otherwise only for truncated text | A ("…" on every command that opens a window, from menus and small buttons) and B (the same everywhere): "…" would mark most of the ribbon and stop meaning anything; C (menus only): the ribbon and the menus would follow different conventions |
 | D-07 | Icons | One per concept: settings the gear, parameters Variable, properties Info | Keep the slider icon for Parameters |
 | D-08 | Placed drawings in the dark theme | Inverted, with an "Invert in dark theme" switch per drawing | A multiply/darken blend |
 | D-09 | Selection handles on the canvas | Keep round handles (accent dot with a ring, 8–10 px); the rule changed | 6–7 px squares |

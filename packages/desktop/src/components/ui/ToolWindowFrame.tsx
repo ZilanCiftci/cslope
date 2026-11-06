@@ -42,7 +42,7 @@ export function ToolWindowFrame({
       <div className="flex-1 overflow-y-auto pr-1">
         {waiting ? (
           <p role="status" className="text-[11px]" style={{ color: "var(--color-vsc-text-muted)" }}>
-            Waiting for the main window…
+            Waiting for the main window
           </p>
         ) : (
           children

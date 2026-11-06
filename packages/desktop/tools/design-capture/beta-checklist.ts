@@ -995,7 +995,7 @@ async function partA() {
       const pdfDir = join(OUT, "exports", "pdf");
       mkdirSync(pdfDir, { recursive: true });
       await queue("downloadPlan", pdfDir);
-      await clickNamed(main, "Export PDF", ["menuitem", "button"]);
+      await clickNamed(main, "Export as PDF", ["menuitem", "button"]);
       const dl = (await takeDownloads(20_000))[0];
       if (!dl?.path || !existsSync(dl.path)) throw new Error(`No PDF saved (${JSON.stringify(dl)})`);
       const target = join(pdfDir, `${key}.pdf`);
