@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
  * The layout of a tool window (Sensitivity, Probabilistic analysis): a
  * heading with one muted sentence under it, one scrolling body and the
  * `.dialog-buttons` row as in the other dialog windows: secondary actions
- * at the left, then the primary action and Close at the right.
+ * at the left, then Close and the primary action (last) at the right.
  */
 export function ToolWindowFrame({
   title,
@@ -55,10 +55,10 @@ export function ToolWindowFrame({
       >
         {footer}
         <span className="flex-1" />
-        {primary}
         <button onClick={() => window.close()} className="btn">
           Close
         </button>
+        {primary}
       </div>
     </div>
   );

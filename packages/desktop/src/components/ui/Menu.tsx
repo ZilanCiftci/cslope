@@ -20,7 +20,7 @@ import { MENU_FRAME_CLASS, MENU_FRAME_STYLE } from "./menu-parts";
 
 /** The items of `menu` itself, not those of a submenu inside it. */
 function ownItems(menu: HTMLElement): HTMLElement[] {
-  return Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]')).filter(
+  return Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"], [role="menuitemradio"]')).filter(
     (el) => el.closest('[role="menu"]') === menu,
   );
 }
@@ -143,8 +143,12 @@ export type MenuItemProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 
   checked?: boolean;
   /** A second line, 10 px muted (what the item is). */
   detail?: React.ReactNode;
-  /** `menuitem` in a menu; `null` in a panel of choices that is not a menu (a plain button). */
-  role?: "menuitem" | null;
+  /**
+   * `menuitem` in a menu; `menuitemradio` for one of exclusive choices
+   * (with `checked`); `null` in a panel of choices that is not a menu (a
+   * plain button).
+   */
+  role?: "menuitem" | "menuitemradio" | null;
 };
 
 /** One command of a menu: 22 px high, 12 px text. */
@@ -178,6 +182,7 @@ export const MenuItem = forwardRef<HTMLButtonElement, MenuItemProps>(function Me
       aria-disabled={disabled || undefined}
       aria-haspopup={submenu ? "menu" : undefined}
       aria-pressed={role === null && checked !== undefined ? checked : undefined}
+      aria-checked={role === "menuitemradio" ? checked === true : undefined}
       onClick={(e) => {
         if (disabled) return;
         onClick?.(e);
