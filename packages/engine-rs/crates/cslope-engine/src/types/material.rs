@@ -41,7 +41,7 @@ pub const MATERIAL_EPSILON: f64 = 1e-10;
 /// (structured clone of its fields): `{ name, color, model }`. Immutable
 /// once created: a slope's table entry is replaced, never edited, so `Arc`
 /// clones of the model stay valid snapshots (ARCHITECTURE.md §1).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct Material {
     pub name: String,
     pub color: String,

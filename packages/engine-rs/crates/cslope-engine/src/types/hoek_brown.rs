@@ -26,7 +26,7 @@ use crate::js;
 use crate::types::material_models::HoekBrownModel;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct HoekBrownParameters {
     /// Uniaxial compressive strength of the intact rock σci (kPa).
@@ -41,7 +41,7 @@ pub struct HoekBrownParameters {
 }
 
 /// Instantaneous Mohr–Coulomb parameters: c (kPa) and φ (°).
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CohesionFriction {
     #[serde(deserialize_with = "crate::types::json::num")]

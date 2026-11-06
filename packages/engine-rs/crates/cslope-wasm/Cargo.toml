@@ -19,6 +19,7 @@ testing = []
 [dependencies]
 cslope-engine = { path = "../cslope-engine" }
 serde.workspace = true
+serde_json.workspace = true
 wasm-bindgen.workspace = true
 js-sys.workspace = true
 serde-wasm-bindgen.workspace = true

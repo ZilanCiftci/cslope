@@ -124,26 +124,32 @@ pub struct SearchPlane {
 /// TypeScript checks against its values keeps another value (`OrOther`) for
 /// that check; a flag is its truthiness (`null` is false); see the
 /// deserializers of the other fields.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
+#[schemars(
+    description = "Analysis options: the method, the search and the loads' factors. Every field is optional; an absent one takes the default."
+)]
 pub struct AnalysisOptionsPatch {
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::present_num"
     )]
+    #[schemars(with = "Option<u32>", range(min = 10, max = 500))]
     pub slices: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::present_num"
     )]
+    #[schemars(with = "Option<u32>", range(min = 500, max = 100000))]
     pub iterations: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::present_num"
     )]
+    #[schemars(with = "Option<u32>", range(min = 0, max = 100000))]
     pub refined_iterations: Option<f64>,
     #[serde(
         default,
@@ -162,6 +168,7 @@ pub struct AnalysisOptionsPatch {
         skip_serializing_if = "Option::is_none",
         deserialize_with = "crate::types::json::present_num"
     )]
+    #[schemars(with = "Option<u32>")]
     pub max_iterations: Option<f64>,
     #[serde(
         default,
@@ -339,6 +346,15 @@ impl<'de> Deserialize<'de> for IntersliceDataPointsPatch {
     }
 }
 
+impl schemars::JsonSchema for IntersliceDataPointsPatch {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "IntersliceDataPoints".into()
+    }
+    fn json_schema(g: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        <Vec<[f64; 2]>>::json_schema(g)
+    }
+}
+
 impl Serialize for IntersliceDataPointsPatch {
     fn serialize<S: serde::Serializer>(&self, s: S) -> std::result::Result<S::Ok, S::Error> {
         match self {
@@ -408,6 +424,15 @@ impl<'de> Deserialize<'de> for AngleRangePatch {
             }
             _ => AngleRangePatch::NotIterable(v),
         })
+    }
+}
+
+impl schemars::JsonSchema for AngleRangePatch {
+    fn schema_name() -> std::borrow::Cow<'static, str> {
+        "AngleRange".into()
+    }
+    fn json_schema(g: &mut schemars::SchemaGenerator) -> schemars::Schema {
+        <Option<[f64; 2]>>::json_schema(g)
     }
 }
 

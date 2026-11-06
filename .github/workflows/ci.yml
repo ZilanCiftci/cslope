@@ -197,6 +197,11 @@ jobs:
       - name: Test
         working-directory: packages/engine-rs
         run: cargo test --release --all-features
+      # The JSON schemas (packages/engine/schema) and the Python TypedDicts
+      # generated from them (cslope-py's __init__.pyi) match the engine's
+      # types, as the committed WebAssembly build matches its sources.
+      - name: Schemas are fresh
+        run: bun packages/engine-rs/tools/schema.ts --check
       # Crates with a RustSec advisory fail the job (the weekly
       # verification-full workflow runs this too).
       - name: Audit crates

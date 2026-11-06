@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "Distribution": {
+      "description": "The distribution of a random variable.",
+      "enum": [
+        "normal",
+        "lognormal"
+      ],
+      "type": "string"
+    },
+    "RandomVariable": {
+      "additionalProperties": false,
+      "properties": {
+        "distribution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Distribution"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default \"normal\"."
+        },
+        "field": {
+          "description": "Field of the material model, e.g. \"cohesion\", \"frictionAngle\", \"unitWeight\", \"undrainedShearStrength\".",
+          "type": "string"
+        },
+        "material": {
+          "description": "Index of the material in the definition's materials.",
+          "format": "double",
+          "type": "number"
+        },
+        "max": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "min": {
+          "description": "Truncation of sampled values (Monte Carlo). Default: ≥ 0 for strength and unit weight, φ < 90°.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sd": {
+          "description": "Standard deviation (same unit as the field).",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "material",
+        "field",
+        "sd"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:cslope:schema:random-variables:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "The schema is stricter than the engine: the engine also reads values of another type as the app's earlier TypeScript engine did (a number of another type as no number, an unknown option as the default) and ignores unknown keys, while this schema accepts only JSON numbers, the documented strings, integers for counts, and known keys. cslope.validate (validate_definition) checks a document against it and adds the rules of the model (regions, boundaries, ranges).",
+  "items": {
+    "$ref": "#/$defs/RandomVariable"
+  },
+  "title": "cSlope random variables",
+  "type": "array",
+  "x-cslope-schema-version": "0.1.0"
+}

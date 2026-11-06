@@ -20,14 +20,14 @@ use std::sync::OnceLock;
 type Pt = [f64; 2];
 
 /// A head line: the elevation of the head along x.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct HeadLine {
     pub id: String,
     pub points: Vec<Pt>,
 }
 
 /// A reference line: where the head of its top and bottom head lines applies.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReferenceLine {
     pub points: Vec<Pt>,
@@ -37,7 +37,7 @@ pub struct ReferenceLine {
     pub bottom_head_line_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Waternet {
     /// Head lines by id: the elevation of the head along x.

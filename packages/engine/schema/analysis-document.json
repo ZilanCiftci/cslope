@@ -1,0 +1,3383 @@
+{
+  "$defs": {
+    "AnalysisLimits": {
+      "additionalProperties": false,
+      "description": "Analysis limit bounds for search area.",
+      "properties": {
+        "entryLeftX": {
+          "format": "double",
+          "type": "number"
+        },
+        "entryRightX": {
+          "format": "double",
+          "type": "number"
+        },
+        "exitLeftX": {
+          "format": "double",
+          "type": "number"
+        },
+        "exitRightX": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "entryLeftX",
+        "entryRightX",
+        "exitLeftX",
+        "exitRightX"
+      ],
+      "type": "object"
+    },
+    "AnalysisMethod": {
+      "description": "Supported analysis methods.",
+      "enum": [
+        "Bishop",
+        "Janbu",
+        "Morgenstern-Price"
+      ],
+      "type": "string"
+    },
+    "AnalysisOptionsPatch": {
+      "additionalProperties": false,
+      "description": "Analysis options: the method, the search and the loads' factors. Every field is optional; an absent one takes the default.",
+      "properties": {
+        "blockActiveAngle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AngleRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "blockPassiveAngle": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AngleRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "bothDirections": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "compositeBase": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "compositeSurfaces": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "fem": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FemAnalysisSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intersliceDataPoints": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntersliceDataPoints"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "intersliceFunction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/IntersliceFunctionType"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "iterations": {
+          "format": "uint32",
+          "maximum": 100000,
+          "minimum": 500,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "janbuCorrection": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "maxIterations": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "method": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalysisMethod"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "minFailureDist": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "minSlipArea": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "minSlipDepth": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "nonCircularOptimization": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "partialFactors": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PartialFactors"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "porePressureHead": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PorePressureHead"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "refinedIterations": {
+          "format": "uint32",
+          "maximum": 100000,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "searchMethod": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SearchMethod"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "seismicHorizontal": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "seismicVertical": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "sgi3d": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Sgi3dSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "slices": {
+          "format": "uint32",
+          "maximum": 500,
+          "minimum": 10,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "tensionCrackAngle": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tensionCrackAuto": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "tensionCrackDepth": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tensionCrackWater": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tolerance": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "AngleRange": {
+      "items": {
+        "format": "double",
+        "type": "number"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": [
+        "array",
+        "null"
+      ]
+    },
+    "BlockSearchObject": {
+      "additionalProperties": false,
+      "description": "A block search object: one point, a line or a window.",
+      "properties": {
+        "points": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "type": "object"
+    },
+    "CustomSearchPlane": {
+      "additionalProperties": false,
+      "description": "A user-specified circular search plane.",
+      "properties": {
+        "cx": {
+          "format": "double",
+          "type": "number"
+        },
+        "cy": {
+          "format": "double",
+          "type": "number"
+        },
+        "radius": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cx",
+        "cy",
+        "radius"
+      ],
+      "type": "object"
+    },
+    "CustomSurface": {
+      "additionalProperties": false,
+      "description": "A user-specified non-circular surface.",
+      "properties": {
+        "axis": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "points": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "type": "object"
+    },
+    "DepthReference": {
+      "anyOf": [
+        {
+          "enum": [
+            "ground",
+            "layer-top"
+          ],
+          "type": "string"
+        }
+      ],
+      "description": "Where the depth of an `s-f-depth` material is measured from. Another\nstring is kept as it is, for validation to report."
+    },
+    "DocumentFormat": {
+      "description": "The `format` of an analysis document: always \"cslope-analysis\".",
+      "enum": [
+        "cslope-analysis"
+      ],
+      "type": "string"
+    },
+    "DrawdownEnvelope": {
+      "additionalProperties": false,
+      "description": "The drawdown (R) envelope of a soil that does not drain during rapid\ndrawdown: the total-stress envelope of isotropically consolidated\nundrained tests (cR, φR), for the three-stage drawdown analysis.",
+      "properties": {
+        "cohesion": {
+          "default": null,
+          "format": "double",
+          "type": "number"
+        },
+        "frictionAngle": {
+          "default": null,
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cohesion",
+        "frictionAngle"
+      ],
+      "type": "object"
+    },
+    "FemAnalysisSettings": {
+      "additionalProperties": false,
+      "description": "Strength reduction by finite elements, run after the limit equilibrium\nanalysis when enabled (src/fem). Stiffness barely affects the factor of\nsafety; it scales the displacements.",
+      "properties": {
+        "convergence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FemConvergence"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Convergence test of the viscoplastic iteration: the displacement\nincrement (\"increment\"), or in addition the out-of-balance force of the\nstresses returned to the yield surface, at most 0.1 % of the load\n(\"equilibrium\", with Anderson acceleration of the iteration). Not set:\nincrement."
+        },
+        "dilationAngle": {
+          "description": "Dilation angle ψ (°), used by Davis B and non-associated flow.",
+          "format": "double",
+          "type": "number"
+        },
+        "elementSize": {
+          "default": null,
+          "description": "Initial element size (m); null: a twentieth of the model height.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "flowRule": {
+          "$ref": "#/$defs/FlowRule",
+          "description": "Davis B (default), associated, or non-associated with the dilation angle."
+        },
+        "initialStress": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/InitialStress"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Initial stresses: gravity applied in one increment (\"gravity\", default)\nor the K0 procedure (\"k0\"): σ′h = K0 σ′v from the overburden\n(fem/initial-stress.ts). With associated flow F does not depend on them."
+        },
+        "k0": {
+          "description": "K0 of every soil for the K0 procedure; null or not set: 1 − sin φ′ (Jaky).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "limitAnalysis": {
+          "description": "The lower and upper bounds of limit analysis (perfect plasticity,\nassociated flow, and with Davis B's reduced strength), which bracket\nthe factor of safety and converge as the mesh is refined: the finite\nelement factor of safety, the strength reduction a comparison; minutes\nof run time. Not set: off (files from before; on for new projects).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "materialStages": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "description": "Construction stage per material name (0 by default); later stages are built after the earlier ones.",
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "nonAssociatedSolver": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NonAssociatedSolver"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Solver of non-associated flow: the viscoplastic iteration of Griffiths\n& Lane (\"viscoplastic\", default) or Newton's method with the\nunsymmetric consistent tangent, F raised in increments (\"newton\", the\nimplicit method of most finite element programs; similar F, usually\nslower). Not set: viscoplastic."
+        },
+        "originalGroundLevel": {
+          "description": "Ground level before excavation (m) for the K0 procedure; null or not set: the present ground.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "poissonsRatio": {
+          "description": "Poisson's ratio ν of every soil.",
+          "format": "double",
+          "type": "number"
+        },
+        "porePressure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FemPorePressure"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pore pressures: hydrostatic below the water table (\"water-table\"), or\nfrom steady seepage with the water table as reservoir and tail water\nwhere it lies at or above the ground (\"seepage\"). Not set: water table."
+        },
+        "refinementLevels": {
+          "description": "Adaptive refinements of the mesh (0–3), for associated flow and Davis B.\nNot with non-associated flow: its factor has no limit as the mesh is\nrefined (it falls on every refinement, Sysala et al. 2021), so it is\ncomputed on the initial mesh only.",
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tensionCutoff": {
+          "description": "Rankine tension cut-off at zero effective stress; default on for new\nprojects (soil carries no tension, the usual default of finite element\nprograms; it brought cSlope closer to a commercial program's verification\nvalues, RMS 4.6 % to 3.0 %).",
+          "type": "boolean"
+        },
+        "youngsModulus": {
+          "description": "Young's modulus E (kPa) of every soil.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "enabled",
+        "flowRule",
+        "youngsModulus",
+        "poissonsRatio",
+        "dilationAngle",
+        "tensionCutoff",
+        "refinementLevels"
+      ],
+      "type": "object"
+    },
+    "FemConvergence": {
+      "description": "Convergence test of the viscoplastic iteration.",
+      "enum": [
+        "increment",
+        "equilibrium"
+      ],
+      "type": "string"
+    },
+    "FemPorePressure": {
+      "description": "Pore pressures of the finite element analysis.",
+      "enum": [
+        "water-table",
+        "seepage"
+      ],
+      "type": "string"
+    },
+    "FlowRule": {
+      "description": "Flow rule of the finite element analysis.",
+      "enum": [
+        "davis-b",
+        "associated",
+        "non-associated"
+      ],
+      "type": "string"
+    },
+    "HeadLine": {
+      "additionalProperties": false,
+      "description": "A head line: the elevation of the head along x.",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "points": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "points"
+      ],
+      "type": "object"
+    },
+    "InitialStress": {
+      "description": "Initial stresses of the finite element analysis.",
+      "enum": [
+        "gravity",
+        "k0"
+      ],
+      "type": "string"
+    },
+    "IntersliceDataPoints": {
+      "items": {
+        "items": {
+          "format": "double",
+          "type": "number"
+        },
+        "maxItems": 2,
+        "minItems": 2,
+        "type": "array"
+      },
+      "type": "array"
+    },
+    "IntersliceFunctionType": {
+      "description": "Supported interslice force functions for Morgenstern-Price.",
+      "enum": [
+        "constant",
+        "half-sine",
+        "clipped-sine",
+        "trapezoidal",
+        "data-point-specified"
+      ],
+      "type": "string"
+    },
+    "LineLoadDefinition": {
+      "additionalProperties": false,
+      "description": "A line load of a definition; `angle`: inclination from the downward\nvertical (°), positive towards +x; `y`: the elevation of the load point\n(a point on a wall face; default the ground at x).",
+      "properties": {
+        "angle": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "magnitude": {
+          "format": "double",
+          "type": "number"
+        },
+        "x": {
+          "format": "double",
+          "type": "number"
+        },
+        "y": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "magnitude",
+        "x"
+      ],
+      "type": "object"
+    },
+    "MaterialBoundary": {
+      "additionalProperties": false,
+      "description": "A material boundary polyline.",
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "materialName": {
+          "default": "",
+          "deprecated": true,
+          "description": "Deprecated: assign the materials of the regions with regionAssignments. Used only without regionAssignments (the region below the boundary's midpoint).",
+          "type": "string"
+        }
+      },
+      "required": [
+        "coordinates"
+      ],
+      "type": "object"
+    },
+    "MaterialModel": {
+      "description": "A material model: unit weight and strength. `kind` names the model.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "description": "Standard Mohr-Coulomb effective-stress model.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "cFactor": {
+              "description": "Combined-method c-factor: the drained c′ is `cohesion` × cFactor.\n0 = not combined, so cFactor = 0 cannot give a combined material\nwith c′ = 0; that takes `cohesion` = 0, any other cFactor and\n`cohesionUndrained` set.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "cohesion": {
+              "default": null,
+              "description": "Effective cohesion c (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "cohesionRateOfChange": {
+              "description": "Rate of cohesion increase per metre below the reference elevation (kPa/m).",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "cohesionRefDepth": {
+              "description": "Reference ELEVATION y (m, despite the name) where c = `cohesion`:\nc = cohesion + (cohesionRefDepth − y_base) × cohesionRateOfChange.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "cohesionUndrained": {
+              "description": "Undrained cohesion Su (kPa). Used by Combined method.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "drawdownStrength": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DrawdownEnvelope"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The drawdown (R) envelope: with a rapid drawdown analysis\n(SlopeDefinition.rapidDrawdown) the soil does not drain and takes the\nundrained strength of the three-stage procedure (model/drawdown.ts).\nNot set: free-draining, its drained strength throughout."
+            },
+            "frictionAngle": {
+              "default": null,
+              "description": "Friction angle φ (°).",
+              "format": "double",
+              "type": "number"
+            },
+            "kind": {
+              "const": "mohr-coulomb",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "cohesion",
+            "frictionAngle",
+            "unitWeight"
+          ],
+          "title": "MohrCoulombModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Undrained strength model (φ = 0).",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "anisotropy": {
+              "description": "`UndrainedAnisotropy.anisotropy`: Su is multiplied by a factor that\ndepends on the slice base inclination α, given as [[α°, factor], …]\nand interpolated linearly (constant beyond the ends), as\n`anisotropic-function`'s modifier: α is positive where the base dips\ndown in the direction of sliding (the active zone near the crest),\nnegative where it rises (the passive zone at the toe). For example\n[[-45, 0.82], [0, 1], [60, 1.5]] for passive 0.82, direct 1.0 and active\n1.5 relative to the direct shear strength. Analyses without a slip\nsurface base (finite elements, limit analysis, the strength profiles)\ntake the factor at α = 0. Not set or empty: isotropic.",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "undrained",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suMax": {
+              "description": "Strength cutoff (kPa), as commercial programs offer it.\nWith `suRateOfChange` ≥ 0 (Su constant or increasing with depth) it is a\nMAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing with\ndepth) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRateOfChange": {
+              "description": "Rate of Su increase per metre below `suRefDepth` (kPa/m).",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRefDepth": {
+              "description": "Reference ELEVATION y (m, despite the name) where Su = `undrainedShearStrength`.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "undrainedShearStrength": {
+              "default": null,
+              "description": "Undrained shear strength Su (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "undrainedShearStrength",
+            "unitWeight"
+          ],
+          "title": "UndrainedModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "High-strength material (e.g. concrete retaining wall).\n\nStrength is treated as infinite — any slip surface passing through\nthis material is considered very stable and effectively skipped.\nOnly `unitWeight` is used (for overburden calculation).",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "high-strength",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "unitWeight"
+          ],
+          "title": "HighStrengthModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Impenetrable material (bedrock).\n\nThe slip surface cannot enter this region. Any slice whose base\nfalls inside this material causes the surface to be rejected.\n`unitWeight` is still needed for overburden on layers below.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "impenetrable",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "unitWeight"
+          ],
+          "title": "ImpenetrableModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Spatial Mohr-Coulomb — c, φ vary as functions of (x, y).\n\nThe user supplies a set of data points with known c, φ, γ values.\nAt analysis time, the effective parameters are interpolated from\nthe nearest data points.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "dataPoints": {
+              "default": [],
+              "description": "Data points: [x, y, c (kPa), φ (°), γ (kN/m³)].",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 5,
+                "minItems": 5,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "interpolation": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/SpatialInterpolation"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Interpolation method (default: \"idw\", inverse distance weighting with\npower 2). \"linear\" is inverse distance weighting with power 1, not a\nlinear (triangulated) interpolation."
+            },
+            "kind": {
+              "const": "spatial-mohr-coulomb",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "unitWeight"
+          ],
+          "title": "SpatialMohrCoulombModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Anisotropic function model.\n\nBase c and φ are multiplied by a modifier that is a function of the\nslice base inclination angle α. The modifier function is supplied\nas an array of (α_deg, factor) pairs and linearly interpolated.\nThe factor scales φ in degrees, not tan φ: 0.8 on φ = 30° gives\n24.0°, where 0.8·tan 30° would give 24.8°.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "cohesion": {
+              "default": null,
+              "description": "Base effective cohesion c (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "frictionAngle": {
+              "default": null,
+              "description": "Base friction angle φ (°).",
+              "format": "double",
+              "type": "number"
+            },
+            "kind": {
+              "const": "anisotropic-function",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "modifierFunction": {
+              "default": [],
+              "description": "Modifier vs base inclination: [[α_deg, factor], …].\n\nα is measured relative to the sliding direction, not geometrically:\npositive where the slice base dips down in the direction of sliding\n(the back scarp), negative where it rises (the toe). The same\nfunction therefore applies unchanged to left- and right-facing slopes.",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "cohesion",
+            "frictionAngle",
+            "unitWeight"
+          ],
+          "title": "AnisotropicFunctionModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Strength as a function of depth.\n\nφ = 0; Su = suRef + (depth − depthRef) × rate,\nwhere depth = yTop − yBottom at the slice base centre, yTop being the\nground surface or the top of the material layer (see `depthReference`).\n\nCombined (with `drainedCohesion` and `drainedFrictionAngle`): the\nstrength is the lesser of the undrained Su and the drained\nc′ + σ′·tan φ′, with c′ = drainedCohesion + (depth − depthRef) ×\ndrainedCohesionRate at the same depth, as Swedish practice analyses\nclay (\"kombinerad analys\") and commercial programs offer it.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "anisotropy": {
+              "description": "`UndrainedAnisotropy.anisotropy` (see `UndrainedModel::anisotropy`).",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "depthRef": {
+              "default": null,
+              "description": "Reference depth (m) below the depth reference.",
+              "format": "double",
+              "type": "number"
+            },
+            "depthReference": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/DepthReference"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "What the depth is measured from:\n- \"ground\": the ground surface above the slice base;\n- \"layer-top\": the top of the region of this material directly above\n  the slice base (as commercial programs offer it); for the uppermost layer this is the ground.\n\nNot set: \"ground\" (models saved before the option existed)."
+            },
+            "drainedCohesion": {
+              "description": "Drained effective cohesion c′ (kPa) at the reference depth, for a\ncombined analysis. Set together with `drainedFrictionAngle`; either\nnot set: undrained only.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "drainedCohesionRate": {
+              "description": "Change of c′ per metre of depth (kPa/m), with the same depth as Su. Not set: 0.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "drainedFrictionAngle": {
+              "description": "Drained friction angle φ′ (°) for a combined analysis (see `drainedCohesion`).",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "s-f-depth",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "rate": {
+              "default": null,
+              "description": "Rate of change of Su with depth (kPa/m); positive: Su increases downwards.",
+              "format": "double",
+              "type": "number"
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suMax": {
+              "description": "Strength cutoff (kPa), as commercial programs offer it.\nWith `rate` ≥ 0 (Su constant or increasing with depth) it is a MAXIMUM:\nSu = min(Su, suMax). With a negative rate (Su decreasing with depth) it\nis a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRef": {
+              "default": null,
+              "description": "Reference undrained shear strength Su (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "depthRef",
+            "rate",
+            "suRef",
+            "unitWeight"
+          ],
+          "title": "StrengthFromDepthModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Strength as a function of datum (absolute elevation y).\n\nφ = 0; Su = suRef + (yRef − y) × rate,\nwhere y is the elevation of the slice base: a positive rate increases\nSu with depth below the datum, as in commercial programs.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "anisotropy": {
+              "description": "`UndrainedAnisotropy.anisotropy` (see `UndrainedModel::anisotropy`).",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "s-f-datum",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "rate": {
+              "default": null,
+              "description": "Increase of Su per metre below yRef (kPa/m).",
+              "format": "double",
+              "type": "number"
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suMax": {
+              "description": "Strength cutoff (kPa), as commercial programs offer it.\nWith `rate` ≥ 0 (Su constant or increasing below the datum) it is a\nMAXIMUM: Su = min(Su, suMax). With a negative rate (Su decreasing\ndownwards) it is a MINIMUM: Su = max(Su, suMax). Not set: no cutoff.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRef": {
+              "default": null,
+              "description": "Reference undrained shear strength Su (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "yRef": {
+              "default": null,
+              "description": "Reference elevation y (m).",
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "rate",
+            "suRef",
+            "unitWeight",
+            "yRef"
+          ],
+          "title": "StrengthFromDatumModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Clay improved with lime-cement columns (KC-pelare): the shear strength of\nthe improved block is the area-weighted mean of the columns and the soil\nbetween them, τ = a·τcol + (1 − a)·cu,soil. Undrained by default; with a\ndrained column strength (c′, φ′) the column part is limited to\nc′ + σ′·tan φ′ ≤ cu,col (combined analysis), as in Swedish practice.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "areaRatio": {
+              "default": null,
+              "description": "Area ratio a = column area / improved area, 0–1.",
+              "format": "double",
+              "type": "number"
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "columnCohesion": {
+              "description": "Drained cohesion of the columns c′ (kPa); with columnFrictionAngle.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "columnFrictionAngle": {
+              "description": "Drained friction angle of the columns φ′ (°); with columnCohesion.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "columnSu": {
+              "default": null,
+              "description": "Undrained shear strength of the columns (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "kind": {
+              "const": "lime-cement-columns",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "soilSu": {
+              "default": null,
+              "description": "Undrained shear strength of the soil between the columns (kPa) at the reference level.",
+              "format": "double",
+              "type": "number"
+            },
+            "suMax": {
+              "description": "Cutoff (kPa) of the soil strength between the columns (soilSu with its\ndepth variation; the columns are not affected). With `suRateOfChange`\n≥ 0 it is a MAXIMUM: cu,soil = min(cu,soil, suMax); with a negative\nrate a MINIMUM: cu,soil = max(cu,soil, suMax). Not set: no cutoff.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRateOfChange": {
+              "description": "Increase of soilSu per metre below the reference level (kPa/m). Default 0.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "suRefDepth": {
+              "description": "Reference level (elevation, m) of soilSu. Default 0.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "areaRatio",
+            "columnSu",
+            "soilSu",
+            "unitWeight"
+          ],
+          "title": "LimeCementColumnModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "Generalised Hoek–Brown rock mass (Hoek, Carranza-Torres & Corkum 2002):\nσ1′ = σ3′ + σci (mb σ3′/σci + s)^a from the intact rock's σci and mi,\nthe Geological Strength Index and the disturbance factor D. The analyses\nuse its instantaneous Mohr–Coulomb parameters at the normal stress on the\nslip surface (types/hoek_brown.rs).",
+          "properties": {
+            "a": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "disturbance": {
+              "description": "Disturbance factor D, 0–1. Default 0.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "gsi": {
+              "default": null,
+              "description": "Geological Strength Index, 0–100.",
+              "format": "double",
+              "type": "number"
+            },
+            "kind": {
+              "const": "hoek-brown",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "mb": {
+              "description": "The criterion's own parameters, given directly (for example the\noriginal criterion, a = 0.5): with `mb` and `s` set they are used\ninstead of those from GSI, mi and D (`a` not set: 0.5).",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "mi": {
+              "default": null,
+              "description": "Intact rock constant mi.",
+              "format": "double",
+              "type": "number"
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "s": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ucs": {
+              "default": null,
+              "description": "Uniaxial compressive strength of the intact rock σci (kPa).",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "ucs",
+            "unitWeight"
+          ],
+          "title": "HoekBrownModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "SHANSEP (Ladd & Foott 1974): the undrained strength from the effective\nvertical stress at the slice base and the stress history,\nSu = σ′v · S · OCR^m, with OCR constant or a function of elevation; or\nSu as a function of σ′v. σ′v is the slice's weight and surface loads per\nunit width less the pore pressure at its base (the overburden on the\nbase in the analysis's pore pressures), as commercial programs take it.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "anisotropy": {
+              "description": "`UndrainedAnisotropy.anisotropy` (see `UndrainedModel::anisotropy`).",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "exponent": {
+              "description": "The exponent m. Default 0.8.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "shansep",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ocr": {
+              "description": "OCR, constant. Default 1.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ocrByElevation": {
+              "description": "OCR against elevation, [[y, OCR], …], interpolated linearly (constant beyond the ends); replaces `ocr`.",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "pop": {
+              "description": "Pre-overburden pressure POP (kPa): OCR = (σ′v + POP)/σ′v at the base.\nReplaces `ocr` and `ocrByElevation`.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "ratio": {
+              "default": null,
+              "description": "S, the Su/σ′v ratio of the normally consolidated soil.",
+              "format": "double",
+              "type": "number"
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "spline": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TableSpline"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cubic splines through `ocrByElevation` / `suByStress` instead of straight lines; constant beyond the ends as with straight lines."
+            },
+            "suByStress": {
+              "description": "Su against σ′v, [[σ′v, Su], …], interpolated linearly (constant beyond the ends); replaces S, m and OCR.",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": [
+                "array",
+                "null"
+              ]
+            },
+            "suMin": {
+              "description": "Lower limit of Su (kPa). Default 0.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "yieldFromEarlierStage": {
+              "description": "With an earlier stage (SlopeDefinition.earlierStage): the yield stress\nis the effective vertical stress of the earlier stage at the base, with\nits distributed loads over the base taken straight down (no spreading\nwith depth), plus `pop` (the stress history the soil kept from it),\nOCR = σ′y/σ′v, at least 1.\n(`yieldFromEarlierStage === true`: any other value is false.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "yieldStress": {
+              "description": "Yield (preconsolidation) stress σ′y (kPa): OCR = σ′y/σ′v at the base, at least 1. Replaces `ocr` and `ocrByElevation`.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "ratio",
+            "unitWeight"
+          ],
+          "title": "ShansepModel",
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "description": "A curved strength envelope given as points of the shear strength against\nthe effective normal stress, τ = f(σ′n), interpolated linearly between\nthem or with a spline (the end segment extended beyond the ends): each\nslice base takes the tangent c and φ of the segment at its normal\nstress, which the analysis updates from the stress it finds, as for\nHoek-Brown.",
+          "properties": {
+            "aboveWater": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MaterialModel"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The strength of the material above its water line (the phreatic\nlevel), when it differs from the strength below it (for example drained\nabove and undrained below). It also applies everywhere when the\nmaterial has no water line. Its unit weight is this model's."
+            },
+            "bBar": {
+              "description": "B̄ (B-bar): the excess pore pressure at a slice base in this material\nis B̄ times the vertical stress of the fill above it (the materials\nwith `b_bar_load`), added to the pore pressure of its water line: the\nshort-term pore pressure of a soft foundation under a new fill\n(Skempton 1954; Bishop 1954). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "bBarLoad": {
+              "description": "The weight of this material (a fill) raises the pore pressure of materials with `b_bar` below it.\n(`if (model.bBarLoad)`: any value by its truthiness.)",
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "shear-normal",
+              "type": "string"
+            },
+            "maxSuction": {
+              "description": "`UnsaturatedStrength.maxSuction`: largest matric suction (kPa) taken\ninto account, > 0. Not set: no limit.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "phiB": {
+              "description": "`UnsaturatedStrength.phiB`: angle φb (°) of the strength increase with\nmatric suction, 0 ≤ φb < 90. Not set or 0: no suction strength.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "points": {
+              "default": [],
+              "description": "[[σ′n (kPa), τ (kPa)], …], σ′n increasing, τ ≥ 0.",
+              "items": {
+                "items": {
+                  "format": "double",
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            "ru": {
+              "description": "Pore pressure ratio rᵤ = u / σv (Bishop & Morgenstern 1960): the pore\npressure at a slice base in this material is rᵤ times the weight of\nthe soil above it per unit width, added to the pore pressure of its\nwater line (if any). Not set: none.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "spline": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/TableSpline"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "A cubic spline through the points instead of straight lines (see `TableSpline`)."
+            },
+            "unitWeight": {
+              "default": null,
+              "description": "Material unit weight in kN/m³.",
+              "format": "double",
+              "type": "number"
+            },
+            "unitWeightSat": {
+              "description": "Saturated unit weight (kN/m³) for the soil below the material's water\nline. Not set: `unit_weight` throughout.",
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "unitWeight"
+          ],
+          "title": "ShearNormalModel",
+          "type": "object"
+        }
+      ]
+    },
+    "NonAssociatedSolver": {
+      "description": "Solver of non-associated flow.",
+      "enum": [
+        "viscoplastic",
+        "newton"
+      ],
+      "type": "string"
+    },
+    "PartialFactors": {
+      "additionalProperties": false,
+      "description": "Partial factors applied to characteristic values.",
+      "properties": {
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SwedishFactorBasis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How the factors were formed in Swedish practice, for display and\nediting (`swedish_partial_factors`); the analyses use the factors above\nonly. Not set: the factors were entered or taken from another set."
+        },
+        "cohesion": {
+          "description": "γc' on effective cohesion.",
+          "format": "double",
+          "type": "number"
+        },
+        "cu": {
+          "description": "γcu on undrained shear strength.",
+          "format": "double",
+          "type": "number"
+        },
+        "tanPhi": {
+          "description": "γφ' on tan φ'.",
+          "format": "double",
+          "type": "number"
+        },
+        "variableLoad": {
+          "description": "γQ on variable loads (distributed and line loads).",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cu",
+        "cohesion",
+        "tanPhi",
+        "variableLoad"
+      ],
+      "type": "object"
+    },
+    "Pile": {
+      "additionalProperties": false,
+      "description": "Pile row (or sheet pile wall) resisting the sliding mass in shear: where\na slip surface crosses the pile axis, a force acts against the sliding\ndirection (see `direction`; by default tilted `angle` degrees upwards,\n0: horizontal). Its size is the given shear force per pile, or —\nwithout one, for a vertical pile — the Ito & Matsui (1975) lateral force\nof the soil squeezing between the piles above the slip surface; either is\nlimited by the pile's shear and bending capacity. Per metre of slope:\ndivided by the spacing.",
+      "properties": {
+        "angle": {
+          "description": "Tilt of the force above horizontal (°), for direction \"angle\". Default 0.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "application": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReinforcementApplication"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default \"active\"."
+        },
+        "axialStiffness": {
+          "description": "Axial stiffness EA per pile (kN), for the finite element analysis; default as `bendingStiffness`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "bendingStiffness": {
+          "description": "Bending stiffness EI per pile (kNm²), for the finite element analysis; default a solid circle of `diameter` in concrete (E = 30 GPa), or a plate for a wall.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "diameter": {
+          "description": "Pile diameter / width (m), for Ito & Matsui.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PileForceDirection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Direction of the force. Default \"angle\" (with `angle`), so that saved\nmodels keep their result; the usual default elsewhere is \"tangent\"."
+        },
+        "force": {
+          "description": "Shear force per pile (kN); omit for Ito & Matsui (needs the diameter).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "location": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PileForceLocation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Where an Ito & Matsui force acts. Default \"centroid\"."
+        },
+        "momentCapacity": {
+          "description": "Bending capacity per pile (kNm): force ≤ M / Lm, Lm the arm of the soil pressure.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "shearCapacity": {
+          "description": "Shear capacity per pile (kN).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "spacing": {
+          "description": "Centre-to-centre spacing (m). Default 1 (a wall per metre).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "wall": {
+          "description": "A continuous wall (sheet piles): in the finite element analysis no soil\nflows through it, and its default stiffness is that of a plate of\nthickness `diameter` per metre. Default: a wall where spacing ≤ diameter.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "x1": {
+          "description": "Pile head and tip.",
+          "format": "double",
+          "type": "number"
+        },
+        "x2": {
+          "format": "double",
+          "type": "number"
+        },
+        "y1": {
+          "format": "double",
+          "type": "number"
+        },
+        "y2": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "type": "object"
+    },
+    "PileForceDirection": {
+      "anyOf": [
+        {
+          "enum": [
+            "angle",
+            "tangent",
+            "perpendicular"
+          ],
+          "type": "string"
+        }
+      ],
+      "description": "Direction of a pile's force on the sliding mass, always against the\nmovement:\n- \"angle\": tilted `angle` degrees above horizontal (0: horizontal);\n- \"tangent\": along the slip surface where it crosses the pile (the usual\n  default, \"tangential\");\n- \"perpendicular\": perpendicular to the pile axis (horizontal for a\n  vertical pile).\n\nAnother string is kept (`Other`), as a JavaScript object keeps it, so\nthat `Slope::set_piles` reports it with TypeScript's message."
+    },
+    "PileForceLocation": {
+      "anyOf": [
+        {
+          "enum": [
+            "centroid",
+            "slip-surface"
+          ],
+          "type": "string"
+        }
+      ],
+      "description": "Where an Ito & Matsui pile force acts: at the resultant of the soil\npressure on the pile above the slip surface (\"centroid\", the default),\nor where the slip surface crosses the pile (\"slip-surface\", as Cai &\nUgai 2000, eq. 9, apply it). A given force acts at the crossing."
+    },
+    "PorePressureHead": {
+      "description": "Pore pressure head below an inclined piezometric line.",
+      "enum": [
+        "phreatic-correction",
+        "vertical"
+      ],
+      "type": "string"
+    },
+    "RapidDrawdown": {
+      "additionalProperties": false,
+      "description": "Rapid drawdown (three-stage, model/drawdown.ts): the water table before\ndrawdown, for all materials.",
+      "properties": {
+        "waterBefore": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "waterBefore"
+      ],
+      "type": "object"
+    },
+    "ReferenceLine": {
+      "additionalProperties": false,
+      "description": "A reference line: where the head of its top and bottom head lines applies.",
+      "properties": {
+        "bottomHeadLineId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "points": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "topHeadLineId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "points"
+      ],
+      "type": "object"
+    },
+    "RegionAssignment": {
+      "additionalProperties": false,
+      "description": "A point-based region material assignment.",
+      "properties": {
+        "materialName": {
+          "type": "string"
+        },
+        "point": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        }
+      },
+      "required": [
+        "point",
+        "materialName"
+      ],
+      "type": "object"
+    },
+    "Reinforcement": {
+      "additionalProperties": false,
+      "properties": {
+        "application": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReinforcementApplication"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default \"active\"."
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReinforcementDirection"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Default \"axial\"."
+        },
+        "end1Capacity": {
+          "description": "Anchorage capacity at end 1 (plate, facing connection), kN per element. Default 0.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "end2Capacity": {
+          "description": "Anchorage capacity at end 2, kN per element. Default 0.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "prestress": {
+          "description": "Lock-off (prestress) load of a grouted anchor's free length, kN per\nelement: the finite element analysis prestresses the free length with\nit (the limit equilibrium takes an active element's force as its\ncapacity). Default 0.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pullout": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ReinforcementPullout"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pullout along the element. Without it both ends are fully anchored:\nthe tensile capacity is available wherever the element is crossed\n(end-anchored bars)."
+        },
+        "spacing": {
+          "description": "Out-of-plane spacing (m); all capacities are divided by it. Default 1.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tensileCapacity": {
+          "description": "Tensile capacity per element (kN), or per metre with spacing 1. Per\nelement means per strip or bar; a sheet with partial coverage (coverage\nA) is entered as T·A per metre with spacing 1.",
+          "format": "double",
+          "type": "number"
+        },
+        "x1": {
+          "description": "End 1 (head / face end).",
+          "format": "double",
+          "type": "number"
+        },
+        "x2": {
+          "description": "End 2 (embedded end).",
+          "format": "double",
+          "type": "number"
+        },
+        "y1": {
+          "format": "double",
+          "type": "number"
+        },
+        "y2": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "tensileCapacity"
+      ],
+      "type": "object"
+    },
+    "ReinforcementApplication": {
+      "anyOf": [
+        {
+          "enum": [
+            "active",
+            "passive"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "ReinforcementDirection": {
+      "anyOf": [
+        {
+          "enum": [
+            "axial",
+            "tangent",
+            "bisector"
+          ],
+          "type": "string"
+        }
+      ]
+    },
+    "ReinforcementPullout": {
+      "description": "Pullout resistance along the element (per element, per metre of its\nlength):\n- \"bond\": a constant bond strength, over the whole element or only over\n  the bonded length at end 2 (grouted tiebacks);\n- \"interface\": r = 2·(a + σ′v·tan δ)·Rc per metre of slope, soil\n  bearing on both faces of a sheet, with σ′v the effective vertical\n  stress at the element (the weight of the soil column above it less the\n  pore pressure) and Rc the coverage ratio (1 for a continuous sheet,\n  strip width / spacing for strips; FHWA's F*·α·σ′v·C·Rc). Rc only sets\n  the width of soil contact: the tensile and end capacities are per\n  element (per strip), so they are not multiplied by it. A\n  geosynthetic \"coverage\" A (as commercial programs define it) scales all strengths given per metre of\n  material width (T·A, (C + 2·L·τ)·A); there enter the tensile and end\n  capacities × A with spacing 1 (per metre of slope), and coverage A;\n- \"development\": the tensile capacity develops linearly over the given\n  length from each end (0: that end is fully anchored).",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "bondedLength": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "bond",
+              "type": "string"
+            },
+            "strength": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "strength"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "adhesion": {
+              "format": "double",
+              "type": "number"
+            },
+            "coverage": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "frictionAngle": {
+              "format": "double",
+              "type": "number"
+            },
+            "kind": {
+              "const": "interface",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "adhesion",
+            "frictionAngle"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "development",
+              "type": "string"
+            },
+            "length1": {
+              "default": null,
+              "format": "double",
+              "type": "number"
+            },
+            "length2": {
+              "default": null,
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "length1",
+            "length2"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "SearchMethod": {
+      "description": "How trial surfaces are generated.",
+      "enum": [
+        "circular",
+        "block"
+      ],
+      "type": "string"
+    },
+    "Sgi3dSettings": {
+      "additionalProperties": false,
+      "description": "The analysis option: 3D effects after the 2D analysis (AnalysisOptions.sgi3d).",
+      "properties": {
+        "cellSize": {
+          "description": "Size of the integration cells (m) (`Sgi3dOptions.cellSize`).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "excludeMaterials": {
+          "description": "Materials not counted in the end faces, by name.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "length": {
+          "description": "Length of the critical stretch L (m) (`Sgi3dOptions.length`).",
+          "format": "double",
+          "type": "number"
+        },
+        "overstrongF2D": {
+          "default": null,
+          "description": "F_2D,överstark,min (eq. 2-4); null: infinitely overstrong (eq. 2-3).",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "enabled",
+        "length",
+        "excludeMaterials"
+      ],
+      "type": "object"
+    },
+    "SlopeDefinition": {
+      "additionalProperties": false,
+      "description": "A slope model: the outline (coordinates), the materials and their regions (materialBoundaries, regionAssignments), water, loads, structures and the search limits. Coordinates in metres, y up; the model slides towards +x unless orientation is \"rtl\".",
+      "properties": {
+        "analysisLimits": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AnalysisLimits"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Search area limits for entry/exit ranges."
+        },
+        "blockSearchObjects": {
+          "description": "Block search objects (analysis option `searchMethod: \"block\"`): each\nblock surface passes through one point of every object. One point is\na fixed point, two points a line, three or more a window (polygon).",
+          "items": {
+            "$ref": "#/$defs/BlockSearchObject"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "coordinates": {
+          "description": "Boundary coordinates [[x,y], ...].",
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "customPlanesOnly": {
+          "description": "When true, only the custom surfaces are analysed (no search).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "customSearchPlanes": {
+          "description": "User-specified circular search planes (cx, cy, radius), in model space\n(the coordinates of this definition, also for a right-to-left slope).\n`analyse` with `map_analysis_result_to_model_space` returns results in\nmodel space; a Slope's own surfaces (`Slope.search`) are in canonical\nspace, taken back with `Slope.toModelX` / `Slope.toModelCircle`.",
+          "items": {
+            "$ref": "#/$defs/CustomSearchPlane"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "customSurfaces": {
+          "description": "User-specified non-circular surfaces: polylines through the soil. They\nare fitted to the ground (end segments extended to it) and analysed\nwith moments about a default axis point, or about `axis` when given\n(the circle centre an optimised surface was derived from).",
+          "items": {
+            "$ref": "#/$defs/CustomSurface"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "earlierStage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlopeDefinition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "An earlier stage of the same section (its geometry, water and loads),\nwhose effective vertical stresses give the yield stress of SHANSEP\nmaterials with `yieldFromEarlierStage` (multi-stage analyses). Its x\nrange must be the model's. (TypeScript's type leaves out its own\n`earlierStage`.)"
+        },
+        "lineLoads": {
+          "description": "Line loads; `angle`: inclination from the downward vertical (°),\npositive towards +x; `y`: the elevation of the load point (a point on a\nwall face; default the ground at x).",
+          "items": {
+            "$ref": "#/$defs/LineLoadDefinition"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "materialBoundaries": {
+          "description": "Material boundary polylines that divide the slope into layers.",
+          "items": {
+            "$ref": "#/$defs/MaterialBoundary"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "materials": {
+          "default": [],
+          "description": "Material assignments. Absent reads as none, which `build_slope`\nrejects with TypeScript's message (TypeScript's `!def.materials`).",
+          "items": {
+            "$ref": "#/$defs/SlopeMaterialDefinition"
+          },
+          "type": "array"
+        },
+        "orientation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SlopeOrientation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Model orientation used for canonical mirroring."
+        },
+        "piles": {
+          "description": "Pile rows and sheet pile walls (shear).",
+          "items": {
+            "$ref": "#/$defs/Pile"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "rapidDrawdown": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RapidDrawdown"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Rapid drawdown (three-stage, model/drawdown.ts): the water table before\ndrawdown, for all materials (the model's own water is the state after\nit). The materials with a drawdown envelope do not drain."
+        },
+        "regionAssignments": {
+          "description": "Point-based region material assignments.\nEach entry maps a representative point to a material name.\nThe engine assigns the material to whichever region contains the point.",
+          "items": {
+            "$ref": "#/$defs/RegionAssignment"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "reinforcements": {
+          "description": "Reinforcement: anchors, tiebacks, soil nails, geosynthetics.",
+          "items": {
+            "$ref": "#/$defs/Reinforcement"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "topRegionMaterialName": {
+          "description": "Material name for the top region (above all boundaries).\nOnly needed when it differs from the first (default) material.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "udls": {
+          "description": "UDL loads.",
+          "items": {
+            "$ref": "#/$defs/UdlDefinition"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "waterTable": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/WaterTableDefinition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Water table definition (optional)."
+        },
+        "waterTables": {
+          "description": "Additional water tables (piezometric lines) that materials can refer\nto with `waterTableId`. Same clipping rule as `waterTable`.",
+          "items": {
+            "$ref": "#/$defs/WaterTableEntry"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "waternet": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Waternet"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pore pressure from head lines and reference lines (model/waternet.rs),\nfor all materials instead of their water lines (which still give the\nphreatic level for unit weights, free water and `aboveWater`)."
+        }
+      },
+      "required": [
+        "coordinates",
+        "materials"
+      ],
+      "type": "object"
+    },
+    "SlopeMaterialDefinition": {
+      "additionalProperties": false,
+      "description": "A material of a slope definition.",
+      "properties": {
+        "cohesion": {
+          "description": "Deprecated: see `unit_weight`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cohesionRateOfChange": {
+          "description": "Deprecated: see `unit_weight`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cohesionRefDepth": {
+          "description": "Deprecated: see `unit_weight`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "cohesionUndrained": {
+          "description": "Deprecated: see `unit_weight`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "color": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "depthRange": {
+          "description": "Depth range [top, bottom] in m for this material.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "frictionAngle": {
+          "description": "Deprecated: see `unit_weight`.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MaterialModel"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "The material: unit weight and strength. The only source of them; see\n`material_model_of` for definitions written before models existed.\n(`if (m.model)`: a value that is not truthy, `null` included, is none.)"
+        },
+        "name": {
+          "type": "string"
+        },
+        "unitWeight": {
+          "description": "Deprecated: older definitions without `model` gave a Mohr-Coulomb\nmaterial in these flat fields. Read only when `model` is absent.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "waterTableId": {
+          "description": "Id of an entry in `water_tables` that governs pore pressure in this\nmaterial. When absent (or unknown) the default `water_table` is used.\n`Some(None)` is `null`: TypeScript assigns it (`waterTableId !==\nundefined`), so the material counts as having its own water table\nwhile it uses the default one.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "SlopeOrientation": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ],
+      "type": "string"
+    },
+    "SpatialInterpolation": {
+      "anyOf": [
+        {
+          "enum": [
+            "nearest",
+            "linear",
+            "idw"
+          ],
+          "type": "string"
+        }
+      ],
+      "description": "Interpolation method of a spatial Mohr-Coulomb model. Another value\n(a string or of another type) is kept as it is (TypeScript falls back to\ninverse distance weighting)."
+    },
+    "SwedishFactorBasis": {
+      "additionalProperties": false,
+      "description": "The input of a set of Swedish partial factors (`swedish_partial_factors`).",
+      "properties": {
+        "etaCu": {
+          "description": "Conversion factor η on the undrained shear strength: γcu = 1.5 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "etaDrained": {
+          "description": "Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "safetyClass": {
+          "description": "Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variableLoadBase": {
+          "description": "γQ before γd: γQ = variableLoadBase · γd. 1.3 gives the EN 1997-1 DA3\nload factor in safety class 3; some Swedish guidance uses 1.4 (for\nexample for traffic loads). The governing document decides.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "safetyClass",
+        "etaCu",
+        "etaDrained",
+        "variableLoadBase"
+      ],
+      "type": "object"
+    },
+    "TableSpline": {
+      "additionalProperties": false,
+      "description": "A cubic spline through a table's points: natural (zero curvature) at an\nend without a slope, clamped to the slope given; a straight line with\nthe end slope beyond the ends (math/spline.rs).",
+      "properties": {
+        "endSlope": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "startSlope": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "UdlDefinition": {
+      "additionalProperties": false,
+      "description": "A UDL of a definition.",
+      "properties": {
+        "direction": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UdlDirection"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "excessPorePressure": {
+          "description": "Excess pore pressure under the load per material (UdlParams.excessPorePressure).",
+          "items": {
+            "$ref": "#/$defs/UdlExcessPorePressure"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "magnitude": {
+          "format": "double",
+          "type": "number"
+        },
+        "x1": {
+          "format": "double",
+          "type": "number"
+        },
+        "x2": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "magnitude",
+        "x1",
+        "x2"
+      ],
+      "type": "object"
+    },
+    "UdlDirection": {
+      "description": "Direction of a distributed load (see `UdlParams::direction`).",
+      "enum": [
+        "vertical",
+        "normal"
+      ],
+      "type": "string"
+    },
+    "UdlExcessPorePressure": {
+      "additionalProperties": false,
+      "description": "Excess pore pressure under a load in one material (see `UdlParams::excess_pore_pressure`).",
+      "properties": {
+        "material": {
+          "description": "Material name.",
+          "type": "string"
+        },
+        "ratio": {
+          "description": "Part of the load (0–1).",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "material",
+        "ratio"
+      ],
+      "type": "object"
+    },
+    "WaterTableDefinition": {
+      "additionalProperties": false,
+      "description": "Water table definition.",
+      "properties": {
+        "followBoundary": {
+          "deprecated": true,
+          "description": "Deprecated: use freeWater (followBoundary = !freeWater). true: the line is clipped to the ground (no free water).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "freeWater": {
+          "description": "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false, the default).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "mode": {
+          "$ref": "#/$defs/WaterTableMode"
+        },
+        "value": {
+          "$ref": "#/$defs/WaterTableValue"
+        }
+      },
+      "required": [
+        "mode",
+        "value"
+      ],
+      "type": "object"
+    },
+    "WaterTableEntry": {
+      "additionalProperties": false,
+      "description": "An additional water table (piezometric line) that materials can refer\nto with `water_table_id`.",
+      "properties": {
+        "coordinates": {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        },
+        "followBoundary": {
+          "deprecated": true,
+          "description": "Deprecated: use freeWater (followBoundary = !freeWater). true: the line is clipped to the ground (no free water).",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "freeWater": {
+          "description": "Whether water above the ground surface is free water whose weight acts on the ground (true), or the line is clipped to the ground (false). Without it (and without followBoundary) the line takes waterTable.freeWater, else false.",
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "coordinates"
+      ],
+      "type": "object"
+    },
+    "WaterTableMode": {
+      "anyOf": [
+        {
+          "enum": [
+            "height",
+            "depth",
+            "custom"
+          ],
+          "type": "string"
+        }
+      ],
+      "description": "Water table mode (`SlopeDefinition.waterTable.mode`). Another value\n(`null` and a missing mode included: `Missing`) is kept, and the water\ntable is then left out, as `buildSlope` leaves it."
+    },
+    "WaterTableValue": {
+      "anyOf": [
+        {
+          "format": "double",
+          "type": "number"
+        },
+        {
+          "items": {
+            "items": {
+              "format": "double",
+              "type": "number"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "type": "array"
+          },
+          "type": "array"
+        }
+      ],
+      "description": "`SlopeDefinition.waterTable.value`: a level (height or depth) or the\npoints of a custom line. Another value (`null`, a string, a list that is\nnot of points, a missing value) is kept, and the water table is then\nleft out, as `buildSlope` leaves it where the value does not fit the\nmode."
+    },
+    "Waternet": {
+      "additionalProperties": false,
+      "properties": {
+        "headLines": {
+          "description": "Head lines by id: the elevation of the head along x.",
+          "items": {
+            "$ref": "#/$defs/HeadLine"
+          },
+          "type": "array"
+        },
+        "phreaticLineId": {
+          "description": "The head line that is the phreatic line (above all reference lines).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "referenceLines": {
+          "description": "Reference lines: where the head of their top and bottom head lines applies.",
+          "items": {
+            "$ref": "#/$defs/ReferenceLine"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "headLines",
+        "referenceLines"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "urn:cslope:schema:analysis-document:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "An analysis as one JSON document: the model and the options it is\nanalysed with. The engine also takes the definition and the options\napart; this is the file an agent or the command line writes.\n\nThe schema is stricter than the engine: the engine also reads values of another type as the app's earlier TypeScript engine did (a number of another type as no number, an unknown option as the default) and ignores unknown keys, while this schema accepts only JSON numbers, the documented strings, integers for counts, and known keys. cslope.validate (validate_definition) checks a document against it and adds the rules of the model (regions, boundaries, ranges).",
+  "properties": {
+    "definition": {
+      "$ref": "#/$defs/SlopeDefinition",
+      "description": "The slope model."
+    },
+    "format": {
+      "$ref": "#/$defs/DocumentFormat",
+      "description": "Always \"cslope-analysis\"."
+    },
+    "formatVersion": {
+      "description": "The version of this document format: 1.",
+      "format": "uint32",
+      "maximum": 1,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "options": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AnalysisOptionsPatch"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The analysis options; absent fields take the defaults (in Python and\non the command line the app's defaults: Morgenstern-Price, 30\nslices, 1000 + 500 trial surfaces, composite surfaces)."
+    }
+  },
+  "required": [
+    "format",
+    "formatVersion",
+    "definition"
+  ],
+  "title": "cSlope analysis document",
+  "type": "object",
+  "x-cslope-schema-version": "0.1.0"
+}
