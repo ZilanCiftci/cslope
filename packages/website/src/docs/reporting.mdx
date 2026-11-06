@@ -26,7 +26,7 @@ Zooming and panning in result mode move the sheet on the screen; they do not cha
 - **Text**: a text block. Choose font, size, bold, italic and color.
 - **Material table**: the materials with their properties. Choose the text size and the columns.
 - **Plot**: a chart of slice data along the critical surface, placed on the sheet. Both axes have round ticks with their values, and grid lines at the ticks.
-- **Color bar**: the factor-of-safety color scale of the trial surfaces (*All surfaces* and *Filter by FOS*). Its settings in the sidebar set the scale, which also colors the surfaces on the sheet, so the drawing and the bar always agree. **Range**: *Automatic* runs from the critical factor of safety to a cap near it (twice the critical value, or one unit above it), so the colors are spread over the surfaces near the critical one; *Fixed* takes a minimum and a maximum of your own; *Follow the surface filter* takes the span of **Surfaces › Filter by FOS**. Surfaces beyond either end get the end color, and the tick there reads ≥ or ≤. **Color scheme**: red–yellow–green–blue (the default), traffic light, warm to cool, viridis, grayscale, or *Custom* with a color for the low end, one for the high end and an optional middle color. Without a color bar the drawing uses the automatic range and the default scheme.
+- **Color bar**: the factor-of-safety color scale of the trial surfaces (*All surfaces* and *Filter by F*). Its settings in the sidebar set the scale, which also colors the surfaces on the sheet, so the drawing and the bar always agree. **Range**: *Automatic* runs from the critical factor of safety to a cap near it (twice the critical value, or one unit above it), so the colors are spread over the surfaces near the critical one; *Fixed* takes a minimum and a maximum of your own; *Follow the surface filter* takes the span of **Surfaces › Filter by F**. Surfaces beyond either end get the end color, and the tick there reads ≥ or ≤. **Color scheme**: red–yellow–green–blue (the default), traffic light, warm to cool, viridis, grayscale, or *Custom* with a color for the low end, one for the high end and an optional middle color. Without a color bar the drawing uses the automatic range and the default scheme.
 
 A sheet has one material table and one color bar: their buttons toggle, so a second click removes the table or the bar. Both are drawn on an opaque plate, so what lies under them does not show through. On screen their text is never smaller than about 9 px: on a small sheet (a small window at 100 %) the table and the bar's values are drawn larger than on paper, so they stay readable; the PDF keeps their size on the paper. A new color bar is placed at the right edge of the drawing, just inside the frame, right below the material table as it is drawn for the model's materials, columns, text size and paper (where there is no room below the table, to its left at the top; without a table, a third of the way down). Drag it where it covers nothing.
 
@@ -40,7 +40,7 @@ Text annotations can show values from the model. They are replaced when the shee
 | --- | --- |
 | `#Title`, `#Subtitle`, `#Client`, `#ProjectNumber`, `#Revision`, `#Author`, `#Checker`, `#Date`, `#Description` | The model's project information (right-click the model in the Models panel, then *Model properties*) |
 | `#Method` | The analysis method |
-| `#FOS`, `#MinFOS` | The factor of safety |
+| `#FOS`, `#MinFOS` | F of the critical surface (*N/A* without a result); the two tags are the same |
 | `#FOS3D` | The smallest 3D factor of safety after SGI Vägledning 8 ([3D effects](/docs/analysis#3d-effects-temporary-slopes)); *N/A* when the analysis has no 3D result |
 | `#name` | The value of the parameter *name* |
 | `{{expression}}` | The value of an expression with parameters, for example `{{H / 2}}` |
@@ -59,7 +59,7 @@ Reference lines belong to the model: they are saved with it and left out of view
 
 ## Layers
 
-The **Layers** list in the result sidebar shows what the sheet draws, topmost first, as in a drawing program: every annotation, the display options turned on under **Results › Display** (*Soil colors*, *Surfaces*, *Custom surfaces*, *Slices*, *Center*, *FOS label*, and with a finite element result *Plastic zone* and *FE mesh*), the *Critical surface* and each drawing shown in results. A display option turned off in the ribbon is not in the list.
+The **Layers** list in the result sidebar shows what the sheet draws, topmost first, as in a drawing program: every annotation, the display options turned on under **Results › Display** (*Soil colors*, *Surfaces*, *Custom surfaces*, *Slices*, *Center*, *F label*, and with a finite element result *Plastic zone* and *FE mesh*), the *Critical surface* and each drawing shown in results. A display option turned off in the ribbon is not in the list.
 
 - Drag a row by its grip, or focus it and press <Kbd>Alt</Kbd>+<Kbd>↑</Kbd> or <Kbd>Alt</Kbd>+<Kbd>↓</Kbd>, to draw it above or below the others, for example the soil colors over the slices, or a text under the material table. The result view and the PDF export follow the order. The order is saved with the model and each change is one undo step; a display option turned off and on again comes back at its place, and a new annotation goes on top.
 - Click an annotation to select it (<Kbd>Ctrl</Kbd>+click adds it to the selection). The button at the end of the row removes an annotation, turns a display option off as the ribbon does, or takes a drawing out of the results (*Show in results*). The critical surface is always drawn.
@@ -67,7 +67,7 @@ The **Layers** list in the result sidebar shows what the sheet draws, topmost fi
 
   | Layer | Properties |
   | --- | --- |
-  | FOS label | Font, size, bold, decimals, color (custom surfaces' labels use the same font) |
+  | F label | Font, size, bold, decimals, color (custom surfaces' labels use the same font) |
   | Soil colors | Opacity |
   | Critical surface, slices | Color, line width |
   | Center | Color, dot radius, radius lines on or off |
@@ -78,7 +78,7 @@ The **Layers** list in the result sidebar shows what the sheet draws, topmost fi
 
   An empty field or **Default** draws the layer as by default: the theme's ink on screen, black in the PDF. A chosen color is drawn as chosen in both themes and in the PDF. **Reset to default** clears the layer's settings. Each change is one undo step; the settings are saved with the model and in templates.
 
-A model without an order of its own draws in the default order: the soil colors and drawings at the bottom, then the finite element layers, the reference lines, the surfaces, the critical surface with its slices, center and FOS label, and the annotations on the sheet on top. The labels of the reference lines and the reinforcement forces stay over the model's layers.
+A model without an order of its own draws in the default order: the soil colors and drawings at the bottom, then the finite element layers, the reference lines, the surfaces, the critical surface with its slices, center and F label, and the annotations on the sheet on top. The labels of the reference lines and the reinforcement forces stay over the model's layers.
 
 ## Templates
 
@@ -96,9 +96,31 @@ Use a template to give every model and every project the same title block and la
 | Export | Content |
 | --- | --- |
 | **Export as PDF…** | The sheet as a vector PDF, named after the model's title or project number |
+| **Analysis summary pages** | Ticked: the PDF has the summary pages after the drawing (see [below](#analysis-summary-pages)) |
+| **Title line above the drawing** | Ticked: the model's name, the factor of safety and the method are written in the top margin of the first page, above the drawing's frame |
 | **Export as PNG…** | The sheet as an image |
 | **Slice data (Excel)…** | The slices of the critical surface as an .xlsx table |
 | **Slice data (CSV)…** | The same as CSV |
 | **Slice data (CSV, decimal comma)…** | CSV with `;` as the separator and `,` as the decimal mark |
 
 The slice table has one row per slice with its geometry (x left, right and mid, width, top and base elevation, height, area, base angle and length), weight, surface load, base material, c, φ, pore pressure, effective normal force and shear strength. The header rows name the model, method, factor of safety and critical surface.
+
+### PDF pages
+
+Both check boxes in the export menu are ticked by default. They belong to the model's result view: they are saved with the model and in [templates](#templates). Untick **Title line above the drawing** when a text annotation on the sheet already carries the title. The title line reads, for example, *Slope A  Minimum factor of safety 1.234 · Morgenstern-Price (complete equilibrium), interslice function half-sine*; with partial factors the factor is the *Over-design factor (design values)*.
+
+### Analysis summary pages
+
+The summary pages follow the drawing, on the same paper. Each has the heading *Analysis summary* with the project title, number, revision and model, and a footer with the cSlope version, the export date and the page number of the whole document (*Page 2 of 3*). They state what the analysis was run with and what it found, so that a checker can repeat the calculation:
+
+| Section | Content |
+| --- | --- |
+| **Result** | The minimum factor of safety (or the over-design factor with partial factors), the method, the critical surface (a circle's center and radius, a composite circle, or the number of points of a non-circular surface) with its entry and exit, the sliding direction (and the other direction's factor when both were analyzed), the number of surfaces analyzed, those not converged or below the minimum size, each custom surface with its factor or reason, and the result's warnings |
+| **3D effects (SGI Vägledning 8)** | With the [3D effects](/docs/analysis#3d-effects-temporary-slopes) option: F3D, the stage length, the adjacent stability, F2D,krit,min and its surface, the end face's moment, the excluded materials and any warning; or why it was not computed |
+| **Search** | The kind of surfaces (circles, block search, custom surfaces only), the search limits, the number of trial surfaces, both directions, composite surfaces, the number of slices, the convergence tolerance and the minimum entry–exit distance, slip depth and slip area |
+| **Water and tension crack** | The piezometric lines and the main line, how the pore pressure is measured, suction, water above the ground, rapid drawdown, head and reference lines, the unit weight of water, the tension crack and the water in it |
+| **Partial factors** | γcu, γc', γφ' and γQ, with their basis; or *characteristic (no partial factors)* |
+| **Materials (characteristic values)** | A table with each material's name, model, γ and γsat, strength in words and water line |
+| **Loads and structures** | A table of the distributed and line loads, the seismic coefficients, the number of reinforcement elements and piles of each type; with partial factors, a note that the loads are multiplied by γQ |
+
+The 3D section is there only with the 3D effects option, and *Loads and structures* only when the model has loads, seismic coefficients, reinforcement or piles.

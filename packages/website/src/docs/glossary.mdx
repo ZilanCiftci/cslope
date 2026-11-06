@@ -1,0 +1,58 @@
+---
+title: Glossary
+description: The symbols and terms cSlope uses, from F, Fm, Ff and λ to piezometric lines, composite surfaces and block search objects.
+section: Reference
+order: 6
+---
+
+## Symbols
+
+| Symbol | Meaning |
+| --- | --- |
+| **F** | The factor of safety: the factor by which the shear strength would have to be divided for the sliding mass to be at limit equilibrium. *Min F* in the result summary is the lowest F of the surfaces analyzed, that of the critical surface. In text annotations the tag `#FOS` (or `#MinFOS`) shows it, and `#FOS3D` the 3D factor. |
+| **Fm** | The factor of safety from moment equilibrium of the sliding mass, in Morgenstern-Price for a given λ. |
+| **Ff** | The factor of safety from horizontal force equilibrium, in Morgenstern-Price for a given λ. |
+| **λ** | The scale factor of the interslice shear force in Morgenstern-Price, $X = \lambda f(x) E$. The method's F is where Fm and Ff meet; the results plot *F against λ* shows both. |
+| **f(x)** | The interslice function: constant (Spencer), half-sine, clipped sine, trapezoidal or given by data points. |
+| **E**, **X** | The normal and the shear force between two slices. |
+| **α** | The inclination of a slice base, positive where it dips in the sliding direction ([Conventions](/docs/conventions#base-inclination-α)). |
+| **m_α** | $\cos\alpha + \sin\alpha\tan\varphi'/F$; small or negative at a steep base, where the normal force on it loses its meaning. |
+| **N′** | The effective normal force on a slice base, $N - u\,\ell$. |
+| **u** | The pore pressure. |
+| **rᵤ** | The pore pressure ratio: $u = r_u\, \gamma h$ at a slice base. |
+| **B̄** | The pore pressure at a base as a share of the vertical stress of the fills above it. |
+| **φb** | The angle of the strength from suction above the water line. |
+| **kh**, **kv** | The horizontal and vertical seismic coefficients. |
+| **γcu**, **γc'**, **γφ'**, **γQ** | The partial factors on the undrained strength, the effective cohesion, tan φ′ and the variable loads. |
+| **σci**, **GSI**, **mi**, **D** | The inputs of the generalized Hoek-Brown criterion: the intact rock's uniaxial compressive strength, the Geological Strength Index, the intact rock constant and the disturbance factor ([Materials](/docs/materials#generalized-hoek-brown)). |
+| **β**, **Pf** | The reliability index and the probability of failure ([Sensitivity and probability](/docs/sensitivity)). |
+
+## Terms
+
+**Over-design factor.** With partial factors, the strength is divided by its factors and the loads multiplied by theirs before the analysis, and F is then an over-design factor on the design values: 1.0 or more satisfies the design. The summary shows it as *Over-design factor (design values)* instead of *Min F* ([Partial factors](/docs/analysis#partial-factors)).
+
+**Critical surface.** The slip surface with the lowest factor of safety among those analyzed.
+
+**Entry and exit.** Where a slip surface meets the ground: the entry at its upper end near the crest, the exit at its lower end near the toe. The **search limits** are the ranges of x in which they may lie ([Search limits](/docs/search#search-limits)).
+
+**Piezometric line.** A line, entered under **Model › Water & parameters › Piezometric lines**, that gives the pressure head below it: the pore pressure at a point is $\gamma_w h$, with $h$ the head measured up to the line ([Water](/docs/water)). With several lines, one is the **main line**.
+
+**Water line.** The piezometric line that applies to a given material: its own line from the material assignment, or the main line. It sets the material's pore pressure, the level below which its saturated unit weight applies and, for a material with a strength above its water line, where that strength applies. In the PDF's material table it is the *Water line* column; in **Pick lines** on a drawing, **Use as water line** makes a piezometric line.
+
+**Waternet.** The head lines and reference lines of a model imported from a .stix file. When present they give the pore pressure, varying linearly between the reference lines, while the piezometric lines still set the phreatic level ([Head and reference lines](/docs/water#head-and-reference-lines-waternet)).
+
+**Composite surface.** A trial circle that reaches impenetrable material (bedrock), or with **Also along the model base** the base of the model, and follows its top there instead of being rejected: a circle with a straight part along the firm base ([Analysis direction](/docs/search#analysis-direction)).
+
+**Block search object.** One of the points, lines or windows of a block search: each trial surface passes through one point of every object, joined from left to right as the base of the sliding block. One point is a fixed point, two points a line, three or more a window ([Block search](/docs/search#block-search)). They are numbered B1, B2, … on the canvas.
+
+**Custom surface.** A circle or polyline of your own, analyzed with the search or instead of it ([Custom surfaces](/docs/search#custom-surfaces)).
+
+**Tension crack.** A vertical crack at the upper end of a slip surface in which the soil carries no shear; it may hold water ([Tension crack](/docs/analysis#tension-crack)).
+
+**Closest pair.** When Morgenstern-Price finds no λ at which Fm and Ff meet, the λ where they come closest; the factor is then given with the remaining gap and marked *No complete equilibrium*.
+
+**Reference line.** A line in model coordinates drawn over the result, for example a slip circle from another analysis to compare with ([Reference lines](/docs/reporting#reference-lines)).
+
+**Region.** An area of the section bounded by the exterior and interior boundaries, with one material ([Geometry](/docs/geometry#regions-and-materials)).
+
+**Drawing.** A PDF, image, DWG or DXF file placed under a model as an underlay, to trace or pick lines from ([Drawings](/docs/drawings)).

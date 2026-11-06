@@ -228,7 +228,7 @@ function ProblemTable() {
 }
 
 const QUANTITY: Record<string, string> = {
-  fos: "FOS",
+  fos: "F",
   "beta-taylor": "β, Taylor series",
   "pf-taylor": "Pf, Taylor series",
   "beta-mc": "β, Monte Carlo",

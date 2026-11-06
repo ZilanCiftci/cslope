@@ -108,6 +108,22 @@
       "destination": "/docs/theory/index.html"
     },
     {
+      "source": "/docs/conventions",
+      "destination": "/docs/conventions/index.html"
+    },
+    {
+      "source": "/docs/glossary",
+      "destination": "/docs/glossary/index.html"
+    },
+    {
+      "source": "/docs/limitations",
+      "destination": "/docs/limitations/index.html"
+    },
+    {
+      "source": "/docs/troubleshooting",
+      "destination": "/docs/troubleshooting/index.html"
+    },
+    {
       "source": "/docs/tutorials/dam",
       "destination": "/docs/tutorials/dam/index.html"
     },
