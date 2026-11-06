@@ -23,7 +23,7 @@ Read [.claude/workflow.md](../../workflow.md) first (labels, autonomy policy, ca
 
 ## 3. Build (background agents)
 
-One agent per group, all started in one message, each with a brief that holds everything it needs:
+One agent per group, all started in one message, using the `sprint-worker` agent ([.claude/agents/sprint-worker.md](../../agents/sprint-worker.md): its own worktree, the `verify` skill preloaded). Each brief holds everything the agent needs:
 
 - the issues (numbers, titles, the essential text), the files it owns and the files it must not touch (the other groups');
 - the worktree and branch: `git -C /home/user/cslope fetch origin main && git -C /home/user/cslope worktree add -B sprint<n>/<group> /home/user/cslope-<group> origin/main`; node_modules linked from /home/user/cslope, never committed;
@@ -37,9 +37,10 @@ One agent per group, all started in one message, each with a brief that holds ev
 As each agent reports:
 
 1. Read its report; look at its screenshots.
-2. Open the PR: title naming the issues, body with what and why, how it was tested, `Fixes #n` per issue. Enable auto-merge (squash) and subscribe to the PR's activity.
-3. One PR merges at a time (branches must be up to date). After each merge, merge main into the next branch **locally**, resolve conflicts by hand (keep both sides' intent), run the `verify` gate, push.
-4. A red CI is fixed in the PR (root cause, not a re-run); never skip a test.
+2. Run the `review` skill on the branch; fix its blockers (and small suggestions) on the branch, verify again.
+3. Open the PR: title naming the issues, body with what and why, how it was tested, `Fixes #n` per issue. Enable auto-merge (squash) and subscribe to the PR's activity.
+4. One PR merges at a time (branches must be up to date). After each merge, merge main into the next branch **locally**, resolve conflicts by hand (keep both sides' intent), run the `verify` gate, push.
+5. A red CI is handled as section 7 of the `verify` skill says (fix, re-run once, or stop and report); never skip a test.
 
 ## 5. Close
 
