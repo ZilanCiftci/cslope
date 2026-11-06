@@ -83,6 +83,8 @@ for phi in range(20, 41, 5):
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | Finite element analysis as the app runs it: `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | Taylor series or Monte Carlo: `ReliabilityResult` |
 | `to_canonical(definition)` | The definition turned to slide towards +x |
+| `model_to_definition(model, *, normalize=True)` | The engine's definition of a model of a project file (`cslope.project`), as the app makes it after opening the file |
+| `normalize_model(model)` | A model of a project file as the app reads it on open (the fields the analysis takes, and complete options) |
 | `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
 | `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
 | `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |
@@ -120,6 +122,21 @@ such as a model where no valid slip surface is found, raise
 The mesh and field arrays of `fem_summary` and `Slope.fem` are
 `array.array` by default, numpy arrays with `arrays="numpy"`, or lists with
 `arrays="list"`.
+
+### Command line
+
+```
+cslope analyse slope.json [--json] [--threads N]
+cslope validate slope.json
+cslope export site.cslp [--model NAME | --all] [-o PATH]
+cslope schema [name]
+cslope info
+```
+
+`cslope export` writes a model of a project file saved by the cSlope app as
+an analysis document, as the app runs it (the active model by default). A
+project saved by an earlier version of the app is refused: open it in the
+app and save it.
 
 ## Examples
 

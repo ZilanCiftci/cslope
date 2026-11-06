@@ -310,6 +310,53 @@ fn default_options<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
     to_py(py, &public_default_options())
 }
 
+/// The engine's definition of an app model (a ``model.json`` of a
+/// ``.cslp`` file, as a dict), in the model's own orientation: the app's
+/// conversion (``buildModelSpaceSlopeDTO``), ported to Rust in the crate
+/// cslope-project. With ``normalize`` (the default) the model is first read
+/// as the app reads it when it opens the project (``normalize_model``), so
+/// that the definition is the one the app runs; without it, the model is
+/// taken as it is.
+#[pyfunction]
+#[pyo3(signature = (model, *, normalize=true))]
+fn model_to_definition<'py>(
+    py: Python<'py>,
+    model: &Bound<'py, PyAny>,
+    normalize: bool,
+) -> PyResult<Bound<'py, PyAny>> {
+    let value: serde_json::Value = from_py(model, "model")?;
+    let model = if normalize {
+        cslope_project::normalize_for_run(&value).map_err(|e| PyValueError::new_err(e.0))?
+    } else {
+        cslope_project::ModelEntry::from_json(value).map_err(PyValueError::new_err)?
+    };
+    to_py(py, &cslope_project::model_to_definition(&model))
+}
+
+/// A model as the app reads it when it opens the project (a project of the
+/// current schema version): the fields that reach the analysis, filled,
+/// clamped and checked as the app does, and its complete ``options``.
+#[pyfunction]
+fn normalize_model<'py>(py: Python<'py>, model: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyAny>> {
+    let value: serde_json::Value = from_py(model, "model")?;
+    let out =
+        cslope_project::normalize_model_json(&value).map_err(|e| PyValueError::new_err(e.0))?;
+    to_py(py, &out)
+}
+
+/// The definition with an explicit assignment for each region that has
+/// none: the material the engine gives it implicitly (for ``cslope
+/// export``, issue #85; ``cslope_project::assign_unassigned_regions``).
+#[pyfunction]
+fn assign_unassigned_regions<'py>(
+    py: Python<'py>,
+    definition: &Bound<'py, PyAny>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let mut def = self::definition(definition)?;
+    cslope_project::assign_unassigned_regions(&mut def);
+    to_py(py, &def)
+}
+
 #[pymodule]
 #[pyo3(name = "_native")]
 fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -335,5 +382,8 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(swedish_partial_factors, m)?)?;
     m.add_function(wrap_pyfunction!(schema, m)?)?;
     m.add_function(wrap_pyfunction!(default_options, m)?)?;
+    m.add_function(wrap_pyfunction!(model_to_definition, m)?)?;
+    m.add_function(wrap_pyfunction!(normalize_model, m)?)?;
+    m.add_function(wrap_pyfunction!(assign_unassigned_regions, m)?)?;
     Ok(())
 }

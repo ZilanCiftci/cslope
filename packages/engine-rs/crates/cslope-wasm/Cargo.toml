@@ -13,11 +13,14 @@ crate-type = ["cdylib", "rlib"]
 
 [features]
 # The testing build (packages/engine/src/wasm-testing): adds `__test_call`,
-# which dispatches the internal functions the TypeScript unit tests import.
-testing = []
+# which dispatches the internal functions the TypeScript unit tests import,
+# and the app model conversion (cslope-project, issue #57) until the app
+# uses it: the product build does not carry it.
+testing = ["dep:cslope-project"]
 
 [dependencies]
 cslope-engine = { path = "../cslope-engine" }
+cslope-project = { path = "../cslope-project", optional = true }
 serde.workspace = true
 serde_json.workspace = true
 wasm-bindgen.workspace = true

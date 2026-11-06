@@ -2,12 +2,16 @@
 // sha256 of every file the build reads from the repository, so that
 // check-wasm-fresh.ts can tell, without Rust, whether the committed build
 // is older than the sources. Hashed: the workspace Cargo.toml, Cargo.lock,
-// rust-toolchain.toml, and per crate its Cargo.toml and src/ (not tests/,
-// benches/ or target/). Line endings are normalised (a Windows checkout
-// with autocrlf hashes the same), paths are relative with forward slashes.
+// rust-toolchain.toml, and per crate the build compiles its Cargo.toml and
+// src/ (not tests/, benches/ or target/). The crates are cslope-wasm and
+// its path dependencies, recursively; the product build leaves out the
+// optional ones (the testing feature's: cslope-project), so a crate the
+// product does not compile (cslope-py, cslope-project) does not mark it
+// stale. Line endings are normalised (a Windows checkout with autocrlf
+// hashes the same), paths are relative with forward slashes.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** packages/engine-rs */
@@ -21,12 +25,45 @@ function walk(dir: string, out: string[]): void {
   }
 }
 
+/**
+ * The path dependencies of a crate (its directory) in its `[dependencies]`
+ * table, as directories; without the optional ones unless `optional`.
+ */
+export function pathDependencies(crate: string, optional: boolean): string[] {
+  const out: string[] = [];
+  let section = "";
+  for (const line of readFileSync(join(crate, "Cargo.toml"), "utf8").split(/\r?\n/)) {
+    const header = /^\s*\[([^\]]+)\]/.exec(line);
+    if (header) {
+      section = header[1].trim();
+      continue;
+    }
+    if (section !== "dependencies") continue;
+    const path = /\bpath\s*=\s*"([^"]+)"/.exec(line);
+    if (!path) continue;
+    if (!optional && /\boptional\s*=\s*true\b/.test(line)) continue;
+    out.push(join(crate, path[1]));
+  }
+  return out;
+}
+
+/** The crates a build compiles: cslope-wasm and its path dependencies (recursively), as directories. */
+export function buildCrates(flavour: BuildInfo["flavour"], root = ENGINE_RS): string[] {
+  const seen = new Set<string>();
+  const visit = (crate: string) => {
+    const dir = resolve(crate);
+    if (seen.has(dir)) return;
+    seen.add(dir);
+    for (const dep of pathDependencies(dir, flavour === "testing")) visit(dep);
+  };
+  visit(join(root, "crates", "cslope-wasm"));
+  return [...seen];
+}
+
 /** The files the hash covers, relative to packages/engine-rs, sorted. */
-export function sourceFiles(root = ENGINE_RS): string[] {
+export function sourceFiles(flavour: BuildInfo["flavour"] = "product", root = ENGINE_RS): string[] {
   const files = ["Cargo.toml", "Cargo.lock", "rust-toolchain.toml"].map((f) => join(root, f));
-  const crates = join(root, "crates");
-  for (const name of readdirSync(crates)) {
-    const crate = join(crates, name);
+  for (const crate of buildCrates(flavour, root)) {
     if (!statSync(crate).isDirectory()) continue;
     files.push(join(crate, "Cargo.toml"));
     walk(join(crate, "src"), files);
@@ -34,9 +71,9 @@ export function sourceFiles(root = ENGINE_RS): string[] {
   return files.map((f) => relative(root, f).split(sep).join("/")).sort();
 }
 
-export function sourceHash(root = ENGINE_RS): string {
+export function sourceHash(flavour: BuildInfo["flavour"] = "product", root = ENGINE_RS): string {
   const h = createHash("sha256");
-  for (const rel of sourceFiles(root)) {
+  for (const rel of sourceFiles(flavour, root)) {
     const text = readFileSync(join(root, rel)).toString("utf8").replace(/\r\n/g, "\n");
     h.update(rel);
     h.update("\0");
@@ -58,7 +95,7 @@ export interface BuildInfo {
   rustc: string;
   /** The wasm-bindgen crate and CLI version. */
   wasmBindgen: string;
-  /** sourceHash() of the sources the build was made from. */
+  /** sourceHash(flavour) of the sources the build was made from. */
   sourceHash: string;
   /** sha256 of cslope_wasm_bg.wasm. */
   wasmSha256: string;

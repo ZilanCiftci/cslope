@@ -86,11 +86,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-05 | A nearly vertical model side is not ground: no slip surface through it | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 194 s (4 workers, load 2.4 at start) |
 | 2026-11-06 | Engine TS cleanup (#51): no result should move | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 546 s (4 workers, load 3.0 at start) |
 | 2026-11-06 | Schema, validation and result summary (#55) | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 501 s (4 workers, load 1.2 at start) |
+| 2026-11-06 | cslope-project conversion (#57) and Monte Carlo message (#81) | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 484 s (4 workers, load 2.0 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-06: cslope-project conversion (#57) and Monte Carlo message (#81)
+
+Compared with 54a27605. Errors are relative to the reference, in percent. Verification run time: 484 s (4 workers, load 2.0 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.228 % | -0.228 % |
+| **Mean absolute error** | | | | 0.323 % | 0.323 % |
+| **RMS error** | | | | 0.455 % | 0.455 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.164 % | -0.164 % |
+| **Mean absolute error** | | | | 0.938 % | 0.938 % |
+| **RMS error** | | | | 1.521 % | 1.521 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.288 % | -0.288 % |
+| **Mean absolute error** | | | | 2.026 % | 2.026 % |
+| **RMS error** | | | | 2.735 % | 2.735 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-06: Schema, validation and result summary (#55)
 

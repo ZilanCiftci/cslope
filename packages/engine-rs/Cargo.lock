@@ -88,10 +88,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "cslope-project"
+version = "0.1.0"
+dependencies = [
+ "cslope-engine",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+]
+
+[[package]]
 name = "cslope-py"
 version = "0.1.0"
 dependencies = [
  "cslope-engine",
+ "cslope-project",
  "pyo3",
  "pythonize",
  "rayon",
@@ -104,6 +115,7 @@ name = "cslope-wasm"
 version = "0.1.0"
 dependencies = [
  "cslope-engine",
+ "cslope-project",
  "js-sys",
  "serde",
  "serde-wasm-bindgen",
