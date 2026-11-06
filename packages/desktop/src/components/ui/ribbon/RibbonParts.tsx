@@ -1,7 +1,9 @@
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { DISABLED_COLOR } from "../disabled-style";
+import { Menu, MenuItem } from "../Menu";
+import { MENU_Z, useMenuDismiss } from "../menu-parts";
 
 /**
  * The compact ribbon: a tab's commands in groups with a caption under
@@ -115,7 +117,7 @@ export function RibbonButton({
  * (the canvas is an isolated stacking context, see EditCanvas), under
  * dialogs.
  */
-export const RIBBON_POPUP_Z = "z-[100]";
+export const RIBBON_POPUP_Z = MENU_Z;
 
 /** A command of a ribbon menu; a disabled one says why in its tooltip. */
 export interface RibbonMenuItem {
@@ -131,21 +133,7 @@ export interface RibbonMenuItem {
 function useRibbonMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("mousedown", onDown);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("mousedown", onDown);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+  useMenuDismiss(open, [ref], () => setOpen(false));
   return { open, setOpen, ref };
 }
 
@@ -163,42 +151,22 @@ function RibbonMenuList({
   onChoose: () => void;
 }) {
   return (
-    <div
-      className={`absolute ${top} left-0 rounded py-1 ${RIBBON_POPUP_Z}`}
-      style={{
-        background: "var(--color-vsc-panel)",
-        border: "1px solid var(--color-vsc-border)",
-        minWidth: 140,
-        boxShadow: "var(--color-vsc-shadow-float)",
-      }}
-      role="menu"
-      aria-label={label}
-    >
-      {items.map((it) => {
-        const explain = it.disabled && it.disabledTitle;
-        return (
-          <button
-            key={it.label}
-            title={explain ? it.disabledTitle : (it.title ?? it.label)}
-            onClick={() => {
-              if (it.disabled) return;
-              onChoose();
-              it.onClick();
-            }}
-            className={`w-full text-left px-3 py-1.5 text-[11px] whitespace-nowrap ${it.disabled ? "cursor-default" : `cursor-pointer ${HOVER}`}`}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: it.disabled ? DISABLED_COLOR : "var(--color-vsc-text)",
-            }}
-            role="menuitem"
-            aria-disabled={it.disabled || undefined}
-          >
-            {it.label}
-          </button>
-        );
-      })}
-    </div>
+    <Menu label={label} onClose={onChoose} className={`absolute ${top} left-0 ${RIBBON_POPUP_Z}`}>
+      {items.map((it) => (
+        <MenuItem
+          key={it.label}
+          title={it.title ?? it.label}
+          disabled={it.disabled}
+          disabledTitle={it.disabledTitle}
+          onClick={() => {
+            onChoose();
+            it.onClick();
+          }}
+        >
+          {it.label}
+        </MenuItem>
+      ))}
+    </Menu>
   );
 }
 

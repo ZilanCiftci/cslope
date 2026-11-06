@@ -391,7 +391,7 @@ describe("EditCanvas pointer interaction", () => {
     fireEvent.contextMenu(canvas(), { clientX: sx, clientY: sy });
     fireEvent.click(screen.getByRole("menuitem", { name: "Assign material…" }));
     expect(screen.getByText("Assign material")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sand" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Sand" }));
     const assigned = useAppStore.getState().regionMaterials;
     expect(assigned).toHaveLength(1);
     expect(assigned[0].materialId).toBe("sand");

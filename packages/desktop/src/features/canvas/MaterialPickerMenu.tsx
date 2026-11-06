@@ -1,5 +1,6 @@
 import type { MaterialRow } from "../../store/types";
 import type { MaterialPickerState } from "./types";
+import { Menu, MenuHeading, MenuItem } from "../../components/ui/Menu";
 
 interface MaterialPickerMenuProps {
   picker: MaterialPickerState | null;
@@ -17,44 +18,29 @@ export function MaterialPickerMenu({
   if (!picker) return null;
 
   return (
-    <div
-      className="absolute z-50 py-1 rounded-md min-w-[140px]"
-      style={{
-        left: picker.screenX,
-        top: picker.screenY,
-        background: "var(--color-vsc-input-bg)",
-        border: "1px solid var(--color-vsc-border)",
-        boxShadow: "var(--color-vsc-shadow-float)",
-      }}
+    <Menu
+      label="Assign material"
+      onClose={onClose}
+      className="absolute z-50"
+      style={{ left: picker.screenX, top: picker.screenY }}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div
-        className="px-3 py-1 text-[10px] font-medium"
-        style={{ color: "var(--color-vsc-text-muted)" }}
-      >
-        Assign material
-      </div>
+      <MenuHeading>Assign material</MenuHeading>
       {materials.map((m) => (
-        <button
+        <MenuItem
           key={m.id}
           onClick={() => {
             onSelect(picker.worldPoint, m.id);
             onClose();
           }}
-          className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors"
-          style={{ color: "var(--color-vsc-text)" }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLElement).style.background =
-              "var(--color-vsc-list-hover)";
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLElement).style.background = "";
-          }}
         >
-          <div className="w-3 h-3 rounded-sm" style={{ background: m.color }} />
-          {m.name}
-        </button>
+          <span className="flex items-center gap-2">
+            {/* The material's color: content, not an icon. */}
+            <span className="w-3 h-3 rounded-xs shrink-0" style={{ background: m.color }} aria-hidden />
+            {m.name}
+          </span>
+        </MenuItem>
       ))}
-    </div>
+    </Menu>
   );
 }
