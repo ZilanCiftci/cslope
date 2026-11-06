@@ -644,8 +644,9 @@ export function exportVectorPdf(data: PdfExportData): void {
     );
 
 
-    // Both are the user's choice (the PDF button's menu): the title line is
-    // off by default, as the drawing's text annotations carry the title.
+    // Both are the user's choice (the PDF button's menu) and on by default
+    // (pdfPageOptions): the title line, so that page 1 printed on its own
+    // carries the result; the user can turn either off in that menu.
     const pages = pdfPageOptions(rvs);
     if (summary && pages.titleLine) {
       drawDrawingTitle(pdf, summary.sections, summary.header, { left: innerFrame.x, top: innerFrame.y, width: innerFrame.w });
