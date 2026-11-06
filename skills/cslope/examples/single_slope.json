@@ -1,0 +1,48 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [0.0, 0.0],
+      [0.0, 15.0],
+      [15.0, 15.0],
+      [35.0, 5.0],
+      [50.0, 5.0],
+      [50.0, 0.0]
+    ],
+    "materials": [
+      {
+        "name": "Silty sand",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 19.0,
+          "cohesion": 5.0,
+          "frictionAngle": 30.0,
+          "unitWeightSat": 20.0
+        }
+      }
+    ],
+    "analysisLimits": {
+      "entryLeftX": 2.0,
+      "entryRightX": 15.0,
+      "exitLeftX": 30.0,
+      "exitRightX": 48.0
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0.0,
+    "tensionCrackDepth": 0.0,
+    "seismicHorizontal": 0.0,
+    "seismicVertical": 0.0,
+    "bothDirections": false
+  }
+}
