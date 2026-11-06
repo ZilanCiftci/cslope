@@ -24,6 +24,8 @@ Use only labels that exist in [.github/labels.json](../../../.github/labels.json
 - `confidential-data` when an attachment holds client data: comment once asking the reporter to remove it (and tell the maintainer).
 - Remove `needs-triage` when done.
 
+An issue that lacks what its template asks for (steps, versions, evidence) gets a comment asking for exactly what is missing, and `needs-repro` for a bug. An issue Claude wrote must meet "Issues written by Claude" in [.claude/workflow.md](../../workflow.md); fix it rather than ask.
+
 ## 3. Waiting on the reporter
 
 An issue labeled `needs-repro` with no answer for 7 days gets one reminder comment; after 7 more days without an answer, close it as not planned with a comment that it can be reopened with the missing information. Never close an issue the maintainer opened this way.
