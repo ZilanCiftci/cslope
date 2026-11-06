@@ -15,6 +15,8 @@ import { drawingError, pageSizeOf, peekSource, rasterFor, setAssetLoader, vector
 import { DRAWING_ACCEPT, DRAWING_MIME, drawingKindName, pageRect, sniffDrawingMime, type DrawingSource } from "./sources";
 import { DRAWING_UNIT_CHOICES, INSUNITS, type VectorDrawing } from "./vectors";
 import { drawVectorTexts, vectorPath } from "./vector-render";
+import { cssVar } from "../canvas/constants";
+import { GroupHeading } from "../properties/GroupHeading";
 import { apply, cropCorners, normalizeCrop, type Affine, type Crop, type Pt } from "./transform";
 import { newPlacementId, placementLabel } from "./placement";
 import {
@@ -338,23 +340,20 @@ export function PlaceDrawingWindow({
             {asset && (
               <>
             <section aria-label="Crop">
-              <h3 className="font-semibold text-[12px]">1. Crop</h3>
-              <p className="text-[11px] mt-0.5" style={muted}>
-                Optional: with Crop, drag a rectangle around the section.{" "}
+              <GroupHeading>1 · Crop</GroupHeading>
+              <p className="text-[11px]" style={muted}>
+                Optional: with Crop in the toolbar, drag a rectangle around the section.{" "}
                 {crop ? "" : vector ? "The whole drawing is placed now." : "The whole page is placed now."}
               </p>
               <div className="flex gap-2 mt-1.5">
-                <button className="btn" aria-pressed={tool === "crop"} onClick={() => setTool(tool === "crop" ? "pick" : "crop")} disabled={!source}>
-                  Crop…
-                </button>
                 <button className="btn" onClick={() => setCrop(null)} disabled={!crop}>
                   Clear crop
                 </button>
               </div>
             </section>
             <section aria-label="Calibrate">
-              <h3 className="font-semibold text-[12px]">2. Calibrate</h3>
-              <div role="radiogroup" aria-label="Calibration" className="flex gap-1 mt-1.5">
+              <GroupHeading>2 · Calibrate</GroupHeading>
+              <div role="radiogroup" aria-label="Calibration" className="flex gap-1">
                 {(
                   [
                     ...(vector ? ([["drawing", "Drawing coordinates"]] as const) : []),
@@ -395,8 +394,8 @@ export function PlaceDrawingWindow({
               </>
             )}
             <section aria-label="Preview">
-              <h3 className="font-semibold text-[12px]">Preview</h3>
-              <p className="text-[11px] mt-0.5" style={muted}>
+              <GroupHeading>Preview</GroupHeading>
+              <p className="text-[11px]" style={muted}>
                 The drawing under {state.modelName || "the model"}, with its outline.
               </p>
               <Preview state={state} assetId={assetId} page={page} crop={shown} transform={result.fit.ok ? result.fit.transform : null} />
@@ -541,7 +540,7 @@ function PageThumb({ source, assetId, page }: { source: DrawingSource; assetId: 
       c.height = Math.round(size.height * scale);
       const ctx = c.getContext("2d");
       if (!ctx) return;
-      ctx.fillStyle = "#fff";
+      ctx.fillStyle = cssVar("--color-canvas-page");
       ctx.fillRect(0, 0, c.width, c.height);
       ctx.drawImage(raster.image, 0, 0, c.width, c.height);
     })().catch(() => {});
@@ -613,6 +612,9 @@ function formMarks(form: CalibrationForm): { at: Pt; label: string; target: Pick
     return at ? [{ at, label: targetLabel(t), target: t }] : [];
   });
 }
+
+/** The pointer's guide lines across the drawing. */
+const CROSSHAIR_GUIDE = "1px dashed color-mix(in srgb, var(--color-canvas-crosshair-strong) 70%, transparent)";
 
 const LOUPE = 140;
 const LOUPE_ZOOM = 4;
@@ -724,13 +726,13 @@ export function Viewer({
     const ctx = c.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#6b7078";
+    ctx.fillStyle = cssVar("--color-canvas-paper-outside");
     ctx.fillRect(0, 0, size.w, size.h);
     const lines = peekSource(assetId)?.kind === "vector" ? vectorsFor(assetId, page) : null;
     const raster = lines ? null : rasterFor({ assetId, page }, view.zoom * dpr);
     const pr = pageSize ? pageRect(pageSize) : null;
     if (pr) {
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = cssVar("--color-canvas-page");
       ctx.fillRect(view.x + pr.x0 * view.zoom, view.y + pr.y0 * view.zoom, (pr.x1 - pr.x0) * view.zoom, (pr.y1 - pr.y0) * view.zoom);
     }
     if (lines) drawLineWork(ctx, lines, view.zoom, view.x, view.y);
@@ -747,30 +749,32 @@ export function Viewer({
       const [x0, y0] = toScreen([shownCrop.x0, shownCrop.y0]);
       const [x1, y1] = toScreen([shownCrop.x1, shownCrop.y1]);
       ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillStyle = cssVar("--color-canvas-crop-mask");
       ctx.beginPath();
       const pr2 = pageRect(pageSize);
       ctx.rect(view.x + pr2.x0 * view.zoom, view.y + pr2.y0 * view.zoom, pageSize.width * view.zoom, pageSize.height * view.zoom);
       ctx.rect(x0, y0, x1 - x0, y1 - y0);
       ctx.fill("evenodd");
-      ctx.strokeStyle = "#0a84ff";
+      ctx.strokeStyle = cssVar("--color-vsc-accent");
       ctx.lineWidth = 1.5;
       ctx.setLineDash([6, 4]);
       ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
       ctx.restore();
     }
+    const accent = cssVar("--color-vsc-accent");
+    const frame = cssVar("--color-canvas-frame");
     for (const f of frames) {
       const [x0, y0] = toScreen([f.crop.x0, f.crop.y0]);
       const [x1, y1] = toScreen([f.crop.x1, f.crop.y1]);
       ctx.save();
-      ctx.strokeStyle = f.selected ? "#0a84ff" : "#7a8590";
+      ctx.strokeStyle = f.selected ? accent : frame;
       ctx.lineWidth = f.selected ? 2.5 : 1.5;
       ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
       ctx.font = "bold 11px system-ui, sans-serif";
       const w = ctx.measureText(f.label).width + 8;
-      ctx.fillStyle = f.selected ? "#0a84ff" : "#7a8590";
+      ctx.fillStyle = f.selected ? accent : frame;
       ctx.fillRect(x0, y0 - 16, w, 16);
-      ctx.fillStyle = "#ffffff";
+      ctx.fillStyle = cssVar("--color-canvas-mark-text");
       ctx.fillText(f.label, x0 + 4, y0 - 4);
       ctx.restore();
     }
@@ -789,7 +793,7 @@ export function Viewer({
     const z = view.zoom * LOUPE_ZOOM;
     const [u, v] = toSource(pointer.x, pointer.y);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = cssVar("--color-canvas-page");
     ctx.fillRect(0, 0, LOUPE, LOUPE);
     const lines = peekSource(assetId)?.kind === "vector" ? vectorsFor(assetId, page) : null;
     if (lines) drawLineWork(ctx, lines, z, LOUPE / 2 - u * z, LOUPE / 2 - v * z);
@@ -803,7 +807,7 @@ export function Viewer({
       ctx.restore();
     }
     drawMarks(ctx, formMarks(form), target, (p) => [LOUPE / 2 + (p[0] - u) * z, LOUPE / 2 + (p[1] - v) * z]);
-    ctx.strokeStyle = "#e5484d";
+    ctx.strokeStyle = cssVar("--color-canvas-crosshair-strong");
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(LOUPE / 2, 0);
@@ -897,19 +901,18 @@ export function Viewer({
       />
       {pointer && view && (
         <>
-          <div className="absolute pointer-events-none" style={{ left: 0, top: pointer.y, width: size.w, height: 0, borderTop: "1px dashed rgba(229,72,77,0.7)" }} />
-          <div className="absolute pointer-events-none" style={{ top: 0, left: pointer.x, height: size.h, width: 0, borderLeft: "1px dashed rgba(229,72,77,0.7)" }} />
+          <div className="absolute pointer-events-none" style={{ left: 0, top: pointer.y, width: size.w, height: 0, borderTop: CROSSHAIR_GUIDE }} />
+          <div className="absolute pointer-events-none" style={{ top: 0, left: pointer.x, height: size.h, width: 0, borderLeft: CROSSHAIR_GUIDE }} />
           <canvas
             ref={loupe}
             aria-hidden
-            className="absolute pointer-events-none rounded-full"
+            className="absolute pointer-events-none rounded-full shadow-md"
             style={{
               width: LOUPE,
               height: LOUPE,
               left: Math.min(pointer.x + 24, size.w - LOUPE - 4),
               top: pointer.y - LOUPE - 24 < 0 ? pointer.y + 24 : pointer.y - LOUPE - 24,
               border: "2px solid var(--color-vsc-accent)",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
             }}
           />
           {src && (
@@ -925,22 +928,30 @@ export function Viewer({
 
 /** A DWG or DXF drawing's line work at `zoom` px per unit, its origin at (x, y) px. */
 function drawLineWork(ctx: CanvasRenderingContext2D, drawing: VectorDrawing, zoom: number, x: number, y: number) {
+  // The page is white paper in both themes, so the line work is dark on it.
+  const ink = cssVar("--color-canvas-page-ink");
   ctx.save();
   ctx.translate(x, y);
-  ctx.strokeStyle = "#2b2f33";
+  ctx.strokeStyle = ink;
   ctx.lineWidth = 1;
   ctx.stroke(vectorPath(drawing, new Set(), { a: zoom, b: 0, c: 0, d: zoom }));
   ctx.restore();
-  drawVectorTexts(ctx, drawing, new Set(), { a: zoom, b: 0, c: 0, d: zoom, e: x, f: y }, "#2b2f33");
+  drawVectorTexts(ctx, drawing, new Set(), { a: zoom, b: 0, c: 0, d: zoom, e: x, f: y }, ink);
 }
 
 function drawMarks(ctx: CanvasRenderingContext2D, marks: { at: Pt; label: string; target: PickTarget }[], target: PickTarget | null, toScreen: (p: Pt) => Pt) {
+  const [axisX, axisY, axisScale, markText] = [
+    "--color-canvas-axis-x",
+    "--color-canvas-axis-y",
+    "--color-canvas-axis-scale",
+    "--color-canvas-mark-text",
+  ].map(cssVar);
   ctx.save();
   ctx.font = "bold 11px system-ui, sans-serif";
   for (const m of marks) {
     const [x, y] = toScreen(m.at);
     const active = sameTarget(m.target, target);
-    const color = m.target.kind === "x" ? "#d9480f" : m.target.kind === "y" ? "#2b8a3e" : "#0a63c9";
+    const color = m.target.kind === "x" ? axisX : m.target.kind === "y" ? axisY : axisScale;
     ctx.strokeStyle = color;
     ctx.lineWidth = active ? 2.5 : 1.5;
     ctx.beginPath();
@@ -953,7 +964,7 @@ function drawMarks(ctx: CanvasRenderingContext2D, marks: { at: Pt; label: string
     const w = ctx.measureText(m.label).width + 6;
     ctx.fillStyle = color;
     ctx.fillRect(x + 8, y - 20, w, 14);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = markText;
     ctx.fillText(m.label, x + 11, y - 9);
   }
   ctx.restore();
@@ -1237,7 +1248,7 @@ function Preview({
     const ctx = c.getContext("2d");
     if (!ctx) return;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = cssVar("--color-canvas-bg");
     ctx.fillRect(0, 0, PREVIEW_W, PREVIEW_H);
     const pts: Pt[] = [...state.outline.exterior, ...state.outline.lines.flat()];
     if (transform && crop) pts.push(...cropCorners(transform, crop));
@@ -1263,7 +1274,7 @@ function Preview({
         ctx.restore();
       }
     }
-    ctx.strokeStyle = "#0a84ff";
+    ctx.strokeStyle = cssVar("--color-vsc-accent");
     ctx.lineWidth = 1.5;
     const line = (p: Pt[], closed: boolean) => {
       if (p.length < 2) return;

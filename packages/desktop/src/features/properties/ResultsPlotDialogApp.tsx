@@ -22,6 +22,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { CHART } from "../../components/ui/chart-colors";
+import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { resultDefinition } from "./result-definition";
 import { isElectron } from "../../utils/is-electron";
 import { sameSurface } from "../../utils/arc";
@@ -169,6 +171,18 @@ function toCanonicalSurface(
 function formatNumber(v: number, digits = 3): string {
   if (!Number.isFinite(v)) return "-";
   return v.toFixed(digits);
+}
+
+/** An axis this plot fixes: its name and the quantity, as plain text. */
+function FixedAxis({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="text-[10px] flex flex-col gap-1">
+      <span style={{ color: "var(--color-vsc-text-muted)" }}>{label}</span>
+      <span className="h-[22px] flex items-center text-[12px]" style={{ color: "var(--color-vsc-text)" }}>
+        {value}
+      </span>
+    </div>
+  );
 }
 
 function toFiniteNumber(value: unknown): number | null {
@@ -474,7 +488,7 @@ export function ResultsPlotDialogApp() {
         <div>
           <h2 className="text-[12px] font-semibold">Results plot</h2>
           <p
-            className="text-[10px] mt-0.5"
+            className="text-[11px] mt-0.5"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
             Values per slice along a slip surface, or the factors of safety Fm and Ff against λ.
@@ -561,11 +575,11 @@ export function ResultsPlotDialogApp() {
               </select>
             </label>
 
-            <label className="text-[10px] flex flex-col gap-1">
-              <span style={{ color: "var(--color-vsc-text-muted)" }}>
-                X axis
-              </span>
-              {plotMode === "slipSurface" ? (
+            {plotMode === "slipSurface" ? (
+              <label className="text-[10px] flex flex-col gap-1">
+                <span style={{ color: "var(--color-vsc-text-muted)" }}>
+                  X axis
+                </span>
                 <select
                   value={axisMode}
                   onChange={(e) => setAxisMode(e.target.value as AxisMode)}
@@ -573,20 +587,19 @@ export function ResultsPlotDialogApp() {
                   <option value="slice">Slice number</option>
                   <option value="x">X value</option>
                 </select>
-              ) : (
-                <div
-                  className="field" aria-disabled="true"
-                >
-                  Lambda
-                </div>
-              )}
-            </label>
+              </label>
+            ) : (
+              // Fixed for this plot: plain text, not a field that cannot be used.
+              <FixedAxis label="X axis" value="Lambda" />
+            )}
 
-            <label className="text-[10px] flex flex-col gap-1">
-              <span style={{ color: "var(--color-vsc-text-muted)" }}>
-                Y axis
-              </span>
-              {plotMode === "slipSurface" ? (
+            {plotMode !== "slipSurface" ? (
+              <FixedAxis label="Y axis" value="Factor of safety" />
+            ) : (
+              <label className="text-[10px] flex flex-col gap-1">
+                <span style={{ color: "var(--color-vsc-text-muted)" }}>
+                  Y axis
+                </span>
                 <select
                   value={metric}
                   onChange={(e) => setMetric(e.target.value as MetricKey)}
@@ -601,14 +614,8 @@ export function ResultsPlotDialogApp() {
                     </optgroup>
                   ))}
                 </select>
-              ) : (
-                <div
-                  className="field" aria-disabled="true"
-                >
-                  Factor of safety
-                </div>
-              )}
-            </label>
+              </label>
+            )}
           </div>
 
           <div
@@ -663,7 +670,7 @@ export function ResultsPlotDialogApp() {
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
-                      stroke="rgba(120,130,140,0.35)"
+                      stroke={CHART.grid}
                     />
                     <XAxis
                       type="number"
@@ -705,28 +712,26 @@ export function ResultsPlotDialogApp() {
                       }}
                     />
                     <Tooltip
-                      contentStyle={{
-                        background: "var(--color-vsc-input-bg)",
-                        border: "1px solid var(--color-vsc-border)",
-                        borderRadius: 6,
-                        fontSize: 11,
-                      }}
-                      separator=": "
-                      formatter={(value) => {
-                        const numeric = toFiniteNumber(value);
-                        return numeric == null
-                          ? `- ${metricMeta.unit}`.trimEnd()
-                          : `${formatNumber(numeric, 2)} ${metricMeta.unit}`.trimEnd();
-                      }}
-                      labelFormatter={(label) => {
-                        const numeric = toFiniteNumber(label);
-                        if (numeric == null) {
-                          return axisMode === "slice" ? "Slice -" : "X -";
-                        }
-                        return axisMode === "slice"
-                          ? `Slice ${formatNumber(numeric, 0)}`
-                          : `X ${formatNumber(numeric, 3)}`;
-                      }}
+                      content={(p) => (
+                        <ChartTooltip
+                          {...p}
+                          formatValue={(value) => {
+                            const numeric = toFiniteNumber(value);
+                            return numeric == null
+                              ? `- ${metricMeta.unit}`.trimEnd()
+                              : `${formatNumber(numeric, 2)} ${metricMeta.unit}`.trimEnd();
+                          }}
+                          formatLabel={(label) => {
+                            const numeric = toFiniteNumber(label);
+                            if (numeric == null) {
+                              return axisMode === "slice" ? "Slice -" : "X -";
+                            }
+                            return axisMode === "slice"
+                              ? `Slice ${formatNumber(numeric, 0)}`
+                              : `X ${formatNumber(numeric, 3)}`;
+                          }}
+                        />
+                      )}
                     />
                     {/* Straight segments: a smoothed curve between slices
                         suggests values that were never computed. */}
@@ -734,7 +739,7 @@ export function ResultsPlotDialogApp() {
                       type="linear"
                       dataKey={metric}
                       name={metricMeta.label}
-                      stroke="#26a69a"
+                      stroke={CHART.series}
                       strokeWidth={2.2}
                       dot={{ r: 2.5, strokeWidth: 1.2 }}
                       activeDot={{ r: 4.5 }}
@@ -766,7 +771,7 @@ export function ResultsPlotDialogApp() {
                 >
                   <CartesianGrid
                     strokeDasharray="3 3"
-                    stroke="rgba(120,130,140,0.35)"
+                    stroke={CHART.grid}
                   />
                   <XAxis
                     type="number"
@@ -804,31 +809,26 @@ export function ResultsPlotDialogApp() {
                     }}
                   />
                   <Tooltip
-                    contentStyle={{
-                      background: "var(--color-vsc-input-bg)",
-                      border: "1px solid var(--color-vsc-border)",
-                      borderRadius: 6,
-                      fontSize: 11,
-                    }}
-                    separator=": "
-                    formatter={(value, name) => {
-                      const numeric = toFiniteNumber(value);
-                      if (numeric == null) {
-                        return ["-", name];
-                      }
-                      return [formatNumber(numeric, 3), name];
-                    }}
-                    labelFormatter={(label) => {
-                      const numeric = toFiniteNumber(label);
-                      return numeric == null
-                        ? "Lambda -"
-                        : `Lambda ${formatNumber(numeric, 3)}`;
-                    }}
+                    content={(p) => (
+                      <ChartTooltip
+                        {...p}
+                        formatValue={(value) => {
+                          const numeric = toFiniteNumber(value);
+                          return numeric == null ? "-" : formatNumber(numeric, 3);
+                        }}
+                        formatLabel={(label) => {
+                          const numeric = toFiniteNumber(label);
+                          return numeric == null
+                            ? "Lambda -"
+                            : `Lambda ${formatNumber(numeric, 3)}`;
+                        }}
+                      />
+                    )}
                   />
                   {equilibriumPoint && (
                     <ReferenceLine
                       x={equilibriumPoint.lambda}
-                      stroke="#98c379"
+                      stroke={CHART.mark}
                       strokeDasharray="4 3"
                       ifOverflow="extendDomain"
                     />
@@ -837,7 +837,7 @@ export function ResultsPlotDialogApp() {
                     type="linear"
                     dataKey="momentFos"
                     name="Moment (Fm)"
-                    stroke="#e06c75"
+                    stroke={CHART.moment}
                     strokeWidth={2.2}
                     dot={{ r: 2.5, strokeWidth: 1.2 }}
                     activeDot={{ r: 4.5 }}
@@ -847,7 +847,7 @@ export function ResultsPlotDialogApp() {
                     type="linear"
                     dataKey="forceFos"
                     name="Force (Ff)"
-                    stroke="#61afef"
+                    stroke={CHART.force}
                     strokeWidth={2.2}
                     dot={{ r: 2.5, strokeWidth: 1.2 }}
                     activeDot={{ r: 4.5 }}
@@ -862,8 +862,8 @@ export function ResultsPlotDialogApp() {
                         2
                       }
                       r={4}
-                      fill="#98c379"
-                      stroke="#98c379"
+                      fill={CHART.mark}
+                      stroke={CHART.mark}
                     />
                   )}
                   <Legend
@@ -871,7 +871,8 @@ export function ResultsPlotDialogApp() {
                     align="right"
                     wrapperStyle={{ fontSize: 10 }}
                     formatter={(value) => (
-                      <span style={{ color: "var(--color-vsc-text-muted)" }}>
+                      // The text in the text color; the series color is the marker.
+                      <span style={{ color: "var(--color-vsc-text)" }}>
                         {value}
                       </span>
                     )}

@@ -2,22 +2,26 @@ import type { ReactNode } from "react";
 
 /**
  * The layout of a tool window (Sensitivity, Probabilistic analysis): a
- * heading, one scrolling body and a row of buttons ending in Close, as in
- * the other dialog windows.
+ * heading with one muted sentence under it, one scrolling body and the
+ * `.dialog-buttons` row as in the other dialog windows: secondary actions
+ * at the left, then the primary action and Close at the right.
  */
 export function ToolWindowFrame({
   title,
   description,
   waiting,
   footer,
+  primary,
   children,
 }: {
   title: string;
   description: string;
   /** The main window has not sent the model yet. */
   waiting?: boolean;
-  /** Buttons left of Close. */
+  /** Secondary actions (export), at the left of the button row. */
   footer?: ReactNode;
+  /** The primary action (Run) and its status, just left of Close. */
+  primary?: ReactNode;
   children?: ReactNode;
 }) {
   return (
@@ -30,7 +34,7 @@ export function ToolWindowFrame({
     >
       <div className="pb-2">
         <h2 className="text-[12px] font-semibold">{title}</h2>
-        <p className="text-[10px] mt-0.5" style={{ color: "var(--color-vsc-text-muted)" }}>
+        <p className="text-[11px] mt-0.5" style={{ color: "var(--color-vsc-text-muted)" }}>
           {description}
         </p>
       </div>
@@ -46,11 +50,13 @@ export function ToolWindowFrame({
       </div>
 
       <div
-        className="pt-3 mt-2 border-t flex items-center gap-2"
+        className="pt-3 mt-2 border-t dialog-buttons items-center text-[11px]"
         style={{ borderColor: "var(--color-vsc-border)" }}
       >
-        <div className="flex-1 min-w-0">{footer}</div>
-        <button onClick={() => window.close()} className="btn min-w-[80px]">
+        {footer}
+        <span className="flex-1" />
+        {primary}
+        <button onClick={() => window.close()} className="btn">
           Close
         </button>
       </div>

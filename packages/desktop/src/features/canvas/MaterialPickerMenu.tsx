@@ -18,13 +18,13 @@ export function MaterialPickerMenu({
 
   return (
     <div
-      className="absolute z-50 py-1 rounded-md shadow-xl min-w-[140px]"
+      className="absolute z-50 py-1 rounded-md min-w-[140px]"
       style={{
         left: picker.screenX,
         top: picker.screenY,
         background: "var(--color-vsc-input-bg)",
         border: "1px solid var(--color-vsc-border)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        boxShadow: "var(--color-vsc-shadow-float)",
       }}
       onMouseDown={(e) => e.stopPropagation()}
     >

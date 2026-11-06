@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { CircleAlert, X } from "lucide-react";
 import { useAppStore } from "../../store/app-store";
+import { useLinePick } from "../drawings/line-pick-store";
 import { isElectron } from "../../utils/is-electron";
 import {
   isNoSlipSurfaceError,
@@ -17,8 +19,10 @@ export function AnalysisErrorBanner() {
   const runState = useAppStore((s) => s.runState);
   const errorMessage = useAppStore((s) => s.errorMessage);
   const activeModelId = useAppStore((s) => s.activeModelId);
-  // The "click a region to assign" hint sits at the top centre too.
+  // The "click a region to assign" hint and the pick-lines bar sit at the
+  // top centre too: the banner moves down below them.
   const assigning = useAppStore((s) => s.assigningMaterialId !== null);
+  const pickingLines = useLinePick((s) => !!s.placementId);
   const limits = useAppStore((s) => s.analysisLimits);
   const orientation = useAppStore((s) => s.orientation);
 
@@ -54,43 +58,34 @@ export function AnalysisErrorBanner() {
     <div
       role="alert"
       data-testid="analysis-error-banner"
-      className={`absolute ${assigning ? "top-14" : "top-3"} left-1/2 -translate-x-1/2 z-20 flex items-start gap-2.5 pl-3 pr-1.5 py-2 rounded-md shadow-lg text-[12px]`}
+      className={`absolute ${pickingLines ? "top-20" : assigning ? "top-14" : "top-3"} left-1/2 -translate-x-1/2 z-20 flex items-start gap-2.5 pl-3 pr-1.5 py-2 rounded-xs text-[12px]`}
       style={{
         width: "min(640px, calc(100% - 32px))",
+        boxShadow: "var(--color-vsc-shadow-float)",
         background:
           "color-mix(in srgb, var(--color-vsc-error) 10%, var(--color-vsc-panel))",
         border: "1px solid var(--color-vsc-error)",
         color: "var(--color-vsc-text)",
       }}
     >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="var(--color-vsc-error)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      <CircleAlert
+        size={16}
+        strokeWidth={1.75}
         className="shrink-0 mt-px"
+        style={{ color: "var(--color-vsc-error)" }}
         aria-hidden="true"
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 7v6M12 16.5v.5" />
-      </svg>
+      />
       <div className="flex-1 min-w-0">
-        <div
-          className="font-semibold"
-          style={{ color: "var(--color-vsc-error)" }}
-        >
-          Analysis failed
-        </div>
-        <div className="mt-0.5 break-words">{errorMessage}</div>
+        {/* The heading in the text colour: the red is on the icon and the
+            border (the error colour on its tint is below 4.5:1). */}
+        <div className="font-semibold">Analysis failed</div>
+        {/* The specific cause first, the general message after it. */}
         {drawnFor && (
-          <div className="mt-1 break-words font-semibold" data-testid="limits-direction-hint">
+          <div className="mt-0.5 break-words font-semibold" data-testid="limits-direction-hint">
             {limitsDirectionMessage(drawnFor)}
           </div>
         )}
+        <div className="mt-0.5 break-words">{errorMessage}</div>
       </div>
       {drawnFor && (
         <button
@@ -115,7 +110,7 @@ export function AnalysisErrorBanner() {
         className="shrink-0 w-6 h-6 flex items-center justify-center rounded cursor-pointer hover:bg-[var(--color-vsc-list-hover)]"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
-        ✕
+        <X size={14} strokeWidth={1.75} aria-hidden="true" />
       </button>
     </div>
   );

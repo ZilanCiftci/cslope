@@ -749,13 +749,19 @@ export function anonymizedFileName(name: string): string {
 export function summaryLines(summary: AnonymizeSummary, options: AnonymizeOptions): string[] {
   const lines: string[] = [];
   const n = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
-  if (options.projectInfo) lines.push(`Project information cleared in ${n(summary.projectInfoCleared, "model")}${summary.importNotesRemoved ? `, ${n(summary.importNotesRemoved, "import note")} removed` : ""}.`);
-  if (options.renameModels) lines.push(`${n(summary.modelsRenamed, "model")} renamed.`);
-  if (options.renameMaterials) lines.push(`${n(summary.materialsRenamed, "material")} renamed.`);
-  if (options.renameObjects) lines.push(`${n(summary.objectsRenamed, "other name")} made generic (water lines, labels, reference lines, drawings, head lines).`);
-  if (options.removeDrawings) lines.push(`${n(summary.drawingsRemoved, "drawing")} and ${n(summary.filesRemoved, "file")} removed.`);
-  if (options.textAnnotations === "replace") lines.push(`Free text replaced in ${n(summary.textAnnotationsReplaced, "text annotation")}.`);
-  if (options.textAnnotations === "delete") lines.push(`${n(summary.textAnnotationsDeleted, "text annotation")} removed.`);
+  // Only what is done: an option that changes nothing in this project has no line.
+  if (options.projectInfo && (summary.projectInfoCleared > 0 || summary.importNotesRemoved > 0)) {
+    const notes = summary.importNotesRemoved ? `${n(summary.importNotesRemoved, "import note")} removed` : "";
+    lines.push(summary.projectInfoCleared > 0
+      ? `Project information cleared in ${n(summary.projectInfoCleared, "model")}${notes ? `, ${notes}` : ""}.`
+      : `${notes[0].toUpperCase()}${notes.slice(1)}.`);
+  }
+  if (options.renameModels && summary.modelsRenamed > 0) lines.push(`${n(summary.modelsRenamed, "model")} renamed.`);
+  if (options.renameMaterials && summary.materialsRenamed > 0) lines.push(`${n(summary.materialsRenamed, "material")} renamed.`);
+  if (options.renameObjects && summary.objectsRenamed > 0) lines.push(`${n(summary.objectsRenamed, "other name")} made generic (water lines, labels, reference lines, drawings, head lines).`);
+  if (options.removeDrawings && (summary.drawingsRemoved > 0 || summary.filesRemoved > 0)) lines.push(`${n(summary.drawingsRemoved, "drawing")} and ${n(summary.filesRemoved, "file")} removed.`);
+  if (options.textAnnotations === "replace" && summary.textAnnotationsReplaced > 0) lines.push(`Free text replaced in ${n(summary.textAnnotationsReplaced, "text annotation")}.`);
+  if (options.textAnnotations === "delete" && summary.textAnnotationsDeleted > 0) lines.push(`${n(summary.textAnnotationsDeleted, "text annotation")} removed.`);
   if (summary.resultsRemoved > 0) lines.push(`Results removed from ${n(summary.resultsRemoved, "model")}.`);
   for (const s of summary.shifted) {
     const fmt = (v: number) => (v >= 0 ? `+${Number(v.toFixed(6))}` : `${Number(v.toFixed(6))}`);

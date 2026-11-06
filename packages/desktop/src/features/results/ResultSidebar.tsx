@@ -5,7 +5,7 @@
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { parseDecimalText } from "../../utils/decimal";
 import { ExperimentalBadge } from "../../components/ui/ExperimentalBadge";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { PAPER_DIMENSIONS, useAppStore } from "../../store/app-store";
 import { Section } from "../../components/ui/Section";
 import { HelpButton } from "../../components/ui/HelpButton";
@@ -66,15 +66,16 @@ const COLORS = [
   "#ffffff",
 ];
 
+/** The material table's column headers without their units, for the column chips. */
 const SHORT_COLUMN_LABELS: Record<MaterialTableColumnKey, string> = {
-  model: "Model",
-  unitWeight: "Unit wt.",
-  cohesion: "c / Su",
-  piezometricLine: "Piezo",
+  model: "Material model",
+  unitWeight: "Unit weight",
+  cohesion: "Cohesion / Su",
+  piezometricLine: "Piezometric surface",
   depthRef: "Datum",
   cDatum: "C-datum",
   cRate: "C-rate",
-  frictionAngle: "Friction",
+  frictionAngle: "Friction angle",
 };
 
 const MATERIAL_TABLE_COLUMN_OPTIONS = MATERIAL_TABLE_COLUMNS.map((col) => ({
@@ -116,6 +117,9 @@ function anchorLabel(anchor: string): string {
 }
 
 export function ResultSidebar() {
+  // Ties each field label to its control (the control's accessible name).
+  const uid = useId();
+  const fieldId = (key: string) => `${uid}-${key}`;
   const toggleSidebar = useAppStore((s) => s.toggleSidebar);
   const propertiesLocation = useAppStore((s) => s.propertiesLocation);
   const setPropertiesLocation = useAppStore((s) => s.setPropertiesLocation);
@@ -609,7 +613,7 @@ export function ResultSidebar() {
                   <div key={`${c.kind}-${c.index}`} className="flex justify-between gap-2" data-testid="custom-surface-row">
                     <Label title={customSurfaceGeometryText(c)}>{customSurfaceName(i)}</Label>
                     {c.surface ? (
-                      <span className="tabular-nums">{customSurfaceValueText(c)}</span>
+                      <span className="tabular-nums">{c.surface.fos.toFixed(3)}</span>
                     ) : (
                       <span className="text-[11px] text-right" style={{ color: "var(--color-vsc-warning-text)" }}>
                         {customSurfaceValueText(c)}
@@ -693,12 +697,14 @@ export function ResultSidebar() {
             >
               <div>
                 <label
+                  htmlFor={fieldId("left-x-m")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Left x (m)
                 </label>
                 <input
+                  id={fieldId("left-x-m")}
                   type="text"
                   inputMode="decimal"
                   value={extentInputValue("bl_x")}
@@ -720,12 +726,14 @@ export function ResultSidebar() {
 
               <div>
                 <label
+                  htmlFor={fieldId("right-x-m")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Right x (m)
                 </label>
                 <input
+                  id={fieldId("right-x-m")}
                   type="text"
                   inputMode="decimal"
                   value={extentInputValue("tr_x")}
@@ -754,12 +762,14 @@ export function ResultSidebar() {
             >
               <div>
                 <label
+                  htmlFor={fieldId("bottom-y-m")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Bottom y (m)
                 </label>
                 <input
+                  id={fieldId("bottom-y-m")}
                   type="text"
                   inputMode="decimal"
                   value={extentInputValue("bl_y")}
@@ -781,12 +791,14 @@ export function ResultSidebar() {
 
               <div>
                 <label
+                  htmlFor={fieldId("top-y-m")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Top y (m)
                 </label>
                 <input
+                  id={fieldId("top-y-m")}
                   type="text"
                   inputMode="decimal"
                   value={extentInputValue("tr_y")}
@@ -823,12 +835,14 @@ export function ResultSidebar() {
             >
               <div>
                 <label
+                  htmlFor={fieldId("tick-spacing-m")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Tick spacing (m)
                 </label>
                 <DraftNumberInput
+                  id={fieldId("tick-spacing-m")}
                   min={0}
                   step="any"
                   placeholder="Auto"
@@ -843,12 +857,14 @@ export function ResultSidebar() {
 
               <div>
                 <label
+                  htmlFor={fieldId("minor-ticks")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Minor ticks
                 </label>
                 <DraftNumberInput
+                  id={fieldId("minor-ticks")}
                   min={0}
                   max={20}
                   step={1}
@@ -881,12 +897,14 @@ export function ResultSidebar() {
               {rvs.showGrid && (
                 <div>
                   <label
+                    htmlFor={fieldId("grid-spacing-m")}
                     className="text-[10px] block mb-0.5"
                     style={{ color: "var(--color-vsc-text-muted)" }}
                   >
                     Grid spacing (m)
                   </label>
                   <DraftNumberInput
+                    id={fieldId("grid-spacing-m")}
                     min={0}
                     step="any"
                     placeholder="As ticks"
@@ -904,12 +922,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("paper-size")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Paper size
               </label>
               <select
+                id={fieldId("paper-size")}
                 value={rvs.paperFrame.paperSize}
                 onChange={(e) =>
                   setRvs({
@@ -931,12 +951,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("paper-orientation")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Paper orientation
               </label>
               <select
+                id={fieldId("paper-orientation")}
                 value={rvs.paperFrame.landscape ? "landscape" : "portrait"}
                 onChange={(e) => {
                   const newLandscape = e.target.value === "landscape";
@@ -980,12 +1002,14 @@ export function ResultSidebar() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label
+                  htmlFor={fieldId("x")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   X (%)
                 </label>
                 <DraftNumberInput
+                  id={fieldId("x")}
                   step="1"
                   value={
                     xValue !== undefined ? Math.round(xValue * 1000) / 10 : undefined
@@ -997,12 +1021,14 @@ export function ResultSidebar() {
               </div>
               <div className="flex-1">
                 <label
+                  htmlFor={fieldId("y")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Y (%)
                 </label>
                 <DraftNumberInput
+                  id={fieldId("y")}
                   step="1"
                   value={
                     yValue !== undefined ? Math.round(yValue * 1000) / 10 : undefined
@@ -1015,16 +1041,23 @@ export function ResultSidebar() {
             </div>
 
             <div>
-              <label
+              <span
+                id={fieldId("anchor")}
                 className="text-[10px] block mb-1"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Anchor
-              </label>
+              </span>
               <div className="flex items-center gap-2">
+                {/* The four corners on a tile in the field colors (seen in both themes). */}
                 <div
-                  className="grid grid-cols-2 gap-[3px] p-1 rounded"
-                  style={{ background: "var(--color-vsc-bg)" }}
+                  role="group"
+                  aria-labelledby={fieldId("anchor")}
+                  className="grid grid-cols-2 gap-0.5 p-0.5 rounded-xs"
+                  style={{
+                    background: "var(--color-vsc-field-bg)",
+                    border: "1px solid var(--color-vsc-field-border)",
+                  }}
                 >
                   {(
                     [
@@ -1036,8 +1069,11 @@ export function ResultSidebar() {
                   ).map((a) => (
                     <button
                       key={a}
+                      type="button"
                       onClick={() => handleAnchorChange(a)}
-                      className="w-[14px] h-[14px] rounded-sm cursor-pointer"
+                      aria-label={anchorLabel(a)}
+                      aria-pressed={(anchorValue ?? "top-left") === a}
+                      className="w-5 h-5 rounded-xs cursor-pointer"
                       style={{
                         background:
                           (anchorValue ?? "top-left") === a
@@ -1085,12 +1121,14 @@ export function ResultSidebar() {
           <div className="space-y-2">
             <div>
               <label
+                htmlFor={fieldId("text")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Text
               </label>
               <textarea
+                id={fieldId("text")}
                 ref={textAreaRef}
                 value={textValue ?? ""}
                 placeholder={textValue === undefined ? "Mixed values" : ""}
@@ -1127,12 +1165,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("font")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Font
               </label>
               <select
+                id={fieldId("font")}
                 value={fontFamilyValue ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
@@ -1153,12 +1193,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("size")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
-                Size
+                Size (px)
               </label>
               <select
+                id={fieldId("size")}
                 value={fontSizeValue ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
@@ -1171,7 +1213,7 @@ export function ResultSidebar() {
                 )}
                 {FONT_SIZES.map((s) => (
                   <option key={s} value={s}>
-                    {s}px
+                    {s}
                   </option>
                 ))}
               </select>
@@ -1199,16 +1241,20 @@ export function ResultSidebar() {
             </div>
 
             <div>
-              <label
+              <span
+                id={fieldId("color")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Color
-              </label>
-              <div className="flex flex-wrap gap-1">
+              </span>
+              <div className="flex flex-wrap gap-1" role="group" aria-labelledby={fieldId("color")}>
                 {COLORS.map((c) => (
                   <button
                     key={c}
+                    type="button"
+                    aria-label={`Color ${c}`}
+                    aria-pressed={(colorValue ?? "") === c}
                     onClick={() => applyToSelectedText({ color: c })}
                     className="w-5 h-5 rounded-sm cursor-pointer"
                     style={{
@@ -1238,12 +1284,14 @@ export function ResultSidebar() {
           <div className="space-y-2">
             <div>
               <label
+                htmlFor={fieldId("text-size")}
                 className="text-[10px] block mb-1"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
-                Text size
+                Text size (px)
               </label>
               <select
+                id={fieldId("text-size")}
                 value={mtFontSize ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
@@ -1258,21 +1306,22 @@ export function ResultSidebar() {
                 )}
                 {FONT_SIZES.map((s) => (
                   <option key={s} value={s}>
-                    {s}px
+                    {s}
                   </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label
+              <span
                 className="text-[10px] block mb-1"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Visible columns
-              </label>
+              </span>
               <MultiSelectComboboxChips
                 options={MATERIAL_TABLE_COLUMN_OPTIONS}
+                ariaLabel="Visible columns"
                 value={visibleColumnsValue}
                 onValueChange={setVisibleColumnsForAll}
                 placeholder="Select columns"
@@ -1287,12 +1336,14 @@ export function ResultSidebar() {
             <div className="flex gap-2">
               <div className="flex-1">
                 <label
+                  htmlFor={fieldId("width")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Width (%)
                 </label>
                 <DraftNumberInput
+                  id={fieldId("width")}
                   min={5}
                   max={95}
                   step="1"
@@ -1311,12 +1362,14 @@ export function ResultSidebar() {
               </div>
               <div className="flex-1">
                 <label
+                  htmlFor={fieldId("height")}
                   className="text-[10px] block mb-0.5"
                   style={{ color: "var(--color-vsc-text-muted)" }}
                 >
                   Height (%)
                 </label>
                 <DraftNumberInput
+                  id={fieldId("height")}
                   min={5}
                   max={95}
                   step="1"
@@ -1337,12 +1390,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("x-axis")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 X axis
               </label>
               <select
+                id={fieldId("x-axis")}
                 value={plotAxisXValue ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
@@ -1365,12 +1420,14 @@ export function ResultSidebar() {
 
             <div>
               <label
+                htmlFor={fieldId("y-axis")}
                 className="text-[10px] block mb-0.5"
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Y axis
               </label>
               <select
+                id={fieldId("y-axis")}
                 value={plotAxisYValue ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;

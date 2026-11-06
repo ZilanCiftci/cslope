@@ -1,5 +1,6 @@
 import { Box } from "lucide-react";
 import type React from "react";
+import { FoldChevron } from "../../components/ui/Section";
 import type { ModelEntry } from "../../store/types";
 
 interface Props {
@@ -70,7 +71,8 @@ export function ModelRow({
 
   return (
     <div
-      className="group flex items-center gap-2 pl-1.5 pr-4 py-[5px] cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
+      // 24 px (a name on two lines grows it); the rename field fits in it.
+      className="group relative flex items-center gap-2 min-h-6 py-px pl-1.5 pr-4 cursor-pointer text-[12px] select-none rounded-sm mx-1 transition-colors"
       style={{
         background: isActive
           ? "var(--color-vsc-selected-bg)"
@@ -82,12 +84,6 @@ export function ModelRow({
             ? "var(--color-vsc-text-bright)"
             : "var(--color-vsc-text)",
         opacity: isDragSource ? 0.5 : 1,
-        borderTop: isDropBefore
-          ? "1px solid var(--color-vsc-accent)"
-          : "1px solid transparent",
-        borderBottom: isDropAfter
-          ? "1px solid var(--color-vsc-accent)"
-          : "1px solid transparent",
       }}
       onMouseEnter={(e) => {
         if (!isActive && !isSelected)
@@ -113,14 +109,29 @@ export function ModelRow({
       onDragEnd={onDragEnd}
       role="treeitem"
       aria-selected={isActive || isSelected}
+      aria-level={1}
+      aria-expanded={drawingsOpen}
       aria-label={model.name}
+      // The active model is the tree's one stop on the Tab key.
+      tabIndex={isActive ? 0 : -1}
     >
-      {/* Folds the model's drawings away (a slot of the same width without any). */}
+      {/* The drop target: a line over or under the row (not a border, which
+          would change the row's height). */}
+      {(isDropBefore || isDropAfter) && (
+        <span
+          aria-hidden
+          data-testid="model-drop-indicator"
+          className="pointer-events-none absolute left-1 right-1 h-[2px] rounded-full"
+          style={{ background: "var(--color-vsc-accent)", [isDropBefore ? "top" : "bottom"]: -1 }}
+        />
+      )}
+      {/* Folds the model's drawings away (a slot of the same width without
+          any). The button's 24 px hit area overhangs its 14 px slot. */}
       {drawingsOpen === undefined ? (
         <span className="w-[14px] shrink-0" aria-hidden />
       ) : (
         <button
-          className="w-[14px] h-[14px] shrink-0 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active)"
+          className="w-6 h-6 -mx-[5px] shrink-0 flex items-center justify-center rounded-sm hover:bg-(--color-vsc-list-active)"
           onClick={(e) => {
             e.stopPropagation();
             onToggleDrawings?.();
@@ -129,9 +140,7 @@ export function ModelRow({
           aria-label={drawingsOpen ? `Hide the drawings of ${model.name}` : `Show the drawings of ${model.name}`}
           title={drawingsOpen ? "Hide drawings" : "Show drawings"}
         >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: drawingsOpen ? "rotate(0deg)" : "rotate(-90deg)" }} aria-hidden>
-            <path d="M2 3l3 3.5L8 3z" />
-          </svg>
+          <FoldChevron open={drawingsOpen} />
         </button>
       )}
       {/* The run state as a dot before the box: green analysed, blue
@@ -160,7 +169,8 @@ export function ModelRow({
             if (e.key === "Enter") onCommitRename();
             if (e.key === "Escape") onCancelRename();
           }}
-          className="flex-1 min-w-0 py-0"
+          className="flex-1 min-w-0 h-[22px] py-0"
+          aria-label="Model name"
           autoFocus
           onClick={(e) => e.stopPropagation()}
         />

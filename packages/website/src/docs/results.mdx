@@ -18,10 +18,17 @@ The result sidebar on the right (collapse or open it at its header row, see [The
 - **Surfaces**: how many surfaces were analyzed and how many of them have a factor of safety below 1.0.
 - **Elapsed**: the time the analysis took.
 - With both directions analyzed: the **sliding direction** of the critical surface and the factor of safety of the **other direction**.
-- With [custom surfaces](/docs/search#custom-surfaces): a row **Custom surface 1**, **2**, … for each, with its factor of safety (*F = 1.234*) or *no solution* and the reason, for example a circle that misses the ground, a surface that leaves the model, is too shallow or passes through impenetrable material, or one that does not converge. The circles are numbered first, then the polylines. Hover over the name to see the circle's center and radius or the number of points. The PDF summary lists them too.
+- With [custom surfaces](/docs/search#custom-surfaces): a row **Custom surface 1**, **2**, … for each, with its factor of safety (*1.234*) or *no solution* and the reason, for example a circle that misses the ground, a surface that leaves the model, is too shallow or passes through impenetrable material, or one that does not converge. The circles are numbered first, then the polylines. Hover over the name to see the circle's center and radius or the number of points. The PDF summary lists them too.
 - Warnings, for example surfaces discarded because they did not reach equilibrium.
 
 The status bar also shows the factor of safety and the method.
+
+### Notes
+
+The notes are folded into one line under the summary (*3 notes*); click it to show one line per note. The **?** next to a note opens this section.
+
+- **Surfaces discarded because they did not reach equilibrium**: for these trial surfaces the method found no factor of safety that satisfies equilibrium within the iteration limits, so they are left out of the minimum. A few are normal; many can point to a search range that reaches unrealistic surfaces.
+- **Surfaces smaller than the minimum slip area or depth were skipped**: the minimum slip area and minimum slip depth set in the analysis options leave small surfaces out of the search. A small local failure, such as a low cut at the toe, can be among the skipped surfaces. Set both to 0 (no limit, the default) to include them.
 
 ## Display options
 

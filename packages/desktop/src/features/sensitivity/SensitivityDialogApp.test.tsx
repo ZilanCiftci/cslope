@@ -73,7 +73,11 @@ describe("Sensitivity window", () => {
   it("resets the range when another variable is chosen (±5 around zero)", () => {
     renderWindow();
     const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    // A parameter has no unit; a material value shows its unit in the labels.
+    expect(screen.getByText("From")).toBeInTheDocument();
     fireEvent.change(select, { target: { value: select.options[2].value } });
+    expect(screen.getByText("From (kPa)")).toBeInTheDocument();
+    expect(screen.getByText("To (kPa)")).toBeInTheDocument();
     expect(input("From").value).toBe("9.6");
     expect(input("To").value).toBe("14.4");
     fireEvent.change(select, { target: { value: select.options[3].value } });

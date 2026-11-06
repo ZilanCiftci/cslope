@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AnalysisResult } from "@cslope/engine";
 
@@ -48,6 +48,10 @@ describe("Explorer — list and selection", () => {
     ]);
     expect(row("Alpha")).toHaveAttribute("aria-selected", "true");
     expect(row("Beta")).toHaveAttribute("aria-selected", "false");
+    // A tree, with the active model as its stop on the Tab key.
+    expect(within(screen.getByRole("tree", { name: "Models" })).getAllByRole("treeitem")).toHaveLength(3);
+    expect(row("Alpha")).toHaveAttribute("tabindex", "0");
+    expect(row("Beta")).toHaveAttribute("tabindex", "-1");
   });
 
   it("moves the selection to a model made active elsewhere (e.g. an import)", async () => {
@@ -174,7 +178,8 @@ describe("Explorer — rename", () => {
   it("renames with a double click and Enter", async () => {
     render(<Explorer />);
     await userEvent.dblClick(row("Beta"));
-    const input = screen.getByDisplayValue("Beta");
+    const input = screen.getByRole("textbox", { name: "Model name" });
+    expect(input).toHaveValue("Beta");
     expect(input).toHaveFocus();
     await userEvent.clear(input);
     await userEvent.type(input, "  Slope 2  {Enter}");
@@ -318,7 +323,8 @@ describe("Explorer — drag and drop", () => {
     } as DOMRect);
     fireEvent.dragStart(row("Alpha"));
     dragOverAt(row("Gamma"), 15);
-    expect(row("Gamma").style.borderBottom).toContain("var(--color-vsc-accent)");
+    // The drop line under the target row.
+    expect(within(row("Gamma")).getByTestId("model-drop-indicator").style.bottom).toBe("-1px");
     fireEvent.drop(row("Gamma"));
     expect(names()).toEqual(["Beta", "Gamma", "Alpha"]);
 
@@ -355,10 +361,7 @@ describe("ProjectInfoDialog", () => {
     ...patch,
   });
 
-  const input = (label: string) =>
-    screen.getByText(label, { exact: false }).parentElement!.querySelector(
-      "input, textarea",
-    ) as HTMLInputElement;
+  const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
 
   it("saves only the fields that were changed, numbers as numbers", async () => {
     const onSave = vi.fn();
@@ -367,7 +370,7 @@ describe("ProjectInfoDialog", () => {
     await userEvent.type(input("Author"), "ZC");
     await userEvent.clear(input("Canvas width (m)"));
     await userEvent.type(input("Canvas width (m)"), "1500");
-    await userEvent.type(input("Description / Notes"), "Notes");
+    await userEvent.type(input("Description"), "Notes");
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({
       author: "ZC",
@@ -385,14 +388,12 @@ describe("ProjectInfoDialog", () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getByText("Editing 2 models")).toBeInTheDocument();
-    expect(screen.getByText("Client (mixed)")).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Model properties" })).toHaveAccessibleDescription(/^Editing 2 models/);
     expect(input("Client")).toHaveValue("");
     expect(input("Client")).toHaveAttribute("placeholder", "Mixed values");
     // Shared values are shown.
     expect(input("Project no.")).toHaveValue("P1");
     await userEvent.type(input("Client"), "C");
-    expect(screen.queryByText("Client (mixed)")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
     expect(onSave).toHaveBeenCalledWith({ client: "C" });
   });

@@ -11,6 +11,8 @@ type MultiSelectComboboxChipsProps = {
   onValueChange: (next: string[]) => void;
   placeholder?: string;
   emptyText?: string;
+  /** The accessible name of the filter input (the field label). */
+  ariaLabel?: string;
 };
 
 /* ── Inline SVG micro-icons (no deps needed) ──────────── */
@@ -74,6 +76,7 @@ export function MultiSelectComboboxChips({
   onValueChange,
   placeholder = "Select items",
   emptyText = "No items found.",
+  ariaLabel,
 }: MultiSelectComboboxChipsProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -301,6 +304,7 @@ export function MultiSelectComboboxChips({
               setHighlightedIndex(0);
             }}
             onKeyDown={handleKeyDown}
+            aria-label={ariaLabel}
             placeholder={value.length === 0 ? placeholder : ""}
             className="flex-1 min-w-[60px] text-[11px] bg-transparent border-none p-0 outline-none"
             style={{ color: "var(--color-vsc-text)" }}
