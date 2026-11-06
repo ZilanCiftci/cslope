@@ -10,15 +10,16 @@ vi.mock("./drawing-cache", () => ({
   vectorsFor: () => null,
 }));
 
-const { drawUnderlays, placementCanvasCorners, worldToCanvasAffine } = await import("./draw-underlays");
+const { DARK_INVERT_FILTER, drawUnderlays, placementCanvasCorners, worldToCanvasAffine } = await import("./draw-underlays");
 const { drawPdfUnderlays } = await import("./pdf-underlay");
 
 /** A context that records what is done to it. */
 function fakeContext() {
-  const calls: { name: string; args: unknown[]; alpha: number; op: string }[] = [];
-  const ctx: Record<string, unknown> = { globalAlpha: 1, globalCompositeOperation: "source-over" };
+  const calls: { name: string; args: unknown[]; alpha: number; op: string; filter: string }[] = [];
+  const ctx: Record<string, unknown> = { globalAlpha: 1, globalCompositeOperation: "source-over", filter: "none" };
   for (const name of ["save", "restore", "transform", "setTransform", "beginPath", "rect", "clip", "drawImage"]) {
-    ctx[name] = (...args: unknown[]) => calls.push({ name, args, alpha: ctx.globalAlpha as number, op: ctx.globalCompositeOperation as string });
+    ctx[name] = (...args: unknown[]) =>
+      calls.push({ name, args, alpha: ctx.globalAlpha as number, op: ctx.globalCompositeOperation as string, filter: ctx.filter as string });
   }
   return { ctx: ctx as unknown as CanvasRenderingContext2D, calls };
 }
@@ -74,6 +75,18 @@ describe("drawing the placed drawings", () => {
     expect(calls).toEqual([]);
     drawUnderlays(ctx, [placement({ id: "top", order: 5, opacity: 0.9 }), placement({ id: "under", order: 1, opacity: 0.2 })], toCanvas);
     expect(calls.filter((c) => c.name === "drawImage").map((c) => c.alpha)).toEqual([0.2, 0.9]);
+  });
+
+  it("inverts an image or PDF drawing in the dark theme, unless its switch is off", () => {
+    const filterOf = (p: BackgroundImage, dark: boolean) => {
+      const { ctx, calls } = fakeContext();
+      drawUnderlays(ctx, [p], toCanvas, { dark });
+      return calls.find((c) => c.name === "drawImage")!.filter;
+    };
+    expect(filterOf(placement(), true)).toBe(DARK_INVERT_FILTER);
+    expect(filterOf(placement({ invertInDark: true }), true)).toBe(DARK_INVERT_FILTER);
+    expect(filterOf(placement({ invertInDark: false }), true)).toBe("none");
+    expect(filterOf(placement(), false)).toBe("none");
   });
 
   it("finds the view's affine and a placement's corners on the canvas", () => {

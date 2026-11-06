@@ -2,7 +2,8 @@
  * The drawings in the Models panel. Under each model, the drawings placed
  * in it (topmost first), each with its visibility and lock; a click selects
  * one (making its model the active one) and opens its settings below it:
- * opacity, "Show in results", order, Recalibrate…, Rename, Pick lines…,
+ * opacity, "Show in results", "Invert in dark theme" (an image or PDF),
+ * order, Recalibrate…, Rename, Pick lines…,
  * Remove and a DWG or DXF drawing's layers. Below the models, Attachments
  * lists the project's files and the models that use each. Every change is
  * an undo step of the model (an opacity drag is one step).
@@ -252,6 +253,16 @@ function DrawingSettings({
         <input type="checkbox" checked={b.showInResults === true} onChange={(e) => st().updateBackground(b.id, { showInResults: e.target.checked || undefined })} />
         <span className="truncate">Show in results</span>
       </label>
+      {kind !== "vector" && (
+        <label className="flex items-center gap-1 mt-1 min-w-0" title="In the dark theme, draw the drawing with its colors inverted: a white page dark, black lines light">
+          <input
+            type="checkbox"
+            checked={b.invertInDark !== false}
+            onChange={(e) => st().updateBackground(b.id, { invertInDark: e.target.checked ? undefined : false })}
+          />
+          <span className="truncate">Invert in dark theme</span>
+        </label>
+      )}
       <div className="flex items-center flex-wrap gap-1 mt-1">
         <button className="btn text-[11px]" onClick={() => openPlaceDrawing(b.id)}>
           Recalibrate…

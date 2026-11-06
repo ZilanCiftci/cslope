@@ -22,6 +22,12 @@ describe("backgrounds.json read", () => {
     expect(normalizeBackgrounds([entry])).toEqual([entry]);
   });
 
+  it("keeps a drawing's inversion in the dark theme switched off; on is the default (absent)", () => {
+    expect(normalizeBackgrounds([{ ...entry, invertInDark: false }])[0].invertInDark).toBe(false);
+    expect(normalizeBackgrounds([{ ...entry, invertInDark: true }])[0]).not.toHaveProperty("invertInDark");
+    expect(normalizeBackgrounds([{ ...entry, invertInDark: "no" }])[0]).not.toHaveProperty("invertInDark");
+  });
+
   it("validates each member: unusable entries dropped, the rest defaulted or clamped", () => {
     const out = normalizeBackgrounds([
       { ...entry, id: "bad id!", crop: { x0: 5, y0: 5, x1: 5, y1: 9 }, page: 0, opacity: -1, name: " ", calibration: { mode: "warp" }, showInResults: "yes" },

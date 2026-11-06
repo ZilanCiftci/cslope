@@ -106,6 +106,7 @@ export function normalizeBackgrounds(
       if (crop.x1 - crop.x0 > 0 && crop.y1 - crop.y0 > 0) entry.crop = crop;
     }
     if (item.showInResults === true) entry.showInResults = true;
+    if (item.invertInDark === false) entry.invertInDark = false;
     if (Array.isArray(item.hiddenLayers)) {
       const names = [...new Set(item.hiddenLayers.filter((n): n is string => typeof n === "string"))];
       if (names.length > 0) entry.hiddenLayers = names;

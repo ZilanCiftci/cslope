@@ -8,6 +8,7 @@ import { createRecordingContext } from "../test/recording-context";
 import { computePaperFrame } from "../features/canvas/helpers";
 import { PLOT_MARGINS } from "../store/defaults";
 import type { Annotation } from "../store/types";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../constants";
 
 const W = 1000;
 const H = 700;
@@ -240,7 +241,8 @@ describe("ResultCanvas paper zoom and pan", () => {
 
   it("selects an annotation on click and drags it on the paper", () => {
     renderCanvas();
-    const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0);
+    // The sheet sits above the floating toolbar's band.
+    const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     const [x, y] = [pf.x + 0.6 * pf.w + 3, pf.y + 0.6 * pf.h + 3];
     fireEvent.pointerDown(canvas(), { button: 0, clientX: x, clientY: y, pointerId: 1 });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["b"]);

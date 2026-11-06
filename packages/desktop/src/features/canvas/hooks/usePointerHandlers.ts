@@ -38,6 +38,7 @@ import { isObjectLocked, nextCycleIndex, sameObject } from "../../../store/canva
 import { handleAxes, moveHandleTo, type HandleActions } from "../handle-edit";
 import type { DrawingSnap } from "../../drawings/snap";
 import type { SnapMarker } from "../../drawings/canvas-snap";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 /** What a drag records as one undo step: the same fields the undo history keeps (a drawing's placement, the locks, …). */
 type UndoableSnapshot = ReturnType<typeof undoableState>;
@@ -468,6 +469,7 @@ export function usePointerHandlers(deps: PointerDeps) {
           s.resultViewSettings.paperFrame.zoom ?? 1,
           s.resultViewSettings.paperFrame.offsetX ?? 0,
           s.resultViewSettings.paperFrame.offsetY ?? 0,
+          SCREEN_PAPER_BOTTOM_RESERVE_PX,
         );
         const cxPx = clientX - rect.left;
         const cyPx = clientY - rect.top;
@@ -591,6 +593,7 @@ export function usePointerHandlers(deps: PointerDeps) {
         frame.zoom ?? 1,
         frame.offsetX ?? 0,
         frame.offsetY ?? 0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
       );
       const cxPx = clientX - rect.left;
       const cyPx = clientY - rect.top;

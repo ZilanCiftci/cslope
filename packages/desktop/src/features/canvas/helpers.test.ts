@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { PAPER_FRAME_MARGIN_PX } from "../../constants";
+import {
+  FLOATING_TOOLBAR_BOTTOM_PX,
+  FLOATING_TOOLBAR_HEIGHT_PX,
+  PAPER_FRAME_MARGIN_PX,
+  SCREEN_PAPER_BOTTOM_RESERVE_PX,
+} from "../../constants";
 import {
   computePaperFrame,
   collectModelFitBounds,
@@ -38,6 +43,18 @@ describe("computePaperFrame", () => {
     expect(frame.w / frame.h).toBeLessThan(1);
     expect(frame.w).toBeGreaterThan(0);
     expect(frame.h).toBeGreaterThan(0);
+  });
+
+  it("keeps a band at the bottom free when asked (the floating toolbar's on screen), centred above it", () => {
+    const reserve = SCREEN_PAPER_BOTTOM_RESERVE_PX;
+    const frame = computePaperFrame(1200, 800, "A3", true, 1, 0, 0, reserve);
+    expect(frame.y + frame.h).toBeLessThanOrEqual(800 - reserve - PAPER_FRAME_MARGIN_PX + 1e-9);
+    expect(frame.y + frame.h / 2).toBeCloseTo((800 - reserve) / 2, 6);
+    expect(frame.h).toBeLessThan(computePaperFrame(1200, 800, "A3").h);
+    // the band reaches the toolbar's top and 8 px above it
+    expect(reserve + PAPER_FRAME_MARGIN_PX).toBe(FLOATING_TOOLBAR_BOTTOM_PX + FLOATING_TOOLBAR_HEIGHT_PX + 8);
+    // a very low canvas keeps at least half its height (less the margins) for the sheet
+    expect(computePaperFrame(1200, 120, "A3", true, 1, 0, 0, reserve).h).toBeCloseTo(40, 6);
   });
 
   it("centres the frame in the canvas", () => {

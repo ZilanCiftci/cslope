@@ -549,6 +549,12 @@ export interface BackgroundImage {
   showInResults?: boolean;
   /** A DWG or DXF drawing: the names of its layers not shown (nor snapped to, nor picked); absent: all shown. */
   hiddenLayers?: string[];
+  /**
+   * An image or PDF drawing: drawn with its colours inverted in the dark
+   * theme (a white page dark, black lines light); absent: true. Not in the
+   * light theme nor the exports.
+   */
+  invertInDark?: boolean;
 }
 
 /**

@@ -31,6 +31,7 @@ import {
   paperPngDataUrl,
   setPaperDrawSource,
 } from "../../../features/export/paper-png";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 const store = () => useAppStore.getState();
 const rvs = () => store().resultViewSettings;
@@ -367,9 +368,10 @@ describe("ResultsMenu", () => {
     await userEvent.click(screen.getByTitle("More export options"));
     await userEvent.click(screen.getByRole("button", { name: "Export as PDF" }));
     const { viewBounds } = mocks.exportVectorPdf.mock.calls[0][0];
-    // The frame is centred on the canvas: symmetric about the origin.
+    // The frame is centred on the canvas above the floating toolbar's band:
+    // symmetric about the origin across, half the band (at 10 px/m) higher.
     expect(viewBounds.xMin).toBeCloseTo(-viewBounds.xMax, 6);
-    expect(viewBounds.yMin).toBeCloseTo(-viewBounds.yMax, 6);
+    expect((viewBounds.yMin + viewBounds.yMax) / 2).toBeCloseTo(SCREEN_PAPER_BOTTOM_RESERVE_PX / 2 / 10, 6);
     expect(viewBounds.xMax).toBeGreaterThan(0);
     expect(viewBounds.xMax).toBeLessThan(40);
   });

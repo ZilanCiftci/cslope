@@ -5,6 +5,7 @@ import { useContextMenu } from "./useContextMenu";
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_PIEZO_LINE, DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computePaperFrame } from "../helpers";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 import type { CanvasCandidate } from "../object-hits";
 import type { CanvasObjectRef } from "../../../store/types";
 
@@ -260,7 +261,7 @@ describe("useContextMenu — result mode", () => {
   ];
   // Click positions (client coordinates) on each annotation anchor.
   const at = (fx: number, fy: number): [number, number] => {
-    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0);
+    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     return [RECT.left + pf.x + fx * pf.w, RECT.top + pf.y + fy * pf.h];
   };
 
@@ -455,7 +456,7 @@ describe("useContextMenu — reference annotations", () => {
 
   it("takes a colour bar drawn over a reference line, not the line", () => {
     const [cx, cy] = at(12, 4);
-    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0);
+    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     const bar = { id: "bar", type: "color-bar" as const, x: (cx - RECT.left - pf.x) / pf.w, y: (cy - RECT.top - pf.y) / pf.h };
     useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, bar] } });
     const { params, open, menu } = setup({ mode: "result" });

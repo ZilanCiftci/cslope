@@ -64,6 +64,7 @@ import { APP_VERSION } from "../../../utils/app-version";
 import { paperPngDataUrl } from "../../../features/export/paper-png";
 import { buildXlsx } from "../../../utils/xlsx";
 import { downloadFile, safeFileName } from "../../../utils/download";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 interface Props {
   isOpen: boolean;
@@ -113,6 +114,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       zoom ?? 1,
       offsetX ?? 0,
       offsetY ?? 0,
+      SCREEN_PAPER_BOTTOM_RESERVE_PX,
     );
     const inner = computeInnerFrame(pf);
 

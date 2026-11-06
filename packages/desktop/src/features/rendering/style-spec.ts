@@ -168,6 +168,18 @@ export const COLOR_BAR_NUM_TICKS = 5;
 
 /** Space between the colour bar (its title, bar and values) and the edge of its plate, at annotation scale 1. */
 export const COLOR_BAR_PLATE_PAD = 4;
+/**
+ * The smallest text of the colour bar on the canvas (px): its title and
+ * values stay readable on a small sheet (at 100 % in a small window). The
+ * PDF sizes it with the paper.
+ */
+export const COLOR_BAR_MIN_TEXT_PX = 10;
+/**
+ * The smallest text of the material table on the canvas (px): a smaller
+ * table (its size follows the sheet and its text size) is drawn larger as
+ * a whole, so it stays readable at 100 %. The PDF sizes it with the paper.
+ */
+export const MATERIAL_TABLE_MIN_TEXT_PX = 9;
 
 // ── Material model hatch patterns ──────────────────────────────
 

@@ -37,6 +37,10 @@ export function getPaperDimensions(
  * Compute the paper frame rectangle (centered, with margin) given canvas CSS size.
  *
  * Used by both the canvas renderer and the PDF exporter (via a virtual canvas).
+ * `bottomReserve` (px) keeps a band at the bottom of the canvas free: the
+ * sheet is fitted and centred in the canvas above it. The result view on
+ * screen passes SCREEN_PAPER_BOTTOM_RESERVE_PX (the floating toolbar's
+ * band); the exports pass nothing.
  */
 export function computePaperFrame(
   canvasW: number,
@@ -46,12 +50,16 @@ export function computePaperFrame(
   zoom = 1,
   offsetX = 0,
   offsetY = 0,
+  bottomReserve = 0,
 ): Rect {
   const { width: pw, height: ph } = getPaperDimensions(paperSize, landscape);
   const paperAspect = pw / ph;
   const margin = PAPER_FRAME_MARGIN_PX;
+  // A very low canvas keeps at least half its height for the sheet.
+  const reserve = Math.max(0, Math.min(bottomReserve, (canvasH - margin * 2) / 2));
+  const fitH = canvasH - reserve;
   const availW = canvasW - margin * 2;
-  const availH = canvasH - margin * 2;
+  const availH = fitH - margin * 2;
   let frameW: number;
   let frameH: number;
   if (availW / availH > paperAspect) {
@@ -68,7 +76,7 @@ export function computePaperFrame(
   frameH *= clampedZoom;
 
   const x = (canvasW - frameW) / 2 + offsetX;
-  const y = (canvasH - frameH) / 2 + offsetY;
+  const y = (fitH - frameH) / 2 + offsetY;
   return { x, y, w: frameW, h: frameH };
 }
 
