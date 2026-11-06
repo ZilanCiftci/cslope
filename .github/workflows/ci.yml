@@ -101,6 +101,19 @@ jobs:
         run: |
           bunx playwright install --with-deps --only-shell chromium
           bun run smoke
+      # ── The browser app (packages/web, #87) ─────────────────────────────
+      # Its tests, its build (with the name and content-security-policy
+      # checks) and the smoke test: the built page in Chromium in both
+      # themes, with T-ACADS Simple run through the engine's worker under
+      # the policy of its vercel.json (F 0.984).
+      - name: Test web
+        run: bun run --filter @cslope/web test
+      - name: Build web
+        run: bun run --filter @cslope/web build
+      - name: Smoke test web
+        working-directory: packages/web
+        run: bun run smoke
+      # ── End of the browser app ──────────────────────────────────────────
 
   # The engine's TypeScript API over the testing build of the WebAssembly
   # engine (internal functions the tests call): the quick set.
