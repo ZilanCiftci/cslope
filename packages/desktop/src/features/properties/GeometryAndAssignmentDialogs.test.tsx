@@ -212,7 +212,7 @@ describe("MaterialsDialogApp", () => {
   it("sends edits back to the main window", async () => {
     render(<MaterialsDialogApp />);
     bridge.emit("onMaterialsState", { materials: [mat("m1", "Sand")] });
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add material" }));
     const sent = bridge.sentOf<{ materials: MaterialRow[] }>("sendMaterialsChanged");
     expect(sent.at(-1)!.materials).toHaveLength(2);
   });

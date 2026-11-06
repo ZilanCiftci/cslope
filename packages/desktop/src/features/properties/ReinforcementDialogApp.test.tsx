@@ -64,11 +64,7 @@ describe("ReinforcementDialogApp — elements", () => {
     render(<ReinforcementDialogApp />);
     hydrate();
     expect(store().coordinates).toEqual(COORDS);
-    await userEvent.selectOptions(
-      screen.getByLabelText("Type of the new reinforcement"),
-      "nail",
-    );
-    await userEvent.click(elements().getByRole("button", { name: "Add" }));
+    await userEvent.click(elements().getByRole("button", { name: "+ Add soil nail" }));
     const [row] = store().reinforcements;
     expect(row.type).toBe("nail");
     expect(row.x1).toBe(10);
@@ -242,6 +238,30 @@ describe("ReinforcementDialogApp — elements", () => {
     expect(rows()[0]).toHaveAttribute("aria-selected", "false");
   });
 
+  it("has one + Add link per type under the list and no Add or Delete buttons", () => {
+    render(<ReinforcementDialogApp />);
+    hydrate();
+    expect(
+      elements()
+        .getAllByRole("button", { name: /^\+ Add/ })
+        .map((b) => b.textContent),
+    ).toEqual(["+ Add anchor", "+ Add tieback", "+ Add soil nail", "+ Add geosynthetic"]);
+    expect(elements().queryByRole("button", { name: "Add" })).toBeNull();
+    expect(elements().queryByRole("button", { name: "Delete" })).toBeNull();
+    expect(screen.queryByLabelText("Type of the new reinforcement")).toBeNull();
+  });
+
+  it("removes an element that is not selected and keeps the selection", async () => {
+    render(<ReinforcementDialogApp />);
+    hydrate([
+      newReinforcement("r1", "anchor", COORDS, "ltr"),
+      newReinforcement("r2", "nail", COORDS, "ltr"),
+    ]);
+    await userEvent.click(elements().getByRole("button", { name: "Remove element 2" }));
+    expect(store().reinforcements.map((r) => r.id)).toEqual(["r1"]);
+    expect(screen.getByText("Element 1: Anchor (end-anchored)")).toBeInTheDocument();
+  });
+
   it("deletes the selected element and selects the next one", async () => {
     render(<ReinforcementDialogApp />);
     hydrate([
@@ -250,10 +270,10 @@ describe("ReinforcementDialogApp — elements", () => {
     ]);
     await userEvent.click(elements().getAllByRole("row")[1]);
     expect(screen.getByLabelText("Pullout")).toBeInTheDocument();
-    await userEvent.click(elements().getByRole("button", { name: "Delete" }));
+    await userEvent.click(elements().getByRole("button", { name: "Remove element 1" }));
     expect(store().reinforcements.map((r) => r.id)).toEqual(["r2"]);
     expect(screen.getByText("Element 1: Soil nail")).toBeInTheDocument();
-    await userEvent.click(elements().getByRole("button", { name: "Delete" }));
+    await userEvent.click(elements().getByRole("button", { name: "Remove element 1" }));
     expect(store().reinforcements).toEqual([]);
     expect(screen.queryByLabelText("Pullout")).toBeNull();
     expect(elements().getByText(/No reinforcement/)).toBeInTheDocument();
@@ -264,10 +284,8 @@ describe("ReinforcementDialogApp — piles", () => {
   it("adds a pile row and a sheet pile wall", async () => {
     render(<ReinforcementDialogApp />);
     hydrate();
-    const add = pilesRegion().getByRole("button", { name: "Add" });
-    await userEvent.click(add);
-    await userEvent.selectOptions(screen.getByLabelText("Type of the new pile"), "sheet-pile");
-    await userEvent.click(add);
+    await userEvent.click(pilesRegion().getByRole("button", { name: "+ Add pile row" }));
+    await userEvent.click(pilesRegion().getByRole("button", { name: "+ Add sheet pile wall" }));
     expect(store().piles.map((p) => [p.type, p.mode])).toEqual([
       ["pile", "ito-matsui"],
       ["sheet-pile", "force"],
@@ -351,7 +369,7 @@ describe("ReinforcementDialogApp — piles", () => {
       momentCapacity: 150,
       application: "active",
     });
-    await userEvent.click(pilesRegion().getByRole("button", { name: "Delete" }));
+    await userEvent.click(pilesRegion().getByRole("button", { name: "Remove P1" }));
     expect(store().piles).toEqual([]);
   });
 });

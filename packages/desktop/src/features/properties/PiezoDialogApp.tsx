@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
 import type {
@@ -11,11 +11,10 @@ import { ImportedDataNotice } from "./ImportedDataNotice";
 import { waternetNoticeText } from "./imported-notices";
 import { Label } from "../../components/ui/Label";
 import {
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { RecordTable } from "../../components/ui/RecordTable";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { resolveParameters } from "../../utils/expression";
 import { mainPiezoLine, nextPiezoPoint } from "../../utils/piezo";
@@ -140,6 +139,7 @@ export function PiezoDialogApp() {
 
   const activeLine =
     pl.lines.find((l) => l.id === pl.activeLineId) ?? pl.lines[0] ?? null;
+  const activeLineIndex = activeLine ? pl.lines.indexOf(activeLine) : -1;
   const parameterValues = resolveParameters(parameters).resolved;
 
   const setPiezoCoordinateExpression = (
@@ -210,22 +210,6 @@ export function PiezoDialogApp() {
         />
       ),
     },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: (_row, i) =>
-        activeLine && activeLine.coordinates.length > 2 ? (
-          <RowRemoveButton
-            ariaLabel={`Remove piezometric point ${i + 1}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              removePiezoPoint(i);
-            }}
-          />
-        ) : null,
-    },
   ];
 
   const addDefaultPoint = () => {
@@ -250,12 +234,13 @@ export function PiezoDialogApp() {
     if (last) setActivePiezoLine(last.id);
   };
 
-  const handleDeleteLine = () => {
-    if (!activeLine) return;
-    removePiezoLine(activeLine.id);
+  const handleDeleteLine = (id: string) => {
+    const index = pl.lines.findIndex((l) => l.id === id);
+    const wasShown = id === activeLine?.id;
+    removePiezoLine(id);
     const remaining = useAppStore.getState().piezometricLine.lines;
-    if (remaining.length > 0) {
-      setActivePiezoLine(remaining[0].id);
+    if (wasShown && remaining.length > 0) {
+      setActivePiezoLine(remaining[Math.min(index, remaining.length - 1)].id);
     }
   };
 
@@ -287,90 +272,43 @@ export function PiezoDialogApp() {
           </div>
         )}
 
-        {/* ── Line list table + Add/Delete buttons ── */}
-        <div className="flex gap-3">
-          <div
-            className="flex-1 rounded border overflow-hidden"
-            style={{ borderColor: "var(--color-vsc-border)" }}
-          >
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr
-                  style={{
-                    background: "var(--color-vsc-surface-tint)",
-                    color: "var(--color-vsc-text-muted)",
-                  }}
-                >
-                  <th className="text-left px-2 py-1.5 font-semibold">Line</th>
-                  <th className="text-right px-2 py-1.5 font-semibold w-24">
-                    Points
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pl.lines.length === 0 && (
-                  <tr>
-                    <td colSpan={2} className="px-2 py-1.5" style={{ color: "var(--color-vsc-text-muted)" }}>
-                      No piezometric lines.
-                    </td>
-                  </tr>
-                )}
-                {pl.lines.map((line) => {
-                  const isSelected = activeLine?.id === line.id;
-                  return (
-                    <tr
-                      key={line.id}
-                      onClick={() => {
-                        setActivePiezoLine(line.id);
-                        selectCanvasObject({ type: "waterLine", id: line.id });
-                      }}
-                      className="cursor-pointer transition-colors"
-                      style={{
-                        background: isSelected
-                          ? "var(--color-vsc-selected-bg)"
-                          : "transparent",
-                        color: isSelected
-                          ? "var(--color-vsc-text-bright)"
-                          : "var(--color-vsc-text)",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background =
-                            "var(--color-vsc-list-hover)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = "transparent";
-                        }
-                      }}
-                    >
-                      <td className="px-2 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block w-2.5 h-2.5 rounded-sm flex-shrink-0"
-                            style={{ background: line.color }}
-                          />
-                          {line.name}
-                        </div>
-                      </td>
-                      <td className="px-2 py-1.5 text-right">
-                        {line.coordinates.length}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <DialogButton onClick={handleAddLine}>Add</DialogButton>
-            <DialogButton onClick={handleDeleteLine} disabled={!activeLine}>
-              Delete
-            </DialogButton>
-          </div>
-        </div>
+        {/* ── Line list: read-only rows, the selected line's points below ── */}
+        <RecordTable
+          mode="records"
+          label="Piezometric lines list"
+          rows={pl.lines}
+          getRowKey={(line) => line.id}
+          selectedRowIndex={activeLineIndex >= 0 ? activeLineIndex : null}
+          onRowClick={(line) => {
+            setActivePiezoLine(line.id);
+            selectCanvasObject({ type: "waterLine", id: line.id });
+          }}
+          emptyText="No piezometric lines."
+          onRemove={(line) => handleDeleteLine(line.id)}
+          removeLabel={(line) => `Remove ${line.name}`}
+          addActions={[{ label: "+ Add line", onClick: handleAddLine }]}
+          columns={[
+            {
+              header: "Line",
+              renderCell: (line) => (
+                <span className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden
+                    className="inline-block w-2.5 h-2.5 rounded-xs flex-shrink-0"
+                    style={{ background: line.color }}
+                  />
+                  {line.name}
+                </span>
+              ),
+            },
+            {
+              header: "Points",
+              widthClassName: "w-24",
+              align: "right",
+              renderCell: (line) => line.coordinates.length,
+            },
+          ]}
+        />
 
         {/* ── Coordinate editor for selected line ── */}
         {activeLine && (
@@ -389,15 +327,12 @@ export function PiezoDialogApp() {
                   : null
               }
               onRowClick={(_row, i) => selectCanvasObject({ type: "waterLine", id: activeLine.id }, i)}
+              onRemove={(_row, i) => removePiezoPoint(i)}
+              removeLabel={(_row, i) => `Remove piezometric point ${i + 1}`}
+              // A line keeps at least two points.
+              canRemove={() => activeLine.coordinates.length > 2}
+              addActions={[{ label: "+ Add point", onClick: addDefaultPoint }]}
             />
-
-            <button
-              onClick={addDefaultPoint}
-              className="text-[11px] cursor-pointer hover:underline font-medium"
-              style={{ color: "var(--color-vsc-link)" }}
-            >
-              + Add point
-            </button>
           </div>
         )}
 
@@ -490,25 +425,5 @@ export function PiezoDialogApp() {
         </button>
       </div>
     </div>
-  );
-}
-
-function DialogButton({
-  onClick,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      onClick={disabled ? undefined : onClick}
-      className="btn min-w-[64px]"
-      aria-disabled={disabled}
-    >
-      {children}
-    </button>
   );
 }

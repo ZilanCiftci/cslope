@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { evaluate } from "../../utils/expression";
+import { CELL_EDITOR_CLASS, cellEditorStyle } from "./cell-editor";
 
 interface SpreadsheetExpressionInputProps {
   value: number;
@@ -103,13 +104,9 @@ export function SpreadsheetExpressionInput({
         setIsFocused(false);
         commitDraft();
       }}
-      className="w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)]"
+      className={CELL_EDITOR_CLASS}
       style={{
-        background: "var(--color-vsc-input-bg)",
-        color: "var(--color-vsc-text)",
-        borderRadius: 0,
-        boxShadow: "none",
-        margin: 0,
+        ...cellEditorStyle,
         borderColor: hasError ? "var(--color-vsc-error)" : undefined,
       }}
       aria-label={ariaLabel}

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("../../utils/is-electron", () => ({ isElectron: true }));
@@ -429,7 +429,10 @@ describe("CustomSearchPlanesDialogApp", () => {
     expect(screen.getByLabelText("Circle center X")).toHaveValue("18.3");
     expect(screen.getByLabelText("Circle center Y")).toHaveValue("15.2");
     expect(screen.getByLabelText("Circle radius")).toHaveValue("13");
-    expect(screen.getByLabelText("Non-circular surface points")).toHaveValue("5, 8; 15, 2; 25, 4");
+    // The list shows both surfaces' geometry.
+    const list = screen.getByRole("grid", { name: "Custom surfaces list" });
+    expect(within(list).getByText("cx 18.3, cy 15.2, R 13")).toBeInTheDocument();
+    expect(within(list).getByText("(5, 8) (15, 2) (25, 4)")).toBeInTheDocument();
     // Nothing is echoed back; a typed number is.
     expect(bridge.sentOf("sendAnalysisChanged")).toEqual([]);
     const r = screen.getByLabelText("Circle radius");
@@ -438,6 +441,28 @@ describe("CustomSearchPlanesDialogApp", () => {
     expect(store().customSearchPlanes[0]).toMatchObject({ cx: 18.3, cy: 15.2, radius: 9 });
     expect(lastSent().customSearchPlanes[0].radius).toBe(9);
     expect(lastSent().customSearchPlanes[1].points).toHaveLength(3);
+    // The non-circular surface's points show when its row is selected.
+    await userEvent.click(within(list).getByText("Non-circular"));
+    expect(screen.getByLabelText("Non-circular surface points")).toHaveValue("5, 8; 15, 2; 25, 4");
+    expect(screen.queryByLabelText("Circle radius")).toBeNull();
+  });
+
+  it("lists the surfaces numbered as in the result, circles first", () => {
+    render(<CustomSearchPlanesDialogApp />);
+    hydrate({
+      customSearchPlanes: [
+        { id: "p1", cx: 0, cy: 0, radius: 0, points: [[5, 8], [25, 4]] },
+        { id: "p2", cx: 0, cy: 0, radius: 0, points: [] },
+        { id: "c1", cx: 10, cy: 20, radius: 12 },
+      ],
+    });
+    const rows = within(screen.getByRole("grid", { name: "Custom surfaces list" })).getAllByRole("row").slice(1);
+    expect(rows.map((r) => within(r).getAllByRole("cell")[0].textContent)).toEqual(["1", "2", "–"]);
+    expect(rows.map((r) => within(r).getAllByRole("cell")[1].textContent)).toEqual(["Circle", "Non-circular", "Non-circular"]);
+    // A surface with points can be drawn as a reference line; an unfinished one cannot.
+    expect(screen.getByRole("button", { name: "Add custom surface 2 as reference line" })).toBeInTheDocument();
+    expect(within(rows[2]).queryByRole("button", { name: /reference line/ })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Custom circle 1" })).toBeInTheDocument();
   });
 
   it("removes circles and non-circular surfaces", async () => {
@@ -448,9 +473,9 @@ describe("CustomSearchPlanesDialogApp", () => {
         { id: "p1", cx: 0, cy: 0, radius: 0, points: [[1, 2], [3, 4]] },
       ],
     });
-    await userEvent.click(screen.getByRole("button", { name: "Remove non-circular surface" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove custom surface 2" }));
     expect(store().customSearchPlanes.map((p) => p.id)).toEqual(["c1"]);
-    await userEvent.click(screen.getByRole("button", { name: "Remove search plane" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove custom circle 1" }));
     expect(store().customSearchPlanes).toEqual([]);
   });
 });

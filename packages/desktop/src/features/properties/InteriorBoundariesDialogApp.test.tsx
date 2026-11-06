@@ -54,17 +54,15 @@ afterEach(() => {
 });
 
 describe("InteriorBoundariesDialogApp", () => {
-  it("shows a hint and a disabled Delete without boundaries", () => {
+  it("shows a hint and only + Add boundary without boundaries", () => {
     render(<InteriorBoundariesDialogApp />);
     expect(bridge.callNames()).toContain("requestInteriorBoundariesState");
     hydrate([]);
     expect(
       screen.getByText("No interior boundaries."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Delete" })).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(screen.getByRole("button", { name: "+ Add boundary" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove boundary/ })).toBeNull();
   });
 
   it("selects the first boundary locally without sending state back", () => {
@@ -78,7 +76,7 @@ describe("InteriorBoundariesDialogApp", () => {
   it("adds a horizontal boundary at mid height and selects it", async () => {
     render(<InteriorBoundariesDialogApp />);
     hydrate([boundary("b1", [[0, 5], [20, 5]])], "b1");
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add boundary" }));
     const bs = store().materialBoundaries;
     expect(bs).toHaveLength(2);
     expect(bs[1].coordinates).toEqual([
@@ -90,7 +88,7 @@ describe("InteriorBoundariesDialogApp", () => {
     expect(sentBoundaries().at(-1)!.materialBoundaries).toHaveLength(2);
   });
 
-  it("switches boundary on row click and deletes the selected one", async () => {
+  it("switches boundary on row click and removes it with its ×", async () => {
     render(<InteriorBoundariesDialogApp />);
     hydrate(
       [boundary("b1", [[0, 5], [20, 5]]), boundary("b2", [[0, 2], [10, 1], [20, 2]])],
@@ -100,7 +98,7 @@ describe("InteriorBoundariesDialogApp", () => {
     expect(store().selectedMaterialBoundaryId).toBe("b2");
     expect(screen.getAllByLabelText(/^Boundary 2 point \d X$/)).toHaveLength(3);
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove boundary 2" }));
     expect(store().materialBoundaries.map((b) => b.id)).toEqual(["b1"]);
     expect(store().selectedMaterialBoundaryId).toBe("b1");
   });
