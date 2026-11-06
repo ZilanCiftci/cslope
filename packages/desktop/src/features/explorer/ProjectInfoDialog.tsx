@@ -1,7 +1,6 @@
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { ModalFrame } from "../../components/ui/ModalFrame";
 import type { ProjectInfo } from "../../store/app-store";
-import { parseDecimalText } from "../../utils/decimal";
 
 interface Props {
   initialInfos: ProjectInfo[];
@@ -11,9 +10,14 @@ interface Props {
   importNotes?: string[];
 }
 
-type ProjectInfoKey = keyof ProjectInfo;
+/**
+ * The fields the dialog edits. The canvas width and height of a model are
+ * not among them: the app never reads them; they stay in the project file
+ * as they were read (old files keep their values).
+ */
+type ProjectInfoKey = Exclude<keyof ProjectInfo, "canvasWidth" | "canvasHeight">;
 
-const STRING_FIELDS: ProjectInfoKey[] = [
+const FIELDS: ProjectInfoKey[] = [
   "title",
   "subtitle",
   "client",
@@ -24,14 +28,6 @@ const STRING_FIELDS: ProjectInfoKey[] = [
   "checker",
   "description",
 ];
-const NUMBER_FIELDS: ProjectInfoKey[] = ["canvasWidth", "canvasHeight"];
-
-function isNumberField(
-  field: ProjectInfoKey,
-): field is "canvasWidth" | "canvasHeight" {
-  return field === "canvasWidth" || field === "canvasHeight";
-}
-
 function allSame<T>(values: T[]): { same: boolean; value: T } {
   const [first] = values;
   return { same: values.every((v) => v === first), value: first };
@@ -52,16 +48,13 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
       author: first.author,
       checker: first.checker,
       description: first.description,
-      canvasWidth: String(first.canvasWidth),
-      canvasHeight: String(first.canvasHeight),
     };
     const mixed = new Set<ProjectInfoKey>();
 
-    const allFields: ProjectInfoKey[] = [...STRING_FIELDS, ...NUMBER_FIELDS];
-    for (const field of allFields) {
+    for (const field of FIELDS) {
       const check = allSame(initialInfos.map((info) => info[field]));
       if (check.same) {
-        values[field] = String(check.value);
+        values[field] = check.value;
       } else {
         mixed.add(field);
         values[field] = "";
@@ -88,14 +81,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
 
   const handleSave = () => {
     const patch: Partial<ProjectInfo> = {};
-    for (const field of touchedFields) {
-      if (isNumberField(field)) {
-        // "," or "." as the decimal separator.
-        patch[field] = parseDecimalText(String(info[field])) || 0;
-      } else {
-        patch[field] = info[field];
-      }
-    }
+    for (const field of touchedFields) patch[field] = info[field];
     onSave(patch);
   };
 
@@ -106,7 +92,7 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
   const field = (
     label: string,
     key: ProjectInfoKey,
-    opts: { wide?: boolean; multiline?: boolean; decimal?: boolean } = {},
+    opts: { wide?: boolean; multiline?: boolean } = {},
   ) => {
     const common = {
       id: fieldId(key),
@@ -124,7 +110,6 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
       <input
         {...common}
         type="text"
-        inputMode={opts.decimal ? "decimal" : undefined}
         onChange={(e) => handleChange(key, e.target.value)}
         className="w-full"
       />
@@ -175,8 +160,6 @@ export function ProjectInfoDialog({ initialInfos, onSave, onClose, importNotes }
           {field("Author", "author")}
           {field("Checker", "checker")}
           {field("Description", "description", { wide: true, multiline: true })}
-          {field("Canvas width (m)", "canvasWidth", { decimal: true })}
-          {field("Canvas height (m)", "canvasHeight", { decimal: true })}
         </div>
         {importNotes && importNotes.length > 0 && (
           <section aria-label="Import notes" data-testid="import-notes">
