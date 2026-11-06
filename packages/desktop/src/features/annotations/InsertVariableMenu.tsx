@@ -1,7 +1,9 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { ChevronDown } from "lucide-react";
 import { DISABLED_COLOR } from "../../components/ui/disabled-style";
+import { Menu, MenuHeading, MenuItem, MenuSeparator } from "../../components/ui/Menu";
+import { MENU_Z, useMenuDismiss } from "../../components/ui/menu-parts";
 import type { ParameterDef } from "../../store/types";
 import type { AnnotationTagContext } from "./resolveAnnotationText";
 import { insertAtCaret, variableItems, type VariableItem } from "./insertVariable";
@@ -33,10 +35,10 @@ export function InsertVariableMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ left: 0, top: 0, maxHeight: 320 });
-  const [active, setActive] = useState(0);
+  // The item focused when the menu opens: the first, or the last (ArrowUp).
+  const [initialFocus, setInitialFocus] = useState<"first" | "last">("first");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const pendingCaret = useRef<number | null>(null);
 
   const items = useMemo(
@@ -54,26 +56,9 @@ export function InsertVariableMenu({
     ta.setSelectionRange(caret, caret);
   }, [text, textareaRef]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (!menuRef.current?.contains(t) && !buttonRef.current?.contains(t)) {
-        setOpen(false);
-      }
-    };
-    window.addEventListener("mousedown", onDown);
-    return () => window.removeEventListener("mousedown", onDown);
-  }, [open]);
+  useMenuDismiss(open, [menuRef, buttonRef], () => setOpen(false));
 
-  useEffect(() => {
-    if (!open) return;
-    const el = itemRefs.current[active];
-    el?.focus();
-    el?.scrollIntoView?.({ block: "nearest" });
-  }, [open, active]);
-
-  const openMenu = (index: number) => {
+  const openMenu = (focus: "first" | "last") => {
     const r = buttonRef.current?.getBoundingClientRect();
     if (r) {
       const left = Math.max(
@@ -89,7 +74,7 @@ export function InsertVariableMenu({
           : Math.max(4, r.top - 2 - maxHeight);
       setPos({ left, top, maxHeight });
     }
-    setActive(index);
+    setInitialFocus(focus);
     setOpen(true);
   };
 
@@ -114,86 +99,34 @@ export function InsertVariableMenu({
       // Not the canvas's nudge of the selected annotation.
       e.preventDefault();
       e.stopPropagation();
-      const n = variableItems(ctx, parameters).length;
-      openMenu(e.key === "ArrowUp" ? n - 1 : 0);
+      openMenu(e.key === "ArrowUp" ? "last" : "first");
     }
   };
 
-  const onMenuKeyDown = (e: React.KeyboardEvent) => {
-    // Keys in the menu are its own (not the canvas's Delete or arrows).
-    e.stopPropagation();
-    const n = items.length;
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setActive((i) => (i + 1) % n);
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setActive((i) => (i - 1 + n) % n);
-        break;
-      case "Home":
-        e.preventDefault();
-        setActive(0);
-        break;
-      case "End":
-        e.preventDefault();
-        setActive(n - 1);
-        break;
-      case "Enter":
-      case " ":
-        e.preventDefault();
-        if (items[active]) choose(items[active]);
-        break;
-      case "Escape":
-        e.preventDefault();
-        close(true);
-        break;
-      case "Tab":
-        close(false);
-        break;
-    }
-  };
+  // Keys in the menu are its own (not the canvas's Delete or arrows);
+  // the menu moves between the items, Escape closes it.
+  const onMenuKeyDown = (e: React.KeyboardEvent) => e.stopPropagation();
 
-  const renderItem = ({ item, index: i }: { item: VariableItem; index: number }) => (
-    <button
+  const renderItem = ({ item }: { item: VariableItem; index: number }) => (
+    <MenuItem
       key={item.insert}
-      ref={(el) => {
-        itemRefs.current[i] = el;
-      }}
-      type="button"
-      role="menuitem"
-      tabIndex={i === active ? 0 : -1}
       // A project information tag: its name says what it is.
       title={item.group ? undefined : item.description}
       onClick={() => choose(item)}
-      onMouseEnter={() => setActive(i)}
-      className="w-full block px-3 py-1 text-left cursor-pointer"
-      style={{
-        background: i === active ? "var(--color-vsc-list-hover)" : "transparent",
-        color: "var(--color-vsc-text)",
-      }}
+      detail={item.group ? undefined : item.description}
     >
       <span className="flex items-baseline gap-2">
-        <span className="text-[11px] font-mono">{item.insert}</span>
+        <span className="font-mono">{item.insert}</span>
         {item.preview !== null && item.preview !== "" && (
           <span
-            className="ml-auto text-[10px] tabular-nums truncate"
+            className="ml-auto text-[11px] tabular-nums truncate"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
             ({item.preview})
           </span>
         )}
       </span>
-      {!item.group && (
-        <span
-          className="block text-[10px] leading-tight"
-          style={{ color: "var(--color-vsc-text-muted)" }}
-        >
-          {item.description}
-        </span>
-      )}
-    </button>
+    </MenuItem>
   );
 
   return (
@@ -209,7 +142,7 @@ export function InsertVariableMenu({
         }
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => (open ? close(false) : openMenu(0))}
+        onClick={() => (open ? close(false) : openMenu("first"))}
         onKeyDown={onButtonKeyDown}
         className="mt-1 text-[10px] pl-1.5 pr-1 py-0.5 rounded inline-flex items-center gap-1 cursor-pointer disabled:cursor-default"
         style={{
@@ -224,42 +157,34 @@ export function InsertVariableMenu({
         <ChevronDown size={12} strokeWidth={1.75} style={{ color: "var(--color-vsc-text-muted)" }} aria-hidden />
       </button>
       {open && (
-        <div
+        <Menu
           ref={menuRef}
-          role="menu"
-          aria-label="Insert variable"
+          label="Insert variable"
           onKeyDown={onMenuKeyDown}
-          className="fixed z-[100] py-1 rounded-md overflow-y-auto"
+          onClose={() => close(true)}
+          initialFocus={initialFocus}
+          className={`fixed ${MENU_Z} overflow-y-auto`}
           style={{
             left: pos.left,
             top: pos.top,
             width: MENU_WIDTH,
             maxHeight: pos.maxHeight,
-            background: "var(--color-vsc-input-bg)",
-            border: "1px solid var(--color-vsc-border)",
-            boxShadow: "var(--color-vsc-shadow-float)",
           }}
         >
           {runs(items).map((run) =>
             run.group ? (
               <Fragment key={run.group}>
                 <div role="group" aria-label={PROJECT_HEADING}>
-                  <div
-                    className="px-3 pt-1 pb-0.5 text-[10px]"
-                    style={{ color: "var(--color-vsc-text-muted)" }}
-                    aria-hidden
-                  >
-                    {PROJECT_HEADING}
-                  </div>
+                  <MenuHeading>{PROJECT_HEADING}</MenuHeading>
                   {run.items.map(renderItem)}
                 </div>
-                <div role="separator" className="my-1 h-px" style={{ background: "var(--color-vsc-border)" }} />
+                <MenuSeparator />
               </Fragment>
             ) : (
               run.items.map(renderItem)
             ),
           )}
-        </div>
+        </Menu>
       )}
     </>
   );

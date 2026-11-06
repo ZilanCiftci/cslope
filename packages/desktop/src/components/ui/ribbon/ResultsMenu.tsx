@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check } from "lucide-react";
 import { useAppStore } from "../../../store/app-store";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
@@ -47,6 +46,8 @@ import {
   RIBBON_POPUP_Z,
 } from "./RibbonParts";
 import { DISABLED_COLOR } from "../disabled-style";
+import { MenuField, MenuItem, MenuSeparator } from "../Menu";
+import { MENU_FRAME_CLASS, MENU_FRAME_STYLE } from "../menu-parts";
 import {
   defaultReferenceCircle,
   defaultReferencePolyline,
@@ -358,13 +359,8 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   />
                   {displayMenuOpen && (
                     <div
-                      className={`absolute top-[1.6rem] left-0 rounded py-1 ${RIBBON_POPUP_Z}`}
-                      style={{
-                        background: "var(--color-vsc-panel)",
-                        border: "1px solid var(--color-vsc-border)",
-                        minWidth: 150,
-                        boxShadow: "var(--color-vsc-shadow-float)",
-                      }}
+                      className={`absolute top-[1.6rem] left-0 ${MENU_FRAME_CLASS} ${RIBBON_POPUP_Z}`}
+                      style={{ ...MENU_FRAME_STYLE, minWidth: 160 }}
                       // Choices and fields, not only commands: a group.
                       role="group"
                       aria-label="Surfaces"
@@ -376,36 +372,22 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                           { value: "filter", label: "Filter by FOS" },
                         ] as { value: SurfaceDisplayMode; label: string }[]
                       ).map((item) => (
-                        <button
+                        // The current mode has a check mark.
+                        <MenuItem
                           key={item.value}
+                          role={null}
+                          checked={rvs.surfaceDisplay === item.value}
                           onClick={() => {
                             setRvs({ surfaceDisplay: item.value });
                             setDisplayMenuOpen(false);
                           }}
-                          className="w-full text-left pl-2 pr-3 py-1.5 text-[11px] cursor-pointer flex items-center gap-1.5 whitespace-nowrap hover:bg-[var(--color-vsc-list-hover)]"
-                          style={{
-                            background: "transparent",
-                            border: "none",
-                            color: "var(--color-vsc-text)",
-                          }}
-                          aria-pressed={rvs.surfaceDisplay === item.value}
                         >
-                          {/* The current mode has a check mark. */}
-                          <span className="w-3 shrink-0 flex items-center justify-center" aria-hidden>
-                            {rvs.surfaceDisplay === item.value && (
-                              <Check size={12} strokeWidth={1.75} style={{ color: "var(--color-vsc-text-muted)" }} />
-                            )}
-                          </span>
                           {item.label}
-                        </button>
+                        </MenuItem>
                       ))}
                       {(result?.customSurfaces?.length ?? 0) > 0 && (
-                        <label
-                          className="flex items-center gap-2 px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
-                          style={{
-                            color: "var(--color-vsc-text)",
-                            borderTop: "1px solid var(--color-vsc-border)",
-                          }}
+                        <MenuField
+                          separator
                           title="Draw the custom search planes' surfaces, dashed, each with its factor of safety"
                         >
                           <input
@@ -416,16 +398,10 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             aria-label="Show custom surfaces"
                           />
                           Custom surfaces
-                        </label>
+                        </MenuField>
                       )}
                       {rvs.surfaceDisplay === "filter" && (
-                        <label
-                          className="flex items-center gap-2 px-3 py-1.5 text-[11px] whitespace-nowrap"
-                          style={{
-                            color: "var(--color-vsc-text)",
-                            borderTop: "1px solid var(--color-vsc-border)",
-                          }}
-                        >
+                        <MenuField separator>
                           FOS ≤
                           <DraftNumberInput
                             min={0.01}
@@ -437,7 +413,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             aria-label="Maximum FOS shown"
                             className="w-16 tabular-nums"
                           />
-                        </label>
+                        </MenuField>
                       )}
                     </div>
                   )}
@@ -679,74 +655,50 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
 
                 {exportMenuOpen && hasResult && (
                   <div
-                    className={`absolute top-[3.25rem] ${exportMenuToLeft ? "right-0" : "left-0"} rounded py-1 ${RIBBON_POPUP_Z}`}
-                    style={{
-                      background: "var(--color-vsc-panel)",
-                      border: "1px solid var(--color-vsc-border)",
-                      minWidth: 160,
-                      boxShadow: "var(--color-vsc-shadow-float)",
-                    }}
+                    className={`absolute top-[3.25rem] ${exportMenuToLeft ? "right-0" : "left-0"} ${MENU_FRAME_CLASS} ${RIBBON_POPUP_Z}`}
+                    style={{ ...MENU_FRAME_STYLE, minWidth: 160 }}
                     // Commands and options: a group, not a menu.
                     role="group"
                     aria-label="Export options"
                   >
-                    <button
+                    <MenuItem
+                      role={null}
                       onClick={() => {
                         setExportMenuOpen(false);
                         handleExportPdf();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--color-vsc-text)",
-                      }}
                     >
                       Export as PDF
-                    </button>
+                    </MenuItem>
                     {/* What the PDF holds besides the drawing; kept with the
                         model's result view (saved in the project file and
                         in view templates). */}
-                    <div
-                      className="px-3 py-1 flex flex-col gap-1"
-                      style={{ borderBottom: "1px solid var(--color-vsc-border)" }}
-                    >
-                      {(
-                        [
-                          ["pdfSummaryPages", "summaryPages", "Analysis summary pages", "Append the calculation basis (method, search, water, partial factors, materials and loads) as pages after the drawing"],
-                          ["pdfTitleLine", "titleLine", "Title line above the drawing", "Write the model name, factor of safety and method in the top margin above the drawing frame"],
-                        ] as const
-                      ).map(([key, option, label, tip]) => (
-                        <label
-                          key={key}
-                          className="flex items-center gap-2 text-[11px] cursor-pointer select-none whitespace-nowrap"
-                          style={{ color: "var(--color-vsc-text)" }}
-                          title={tip}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={pdfPageOptions(rvs)[option]}
-                            onChange={(e) => setRvs({ [key]: e.target.checked })}
-                            className="accent-[var(--color-vsc-accent)] w-3 h-3"
-                          />
-                          {label}
-                        </label>
-                      ))}
-                    </div>
-                    <button
+                    {(
+                      [
+                        ["pdfSummaryPages", "summaryPages", "Analysis summary pages", "Append the calculation basis (method, search, water, partial factors, materials and loads) as pages after the drawing"],
+                        ["pdfTitleLine", "titleLine", "Title line above the drawing", "Write the model name, factor of safety and method in the top margin above the drawing frame"],
+                      ] as const
+                    ).map(([key, option, label, tip]) => (
+                      <MenuField key={key} title={tip}>
+                        <input
+                          type="checkbox"
+                          checked={pdfPageOptions(rvs)[option]}
+                          onChange={(e) => setRvs({ [key]: e.target.checked })}
+                          className="accent-[var(--color-vsc-accent)] w-3 h-3"
+                        />
+                        {label}
+                      </MenuField>
+                    ))}
+                    <MenuSeparator />
+                    <MenuItem
+                      role={null}
                       onClick={() => {
                         setExportMenuOpen(false);
                         handleExportPng();
                       }}
-                      className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "var(--color-vsc-text)",
-                      }}
                     >
                       Export as PNG
-                    </button>
+                    </MenuItem>
                     {(
                       [
                         ["xlsx", "Slice data (Excel)", "Slices of the critical surface as an Excel workbook"],
@@ -754,22 +706,17 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         ["csv-se", "Slice data (CSV, decimal comma)", "Slices of the critical surface; semicolon separator, decimal comma (Excel with a comma locale)"],
                       ] as const
                     ).map(([format, label, tip]) => (
-                      <button
+                      <MenuItem
                         key={format}
+                        role={null}
+                        title={tip}
                         onClick={() => {
                           setExportMenuOpen(false);
                           exportSliceData(format);
                         }}
-                        className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer whitespace-nowrap"
-                        style={{
-                          background: "transparent",
-                          border: "none",
-                          color: "var(--color-vsc-text)",
-                        }}
-                        title={tip}
                       >
                         {label}
-                      </button>
+                      </MenuItem>
                     ))}
                   </div>
                 )}

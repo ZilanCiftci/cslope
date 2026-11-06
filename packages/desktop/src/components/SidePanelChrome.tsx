@@ -5,7 +5,7 @@
  * small menu that moves the panel to the other side of the window.
  */
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
 import {
   PanelLeftClose,
   PanelLeftOpen,
@@ -13,6 +13,8 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { SECTION_HEADING_TEXT } from "./ui/Section";
+import { Menu, MenuItem } from "./ui/Menu";
+import { MENU_Z, useMenuDismiss } from "./ui/menu-parts";
 
 export type PanelSide = "left" | "right";
 
@@ -162,7 +164,7 @@ export function CollapsedPanelStrip({ side, label, onOpen, onMove }: StripProps)
   );
 }
 
-/** The move-panel context menu, styled like the canvas context menu. */
+/** The move-panel context menu. */
 function MoveMenu({
   x,
   y,
@@ -177,55 +179,22 @@ function MoveMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const onPointerDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("mousedown", onPointerDown);
-    document.addEventListener("keydown", onKey);
-    window.addEventListener("blur", onClose);
-    return () => {
-      document.removeEventListener("mousedown", onPointerDown);
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("blur", onClose);
-    };
-  }, [onClose]);
-
+  useMenuDismiss(true, [ref], onClose);
   return (
-    <div
+    <Menu
       ref={ref}
-      className="fixed z-[100] py-1 rounded-md shadow-xl min-w-[160px] normal-case tracking-normal font-normal"
-      style={{
-        left: x,
-        top: y,
-        background: "var(--color-vsc-input-bg)",
-        border: "1px solid var(--color-vsc-border)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-      }}
-      role="menu"
+      onClose={onClose}
+      className={`fixed ${MENU_Z} normal-case tracking-normal font-normal`}
+      style={{ left: x, top: y }}
     >
-      <button
-        type="button"
+      <MenuItem
         onClick={() => {
           onMove();
           onClose();
         }}
-        className="w-full px-3 py-1.5 text-[12px] text-left cursor-pointer whitespace-nowrap transition-colors"
-        style={{ color: "var(--color-vsc-text)" }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "var(--color-vsc-list-hover)";
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "";
-        }}
-        role="menuitem"
       >
         {label}
-      </button>
-    </div>
+      </MenuItem>
+    </Menu>
   );
 }
