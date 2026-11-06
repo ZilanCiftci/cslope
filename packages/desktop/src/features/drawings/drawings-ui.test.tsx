@@ -139,6 +139,14 @@ describe("Attachments", () => {
     fireEvent.click(screen.getByRole("button", { name: "Place sheet.pdf in the active model" }));
     expect(drawingWindowState().edit).toMatchObject({ assetId: "sheet" });
   });
+
+  it("adds a new drawing file with the link under the list", () => {
+    render(<AttachmentsPanel />);
+    fireEvent.click(screen.getByRole("button", { name: "Place sheet.pdf in the active model" }));
+    // A new file: the window opens without a file or placement to edit.
+    fireEvent.click(screen.getByRole("button", { name: "+ Add drawing…" }));
+    expect(drawingWindowState().edit).toBeNull();
+  });
 });
 
 describe("the Place drawing window's commands", () => {

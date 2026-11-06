@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createRecordingContext } from "../../test/recording-context";
-import { act, cleanup, createEvent, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, createEvent, fireEvent, render, screen, within } from "@testing-library/react";
 import type { AnalysisResult } from "@cslope/engine";
 import { ResultSidebar } from "./ResultSidebar";
 import { useAppStore } from "../../store/app-store";
@@ -97,14 +97,13 @@ describe("ResultSidebar summary", () => {
     expect(screen.getByText("← left")).toBeInTheDocument();
     expect(screen.getByText("Other direction").nextSibling!.textContent).toBe("no surface");
     // The notes are folded into one line; unfolded, each is a line, and the
-    // explanation sits behind its info button instead of a long tooltip.
+    // explanation is in the documentation, behind a help button.
     expect(screen.queryByText(/discarded because they did not reach equilibrium/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /3 notes/ }));
     const note = screen.getByText("3 surfaces were discarded because they did not reach equilibrium");
     expect(note).not.toHaveAttribute("title");
     expect(screen.queryByText(/within the iteration limits/)).toBeNull();
-    fireEvent.click(screen.getAllByRole("button", { name: "Explain" })[0]);
-    expect(screen.getByText(/within the iteration limits/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Help: Surfaces without equilibrium" })).toBeInTheDocument();
     expect(screen.getByText(/1 material boundary split\(s\) failed/)).toBeInTheDocument();
     expect(screen.getByText(/2 slices of the critical surface have negative effective normal force/)).toBeInTheDocument();
   });
@@ -128,9 +127,9 @@ describe("ResultSidebar summary", () => {
     render(<ResultSidebar />);
     const rows = screen.getAllByTestId("custom-surface-row");
     expect(rows.map((r) => r.textContent)).toEqual([
-      "Custom surface 1F = 0.664",
+      "Custom surface 10.664",
       "Custom surface 2no solution: the circle does not cut the ground twice",
-      "Custom surface 3F = 1.500",
+      "Custom surface 31.500",
     ]);
     expect(screen.getByText("Custom surface 1")).toHaveAttribute("title", "circle, center (10.00, 12.00) m, radius 10.00 m");
     expect(screen.getByText("Custom surface 2")).toHaveAttribute("title", "circle");
@@ -386,6 +385,8 @@ describe("ResultSidebar paper frame properties", () => {
     render(<ResultSidebar />);
     for (const label of ["Left x (m)", "Right x (m)", "Bottom y (m)", "Top y (m)", "Tick spacing (m)", "Minor ticks", "Paper size", "Paper orientation"]) {
       expect(field(label), label).toBeInTheDocument();
+      // The label names its field.
+      expect(screen.getByLabelText(label), label).toBe(field(label));
     }
     expect(screen.getByRole("button", { name: "Use model bounds" })).toBeInTheDocument();
     expect(screen.getByLabelText("Grid lines")).toBeInTheDocument();
@@ -553,8 +554,9 @@ describe("ResultSidebar annotation properties", () => {
     select(["p"]);
     render(<ResultSidebar />);
     expect(screen.getByText("Top left", { selector: "span" })).toBeInTheDocument();
-    fireEvent.click(screen.getByTitle("Bottom right"));
+    fireEvent.click(within(screen.getByRole("group", { name: "Anchor" })).getByRole("button", { name: "Bottom right" }));
     expect(anno("p")).toMatchObject({ anchor: "bottom-right", x: 0.5, y: 0.6 });
+    expect(screen.getByRole("button", { name: "Bottom right" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("moves the anchor point so the annotation box stays in place", () => {
@@ -581,10 +583,10 @@ describe("ResultSidebar annotation properties", () => {
     select(["t1", "t2"]);
     render(<ResultSidebar />);
     expect(field("Text").placeholder).toBe("Mixed values");
-    expect(field("Size").value).toBe("__mixed__");
+    expect(field("Size (px)").value).toBe("__mixed__");
     fireEvent.change(field("Text"), { target: { value: "Same" } });
     expect([anno("t1").text, anno("t2").text]).toEqual(["Same", "Same"]);
-    fireEvent.change(field("Size"), { target: { value: "16" } });
+    fireEvent.change(field("Size (px)"), { target: { value: "16" } });
     expect([anno("t1").fontSize, anno("t2").fontSize]).toEqual([16, 16]);
     // Mixed bold → bold for all; then toggled off.
     fireEvent.click(screen.getByRole("button", { name: "B" }));
@@ -601,8 +603,8 @@ describe("ResultSidebar annotation properties", () => {
   it("sets the text size of material tables", () => {
     select(["m"]);
     render(<ResultSidebar />);
-    expect(field("Text size").value).toBe("6");
-    fireEvent.change(field("Text size"), { target: { value: "10" } });
+    expect(field("Text size (px)").value).toBe("6");
+    fireEvent.change(field("Text size (px)"), { target: { value: "10" } });
     expect(anno("m").fontSize).toBe(10);
   });
 
@@ -668,11 +670,11 @@ describe("ResultSidebar annotation properties", () => {
     Element.prototype.scrollIntoView = vi.fn();
     select(["m"]);
     render(<ResultSidebar />);
-    fireEvent.click(screen.getByLabelText("Remove c / Su"));
+    fireEvent.click(screen.getByLabelText("Remove Cohesion / Su"));
     expect(anno("m").tableColumns).not.toContain("cohesion");
     expect(anno("m").tableColumns).toContain("unitWeight");
     fireEvent.click(screen.getByLabelText("Toggle options"));
-    fireEvent.click(screen.getByRole("option", { name: "c / Su" }));
+    fireEvent.click(screen.getByRole("option", { name: "Cohesion / Su" }));
     expect(anno("m").tableColumns).toContain("cohesion");
   });
 
@@ -763,7 +765,7 @@ describe("ResultSidebar reference lines", () => {
   it("lists reference lines by their label or shape", () => {
     render(<ResultSidebar />);
     expect(screen.getByText("Reference: other program")).toBeInTheDocument();
-    expect(screen.getByText("Reference: Reference circle")).toBeInTheDocument();
+    expect(screen.getByText("Reference circle")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Reference: other program"));
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["rl"]);
   });

@@ -5,7 +5,7 @@
  * colour). The scale chosen here also colours the surfaces of the plot.
  */
 
-import { useCallback } from "react";
+import { useCallback, useId } from "react";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import {
   CUSTOM_SCHEME_DEFAULTS,
@@ -46,13 +46,15 @@ function ColorField({
   value: string | undefined;
   onChange: (hex: string) => void;
 }) {
+  const id = useId();
   return (
     <div className="flex-1">
-      <label className={LABEL_CLASS} style={MUTED}>
+      <label htmlFor={id} className={LABEL_CLASS} style={MUTED}>
         {label}
       </label>
       <div className="flex items-center gap-1.5">
         <input
+          id={id}
           type="color"
           value={value ?? "#000000"}
           onChange={(e) => onChange(e.target.value)}
@@ -81,6 +83,8 @@ export function ColorBarProperties({
   fosFilterMax: number;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
 }) {
+  const uid = useId();
+  const fieldId = (key: string) => `${uid}-${key}`;
   const apply = useCallback(
     (patch: Partial<Annotation>) => {
       for (const anno of annotations) updateAnnotation(anno.id, patch);
@@ -150,10 +154,11 @@ export function ColorBarProperties({
   return (
     <div className="space-y-2" data-testid="color-bar-properties">
       <div>
-        <label className={LABEL_CLASS} style={MUTED}>
+        <label htmlFor={fieldId("range")} className={LABEL_CLASS} style={MUTED}>
           Range
         </label>
         <select
+          id={fieldId("range")}
           value={modeValue ?? MIXED}
           onChange={(e) => {
             if (e.target.value === MIXED) return;
@@ -189,10 +194,11 @@ export function ColorBarProperties({
         <div>
           <div className="flex gap-2">
             <div className="flex-1">
-              <label className={LABEL_CLASS} style={MUTED}>
+              <label htmlFor={fieldId("min-f")} className={LABEL_CLASS} style={MUTED}>
                 Min F
               </label>
               <DraftNumberInput
+                id={fieldId("min-f")}
                 value={minValue}
                 placeholder={minValue === undefined ? "Mixed" : ""}
                 onValueChange={(v) => apply({ scaleMin: v })}
@@ -201,10 +207,11 @@ export function ColorBarProperties({
               />
             </div>
             <div className="flex-1">
-              <label className={LABEL_CLASS} style={MUTED}>
+              <label htmlFor={fieldId("max-f")} className={LABEL_CLASS} style={MUTED}>
                 Max F
               </label>
               <DraftNumberInput
+                id={fieldId("max-f")}
                 value={maxValue}
                 placeholder={maxValue === undefined ? "Mixed" : ""}
                 onValueChange={(v) => apply({ scaleMax: v })}
@@ -222,10 +229,11 @@ export function ColorBarProperties({
       )}
 
       <div>
-        <label className={LABEL_CLASS} style={MUTED}>
+        <label htmlFor={fieldId("color-scheme")} className={LABEL_CLASS} style={MUTED}>
           Color scheme
         </label>
         <select
+          id={fieldId("color-scheme")}
           value={schemeValue ?? MIXED}
           onChange={(e) => {
             if (e.target.value === MIXED) return;

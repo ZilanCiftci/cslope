@@ -1,5 +1,24 @@
 import { type ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useAppStore } from "../../store/app-store";
+
+/**
+ * The type of a sidebar's section heading (MODELS, ATTACHMENTS, SUMMARY,
+ * LAYERS, ...): 10 px bold uppercase with 0.08 em tracking.
+ */
+export const SECTION_HEADING_TEXT = "text-[10px] font-bold uppercase tracking-[0.08em] select-none";
+
+/**
+ * The height and padding of a section heading row, the same in both
+ * sidebars (24 px, the icon buttons' height, between 1 px borders).
+ */
+export const SECTION_HEADING_ROW = "flex items-center gap-1.5 h-6 px-4";
+
+/** The fold chevron of a section or a tree row: down when open, right when folded. */
+export function FoldChevron({ open, size = 12 }: { open: boolean; size?: number }) {
+  const Icon = open ? ChevronDown : ChevronRight;
+  return <Icon size={size} strokeWidth={1.75} className="shrink-0" aria-hidden />;
+}
 
 interface SectionProps {
   title: string;
@@ -38,22 +57,14 @@ export function Section({
     <div style={{ borderBottom: "1px solid var(--color-vsc-border)" }}>
       <button
         onClick={handleToggle}
-        className="w-full flex items-center gap-2 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.1em] select-none cursor-pointer"
+        aria-expanded={!!isOpen}
+        className={`w-full ${SECTION_HEADING_ROW} ${SECTION_HEADING_TEXT} cursor-pointer`}
         style={{
           background: "var(--color-vsc-surface-tint)",
           color: "var(--color-vsc-text-muted)",
         }}
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="currentColor"
-          className="transition-transform"
-          style={{ transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)" }}
-        >
-          <path d="M2 3l3 3.5L8 3z" />
-        </svg>
+        <FoldChevron open={!!isOpen} />
         {title}
       </button>
       {isOpen && (
