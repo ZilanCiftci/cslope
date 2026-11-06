@@ -42,7 +42,7 @@ import type {
   ReinforcementRow,
   UdlRow,
 } from "./store/types";
-import { DIALOG_BODY_SELECTOR, naturalDialogHeight } from "./utils/dialog-height";
+import { DIALOG_BODY_SELECTOR, DIALOG_OPENING_MS, naturalDialogHeight, shouldFitDialog, type DialogFit } from "./utils/dialog-height";
 import { useSelectionSync } from "./features/canvas/useSelectionSync";
 
 interface LoadsStatePayload {
@@ -370,28 +370,31 @@ function App() {
   }, [isAnyDialogWindow]);
 
   useEffect(() => {
-    // Dialog windows open at a fixed height. Fit the window to the content
-    // once it has laid out, and again whenever the content changes size
-    // (its state arriving, rows added or removed); the main process keeps
-    // it within the opening height. Dialogs whose content changes a lot
-    // with the selection keep their height.
-    const keepsHeight =
-      isMaterialsDialogWindow ||
-      isReinforcementDialogWindow ||
-      isResultsPlotDialogWindow ||
-      // Their results appear below the inputs.
-      isSensitivityDialogWindow ||
-      isReliabilityDialogWindow ||
-      isPlaceDrawingDialogWindow;
+    // Dialog windows open at the full dialog height. Fit the window to the
+    // content once it has laid out (its state arriving), and afterwards as
+    // the window's DialogFit says; the main process keeps it within the
+    // opening height. The workspace windows keep their size.
+    const keepsHeight = isResultsPlotDialogWindow || isPlaceDrawingDialogWindow;
     if (!isElectron || !isAnyDialogWindow || keepsHeight) return;
     if (typeof ResizeObserver === "undefined") return;
+    const mode: DialogFit =
+      // Their form changes a lot with the selection: sized on opening only.
+      isMaterialsDialogWindow || isReinforcementDialogWindow
+        ? "open"
+        : // Their results appear below the inputs after a run.
+          isSensitivityDialogWindow || isReliabilityDialogWindow
+          ? "grow"
+          : "follow";
+    const start = Date.now();
     let sent = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const fit = () => {
+      const opening = Date.now() - start < DIALOG_OPENING_MS;
+      if (!opening && mode === "open") return;
       clearTimeout(timer);
       timer = setTimeout(() => {
         const height = naturalDialogHeight(document, window.innerHeight);
-        if (height && Math.abs(height - sent) > 2) {
+        if (height && shouldFitDialog(mode, opening, height, sent)) {
           sent = height;
           window.cslope.fitDialogHeight(height);
         }
@@ -408,12 +411,15 @@ function App() {
       fit();
     });
     tree.observe(document.body, { childList: true, subtree: true });
+    // Once resized, measure again: a rounded pixel can still overflow.
+    window.addEventListener("resize", fit);
     watchBody();
     fit();
     return () => {
       clearTimeout(timer);
       sizes.disconnect();
       tree.disconnect();
+      window.removeEventListener("resize", fit);
     };
   }, [
     isAnyDialogWindow,

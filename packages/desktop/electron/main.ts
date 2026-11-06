@@ -175,6 +175,14 @@ function createWindow() {
   }
 }
 
+// One width per family of dialog windows (CSS px): lists of records
+// (boundaries, loads, lines, settings), forms (materials, reinforcement,
+// parameters) and the analysis windows (Sensitivity, Probabilistic). Each
+// opens at most DIALOG_HEIGHT high; the renderer then fits the height to
+// its content ("window:fitDialogHeight" below).
+const DIALOG_WIDTH = { list: 520, form: 760, analysis: 620 } as const;
+const DIALOG_HEIGHT = 760;
+
 function createMaterialsWindow() {
   if (!win) return;
 
@@ -185,8 +193,8 @@ function createMaterialsWindow() {
   }
 
   materialsWin = new BrowserWindow({
-    width: 760,
-    height: 760,
+    width: DIALOG_WIDTH.form,
+    height: DIALOG_HEIGHT,
     minWidth: 640,
     minHeight: 560,
     title: "Materials",
@@ -225,8 +233,8 @@ function createMaterialAssignmentWindow() {
   }
 
   materialAssignmentWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Assign materials",
@@ -267,8 +275,8 @@ function createGeometryWindow() {
   }
 
   geometryWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Exterior boundary",
@@ -307,9 +315,9 @@ function createInteriorBoundariesWindow() {
   }
 
   interiorBoundariesWin = new BrowserWindow({
-    width: 640,
-    height: 760,
-    minWidth: 520,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
+    minWidth: 420,
     minHeight: 560,
     title: "Interior boundaries",
     parent: win,
@@ -349,8 +357,8 @@ function createUdlWindow() {
   }
 
   udlWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Distributed loads",
@@ -389,8 +397,8 @@ function createLineLoadsWindow() {
   }
 
   lineLoadsWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Line loads",
@@ -429,8 +437,8 @@ function createReinforcementWindow() {
   }
 
   reinforcementWin = new BrowserWindow({
-    width: 760,
-    height: 760,
+    width: DIALOG_WIDTH.form,
+    height: DIALOG_HEIGHT,
     minWidth: 560,
     minHeight: 520,
     title: "Reinforcement",
@@ -469,8 +477,8 @@ function createPiezoWindow() {
   }
 
   piezoWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Piezometric lines",
@@ -509,8 +517,8 @@ function createParametersWindow() {
   }
 
   parametersWin = new BrowserWindow({
-    width: 760,
-    height: 760,
+    width: DIALOG_WIDTH.form,
+    height: DIALOG_HEIGHT,
     minWidth: 640,
     minHeight: 560,
     title: "Parameters",
@@ -587,8 +595,8 @@ function createResultsPlotWindow() {
 // also the drawing files it asks for), and is told when one closes.
 type ToolWindow = "sensitivity" | "reliability" | "drawing";
 const TOOL_WINDOWS: Record<ToolWindow, { title: string; hash: string; width: number; height: number; minWidth?: number; minHeight?: number }> = {
-  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: 620, height: 760 },
-  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: 620, height: 780 },
+  sensitivity: { title: "Sensitivity analysis", hash: "sensitivity-dialog", width: DIALOG_WIDTH.analysis, height: DIALOG_HEIGHT },
+  reliability: { title: "Probabilistic analysis", hash: "reliability-dialog", width: DIALOG_WIDTH.analysis, height: DIALOG_HEIGHT },
   drawing: { title: "Place drawing", hash: "place-drawing-dialog", width: 1280, height: 860, minWidth: 900, minHeight: 600 },
 };
 const toolWins = new Map<ToolWindow, BrowserWindow>();
@@ -645,8 +653,8 @@ function createSearchLimitsWindow() {
   }
 
   searchLimitsWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Search limits",
@@ -685,8 +693,8 @@ function createCustomSearchPlanesWindow() {
   }
 
   customSearchPlanesWin = new BrowserWindow({
-    width: 520,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 420,
     minHeight: 520,
     title: "Custom surfaces",
@@ -727,8 +735,8 @@ function createOptionsWindow() {
   }
 
   optionsWin = new BrowserWindow({
-    width: 560,
-    height: 760,
+    width: DIALOG_WIDTH.list,
+    height: DIALOG_HEIGHT,
     minWidth: 460,
     minHeight: 560,
     title: "Options",
@@ -790,7 +798,7 @@ ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
     child.on("will-resize", () => userSizedDialogs.add(child));
   }
   const target = Math.round(Math.min(dialogOpenHeight.get(child)!, Math.max(240, height)));
-  if (Math.abs(target - current) < 2) return;
+  if (target === current) return;
   dialogFittedHeight.set(child, target);
   const frame = child.getSize()[1] - current;
   const [minWidth, minHeight] = child.getMinimumSize();

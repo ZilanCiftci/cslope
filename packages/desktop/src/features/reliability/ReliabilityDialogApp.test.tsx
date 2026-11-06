@@ -171,12 +171,14 @@ describe("Probabilistic analysis window", () => {
     const table = within(screen.getByRole("table", { name: "Probabilistic results" }));
     expect(table.getByText("Reliability index β (lognormal)").nextSibling!.textContent).toBe("3.010");
     expect(table.getByText("Probability of failure (lognormal)").nextSibling!.textContent).toBe("0.13 %");
-    expect(table.queryByText("Mean FOS of the samples")).toBeNull();
+    expect(table.queryByText("Mean F of the samples")).toBeNull();
     const terms = within(screen.getByRole("table", { name: "Taylor series terms" }));
     expect(terms.getByText("Clay: c (kPa)")).toBeInTheDocument();
     expect(terms.getByText("1.700")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "CSV (decimal comma)" }));
+    // The decimal comma from the split button's menu.
+    fireEvent.click(screen.getByRole("button", { name: "CSV decimal separator" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Decimal comma (1,5)" }));
     const [filename, data, type] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(`${useAppStore.getState().models[0].name} probabilistic.csv`);
     expect(String(data).startsWith("﻿")).toBe(true);
@@ -205,10 +207,10 @@ describe("Probabilistic analysis window", () => {
     const table = within(screen.getByRole("table", { name: "Probabilistic results" }));
     expect(table.getByText("∞ (σ = 0)")).toBeInTheDocument();
     expect(table.getByText("< 0.01 %")).toBeInTheDocument();
-    expect(table.getByText("Share of samples with FOS < 1").nextSibling!.textContent).toBe("2.00 %");
-    expect(table.getByText("Mean FOS of the samples").nextSibling!.textContent).toBe("1.480");
-    expect(table.getByText("Samples without a FOS (left out)").nextSibling!.textContent).toBe("2");
-    expect(screen.getByLabelText("Distribution of the FOS")).toBeInTheDocument();
+    expect(table.getByText("Share of samples with F < 1").nextSibling!.textContent).toBe("2.00 %");
+    expect(table.getByText("Mean F of the samples").nextSibling!.textContent).toBe("1.480");
+    expect(table.getByText("Samples without an F (left out)").nextSibling!.textContent).toBe("2");
+    expect(screen.getByLabelText("Distribution of F")).toBeInTheDocument();
   });
 
   it("shows errors and notes about partial factors and both directions", () => {

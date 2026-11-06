@@ -731,6 +731,23 @@ const PAIRS: [prefix: string, openChannel: string][] = [
   ["parameters", "window:openParametersDialog"],
 ];
 
+describe("dialog window size", () => {
+  it("opens one width per family of windows, all at most 760 px high", async () => {
+    await loadMain();
+    const widths: Record<string, number> = {};
+    for (const [channel, title] of DIALOGS) {
+      if (title === "Results plot") continue; // a workspace window
+      const dlg = openDialog(channel);
+      widths[title] = dlg.options.width;
+      expect(dlg.options.height).toBe(760);
+    }
+    const lists = ["Assign materials", "Exterior boundary", "Interior boundaries", "Distributed loads", "Line loads", "Piezometric lines", "Search limits", "Custom surfaces", "Options"];
+    for (const t of lists) expect(widths[t], t).toBe(520);
+    for (const t of ["Materials", "Reinforcement", "Parameters"]) expect(widths[t], t).toBe(760);
+    for (const t of ["Sensitivity analysis", "Probabilistic analysis"]) expect(widths[t], t).toBe(620);
+  });
+});
+
 describe("dialog window height", () => {
   it("fits a dialog to its content, within its opening height", async () => {
     await loadMain();

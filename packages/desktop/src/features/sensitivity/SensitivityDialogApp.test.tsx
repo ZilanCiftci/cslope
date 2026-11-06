@@ -67,7 +67,7 @@ describe("Sensitivity window", () => {
     expect(input("To").value).toBe("12");
     expect(input("Number of values").value).toBe("9");
     // Before the first run, the chart's place says how to fill it.
-    expect(screen.getByTestId("sensitivity-empty")).toHaveTextContent("Run to plot the FOS against Parameter H.");
+    expect(screen.getByTestId("sensitivity-empty")).toHaveTextContent("Run to plot F against Parameter H.");
   });
 
   it("resets the range when another variable is chosen (±5 around zero)", () => {
@@ -123,7 +123,7 @@ describe("Sensitivity window", () => {
     expect(onCommand).toHaveBeenCalledWith({ type: "cancel" });
   });
 
-  it("tabulates the results, flags values without a FOS and exports CSV", () => {
+  it("tabulates the results, flags values without an F and exports CSV", () => {
     renderWindow();
     act(() =>
       useSensitivityStore.setState({
@@ -137,17 +137,17 @@ describe("Sensitivity window", () => {
         ],
       }),
     );
-    expect(screen.getByText("2 of 3 values gave a FOS")).toBeInTheDocument();
+    expect(screen.getByText("2 of 3 values gave an F")).toBeInTheDocument();
     expect(screen.getByText("1.235")).toBeInTheDocument();
     expect(screen.getByText("no surface").closest("tr")).toHaveAttribute("title", "No valid surface");
     expect(screen.getByText(/1 value\(s\) gave no result/)).toBeInTheDocument();
-    expect(screen.getByLabelText("FOS against the varied value")).toBeInTheDocument();
+    expect(screen.getByLabelText("F against the varied value")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     const [filename, data] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(`${useAppStore.getState().models[0].name} sensitivity.csv`);
     const csv = String(data);
-    expect(csv.startsWith("﻿Parameter H,FOS,Note")).toBe(true);
+    expect(csv.startsWith("﻿Parameter H,F,Note")).toBe(true);
     expect(csv).toContain("8,1.2346");
     expect(csv).toContain("No valid surface");
   });

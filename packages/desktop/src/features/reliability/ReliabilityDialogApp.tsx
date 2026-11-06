@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, ReferenceLine, Tooltip, XAxis, YAxis } fr
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { CsvExportButton } from "../../components/ui/CsvExportButton";
 import { CHART } from "../../components/ui/chart-colors";
 import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { useWidth } from "../../utils/use-width";
@@ -106,28 +107,19 @@ function ReliabilityBody({
     <ToolWindowFrame
       title={TITLE}
       description={DESCRIPTION}
-      footer={([false, true] as const).map((swedish) => (
-        <button
-          key={String(swedish)}
-          onClick={() =>
+      footer={
+        <CsvExportButton
+          onExport={(decimalComma) =>
             result &&
             downloadFile(
               safeFileName(`${model.name || "cslope"} probabilistic`, "csv"),
-              "﻿" + reliabilityCsv(result, labels, swedish),
+              "\uFEFF" + reliabilityCsv(result, labels, decimalComma),
               "text/csv;charset=utf-8",
             )
           }
           disabled={!result || running}
-          className="btn"
-          title={
-            swedish
-              ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
-              : "CSV with commas and decimal points"
-          }
-        >
-          {swedish ? "CSV (decimal comma)" : "Export CSV"}
-        </button>
-      ))}
+        />
+      }
       primary={
         <>
           <span style={{ color: "var(--color-vsc-text-muted)" }}>
@@ -280,10 +272,10 @@ function ReliabilityBody({
             )}
             <p className="text-[10px]" style={{ color: "var(--color-vsc-text-muted)" }}>
               {method === "taylor"
-                ? "FOS at the mean values and at mean ± σ of each variable; σ of the FOS from the differences, β and Pf for a lognormal FOS (Duncan 2000)."
+                ? "F at the mean values and at mean ± σ of each variable; σ of F from the differences, β and Pf for a lognormal F (Duncan 2000)."
                 : "One search at the mean values, then each sample analyzed on that critical surface (not a new search per sample). Samples are truncated at zero."}
               {bothDirections ? " Only the model's own sliding direction is analyzed." : ""}
-              {designValues ? " Partial factors are applied, so the FOS are design values." : ""}
+              {designValues ? " Partial factors are applied, so the values of F are design values." : ""}
             </p>
           </>
         )}
@@ -305,17 +297,17 @@ function ReliabilityBody({
           <>
             <table className="w-full text-[11px] tabular-nums" aria-label="Probabilistic results">
               <tbody>
-                <ResultRow label="FOS at the mean values" value={result.fos.toFixed(3)} />
-                {result.method === "monte-carlo" && <ResultRow label="Mean FOS of the samples" value={result.meanFOS.toFixed(3)} />}
-                <ResultRow label="σ of the FOS" value={result.sdFOS.toFixed(3)} />
+                <ResultRow label="F at the mean values" value={result.fos.toFixed(3)} />
+                {result.method === "monte-carlo" && <ResultRow label="Mean F of the samples" value={result.meanFOS.toFixed(3)} />}
+                <ResultRow label="σ of F" value={result.sdFOS.toFixed(3)} />
                 <ResultRow label="Coefficient of variation" value={result.cov.toFixed(3)} />
                 <ResultRow label="Reliability index β (lognormal)" value={fmtBeta(result.betaLognormal)} bold />
                 <ResultRow label="Probability of failure (lognormal)" value={fmtPct(result.pfLognormal)} bold />
                 {result.pf != null && (
-                  <ResultRow label="Share of samples with FOS < 1" value={fmtPct(result.pf)} bold />
+                  <ResultRow label="Share of samples with F < 1" value={fmtPct(result.pf)} bold />
                 )}
                 <ResultRow label="Reliability index β (normal)" value={fmtBeta(result.betaNormal)} />
-                {result.failed > 0 && <ResultRow label="Samples without a FOS (left out)" value={String(result.failed)} />}
+                {result.failed > 0 && <ResultRow label="Samples without an F (left out)" value={String(result.failed)} />}
               </tbody>
             </table>
             {result.terms && (
@@ -325,8 +317,8 @@ function ReliabilityBody({
                     <th className="text-left font-normal">Variable</th>
                     <th className="text-right font-normal">Mean</th>
                     <th className="text-right font-normal">σ</th>
-                    <th className="text-right font-normal">FOS⁺</th>
-                    <th className="text-right font-normal">FOS⁻</th>
+                    <th className="text-right font-normal">F⁺</th>
+                    <th className="text-right font-normal">F⁻</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -343,7 +335,7 @@ function ReliabilityBody({
               </table>
             )}
             {bars.length > 0 && (
-              <div aria-label="Distribution of the FOS" ref={chartRef}>
+              <div aria-label="Distribution of F" ref={chartRef}>
                 <BarChart width={chartWidth} height={200} data={bars} margin={{ top: 10, right: 16, left: 0, bottom: 14 }} barCategoryGap={0}>
                   <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                   <XAxis
@@ -352,7 +344,7 @@ function ReliabilityBody({
                     domain={["dataMin", "dataMax"]}
                     tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                     tickFormatter={(v) => Number(v).toFixed(2)}
-                    label={{ value: "FOS", position: "insideBottom", offset: -8, fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
+                    label={{ value: "F", position: "insideBottom", offset: -8, fontSize: 10, fill: "var(--color-vsc-text-muted)" }}
                   />
                   <YAxis tick={{ fontSize: 10, fill: "var(--color-vsc-text-muted)" }} width={40} />
                   <ReferenceLine x={1} stroke="var(--color-vsc-error)" strokeDasharray="4 3" ifOverflow="extendDomain" />
@@ -361,7 +353,7 @@ function ReliabilityBody({
                       <ChartTooltip
                         {...p}
                         formatValue={(v) => String(v)}
-                        formatLabel={(v) => `FOS ≈ ${Number(v).toFixed(3)}`}
+                        formatLabel={(v) => `F ≈ ${Number(v).toFixed(3)}`}
                       />
                     )}
                   />

@@ -18,7 +18,7 @@ Both analyses build on a finished model. Open them from **Results › Plots**; e
 
 <Figure src="/media/tutorials/probabilistic/01-sensitivity.png" alt="The Sensitivity analysis window with a chart of the factor of safety against unit weight" caption="A sensitivity analysis of the unit weight." />
 
-The chart shows the factor of safety against the value, with a line at 1.0. The table lists the values. **Export CSV** saves them (also with `;` as the separator and `,` as the decimal mark, for spreadsheets in many European locales).
+The chart shows the factor of safety F against the value, with a line at 1.0. The table lists the values. **Export CSV** saves them. The ▾ beside it chooses a decimal point (1.5) or a decimal comma (1,5, with `;` as the separator, for spreadsheets in many European locales) and saves with it; the choice is remembered for the next export, in every results window.
 
 <Callout type="tip">
   To vary a dimension, such as the height of an embankment or the depth of an excavation, define it as a parameter and use the parameter in the coordinates. The sensitivity analysis can then vary it like any other input.
@@ -46,4 +46,4 @@ The window starts with one variable. Click **+ Add variable** for more, and choo
 - for Monte Carlo, the share of samples with a factor of safety below 1 and a histogram of the samples,
 - for the Taylor series, a table of the factor of safety at mean + σ and mean − σ of each variable, which shows which variables matter most.
 
-The results can be exported as CSV. Sensitivity and probabilistic results are not saved with the project; run them again after opening it. The equations are on the [theory](/docs/theory#reliability) page.
+The results can be exported with **Export CSV**, with a decimal point or a decimal comma as in the Sensitivity window. Sensitivity and probabilistic results are not saved with the project; run them again after opening it. The equations are on the [theory](/docs/theory#reliability) page.

@@ -11,6 +11,7 @@ import {
 import { Label } from "../../components/ui/Label";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { ToolWindowFrame } from "../../components/ui/ToolWindowFrame";
+import { CsvExportButton } from "../../components/ui/CsvExportButton";
 import { CHART } from "../../components/ui/chart-colors";
 import { ChartTooltip } from "../../components/ui/ChartTooltip";
 import { useWidth } from "../../utils/use-width";
@@ -22,11 +23,11 @@ import type { SensitivityCommand, SensitivityWindowState } from "./window-sync";
 
 const TITLE = "Sensitivity analysis";
 const DESCRIPTION =
-  "The minimum FOS of the active model for a range of values of one parameter or material property.";
+  "The minimum F of the active model for a range of values of one parameter or material property.";
 
 /**
  * The Sensitivity window: run the active model for a range of values of
- * one parameter or material property and plot the minimum FOS. The main
+ * one parameter or material property and plot the minimum F. The main
  * window runs the analyses and sends the model and the results here.
  */
 export function SensitivityDialogApp() {
@@ -100,31 +101,22 @@ function SensitivityBody({
     <ToolWindowFrame
       title={TITLE}
       description={DESCRIPTION}
-      footer={([false, true] as const).map((swedish) => (
-        <button
-          key={String(swedish)}
-          onClick={() =>
+      footer={
+        <CsvExportButton
+          onExport={(decimalComma) =>
             downloadFile(
               safeFileName(`${model.name || "cslope"} sensitivity`, "csv"),
-              "\uFEFF" + sensitivityCsv(label, points, swedish),
+              "\uFEFF" + sensitivityCsv(label, points, decimalComma),
               "text/csv;charset=utf-8",
             )
           }
           disabled={points.length === 0 || running}
-          className="btn"
-          title={
-            swedish
-              ? "CSV with semicolons and decimal commas, for Excel set to a decimal-comma locale"
-              : "CSV with commas and decimal points"
-          }
-        >
-          {swedish ? "CSV (decimal comma)" : "Export CSV"}
-        </button>
-      ))}
+        />
+      }
       primary={
         <>
           <span className="whitespace-nowrap" style={{ color: "var(--color-vsc-text-muted)" }}>
-            {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave a FOS` : ""}
+            {running ? `${points.length} / ${total}` : points.length > 0 ? `${data.length} of ${points.length} values gave an F` : ""}
           </span>
           {running ? (
             <button onClick={() => onCommand({ type: "cancel" })} className="btn">
@@ -196,7 +188,7 @@ function SensitivityBody({
         )}
 
         {data.length > 0 && (
-          <div aria-label="FOS against the varied value" ref={chartRef}>
+          <div aria-label="F against the varied value" ref={chartRef}>
             <LineChart width={chartWidth} height={240} data={data} margin={{ top: 10, right: 16, left: 0, bottom: 14 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={CHART.grid} />
                 <XAxis
@@ -233,7 +225,7 @@ function SensitivityBody({
                     />
                   )}
                 />
-                <Line type="monotone" dataKey="fos" name="FOS" stroke={CHART.series} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
+                <Line type="monotone" dataKey="fos" name="F" stroke={CHART.series} strokeWidth={2} dot={{ r: 2.5 }} isAnimationActive={false} />
             </LineChart>
           </div>
         )}
@@ -245,7 +237,7 @@ function SensitivityBody({
             style={{ border: "1px dashed var(--color-vsc-border)", color: "var(--color-vsc-text-muted)" }}
             data-testid="sensitivity-empty"
           >
-            Run to plot the FOS against {selected.label}.
+            Run to plot F against {selected.label}.
           </div>
         )}
 
@@ -255,7 +247,7 @@ function SensitivityBody({
             <thead>
               <tr style={{ color: "var(--color-vsc-text-muted)" }}>
                 <th className="text-left font-normal pr-8">{label}</th>
-                <th className="text-right font-normal">FOS</th>
+                <th className="text-right font-normal">F</th>
               </tr>
             </thead>
             <tbody>
