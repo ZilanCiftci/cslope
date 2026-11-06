@@ -15,14 +15,16 @@ The shared contract for the main session, its agents and the skills `triage`, `s
 
 An issue Claude or an agent writes (from a review, a sprint, a finding while working) is held to the same template as a user's, and more: whoever picks it up must be able to act without asking. It has these sections, in this order:
 
-1. **Summary**: one or two sentences, what is wrong or wanted and where in the app (menu path, window, panel).
+1. **Summary**: one or two sentences, what is wrong or wanted and where in the app (menu path, window, panel), and why it matters.
 2. **Steps to reproduce** (bugs): numbered, from a fresh start or a named example model; the cSlope version or commit (`main` at `<sha>`) and the OS.
-3. **What happens / what should happen**: both, concretely (the exact text, the size in px, the value).
-4. **Evidence**: screenshots (light and dark when it is about looks), cropped to the problem, marked if needed; log output or test output in a code block; for a wrong result, both values and their source. No client data.
-5. **Cause** (when known): files and lines (`path:line`), and why.
-6. **Proposed fix**: the change, the files it touches, alternatives with their consequence when there is a choice (then also `needs-decision`).
-7. **Done when**: the acceptance checks, as a checklist (a test that fails today and passes after; a screenshot in both themes; docs updated).
-8. **Links**: the PR, decision (DECISIONS.md), design rule or earlier issue it comes from.
+3. **Observed** (dated): what happens and what should happen, concretely (the exact text, the size in px, the value), and the evidence: screenshots (light and dark when it is about looks), cropped to the problem; log or test output in a code block; for a wrong result, both values and their source. Only what was seen or measured goes here. No client data.
+4. **Cause**: files and lines (`path:line`) and why. Say how certain it is: *confirmed* (reproduced, the line found) or *hypothesis until measured*; never present a guess as a fact.
+5. **Plan**: numbered steps, each with a rough size (small / an hour / a day). When the cause is a hypothesis, step 0 is to measure it. When there is a choice, the options with their consequence, the rejected ones with the reason (and `needs-decision`).
+6. **Decisions for the maintainer** (only when needed): numbered questions, each with a recommendation.
+7. **Done when**: the acceptance checks, as a checklist (a test that fails today and passes after; a screenshot in both themes; the measured value; docs updated).
+8. **Related**: the PR, decision (DECISIONS.md), design rule or earlier issue it comes from.
+
+Shorter is fine for a small issue, but never without steps (for a bug), evidence and "done when".
 
 Screenshots: images can't be uploaded through the API, so they are committed to the `issue-assets` branch (an orphan branch holding only images, one folder per issue: `issue-<n>/`) and linked with their raw URL (`https://raw.githubusercontent.com/ZilanCiftci/cslope/issue-assets/issue-<n>/<file>.png`). Only synthetic models and the built-in examples, never a client's project.
 
