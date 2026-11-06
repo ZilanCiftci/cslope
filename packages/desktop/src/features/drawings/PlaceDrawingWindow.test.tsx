@@ -40,7 +40,9 @@ describe("Place drawing window", () => {
     expect(radio("Drawing coordinates")).toHaveAttribute("aria-checked", "true");
     // One name for the axes mode, whatever the file.
     expect(radio("Axes")).toHaveAttribute("aria-checked", "false");
-    expect(screen.getByRole("button", { name: "Crop…" })).toBeInTheDocument();
+    // One crop control: the toolbar's Crop toggle.
+    expect(screen.getByRole("button", { name: "Crop" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.queryByRole("button", { name: "Crop…" })).toBeNull();
     expect(screen.getByRole("button", { name: "Clear crop" })).toBeDisabled();
     expect(screen.getByText(/The whole drawing is placed now/)).toBeInTheDocument();
   });

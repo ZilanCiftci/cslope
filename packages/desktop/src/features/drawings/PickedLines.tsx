@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { PickedChain } from "./line-pick";
 import { apply } from "./transform";
+import { cssVar } from "../canvas/constants";
 
 type ToCanvas = (wx: number, wy: number) => [number, number];
 
@@ -43,10 +44,17 @@ export function PickedLines({
       ctx.lineCap = "round";
       ctx.stroke();
     };
-    if (hover) stroke(hover, "rgba(245,158,11,0.55)", 5);
+    const pick = cssVar("--color-canvas-pick");
+    if (hover) {
+      ctx.globalAlpha = 0.55;
+      stroke(hover, pick, 5);
+      ctx.globalAlpha = 1;
+    }
+    // A dark halo under each picked line keeps it visible on any drawing.
+    const halo = cssVar("--color-canvas-pick-halo");
     for (const ch of chains) {
-      stroke(ch, "rgba(0,0,0,0.35)", 6);
-      stroke(ch, "#f59e0b", 3);
+      stroke(ch, halo, 6);
+      stroke(ch, pick, 3);
     }
   }, [chains, hover, transform, toCanvas, size]);
   return <canvas ref={ref} className="absolute inset-0 w-full h-full pointer-events-none z-30" data-testid="picked-lines" />;

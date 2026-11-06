@@ -182,8 +182,8 @@ export function useLinePickCanvas({ canvasRef, getEventWorldPos, viewScale, setC
                 top: windowRect.y0,
                 width: windowRect.x1 - windowRect.x0,
                 height: windowRect.y1 - windowRect.y0,
-                border: "1px dashed #f59e0b",
-                background: "rgba(245,158,11,0.08)",
+                border: "1px dashed var(--color-canvas-pick)",
+                background: "color-mix(in srgb, var(--color-canvas-pick) 8%, transparent)",
               }}
             />
           )}

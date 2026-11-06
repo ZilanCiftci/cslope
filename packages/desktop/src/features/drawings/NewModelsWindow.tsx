@@ -37,6 +37,7 @@ import {
   type Tool,
 } from "./PlaceDrawingWindow";
 import { drawingExtentText, fileUnitCode, rememberLocalBytes, useDrawingsTick } from "./place-window-shared";
+import { GroupHeading } from "../properties/GroupHeading";
 
 const muted = { color: "var(--color-vsc-text-muted)" } as const;
 
@@ -239,8 +240,8 @@ export function NewModelsWindow({
         <div className="w-[360px] shrink-0 border-l flex flex-col min-h-0" style={{ borderColor: "var(--color-vsc-border)" }}>
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-3">
             <section aria-label="Frames">
-              <h3 className="font-semibold text-[12px]">1. Frames</h3>
-              <p className="text-[11px] mt-0.5" style={muted}>
+              <GroupHeading>Frames</GroupHeading>
+              <p className="text-[11px]" style={muted}>
                 With Draw frame, drag a rectangle around each section{source && source.pageCount > 1 ? ", on any page" : ""}. Each frame becomes
                 a model, named after the frame.
               </p>
