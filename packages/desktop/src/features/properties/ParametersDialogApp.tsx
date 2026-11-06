@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Label } from "../../components/ui/Label";
 import {
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { CELL_EDITOR_CLASS, cellEditorStyle } from "../../components/ui/cell-editor";
 import { useAppStore } from "../../store/app-store";
 import type { ParameterDef } from "../../store/types";
 import { isElectron } from "../../utils/is-electron";
@@ -117,14 +116,10 @@ export function ParametersDialogApp() {
             type="text"
             value={row.name}
             onChange={(e) => updateParam(row.id, { name: e.target.value })}
-            className="w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)]"
+            className={CELL_EDITOR_CLASS}
             style={{
-              background: "var(--color-vsc-input-bg)",
-              color: "var(--color-vsc-text)",
-              borderRadius: 0,
-              boxShadow: "none",
-              margin: 0,
-              borderColor: hasError ? "var(--color-vsc-error)" : "transparent",
+              ...cellEditorStyle,
+              borderColor: hasError ? "var(--color-vsc-error)" : undefined,
             }}
             aria-label="Parameter name"
           />
@@ -138,13 +133,9 @@ export function ParametersDialogApp() {
           type="text"
           value={row.expression}
           onChange={(e) => updateParam(row.id, { expression: e.target.value })}
-          className="w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)]"
+          className={CELL_EDITOR_CLASS}
           style={{
-            background: "var(--color-vsc-input-bg)",
-            color: "var(--color-vsc-text)",
-            borderRadius: 0,
-            boxShadow: "none",
-            margin: 0,
+            ...cellEditorStyle,
           }}
           aria-label="Parameter expression"
         />
@@ -179,21 +170,6 @@ export function ParametersDialogApp() {
         );
       },
     },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: (row, i) => (
-        <RowRemoveButton
-          ariaLabel={`Remove parameter ${i + 1}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeParameter(row.id);
-          }}
-        />
-      ),
-    },
   ];
 
   return (
@@ -215,15 +191,10 @@ export function ParametersDialogApp() {
           columns={columns}
           getRowKey={(row) => row.id}
           emptyText="No parameters."
+          onRemove={(row) => removeParameter(row.id)}
+          removeLabel={(_row, i) => `Remove parameter ${i + 1}`}
+          addActions={[{ label: "+ Add parameter", onClick: addParameter }]}
         />
-
-        <button
-          onClick={addParameter}
-          className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-link)" }}
-        >
-          + Add parameter
-        </button>
       </div>
 
       <div

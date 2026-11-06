@@ -1,6 +1,9 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Menu, MenuItem, MenuSeparator } from "./Menu";
+import { useMenuDismiss } from "./menu-parts";
 import { ChevronDown } from "lucide-react";
 import type { AnalysisRunState, CanvasToolbarState } from "../../store/types";
+import { FLOATING_TOOLBAR_BOTTOM_PX, FLOATING_TOOLBAR_HEIGHT_PX } from "../../constants";
 import { EditModeIcon, ResultsModeIcon } from "../icons/ModeIcons";
 import {
   FitIcon,
@@ -123,20 +126,8 @@ export function FloatingToolbar({
     return () => observer.disconnect();
   }, []);
 
-  // Close run dropdown on outside click
-  useEffect(() => {
-    if (!runMenuOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (
-        runMenuRef.current &&
-        !runMenuRef.current.contains(e.target as Node)
-      ) {
-        setRunMenuOpen(false);
-      }
-    };
-    document.addEventListener("pointerdown", handler, true);
-    return () => document.removeEventListener("pointerdown", handler, true);
-  }, [runMenuOpen]);
+  // Close the run menu on Escape or a press outside it.
+  useMenuDismiss(runMenuOpen, [runMenuRef], () => setRunMenuOpen(false));
 
   const handleRunClick = useCallback(() => {
     if (runState === "running") {
@@ -160,10 +151,12 @@ export function FloatingToolbar({
   return (
     <div
       ref={toolbarRef}
-      className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30 pointer-events-none"
+      className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-none"
       role="toolbar"
       aria-label="Floating toolbar"
       style={{
+        // The result view keeps the band above it free of the sheet (SCREEN_PAPER_BOTTOM_RESERVE_PX).
+        bottom: FLOATING_TOOLBAR_BOTTOM_PX,
         opacity: faded ? 0.7 : 1,
         transition: "opacity 0.4s ease",
       }}
@@ -174,8 +167,9 @@ export function FloatingToolbar({
       onPointerLeave={resetFadeTimer}
     >
       <div
-        className="pointer-events-auto flex items-center gap-0 rounded-xs shadow-md px-0.5 h-8"
+        className="pointer-events-auto flex items-center gap-0 rounded-xs shadow-md px-0.5"
         style={{
+          height: FLOATING_TOOLBAR_HEIGHT_PX,
           background: "var(--color-vsc-sidebar)",
           border: "1px solid var(--color-vsc-border)",
         }}
@@ -257,41 +251,38 @@ export function FloatingToolbar({
 
           {/* Dropdown menu */}
           {runMenuOpen && (
-            <div
-              className="absolute bottom-full mb-1 rounded-xs overflow-hidden min-w-[140px] py-0.5"
-              style={{
-                background: "var(--color-vsc-input-bg)",
-                border: "1px solid var(--color-vsc-border)",
-                boxShadow: "var(--color-vsc-shadow-float)",
-              }}
+            <Menu
+              label="More run options"
+              onClose={() => setRunMenuOpen(false)}
+              className="absolute bottom-full mb-1"
             >
-              <DropdownItem
-                label="Run all"
+              <MenuItem
                 onClick={() => {
                   setRunMenuOpen(false);
                   onRunAll();
                 }}
-              />
-              <div
-                className="mx-2"
-                style={{ borderTop: "1px solid var(--color-vsc-border)" }}
-              />
-              <DropdownItem
-                label="Clear results of this model"
+              >
+                Run all
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem
                 disabled={!hasResult}
                 onClick={() => {
                   setRunMenuOpen(false);
                   onReset();
                 }}
-              />
-              <DropdownItem
-                label="Clear results of all models"
+              >
+                Clear results of this model
+              </MenuItem>
+              <MenuItem
                 onClick={() => {
                   setRunMenuOpen(false);
                   onResetAll();
                 }}
-              />
-            </div>
+              >
+                Clear results of all models
+              </MenuItem>
+            </Menu>
           )}
         </div>
 
@@ -444,36 +435,3 @@ function ToolbarButton({
   );
 }
 
-function DropdownItem({
-  label,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  disabled?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      // Disabled for the keyboard too, not only for the pointer.
-      disabled={disabled}
-      className="w-full text-left px-3 py-1 text-[12px]"
-      style={{
-        color: disabled ? "var(--color-vsc-field-disabled-text)" : "var(--color-vsc-text)",
-        pointerEvents: disabled ? "none" : "auto",
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          (e.target as HTMLElement).style.background =
-            "var(--color-vsc-list-hover)";
-        }
-      }}
-      onMouseLeave={(e) => {
-        (e.target as HTMLElement).style.background = "transparent";
-      }}
-      onClick={disabled ? undefined : onClick}
-    >
-      {label}
-    </button>
-  );
-}

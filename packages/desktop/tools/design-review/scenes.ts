@@ -204,6 +204,15 @@ const MATERIAL_KINDS: [string, string][] = [
 
 const REINFORCEMENT_TYPES = ["anchor", "tieback", "nail", "geosynthetic"];
 const PILE_TYPES = ["pile", "sheet-pile"];
+/** The "+ Add …" link of each type in the Reinforcement window. */
+const ADD_LINK: Record<string, string> = {
+  anchor: "+ Add anchor",
+  tieback: "+ Add tieback",
+  nail: "+ Add soil nail",
+  geosynthetic: "+ Add geosynthetic",
+  pile: "+ Add pile row",
+  "sheet-pile": "+ Add sheet pile wall",
+};
 
 // ── The scenes ─────────────────────────────────────────────────────────
 
@@ -410,6 +419,16 @@ const sidebarScenes: Scene[] = [
     open: async (ctx) => {
       const row = ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first();
       await row.locator("xpath=descendant-or-self::*[contains(@title, 'click for its settings')]").first().click();
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
+    id: "models-drawing-hover",
+    title: "Models panel, a drawing row under the pointer (grip and ×)",
+    area: "sidebar",
+    data: "drawings",
+    open: async (ctx) => {
+      await ctx.page.getByRole("group", { name: "Drawings of the model" }).first().getByRole("treeitem").first().hover();
       return { focus: explorer(ctx) };
     },
   },
@@ -854,8 +873,8 @@ const menus: Scene[] = [
       for (const p of pts) {
         await ctx.page.mouse.dblclick(p.x, p.y);
         await ctx.wait(250);
-        const m = ctx.page.getByText("Assign material", { exact: true });
-        if (await m.count()) return { focus: m.first().locator("..") };
+        const m = ctx.page.getByRole("menu", { name: "Assign material", exact: true });
+        if (await m.count()) return { focus: m.first() };
         await ctx.page.keyboard.press("Escape");
       }
       throw new Error("No material picker opened at any point of the grid");
@@ -1015,8 +1034,7 @@ const windows: Scene[] = [
       area: "windows",
       open: async (ctx) => {
         const win = await modelWindow(ctx, "Reinforcement", "reinforcement-dialog");
-        await win.getByRole("combobox", { name: "Type of the new reinforcement" }).selectOption(type);
-        await win.getByRole("region", { name: "Reinforcement elements" }).getByRole("button", { name: "Add", exact: true }).click();
+        await win.getByRole("region", { name: "Reinforcement elements" }).getByRole("button", { name: ADD_LINK[type], exact: true }).click();
         await win.waitForTimeout(400);
         return { page: win };
       },
@@ -1029,8 +1047,7 @@ const windows: Scene[] = [
       area: "windows",
       open: async (ctx) => {
         const win = await modelWindow(ctx, "Reinforcement", "reinforcement-dialog");
-        await win.getByRole("combobox", { name: "Type of the new pile" }).selectOption(type);
-        await win.getByRole("region", { name: "Piles and sheet piles" }).getByRole("button", { name: "Add", exact: true }).click();
+        await win.getByRole("region", { name: "Piles and sheet piles" }).getByRole("button", { name: ADD_LINK[type], exact: true }).click();
         await win.waitForTimeout(400);
         return { page: win };
       },
@@ -1285,16 +1302,15 @@ const dialogs: Scene[] = [
   },
   {
     id: "dlg-about",
-    title: "About cSlope (native message box)",
+    title: "About cSlope (Help › About)",
     area: "dialogs",
     open: async (ctx) => {
       await ctx.tab("Help");
       await ctx.click("About");
-      await ctx.wait(1500);
-      if (!(await ctx.grabScreen())) throw new Error("The About box is a native message box; the X screen could not be grabbed");
-      await ctx.page.keyboard.press("Enter").catch(() => {});
+      const dialog = ctx.page.getByRole("dialog", { name: "About cSlope" });
+      await dialog.waitFor({ timeout: 10_000 });
+      return { focus: dialog };
     },
-    restartAfter: true,
   },
   {
     id: "dlg-confirm-delete-model",

@@ -3,11 +3,10 @@ import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
 import {
   SpreadsheetNumberInput,
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { CELL_EDITOR_CLASS, cellEditorStyle } from "../../components/ui/cell-editor";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { useAppStore } from "../../store/app-store";
@@ -207,32 +206,13 @@ export function LineLoadsDialogApp() {
             aria-label="Line load point y"
             onValueChange={(y) => updateLineLoad(row.id, { y })}
             onClear={() => updateLineLoad(row.id, { y: undefined })}
-            className="w-full h-full py-1 px-2 text-[12px] outline-none border-2 border-transparent focus:border-[var(--color-vsc-accent)] disabled:opacity-40"
+            className={`${CELL_EDITOR_CLASS} disabled:opacity-40`}
             style={{
-              background: "var(--color-vsc-input-bg)",
-              color: "var(--color-vsc-text)",
-              borderRadius: 0,
-              boxShadow: "none",
-              margin: 0,
+              ...cellEditorStyle,
             }}
           />
         );
       },
-    },
-    {
-      header: <RemoveColumnHeader />,
-      widthClassName: "w-8",
-      cellClassName: "px-1",
-      align: "right",
-      renderCell: (row, i) => (
-        <RowRemoveButton
-          ariaLabel={`Remove line load ${i + 1}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            removeLineLoad(row.id);
-          }}
-        />
-      ),
     },
   ];
 
@@ -257,14 +237,10 @@ export function LineLoadsDialogApp() {
           selectedRowIndex={canvasSelection?.object.type === "lineLoad" ? lineLoads.findIndex((l) => l.id === (canvasSelection.object as { id: string }).id) : null}
           onRowClick={(row) => selectCanvasObject({ type: "lineLoad", id: row.id })}
           emptyText="No line loads."
+          onRemove={(row) => removeLineLoad(row.id)}
+          removeLabel={(_row, i) => `Remove line load ${i + 1}`}
+          addActions={[{ label: "+ Add line load", onClick: addLineLoad }]}
         />
-        <button
-          onClick={addLineLoad}
-          className="text-[11px] mt-1 cursor-pointer hover:underline font-medium"
-          style={{ color: "var(--color-vsc-link)" }}
-        >
-          + Add line load
-        </button>
       </div>
       <div
         className="pt-3 mt-2 border-t dialog-buttons"

@@ -50,6 +50,7 @@ import type {
   PaperSize,
   ResultViewSettings,
 } from "../../store/types";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../constants";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
 const FONT_FAMILIES = [
@@ -392,6 +393,7 @@ export function ResultSidebar() {
         pfSettings.zoom ?? 1,
         0,
         0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
       );
       for (const anno of selectedPaperAnnotations) {
         const oldAnchor = anno.anchor ?? "top-left";

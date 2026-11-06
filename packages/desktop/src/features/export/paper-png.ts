@@ -81,6 +81,7 @@ export function paperPngDataUrl(options: { scale?: number } = {}): string | null
     paperFrame.zoom ?? 1,
     paperFrame.offsetX ?? 0,
     paperFrame.offsetY ?? 0,
+    args.paperBottomReserve ?? 0,
   );
   // The world point at the centre of the paper on screen.
   const cx = (screenFrame.x + screenFrame.w / 2 - args.w / 2) / scale - ox;
@@ -104,6 +105,8 @@ export function paperPngDataUrl(options: { scale?: number } = {}): string | null
     ...args,
     w: layoutW,
     h: layoutH,
+    // The export lays the sheet out without the screen's toolbar band.
+    paperBottomReserve: 0,
     viewScale: s,
     worldToCanvas,
     canvasToWorld,

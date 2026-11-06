@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAppStore } from "../../../store/app-store";
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../../../store/defaults";
 import { computeInnerFrame, computePaperFrame } from "../../view/paper";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 import { useViewport } from "./useViewport";
 
 const W = 800;
@@ -88,7 +89,7 @@ describe("useViewport fitting", () => {
     renderHook(() => useViewport(canvasRef));
     const inner = () => {
       const pf = useAppStore.getState().resultViewSettings.paperFrame;
-      return computeInnerFrame(computePaperFrame(W, H, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0));
+      return computeInnerFrame(computePaperFrame(W, H, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0, SCREEN_PAPER_BOTTOM_RESERVE_PX));
     };
     const worldAt = (cx: number, cy: number) => {
       const s = useAppStore.getState();

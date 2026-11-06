@@ -65,10 +65,20 @@ describe("drawings in the models tree", () => {
     fireEvent.change(screen.getByLabelText("Opacity of Section A"), { target: { value: "80" } });
     expect(s().backgrounds.find((b) => b.id === "A")?.opacity).toBe(0.8);
 
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Show in results" }));
     expect(s().backgrounds.find((b) => b.id === "A")?.showInResults).toBe(true);
 
-    fireEvent.click(screen.getByRole("button", { name: "Move Section A up" }));
+    // An image or PDF drawing is inverted in the dark theme unless switched off (one undo step each).
+    const invert = screen.getByRole("checkbox", { name: "Invert in dark theme" });
+    expect(invert).toBeChecked();
+    fireEvent.click(invert);
+    expect(s().backgrounds.find((b) => b.id === "A")?.invertInDark).toBe(false);
+    fireEvent.click(screen.getByRole("checkbox", { name: "Invert in dark theme" }));
+    expect(s().backgrounds.find((b) => b.id === "A")?.invertInDark).toBeUndefined();
+
+    // Alt+Up on the row draws it over the one above (the settings have no order buttons).
+    expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
+    fireEvent.keyDown(screen.getByRole("treeitem", { name: "Section A" }), { key: "ArrowUp", altKey: true });
     expect([...s().backgrounds].sort((a, b) => a.order - b.order).map((b) => b.id)).toEqual(["B", "A"]);
 
     fireEvent.doubleClick(screen.getByText("Section A"));
@@ -128,10 +138,13 @@ describe("Attachments", () => {
     expect(screen.getByRole("listitem", { name: "sheet.pdf" })).toHaveTextContent(`in ${model}`);
   });
 
-  it("is not shown without attachments", () => {
+  it("says so without attachments and still offers to add a drawing", () => {
     adoptProjectAssets([]);
     render(<AttachmentsPanel />);
-    expect(screen.queryByTestId("attachments-panel")).toBeNull();
+    expect(screen.getByTestId("attachments-panel")).toHaveTextContent("No files.");
+    expect(screen.queryByRole("list", { name: "Attached files" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "+ Add drawing…" }));
+    expect(drawingWindowState().edit).toBeNull();
   });
 
   it("places a file of the project in the active model", () => {

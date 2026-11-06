@@ -340,6 +340,13 @@ describe("persistence normalization fallbacks", () => {
     expect(typeof parsed.models[0].projectInfo!.title).toBe("string");
   });
 
+  it("keeps the canvas width and height of an old file (no longer edited, D-21)", () => {
+    const parsed = parseProjectFile(
+      makeBaseProject([{ ...minimalModel, projectInfo: { title: "Old", canvasWidth: 1500, canvasHeight: 800 } }]),
+    );
+    expect(parsed.models[0].projectInfo).toMatchObject({ title: "Old", canvasWidth: 1500, canvasHeight: 800 });
+  });
+
   it("defaults piezometricLine when missing", () => {
     const parsed = parseProjectFile(makeBaseProject([minimalModel]));
     expect(parsed.models[0].piezometricLine).toBeDefined();

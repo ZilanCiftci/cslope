@@ -1,11 +1,10 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Label } from "../../components/ui/Label";
 import {
-  RowRemoveButton,
-  RemoveColumnHeader,
   SpreadsheetTable,
   type SpreadsheetColumn,
 } from "../../components/ui/SpreadsheetTable";
+import { RecordTable } from "../../components/ui/RecordTable";
 import { SpreadsheetExpressionInput } from "../../components/ui/SpreadsheetExpressionInput";
 import { isElectron } from "../../utils/is-electron";
 import { useAppStore } from "../../store/app-store";
@@ -42,7 +41,6 @@ export function InteriorBoundariesDialogApp() {
   const selectCanvasObject = useAppStore((s) => s.selectCanvasObject);
   const [isHydrated, setIsHydrated] = useState(!isElectron);
   const suppressNextBroadcastRef = useRef(false);
-  const boundaryRowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
 
   const selectedBoundary =
     materialBoundaries.find((b) => b.id === selectedMaterialBoundaryId) ??
@@ -159,12 +157,6 @@ export function InteriorBoundariesDialogApp() {
     setSelectedMaterialBoundary,
   ]);
 
-  useEffect(() => {
-    if (!selectedMaterialBoundaryId) return;
-    const row = boundaryRowRefs.current.get(selectedMaterialBoundaryId);
-    row?.scrollIntoView({ block: "nearest" });
-  }, [selectedMaterialBoundaryId]);
-
   const handleAddBoundary = () => {
     addMaterialBoundary([
       [xMin, yMid],
@@ -175,11 +167,12 @@ export function InteriorBoundariesDialogApp() {
     setSelectedMaterialBoundary(last?.id ?? null);
   };
 
-  const handleDeleteBoundary = () => {
-    if (!selectedBoundary) return;
-    removeMaterialBoundary(selectedBoundary.id);
+  const handleDeleteBoundary = (id: string) => {
+    const index = materialBoundaries.findIndex((b) => b.id === id);
+    const wasShown = id === selectedBoundary?.id;
+    removeMaterialBoundary(id);
     const remaining = useAppStore.getState().materialBoundaries;
-    setSelectedMaterialBoundary(remaining[0]?.id ?? null);
+    if (wasShown) setSelectedMaterialBoundary(remaining[Math.min(index, remaining.length - 1)]?.id ?? null);
   };
 
   const selectedBoundaryIndex = selectedBoundary
@@ -199,94 +192,33 @@ export function InteriorBoundariesDialogApp() {
         description="Lines inside the model that divide it into regions of different materials."
       />
       <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-        <div className="flex gap-3">
-          <div
-            className="flex-1 rounded border overflow-hidden"
-            style={{ borderColor: "var(--color-vsc-border)" }}
-          >
-            <table className="w-full text-[11px]">
-              <thead>
-                <tr
-                  style={{
-                    background: "var(--color-vsc-surface-tint)",
-                    color: "var(--color-vsc-text-muted)",
-                  }}
-                >
-                  <th className="text-left px-2 py-1.5 font-semibold">
-                    Boundary
-                  </th>
-                  <th className="text-right px-2 py-1.5 font-semibold w-24">
-                    Points
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {materialBoundaries.length === 0 && (
-                  <tr>
-                    <td colSpan={2} className="px-2 py-1.5" style={{ color: "var(--color-vsc-text-muted)" }}>
-                      No interior boundaries.
-                    </td>
-                  </tr>
-                )}
-                {materialBoundaries.map((boundary, idx) => {
-                  const isSelected = selectedBoundary?.id === boundary.id;
-
-                  return (
-                    <tr
-                      key={boundary.id}
-                      ref={(el) => {
-                        if (!el) {
-                          boundaryRowRefs.current.delete(boundary.id);
-                          return;
-                        }
-                        boundaryRowRefs.current.set(boundary.id, el);
-                      }}
-                      onClick={() => {
-                        setSelectedMaterialBoundary(boundary.id);
-                        selectCanvasObject({ type: "boundary", id: boundary.id });
-                      }}
-                      className="cursor-pointer transition-colors"
-                      style={{
-                        background: isSelected
-                          ? "var(--color-vsc-selected-bg)"
-                          : "transparent",
-                        color: isSelected
-                          ? "var(--color-vsc-text-bright)"
-                          : "var(--color-vsc-text)",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background =
-                            "var(--color-vsc-list-hover)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) {
-                          e.currentTarget.style.background = "transparent";
-                        }
-                      }}
-                    >
-                      <td className="px-2 py-1.5">Boundary {idx + 1}</td>
-                      <td className="px-2 py-1.5 text-right">
-                        {boundary.coordinates.length}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <DialogButton onClick={handleAddBoundary}>Add</DialogButton>
-            <DialogButton
-              onClick={handleDeleteBoundary}
-              disabled={!selectedBoundary}
-            >
-              Delete
-            </DialogButton>
-          </div>
-        </div>
+        <RecordTable
+          mode="records"
+          label="Interior boundaries list"
+          rows={materialBoundaries}
+          getRowKey={(boundary) => boundary.id}
+          selectedRowIndex={selectedBoundaryIndex >= 0 ? selectedBoundaryIndex : null}
+          onRowClick={(boundary) => {
+            setSelectedMaterialBoundary(boundary.id);
+            selectCanvasObject({ type: "boundary", id: boundary.id });
+          }}
+          emptyText="No interior boundaries."
+          onRemove={(boundary) => handleDeleteBoundary(boundary.id)}
+          removeLabel={(_boundary, idx) => `Remove boundary ${idx + 1}`}
+          addActions={[{ label: "+ Add boundary", onClick: handleAddBoundary }]}
+          columns={[
+            {
+              header: "Boundary",
+              renderCell: (_boundary, idx) => `Boundary ${idx + 1}`,
+            },
+            {
+              header: "Points",
+              widthClassName: "w-24",
+              align: "right",
+              renderCell: (boundary) => boundary.coordinates.length,
+            },
+          ]}
+        />
 
         {selectedBoundary && (
           <div className="pt-1 space-y-2">
@@ -305,6 +237,21 @@ export function InteriorBoundariesDialogApp() {
                   : null
               }
               onRowClick={(_row, i) => selectCanvasObject({ type: "boundary", id: selectedBoundary.id }, i)}
+              onRemove={(_row, i) => removeBoundaryPoint(selectedBoundary.id, i)}
+              removeLabel={(_row, i) => `Remove point ${i + 1}`}
+              // A boundary keeps at least two points.
+              canRemove={() => selectedBoundary.coordinates.length > 2}
+              addActions={[
+                {
+                  label: "+ Add point",
+                  onClick: () => {
+                    const last = selectedBoundary.coordinates[
+                      selectedBoundary.coordinates.length - 1
+                    ] ?? [xMax, yMid];
+                    addBoundaryPoint(selectedBoundary.id, [last[0] + 2, last[1]]);
+                  },
+                },
+              ]}
               columns={
                 [
                   {
@@ -376,38 +323,10 @@ export function InteriorBoundariesDialogApp() {
                       />
                     ),
                   },
-                  {
-                    header: <RemoveColumnHeader />,
-                    widthClassName: "w-8",
-                    cellClassName: "px-1",
-                    align: "right",
-                    renderCell: (_row, i) =>
-                      selectedBoundary.coordinates.length > 2 ? (
-                        <RowRemoveButton
-                          ariaLabel={`Remove point ${i + 1}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeBoundaryPoint(selectedBoundary.id, i);
-                          }}
-                        />
-                      ) : null,
-                  },
                 ] satisfies SpreadsheetColumn<[number, number]>[]
               }
             />
 
-            <button
-              onClick={() => {
-                const last = selectedBoundary.coordinates[
-                  selectedBoundary.coordinates.length - 1
-                ] ?? [xMax, yMid];
-                addBoundaryPoint(selectedBoundary.id, [last[0] + 2, last[1]]);
-              }}
-              className="text-[11px] cursor-pointer hover:underline font-medium"
-              style={{ color: "var(--color-vsc-link)" }}
-            >
-              + Add point
-            </button>
           </div>
         )}
       </div>
@@ -423,25 +342,5 @@ export function InteriorBoundariesDialogApp() {
         </button>
       </div>
     </div>
-  );
-}
-
-function DialogButton({
-  onClick,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      onClick={disabled ? undefined : onClick}
-      className="btn min-w-[64px]"
-      aria-disabled={disabled}
-    >
-      {children}
-    </button>
   );
 }

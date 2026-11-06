@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { RowRemoveButton } from "./SpreadsheetTable";
+import { RecordTable, type RecordColumn } from "./RecordTable";
+import { CELL_EDITOR_CLASS, cellEditorStyle } from "./cell-editor";
 
 const normalizeDecimalSeparator = (value: string): string =>
   value.replace(/,/g, ".");
@@ -70,144 +71,62 @@ export function DataPointTable({
 
   const tooFew = rows.length < minRows;
 
-  return (
-    <div className="space-y-1">
-      <div
-        className="overflow-hidden rounded-xs border"
-        style={{
-          borderColor: tooFew
-            ? "var(--color-vsc-error)"
-            : "var(--color-vsc-border)",
+  const columns: RecordColumn<number[]>[] = headers.map((header, ci) => ({
+    header,
+    renderCell: (row, ri) => (
+      <input
+        type="text"
+        inputMode="decimal"
+        value={draftCells[cellKey(ri, ci)] ?? String(row[ci])}
+        onChange={(e) => {
+          const nextDraft = normalizeDecimalSeparator(e.target.value);
+          if (!canBeNumericDraft(nextDraft)) {
+            return;
+          }
+
+          updateDraftCell(ri, ci, nextDraft);
+
+          if (isTransientDraft(nextDraft)) {
+            return;
+          }
+
+          const parsed = Number(nextDraft);
+          if (Number.isFinite(parsed)) {
+            updateCell(ri, ci, parsed);
+          }
         }}
-      >
-        <table className="w-full text-[11px] border-collapse">
-          <thead>
-            <tr style={{ background: "var(--color-vsc-surface-tint-strong)" }}>
-              {headers.map((h, i) => (
-                <th
-                  key={i}
-                  className="py-1 px-1.5 font-semibold text-[11px] text-left"
-                  style={{
-                    color: "var(--color-vsc-text-muted)",
-                    borderBottom: "1px solid var(--color-vsc-border)",
-                    borderRight:
-                      i < headers.length - 1
-                        ? "1px solid var(--color-vsc-border)"
-                        : "none",
-                  }}
-                >
-                  {h}
-                </th>
-              ))}
-              <th
-                className="w-7"
-                style={{ borderBottom: "1px solid var(--color-vsc-border)" }}
-              >
-                <span className="sr-only">Remove</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && emptyText && (
-              <tr>
-                <td
-                  colSpan={headers.length + 1}
-                  className="px-1.5 py-1 text-[11px]"
-                  style={{ color: "var(--color-vsc-text-muted)" }}
-                >
-                  {emptyText}
-                </td>
-              </tr>
-            )}
-            {rows.map((row, ri) => (
-              <tr key={ri} className="group">
-                {row.map((val, ci) => (
-                  <td
-                    key={ci}
-                    className="p-0"
-                    style={{
-                      borderRight:
-                        ci < row.length - 1
-                          ? "1px solid var(--color-vsc-border)"
-                          : "none",
-                      borderBottom:
-                        ri < rows.length - 1
-                          ? "1px solid var(--color-vsc-border)"
-                          : "none",
-                    }}
-                  >
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={draftCells[cellKey(ri, ci)] ?? String(val)}
-                      onChange={(e) => {
-                        const nextDraft = normalizeDecimalSeparator(
-                          e.target.value,
-                        );
-                        if (!canBeNumericDraft(nextDraft)) {
-                          return;
-                        }
+        onBlur={(e) => {
+          const nextDraft = normalizeDecimalSeparator(e.target.value);
+          let resolved = 0;
 
-                        updateDraftCell(ri, ci, nextDraft);
+          if (!isTransientDraft(nextDraft)) {
+            const parsed = Number(nextDraft);
+            if (Number.isFinite(parsed)) {
+              resolved = parsed;
+            }
+          }
 
-                        if (isTransientDraft(nextDraft)) {
-                          return;
-                        }
+          // A kept draft would hide rows passed in later.
+          clearDraftCell(ri, ci);
+          updateCell(ri, ci, resolved);
+        }}
+        className={CELL_EDITOR_CLASS}
+        style={cellEditorStyle}
+        aria-label={`${headers[ci]} row ${ri + 1}`}
+      />
+    ),
+  }));
 
-                        const parsed = Number(nextDraft);
-                        if (Number.isFinite(parsed)) {
-                          updateCell(ri, ci, parsed);
-                        }
-                      }}
-                      onBlur={(e) => {
-                        const nextDraft = normalizeDecimalSeparator(
-                          e.target.value,
-                        );
-                        let resolved = 0;
-
-                        if (!isTransientDraft(nextDraft)) {
-                          const parsed = Number(nextDraft);
-                          if (Number.isFinite(parsed)) {
-                            resolved = parsed;
-                          }
-                        }
-
-                        // A kept draft would hide rows passed in later.
-                        clearDraftCell(ri, ci);
-                        updateCell(ri, ci, resolved);
-                      }}
-                      className="w-full bg-transparent border-none text-[11px] px-1.5 py-0.5 outline-none"
-                      style={{ color: "var(--color-vsc-text)" }}
-                      aria-label={`${headers[ci]} row ${ri + 1}`}
-                    />
-                  </td>
-                ))}
-                <td
-                  className="w-7 text-center leading-none"
-                  style={{
-                    borderBottom:
-                      ri < rows.length - 1
-                        ? "1px solid var(--color-vsc-border)"
-                        : "none",
-                  }}
-                >
-                  <RowRemoveButton
-                    ariaLabel={`Remove point ${ri + 1}`}
-                    onClick={() => removeRow(ri)}
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <button
-        onClick={addRow}
-        className="text-[11px] cursor-pointer hover:underline font-medium"
-        style={{ color: "var(--color-vsc-link)" }}
-      >
-        + Add point
-      </button>
-    </div>
+  return (
+    <RecordTable
+      rows={rows}
+      columns={columns}
+      getRowKey={(_row, ri) => ri}
+      emptyText={emptyText}
+      invalid={tooFew}
+      onRemove={(_row, ri) => removeRow(ri)}
+      removeLabel={(_row, ri) => `Remove point ${ri + 1}`}
+      addActions={[{ label: "+ Add point", onClick: addRow }]}
+    />
   );
 }

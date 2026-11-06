@@ -1936,9 +1936,11 @@ describe("drawCanvas — dark theme ink", () => {
   };
   const root = () => document.documentElement;
   beforeEach(() => {
+    root().dataset.theme = "dark";
     for (const [key, value] of Object.entries(DARK)) root().style.setProperty(INK_TOKENS[key as keyof CanvasInk], value);
   });
   afterEach(() => {
+    delete root().dataset.theme;
     for (const key of Object.keys(DARK)) root().style.removeProperty(INK_TOKENS[key as keyof CanvasInk]);
   });
 
@@ -1965,16 +1967,41 @@ describe("drawCanvas — dark theme ink", () => {
     expect(rec.strokes("#eef0f2").filter((p) => p.state.lineWidth === 1 && pathPoints(p).length === 2).length).toBeGreaterThanOrEqual(2);
     expect(rec.fills("#eef0f2").length).toBeGreaterThanOrEqual(1);
     // nothing of it black on the dark sheet
-    expect(rec.strokes(CRITICAL_SURFACE_COLOR.hex).filter((p) => isArc(p) || pathPoints(p).length === 2)).toHaveLength(0);
+    expect(rec.strokes(CRITICAL_SURFACE_COLOR.hex).filter((p) => isArc(p) || (pathPoints(p).length === 2 && p.state.lineWidth < 1))).toHaveLength(0);
   });
 
-  it("draws the critical surface black over a light soil fill, in the light ink elsewhere", () => {
+  it("draws the critical surface and the slices in the light ink over a light soil fill too, on a thin halo", () => {
     const rec = drawDark();
     const arcs = rec.strokes().filter(isArc);
-    expect(arcs.map((p) => p.state.strokeStyle).sort()).toEqual([CRITICAL_SURFACE_COLOR.hex, "#eef0f2"].sort());
-    // each pass inside its own (even-odd) clip
-    expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd").length).toBeGreaterThanOrEqual(2);
+    expect(arcs.map((p) => p.state.strokeStyle)).toEqual(["#eef0f2"]);
+    // the halo: the same arc 2 px wider, in the sheet's colour, under it
+    const halo = rec.strokes().filter((p) => p.state.lineWidth === 3.5 && pathPoints(p).length > 20);
+    expect(halo).toHaveLength(1);
+    expect(halo[0].state.strokeStyle).not.toBe("#eef0f2");
+    expect(rec.paths.indexOf(halo[0])).toBeLessThan(rec.paths.indexOf(arcs[0]));
+    // one colour per line: no clip by the fills, nothing black or white over them
+    expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd")).toHaveLength(0);
+    expect(rec.strokes(CRITICAL_SURFACE_COLOR.hex).filter((p) => isArc(p) || (pathPoints(p).length === 2 && p.state.lineWidth < 1))).toHaveLength(0);
+    // the slice lines: in the ink (not white over a dark fill), on their own wider halo
+    const slices = rec.strokes("#eef0f2").filter((p) => p.state.lineWidth < 1 && pathPoints(p).length >= 2);
+    expect(slices.length).toBeGreaterThan(0);
+    const same = (p: PaintedPath) => JSON.stringify(pathPoints(p)) === JSON.stringify(pathPoints(slices[0]));
+    const sliceHalo = rec.strokes().filter((p) => p !== slices[0] && same(p) && p.state.lineWidth > slices[0].state.lineWidth);
+    expect(sliceHalo).toHaveLength(1);
+    expect(rec.paths.indexOf(sliceHalo[0])).toBeLessThan(rec.paths.indexOf(slices[0]));
     expect(rec.depth()).toBe(0);
+  });
+
+  it("draws a water line in its light colour over the fills, on a halo", () => {
+    const rec = drawDark(
+      { showSoilColor: true },
+      { piezometricLine: { ...DEFAULT_PIEZO_LINE, lines: [{ id: "w1", name: "Water 1", color: "#0000ff", coordinates: [[0, 6], [30, 6]] }], activeLineId: "w1" } },
+    );
+    const water = rec.strokes().filter((p) => pathPoints(p).length === 2 && pathPoints(p)[0][1] === pathPoints(p)[1][1] && p.state.lineDash.length === 0);
+    const ink = water.filter((p) => p.state.strokeStyle === "#7ea8ff");
+    expect(ink.length).toBeGreaterThan(0);
+    expect(water.some((p) => p.state.strokeStyle !== "#7ea8ff" && p.state.lineWidth > ink[0].state.lineWidth)).toBe(true);
+    expect(rec.strokes(PIEZO_COLOR.hex)).toHaveLength(0);
   });
 
   it("draws loads, text annotations without a colour, the colour bar and the material table in the dark ink", () => {
@@ -2002,13 +2029,15 @@ describe("drawCanvas — dark theme ink", () => {
   });
 
   it("keeps the print colours without the tokens (the light theme sets them to these)", () => {
+    root().dataset.theme = "light";
     for (const key of Object.keys(DARK)) root().style.removeProperty(INK_TOKENS[key as keyof CanvasInk]);
     const rec = drawDark({}, { udls: [{ id: "u1", magnitude: 15, x1: 2, x2: 8 }] });
     expect(rec.strokes().filter(isArc).map((p) => p.state.strokeStyle)).toEqual([CRITICAL_SURFACE_COLOR.hex]);
     expect(rec.findText("1.234")!.state.fillStyle).toBe(CRITICAL_SURFACE_COLOR.hex);
     expect(rec.findText("q = 15 kPa")!.state.fillStyle).toBe(UDL_LOAD_COLOR.hex);
-    // one pass: no even-odd clips for the lines over the fills
+    // one pass: no even-odd clips for the lines over the fills, and no halo
     expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd")).toHaveLength(0);
+    expect(rec.strokes().filter((p) => p.state.lineWidth === 3.5 && pathPoints(p).length > 20)).toHaveLength(0);
   });
 });
 

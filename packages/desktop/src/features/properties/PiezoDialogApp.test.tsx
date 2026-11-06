@@ -55,21 +55,21 @@ afterEach(() => {
 });
 
 describe("PiezoDialogApp", () => {
-  it("shows a hint and a disabled Delete button without lines", () => {
+  it("shows a hint and only + Add line without lines", () => {
     render(<PiezoDialogApp />);
     hydrate();
     expect(
       screen.getByText("No piezometric lines."),
     ).toBeInTheDocument();
-    const del = screen.getByRole("button", { name: "Delete" });
-    expect(del).toHaveAttribute("aria-disabled", "true");
+    expect(screen.getByRole("button", { name: "+ Add line" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Remove Line/ })).toBeNull();
     expect(screen.queryByLabelText("Free water above ground")).toBeNull();
   });
 
   it("adds a horizontal line across the model at mid height", async () => {
     render(<PiezoDialogApp />);
     hydrate();
-    await userEvent.click(screen.getByRole("button", { name: "Add" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ Add line" }));
     expect(pl().lines).toHaveLength(1);
     expect(pl().lines[0].coordinates).toEqual([
       [0, 5],
@@ -147,7 +147,7 @@ describe("PiezoDialogApp", () => {
     expect(screen.getByText("Line 2 coordinates")).toBeInTheDocument();
     expect(screen.getAllByLabelText(/Piezometric point \d X/)).toHaveLength(3);
 
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Remove Line 2" }));
     expect(pl().lines.map((l) => l.id)).toEqual(["a"]);
     expect(pl().activeLineId).toBe("a");
     expect(screen.getByText("Line 1 coordinates")).toBeInTheDocument();

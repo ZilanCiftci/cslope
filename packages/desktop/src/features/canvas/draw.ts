@@ -26,7 +26,7 @@ import {
   cssVar,
   RULER_SIZE_PX,
 } from "./constants";
-import { PRINT_INK, themeInk } from "./ink";
+import { isDarkTheme, PRINT_INK, themeInk } from "./ink";
 import { GRID_RAW_STEP_PX } from "../../constants";
 import {
   clampMinorTicks,
@@ -96,6 +96,7 @@ import {
   FEM_PLASTIC_ZONE_OPACITY,
   FOS_LABEL_FONT_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
+  COLOR_BAR_MIN_TEXT_PX,
 } from "../rendering/style-spec";
 import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb } from "../results/layer-styles";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
@@ -626,6 +627,12 @@ export interface DrawCanvasParams {
   backgrounds?: AppState["backgrounds"];
   /** Device pixels per canvas unit (the drawings' raster resolution follows it). */
   pixelRatio?: number;
+  /**
+   * The band at the bottom of the canvas the sheet is fitted above (px,
+   * computePaperFrame): the floating toolbar's on screen; none (0) in the
+   * exports.
+   */
+  paperBottomReserve?: number;
   worldToCanvas: (
     wx: number,
     wy: number,
@@ -681,6 +688,7 @@ export function drawCanvas(
     locks = NO_LOCKS,
     backgrounds = NO_BACKGROUNDS,
     pixelRatio = 1,
+    paperBottomReserve = 0,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX,
@@ -704,6 +712,7 @@ export function drawCanvas(
   // The display layers' styles (Properties › Layers): overrides of the
   // constants above; a chosen color is drawn as chosen in both themes.
   const LS = resultViewSettings.layerStyles ?? {};
+  const DARK_THEME = isDarkTheme();
   const GRID_COLOR = INK.gridLine;
   const GRID_TEXT_COLOR = cssVar("--color-canvas-grid-text");
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
@@ -852,50 +861,22 @@ export function drawCanvas(
   const WATER_LABEL_COLOR = cssVar("--color-canvas-water-label") || PIEZO_COLOR.hex;
   const HEAD_LABEL_COLOR = cssVar("--color-canvas-head-label") || PRINT_INK.headLine;
   const LINE_LABEL_HALO = (mode === "result" && result ? PAPER_FILL_COLOR : BG_COLOR) || "#ffffff";
-  // Lines that cross the soil (the critical surface, water and head lines):
-  // in the theme's ink over the sheet, in the print colour over the light
-  // soil fills, where the dark theme's light ink would not read (the fills
-  // are the user's colours in both themes). One pass where the two are
-  // the same (the light theme).
-  let lightFillRings: [number, number][][] | null = null;
-  const paintAgainstFills = (ink: string, print: string, paint: (color: string) => void) => {
-    if (ink === print || resultViewSettings.showSoilColor === false || coordinates.length < 3) {
-      paint(ink);
-      return;
+  // Lines that cross the soil (the critical surface and its radius lines,
+  // the water, drawdown, head and reference lines): one colour each, the
+  // theme's ink, whatever is under them. In the dark theme (light ink, and
+  // the soil fills are the user's colours in both themes) a thin halo in
+  // the colour of the sheet (or the canvas) is drawn under them first, so
+  // they read over a light fill as over the sheet. The light theme draws
+  // them without one, as the PDF does. `paint` draws the line in `color`,
+  // its widths `halo` px wider (0 for the line itself; a filled mark
+  // strokes its outline that wide on the halo pass).
+  const paintAgainstFills = (ink: string, paint: (color: string, halo: number) => void) => {
+    if (DARK_THEME) {
+      ctx.save();
+      paint(LINE_LABEL_HALO, LINE_HALO_PX * paperZoom);
+      ctx.restore();
     }
-    lightFillRings ??= getCachedRegions(coordinates, materialBoundaries, regionMaterials, materials[0]?.id ?? "").flatMap((r) => {
-      const color = materials.find((m) => m.id === r.materialId)?.color;
-      if (color === undefined || r.px.length < 3 || isDarkFill(color)) return [];
-      return [r, ...(r.holes ?? [])]
-        .filter((ring) => ring.px.length >= 3)
-        .map((ring) => ring.px.map((x, i) => worldToCanvas(x, ring.py[i], w, h)));
-    });
-    const rings = lightFillRings;
-    if (rings.length === 0) {
-      paint(ink);
-      return;
-    }
-    const addRings = () => {
-      for (const ring of rings) {
-        ring.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
-        ctx.closePath();
-      }
-    };
-    // Outside the light fills, then inside them (each part once, so a
-    // translucent line is not painted twice).
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(0, 0, w, h);
-    addRings();
-    ctx.clip("evenodd");
-    paint(ink);
-    ctx.restore();
-    ctx.save();
-    ctx.beginPath();
-    addRings();
-    ctx.clip("evenodd");
-    paint(print);
-    ctx.restore();
+    paint(ink, 0);
   };
   // Point labels stay off the rulers (left and bottom) and the canvas edge.
   const labelBounds: Box = { left: RULER_SIZE_PX + 2, top: 2, right: w - 2, bottom: h - RULER_SIZE_PX - 2 };
@@ -940,6 +921,7 @@ export function drawCanvas(
         pf0Frame.zoom ?? 1,
         pf0Frame.offsetX ?? 0,
         pf0Frame.offsetY ?? 0,
+        paperBottomReserve,
       );
       // Theme-aware background outside paper
       ctx.save();
@@ -1014,6 +996,7 @@ export function drawCanvas(
       resultViewSettings.paperFrame.zoom ?? 1,
       resultViewSettings.paperFrame.offsetX ?? 0,
       resultViewSettings.paperFrame.offsetY ?? 0,
+      paperBottomReserve,
     );
     const padL = pfGrid.w * PLOT_MARGINS.L;
     const padR = pfGrid.w * PLOT_MARGINS.R;
@@ -1263,7 +1246,7 @@ export function drawCanvas(
   // Placed drawings shown in results, each a layer, in the given order.
   const drawDrawingLayers = (list: readonly BackgroundImage[]) => {
     for (const d of list) {
-      drawUnderlays(ctx, [d], (x, y) => worldToCanvas(x, y, w, h), { pixelRatio, ink: INK.drawingInk, include: (p) => p.visible });
+      drawUnderlays(ctx, [d], (x, y) => worldToCanvas(x, y, w, h), { pixelRatio, ink: INK.drawingInk, dark: DARK_THEME, include: (p) => p.visible });
     }
   };
   // Drawings below the soil colours in the order (default: none).
@@ -1350,6 +1333,7 @@ export function drawCanvas(
       drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
         pixelRatio,
         ink: INK.drawingInk,
+        dark: DARK_THEME,
         include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
       });
     ctx.restore();
@@ -1832,9 +1816,9 @@ export function drawCanvas(
   const waterBefore = piezometricLine.rapidDrawdown?.waterBefore;
   if (waterBefore && waterBefore.length >= 2) {
     const pts = waterBefore.map(([x, y]) => worldToCanvas(x, y, w, h));
-    paintAgainstFills(INK.waterLine, PIEZO_COLOR.hex, (color) => {
+    paintAgainstFills(INK.waterLine, (color, halo) => {
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5 * paperZoom;
+      ctx.lineWidth = 1.5 * paperZoom + halo;
       ctx.setLineDash([8 * paperZoom, 5 * paperZoom]);
       ctx.beginPath();
       pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
@@ -1864,19 +1848,19 @@ export function drawCanvas(
       });
       ctx.stroke();
     };
-    paintAgainstFills(INK.referenceLine, PRINT_INK.referenceLine, (color) => {
+    paintAgainstFills(INK.referenceLine, (color, halo) => {
       ctx.save();
       ctx.globalAlpha = 0.45;
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1 * paperZoom;
+      ctx.lineWidth = 1 * paperZoom + halo;
       ctx.setLineDash([1.5 * paperZoom, 3 * paperZoom]);
       for (const ref of waternet.referenceLines) if (ref.points.length >= 2) path(ref.points);
       ctx.restore();
     });
 
-    paintAgainstFills(INK.headLine, PRINT_INK.headLine, (color) => {
+    paintAgainstFills(INK.headLine, (color, halo) => {
       ctx.strokeStyle = color;
-      ctx.lineWidth = 1.2 * paperZoom;
+      ctx.lineWidth = 1.2 * paperZoom + halo;
       ctx.setLineDash([8 * paperZoom, 3 * paperZoom, 2 * paperZoom, 3 * paperZoom]);
       waternet.headLines.forEach((head) => {
         if (head.points.length >= 2) path(head.points);
@@ -1961,9 +1945,9 @@ export function drawCanvas(
       // Stroke: solid polyline (the water ink over the sheet, the print
       // blue over a light fill)
       const selectedLine = line.id === selectedWaterLineId;
-      paintAgainstFills(selectedLine ? SELECTED_BOUNDARY_COLOR : piezoBlue, selectedLine ? SELECTED_BOUNDARY_COLOR : PIEZO_COLOR.hex, (lineColor) => {
+      paintAgainstFills(selectedLine ? SELECTED_BOUNDARY_COLOR : piezoBlue, (lineColor, halo) => {
         ctx.strokeStyle = lineColor;
-        ctx.lineWidth = (selectedLine ? 3 : 1.5) * thin * paperZoom;
+        ctx.lineWidth = (selectedLine ? 3 : 1.5) * thin * paperZoom + halo;
         ctx.beginPath();
         for (let i = 0; i < plCoords.length; i++) {
           const [px, py] = worldToCanvas(plCoords[i][0], plCoords[i][1], w, h);
@@ -1975,7 +1959,7 @@ export function drawCanvas(
         // Dashed: the horizontal continuation the analysis uses beyond the
         // line's end points.
         ctx.setLineDash([6 * paperZoom, 4 * paperZoom]);
-        ctx.lineWidth = 1 * paperZoom;
+        ctx.lineWidth = 1 * paperZoom + halo;
         for (const [a, b] of piezoExtensions(plCoords, coordinates)) {
           const [ax, ay] = worldToCanvas(a[0], a[1], w, h);
           const [bx, by] = worldToCanvas(b[0], b[1], w, h);
@@ -1997,7 +1981,7 @@ export function drawCanvas(
       const symbols = drawnPiezoSymbols[lineIdx];
       for (const { x: mx, y: my, bars } of symbols) {
         const triTop = my - triH;
-        paintAgainstFills(piezoBlue, PIEZO_COLOR.hex, (symbolColor) => {
+        paintAgainstFills(piezoBlue, (symbolColor, halo) => {
           ctx.beginPath();
           ctx.moveTo(mx - triHalf, triTop);
           ctx.lineTo(mx + triHalf, triTop);
@@ -2005,11 +1989,17 @@ export function drawCanvas(
           ctx.closePath();
           ctx.fillStyle = symbolColor;
           ctx.fill();
+          if (halo > 0) {
+            ctx.strokeStyle = symbolColor;
+            ctx.lineWidth = halo;
+            ctx.lineJoin = "round";
+            ctx.stroke();
+          }
 
           // Two bars below the tip (left out where they would go into the ground).
           if (bars) {
             ctx.strokeStyle = symbolColor;
-            ctx.lineWidth = 1.2 * thin * paperZoom;
+            ctx.lineWidth = 1.2 * thin * paperZoom + halo;
             for (const gap of [PIEZO_BAR_GAP1_PX, PIEZO_BAR_GAP2_PX]) {
               ctx.beginPath();
               ctx.moveTo(mx - barW, my + gap * paperZoom);
@@ -2529,6 +2519,7 @@ export function drawCanvas(
       paperFrame.zoom ?? 1,
       paperFrame.offsetX ?? 0,
       paperFrame.offsetY ?? 0,
+      paperBottomReserve,
     );
     // Scale factor for annotations based on paper frame size
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
@@ -2660,11 +2651,10 @@ export function drawCanvas(
     };
 
     const cs = result.criticalSurface;
-    // The critical surface and its radius lines: the theme's ink, black
-    // over a light soil fill (paintAgainstFills).
-    // A color chosen for the layer: as chosen, over the sheet and the fills.
-    const paintCritical = (paint: (color: string) => void, chosen?: string) =>
-      chosen ? paint(chosen) : paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
+    // The critical surface and its radius lines: the theme's ink, or the
+    // layer's chosen color (with the dark theme's halo, paintAgainstFills).
+    const paintCritical = (paint: (color: string, halo: number) => void, chosen?: string) =>
+      paintAgainstFills(chosen ?? INK.critical, paint);
 
     const drawSlicesLayer = () => {
       if (!cs) return;
@@ -2699,15 +2689,36 @@ export function drawCanvas(
         );
 
         ctx.save();
-        ctx.lineWidth = (LS.slices?.width ?? SLICE_LINE_WIDTH_PX) * paperZoom * Math.max(0.6, density);
+        const sliceWidth = (LS.slices?.width ?? SLICE_LINE_WIDTH_PX) * paperZoom * Math.max(0.6, density);
+        ctx.lineWidth = sliceWidth;
         ctx.globalAlpha = SLICE_LINE_OPACITY * density;
-        for (const x of xBounds) {
+        if (DARK_THEME) {
+          // The dark theme: the theme's ink everywhere, on a thin halo in
+          // the sheet's colour (as the other lines over the soil).
+          ctx.beginPath();
+          for (const x of xBounds) {
+            const topY = surfaceYAtX(x);
+            const botY = arcYAtX(x);
+            if (topY === null || botY === null) continue;
+            const [sx, sy] = worldToCanvas(x, topY, w, h);
+            const [, ey] = worldToCanvas(x, botY, w, h);
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(sx, ey);
+          }
+          ctx.strokeStyle = LINE_LABEL_HALO;
+          ctx.lineWidth = sliceWidth + SLICE_HALO_PX * paperZoom;
+          ctx.stroke();
+          ctx.strokeStyle = LS.slices?.color ?? INK.critical;
+          ctx.lineWidth = sliceWidth;
+          ctx.stroke();
+        }
+        for (const x of DARK_THEME ? [] : xBounds) {
           const topY = surfaceYAtX(x);
           const botY = arcYAtX(x);
           if (topY === null || botY === null) continue;
           for (const part of splitVerticalByRegion(sliceRegions, x, botY, topY)) {
-            // Over the sheet (no fill) the theme's ink; over a fill black,
-            // or white over a dark one.
+            // The light theme: black over the sheet and a light fill, white
+            // over a dark one (as the PDF draws them).
             const dark = part.region !== null && regionDark.get(part.region) === true;
             ctx.strokeStyle =
               LS.slices?.color ??
@@ -2744,10 +2755,10 @@ export function drawCanvas(
         );
 
         // Radius lines (solid, bold — same style as the arc)
-        paintCritical((color) => {
+        paintCritical((color, halo) => {
           if (LS.center?.radiusLines !== false) {
             ctx.strokeStyle = color;
-            ctx.lineWidth = CENTER_LINE_WIDTH_PX * paperZoom;
+            ctx.lineWidth = CENTER_LINE_WIDTH_PX * paperZoom + halo;
             ctx.beginPath();
             ctx.moveTo(ccx, ccy);
             ctx.lineTo(epx, epy);
@@ -2761,7 +2772,7 @@ export function drawCanvas(
           // Small filled circle at centre
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(ccx, ccy, (LS.center?.size ?? CENTER_DOT_RADIUS_PX) * paperZoom, 0, Math.PI * 2);
+          ctx.arc(ccx, ccy, (LS.center?.size ?? CENTER_DOT_RADIUS_PX) * paperZoom + halo / 2, 0, Math.PI * 2);
           ctx.fill();
         }, LS.center?.color);
       }
@@ -2925,9 +2936,9 @@ export function drawCanvas(
 
       // Arc stroke (bold black like reference image), from the top of the
       // tension crack (its face is part of the slip surface) to the exit.
-      paintCritical((color) => {
+      paintCritical((color, halo) => {
         ctx.strokeStyle = color;
-        ctx.lineWidth = (LS.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX) * paperZoom;
+        ctx.lineWidth = (LS.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX) * paperZoom + halo;
         ctx.beginPath();
         if (crack) {
           const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
@@ -2948,7 +2959,7 @@ export function drawCanvas(
         const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
         // Labels stay inside the plot frame (the geometry clip).
         const pf = resultViewSettings.paperFrame;
-        const fr = computePaperFrame(w, h, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0);
+        const fr = computePaperFrame(w, h, pf.paperSize, pf.landscape, pf.zoom ?? 1, pf.offsetX ?? 0, pf.offsetY ?? 0, paperBottomReserve);
         const forces = cs.reinforcementForces;
         // Laid out again only when what it depends on changes (not on a mouse move).
         const layout = memoLayout(
@@ -3018,7 +3029,7 @@ export function drawCanvas(
       if (drawnReferences.some((d) => d.anno.label?.trim())) {
         const toC = (x: number, y: number) => worldToCanvas(x, y, w, h);
         const { paperFrame: rf } = rvs;
-        const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0);
+        const frame = computePaperFrame(w, h, rf.paperSize, rf.landscape, rf.zoom ?? 1, rf.offsetX ?? 0, rf.offsetY ?? 0, paperBottomReserve);
         const refLayout = new LabelLayout({
           left: frame.x + frame.w * PLOT_MARGINS.L + 2,
           top: frame.y + frame.h * PLOT_MARGINS.T + 2,
@@ -3210,7 +3221,7 @@ export function drawCanvas(
       } else if (anno.type === "color-bar") {
         const barW = 20 * annoScale;
         const barH = 200 * annoScale;
-        const labelFontSize = Math.max(10, 11 * annoScale);
+        const labelFontSize = Math.max(COLOR_BAR_MIN_TEXT_PX, 11 * annoScale);
         const titleExtraTop = labelFontSize + 4 * annoScale;
 
         // Measure label width for total content size
@@ -3577,6 +3588,14 @@ export function drawCanvas(
     ctx.setLineDash([]);
   }
 }
+
+/**
+ * How much wider (px of the paper at zoom 1) the dark theme's halo under a
+ * line that crosses the soil is than the line: 1 px on each side.
+ */
+const LINE_HALO_PX = 2;
+/** The same for the slice lines (thinner, as they are). */
+const SLICE_HALO_PX = 1;
 
 /**
  * The edges of the finite element mesh, each once (an edge between two

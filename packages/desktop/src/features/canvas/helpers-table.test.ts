@@ -6,7 +6,9 @@ import {
   extendBoundsWithFosLabelFitPadding,
   getAnnotationBoundsPx,
   measureTable,
+  tableScale,
 } from "./helpers";
+import { MATERIAL_TABLE_MIN_TEXT_PX } from "../rendering/style-spec";
 import { drawCanvas, type DrawCanvasParams } from "./draw";
 import { createRecordingContext, type TextCall } from "../../test/recording-context";
 import {
@@ -113,6 +115,23 @@ describe("drawTable", () => {
       expect(t.x).toBeLessThan(10 + size.w);
       expect(t.y).toBeLessThan(20 + size.h);
     }
+  });
+
+  it("never draws its text smaller than the minimum on screen: the whole table grows instead, on an opaque fill", () => {
+    const { columnKeys, header, rows } = buildMaterialTableData(ALL_COLUMNS, materials);
+    const rec = createRecordingContext();
+    // 6 px text at half the sheet's scale would be 3 px: drawn as at the minimum
+    expect(tableScale(0.5, 6)).toBe(MATERIAL_TABLE_MIN_TEXT_PX / 6);
+    expect(tableScale(2, 6)).toBe(2);
+    expect(measureTable(rec.ctx, columnKeys, header, rows, 0.5, 6)).toEqual(
+      measureTable(rec.ctx, columnKeys, header, rows, MATERIAL_TABLE_MIN_TEXT_PX / 6, 6),
+    );
+    rec.reset();
+    drawTable(rec.ctx, 0, 0, columnKeys, header, rows, materials, 0.5, 6);
+    expect(rec.texts.length).toBeGreaterThan(0);
+    for (const t of rec.texts) expect(parseFloat(t.state.font.replace(/^bold /, ""))).toBeGreaterThanOrEqual(MATERIAL_TABLE_MIN_TEXT_PX);
+    // the background hides what is under it (the print colours: white)
+    expect(rec.fills()[0].state.fillStyle).toBe("#ffffff");
   });
 
   it("wraps long cells onto more lines instead of cutting them off, and wraps long headers", () => {
