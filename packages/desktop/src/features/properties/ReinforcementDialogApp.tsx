@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { isElectron } from "../../utils/is-electron";
 import { Label } from "../../components/ui/Label";
+import { RecordTable, type AddAction } from "../../components/ui/RecordTable";
 import { DialogHeader, WindowSubheading } from "./DialogHeader";
 import { useAppStore } from "../../store/app-store";
 import type {
@@ -34,6 +35,13 @@ interface LoadsStatePayload {
 }
 
 const TYPES = Object.keys(REINFORCEMENT_TYPE_LABELS) as ReinforcementType[];
+/** The short names in the "+ Add …" links under the list. */
+const REINFORCEMENT_ADD_NAMES: Record<ReinforcementType, string> = {
+  anchor: "anchor",
+  tieback: "tieback",
+  nail: "soil nail",
+  geosynthetic: "geosynthetic",
+};
 const PILE_TYPES = Object.keys(PILE_TYPE_LABELS) as PileType[];
 const PILE_DIRECTIONS = Object.keys(PILE_DIRECTION_LABELS) as NonNullable<PileRow["direction"]>[];
 const PILE_LOCATIONS = Object.keys(PILE_LOCATION_LABELS) as NonNullable<PileRow["location"]>[];
@@ -169,33 +177,16 @@ function NumberField({
   );
 }
 
-function DialogButton({
-  onClick,
-  disabled,
-  children,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      onClick={disabled ? undefined : onClick}
-      className="btn w-full"
-      aria-disabled={disabled}
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Compact list, one row per element, as in the Materials dialog. */
+/** A list of elements: read-only rows, the selected one edited below. */
 function ElementList<T extends { id: string }>({
   rows,
   headers,
   cells,
   selectedId,
   onSelect,
+  onRemove,
+  removeLabel,
+  addActions,
   empty,
   label,
 }: {
@@ -204,87 +195,32 @@ function ElementList<T extends { id: string }>({
   cells: (row: T, index: number) => ReactNode[];
   selectedId: string | undefined;
   onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
+  removeLabel: (row: T, index: number) => string;
+  addActions: AddAction[];
   empty: string;
   /** Accessible name of the list. */
   label: string;
 }) {
-  const bodyRef = useRef<HTMLTableSectionElement>(null);
-  // One row is in the tab order (the selected one, else the first); the
-  // arrow keys move the selection and the focus with it.
-  const focusIndex = Math.max(0, rows.findIndex((r) => r.id === selectedId));
-  const moveTo = (index: number) => {
-    const k = Math.min(rows.length - 1, Math.max(0, index));
-    if (!rows[k]) return;
-    onSelect(rows[k].id);
-    bodyRef.current?.querySelectorAll<HTMLElement>("tr[data-row-id]")[k]?.focus();
-  };
+  const selectedIndex = rows.findIndex((r) => r.id === selectedId);
   return (
-    <div
-      className="flex-1 min-w-0 rounded border overflow-auto max-h-[212px]"
-      style={{ borderColor: "var(--color-vsc-border)" }}
-    >
-      <table role="grid" aria-label={label} className="w-full text-[11px] whitespace-nowrap">
-        <thead className="sticky top-0" style={{ background: "var(--color-vsc-bg)" }}>
-          <tr style={{ background: "var(--color-vsc-surface-tint)", color: "var(--color-vsc-text-muted)" }}>
-            {headers.map((h) => (
-              <th key={h} className="text-left px-2 py-1.5 font-semibold">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody ref={bodyRef}>
-          {rows.length === 0 && (
-            <tr>
-              <td colSpan={headers.length} className="px-2 py-2" style={{ color: "var(--color-vsc-text-muted)" }}>
-                {empty}
-              </td>
-            </tr>
-          )}
-          {rows.map((row, i) => {
-            const isSelected = row.id === selectedId;
-            return (
-              <tr
-                key={row.id}
-                data-row-id={row.id}
-                tabIndex={i === focusIndex ? 0 : -1}
-                onClick={() => onSelect(row.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onSelect(row.id);
-                  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                    e.preventDefault();
-                    moveTo(i + (e.key === "ArrowDown" ? 1 : -1));
-                  } else if (e.key === "Home" || e.key === "End") {
-                    e.preventDefault();
-                    moveTo(e.key === "Home" ? 0 : rows.length - 1);
-                  }
-                }}
-                aria-selected={isSelected}
-                className="cursor-pointer transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:-outline-offset-1"
-                style={{
-                  background: isSelected ? "var(--color-vsc-selected-bg)" : "transparent",
-                  color: isSelected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
-                }}
-                onMouseEnter={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = "var(--color-vsc-list-hover)";
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.background = "transparent";
-                }}
-              >
-                {cells(row, i).map((cell, k) => (
-                  <td key={k} className="px-2 py-1 tabular-nums">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <RecordTable
+      mode="records"
+      label={label}
+      rows={rows}
+      getRowKey={(row) => row.id}
+      selectedRowIndex={selectedIndex >= 0 ? selectedIndex : null}
+      onRowClick={(row) => onSelect(row.id)}
+      onRemove={(row) => onRemove(row.id)}
+      removeLabel={removeLabel}
+      addActions={addActions}
+      emptyText={empty}
+      maxHeight={212}
+      columns={headers.map((header, k) => ({
+        header,
+        renderCell: (row: T, i: number) => cells(row, i)[k],
+      }))}
+    />
   );
 }
 
@@ -310,7 +246,6 @@ export function ReinforcementDialogApp() {
   const addPile = useAppStore((s) => s.addPile);
   const updatePile = useAppStore((s) => s.updatePile);
   const removePile = useAppStore((s) => s.removePile);
-  const [newPileType, setNewPileType] = useState<PileType>("pile");
   const parameters = useAppStore((s) => s.parameters);
   const addReinforcement = useAppStore((s) => s.addReinforcement);
   const updateReinforcement = useAppStore((s) => s.updateReinforcement);
@@ -330,7 +265,6 @@ export function ReinforcementDialogApp() {
     if (selectedOnCanvas?.type === "reinforcement") setSelectedId(selectedOnCanvas.id);
     if (selectedOnCanvas?.type === "pile") setSelectedPileId(selectedOnCanvas.id);
   }
-  const [newType, setNewType] = useState<ReinforcementType>("anchor");
   const suppressNextBroadcastRef = useRef(false);
 
   useEffect(() => {
@@ -376,27 +310,29 @@ export function ReinforcementDialogApp() {
   const pileIndex = pile ? piles.indexOf(pile) : -1;
   const update = (id: string, patch: Partial<ReinforcementRow>) => updateReinforcement(id, patch);
 
-  const handleAdd = () => {
-    addReinforcement(newType);
+  const handleAdd = (type: ReinforcementType) => {
+    addReinforcement(type);
     const last = useAppStore.getState().reinforcements.at(-1);
     if (last) setSelectedId(last.id);
   };
-  const handleDelete = () => {
-    if (!selected) return;
-    removeReinforcement(selected.id);
+  const handleDelete = (id: string) => {
+    const index = reinforcements.findIndex((r) => r.id === id);
+    removeReinforcement(id);
+    if (id !== selected?.id) return;
     const rest = useAppStore.getState().reinforcements;
-    setSelectedId(rest[Math.min(selectedIndex, rest.length - 1)]?.id ?? null);
+    setSelectedId(rest[Math.min(index, rest.length - 1)]?.id ?? null);
   };
-  const handleAddPile = () => {
-    addPile(newPileType);
+  const handleAddPile = (type: PileType) => {
+    addPile(type);
     const last = useAppStore.getState().piles.at(-1);
     if (last) setSelectedPileId(last.id);
   };
-  const handleDeletePile = () => {
-    if (!pile) return;
-    removePile(pile.id);
+  const handleDeletePile = (id: string) => {
+    const index = piles.findIndex((p) => p.id === id);
+    removePile(id);
+    if (id !== pile?.id) return;
     const rest = useAppStore.getState().piles;
-    setSelectedPileId(rest[Math.min(pileIndex, rest.length - 1)]?.id ?? null);
+    setSelectedPileId(rest[Math.min(index, rest.length - 1)]?.id ?? null);
   };
 
   const length = selected ? Math.hypot(selected.x2 - selected.x1, selected.y2 - selected.y1) : 0;
@@ -416,46 +352,33 @@ export function ReinforcementDialogApp() {
       />
       <div className="flex-1 overflow-y-auto pr-1 space-y-3">
         <section aria-label="Reinforcement elements" className="space-y-2">
-          <div className="flex gap-3">
-            <ElementList
-              rows={reinforcements}
-              headers={["#", "Type", "End 1 x, y (m)", "End 2 x, y (m)", "Length (m)", "T (kN)", "S (m)"]}
-              cells={(r, i) => [
-                <span style={muted}>{i + 1}</span>,
-                REINFORCEMENT_TYPE_LABELS[r.type],
-                formatPoint(r.x1, r.y1),
-                formatPoint(r.x2, r.y2),
-                Math.hypot(r.x2 - r.x1, r.y2 - r.y1).toFixed(2),
-                formatNumber(r.tensileCapacity, 1),
-                formatSignificant(r.spacing),
-              ]}
-              selectedId={selected?.id}
-              onSelect={(id) => {
-                setSelectedId(id);
-                selectCanvasObject({ type: "reinforcement", id });
-              }}
-              empty="No reinforcement. Choose a type and click Add."
-              label="Reinforcement elements list"
-            />
-            <div className="flex flex-col gap-1.5 w-44 shrink-0">
-              <select
-                value={newType}
-                aria-label="Type of the new reinforcement"
-                className="w-full"
-                onChange={(e) => setNewType(e.target.value as ReinforcementType)}
-              >
-                {TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {REINFORCEMENT_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-              <DialogButton onClick={handleAdd}>Add</DialogButton>
-              <DialogButton onClick={handleDelete} disabled={!selected}>
-                Delete
-              </DialogButton>
-            </div>
-          </div>
+          <ElementList
+            rows={reinforcements}
+            headers={["#", "Type", "End 1 x, y (m)", "End 2 x, y (m)", "Length (m)", "T (kN)", "S (m)"]}
+            cells={(r, i) => [
+              <span style={muted}>{i + 1}</span>,
+              REINFORCEMENT_TYPE_LABELS[r.type],
+              formatPoint(r.x1, r.y1),
+              formatPoint(r.x2, r.y2),
+              Math.hypot(r.x2 - r.x1, r.y2 - r.y1).toFixed(2),
+              formatNumber(r.tensileCapacity, 1),
+              formatSignificant(r.spacing),
+            ]}
+            selectedId={selected?.id}
+            onSelect={(id) => {
+              setSelectedId(id);
+              selectCanvasObject({ type: "reinforcement", id });
+            }}
+            onRemove={handleDelete}
+            removeLabel={(_r, i) => `Remove element ${i + 1}`}
+            addActions={TYPES.map((t) => ({
+              label: `+ Add ${REINFORCEMENT_ADD_NAMES[t]}`,
+              title: REINFORCEMENT_TYPE_LABELS[t],
+              onClick: () => handleAdd(t),
+            }))}
+            empty="No reinforcement."
+            label="Reinforcement elements list"
+          />
 
           {selected && (
             <DetailPanel key={selected.id} title={`Element ${selectedIndex + 1}: ${REINFORCEMENT_TYPE_LABELS[selected.type]}`}>
@@ -652,44 +575,30 @@ export function ReinforcementDialogApp() {
             description="Piles and sheet piles that resist the sliding mass in shear."
             help={{ topic: "Piles and sheet piles", page: "reinforcement#piles-and-sheet-piles" }}
           />
-          <div className="flex gap-3">
-            <ElementList
-              rows={piles}
-              headers={["#", "Type", "End 1 x, y (m)", "End 2 x, y (m)", "Shear force"]}
-              cells={(p, i) => [
-                <span style={muted}>P{i + 1}</span>,
-                PILE_TYPE_LABELS[p.type],
-                formatPoint(p.x1, p.y1),
-                formatPoint(p.x2, p.y2),
-                p.mode === "force" ? `${formatNumber(p.force, 1)} kN` : "Ito & Matsui",
-              ]}
-              selectedId={pile?.id}
-              onSelect={(id) => {
-                setSelectedPileId(id);
-                selectCanvasObject({ type: "pile", id });
-              }}
-              empty="No piles. Choose a type and click Add."
-              label="Piles list"
-            />
-            <div className="flex flex-col gap-1.5 w-44 shrink-0">
-              <select
-                value={newPileType}
-                aria-label="Type of the new pile"
-                className="w-full"
-                onChange={(e) => setNewPileType(e.target.value as PileType)}
-              >
-                {PILE_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {PILE_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-              <DialogButton onClick={handleAddPile}>Add</DialogButton>
-              <DialogButton onClick={handleDeletePile} disabled={!pile}>
-                Delete
-              </DialogButton>
-            </div>
-          </div>
+          <ElementList
+            rows={piles}
+            headers={["#", "Type", "End 1 x, y (m)", "End 2 x, y (m)", "Shear force"]}
+            cells={(p, i) => [
+              <span style={muted}>P{i + 1}</span>,
+              PILE_TYPE_LABELS[p.type],
+              formatPoint(p.x1, p.y1),
+              formatPoint(p.x2, p.y2),
+              p.mode === "force" ? `${formatNumber(p.force, 1)} kN` : "Ito & Matsui",
+            ]}
+            selectedId={pile?.id}
+            onSelect={(id) => {
+              setSelectedPileId(id);
+              selectCanvasObject({ type: "pile", id });
+            }}
+            onRemove={handleDeletePile}
+            removeLabel={(_p, i) => `Remove P${i + 1}`}
+            addActions={PILE_TYPES.map((t) => ({
+              label: `+ Add ${PILE_TYPE_LABELS[t].toLowerCase()}`,
+              onClick: () => handleAddPile(t),
+            }))}
+            empty="No piles."
+            label="Piles list"
+          />
           {piles.map((p, i) => {
             const problem = pileProblem(p);
             return problem ? (

@@ -204,6 +204,15 @@ const MATERIAL_KINDS: [string, string][] = [
 
 const REINFORCEMENT_TYPES = ["anchor", "tieback", "nail", "geosynthetic"];
 const PILE_TYPES = ["pile", "sheet-pile"];
+/** The "+ Add …" link of each type in the Reinforcement window. */
+const ADD_LINK: Record<string, string> = {
+  anchor: "+ Add anchor",
+  tieback: "+ Add tieback",
+  nail: "+ Add soil nail",
+  geosynthetic: "+ Add geosynthetic",
+  pile: "+ Add pile row",
+  "sheet-pile": "+ Add sheet pile wall",
+};
 
 // ── The scenes ─────────────────────────────────────────────────────────
 
@@ -987,8 +996,7 @@ const windows: Scene[] = [
       area: "windows",
       open: async (ctx) => {
         const win = await modelWindow(ctx, "Reinforcement", "reinforcement-dialog");
-        await win.getByRole("combobox", { name: "Type of the new reinforcement" }).selectOption(type);
-        await win.getByRole("region", { name: "Reinforcement elements" }).getByRole("button", { name: "Add", exact: true }).click();
+        await win.getByRole("region", { name: "Reinforcement elements" }).getByRole("button", { name: ADD_LINK[type], exact: true }).click();
         await win.waitForTimeout(400);
         return { page: win };
       },
@@ -1001,8 +1009,7 @@ const windows: Scene[] = [
       area: "windows",
       open: async (ctx) => {
         const win = await modelWindow(ctx, "Reinforcement", "reinforcement-dialog");
-        await win.getByRole("combobox", { name: "Type of the new pile" }).selectOption(type);
-        await win.getByRole("region", { name: "Piles and sheet piles" }).getByRole("button", { name: "Add", exact: true }).click();
+        await win.getByRole("region", { name: "Piles and sheet piles" }).getByRole("button", { name: ADD_LINK[type], exact: true }).click();
         await win.waitForTimeout(400);
         return { page: win };
       },
