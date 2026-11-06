@@ -13,7 +13,7 @@ The shared contract for the main session, its agents and the skills `triage`, `s
 
 ## Issues written by Claude
 
-An issue Claude or an agent writes (from a review, a sprint, a finding while working) is held to the same template as a user's, and more: whoever picks it up must be able to act without asking. It has these sections, in this order:
+An issue Claude or an agent writes (from a review, a sprint, a finding while working) is held to the same template as a user's, and more: whoever picks it up must be able to act without asking. Write it with the `issue` skill; a hook (`.claude/hooks/check-issue.ts`, set in `.claude/settings.json`) blocks an `issue_write` without the required sections. It has these sections, as `##` headings with exactly these names, in this order:
 
 1. **Summary**: one or two sentences, what is wrong or wanted and where in the app (menu path, window, panel), and why it matters.
 2. **Steps to reproduce** (bugs): numbered, from a fresh start or a named example model; the cSlope version or commit (`main` at `<sha>`) and the OS.
