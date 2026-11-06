@@ -169,6 +169,10 @@ async function loadData(page: Page, data: Data, set: DataSet) {
         s.loadExamples();
         const all = (window as any).__CSLOPE_STORE__.getState().models;
         if (set === "example1") s.loadProject({ models: [all[0]], activeModelId: all[0].id });
+        if (set === "dam") {
+          const m = all.find((x: any) => /Talbingo/.test(x.name));
+          s.loadProject({ models: [m], activeModelId: m.id });
+        }
         if (set === "nonhomog") {
           const m = all.find((x: any) => /Non-Homogeneous/.test(x.name)) ?? all[1];
           s.loadProject({ models: [m], activeModelId: m.id });

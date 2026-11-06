@@ -19,7 +19,7 @@ import type { Locator, Page } from "playwright";
 
 export type Area = "main-edit" | "main-result" | "sidebar" | "menus" | "windows" | "dialogs" | "canvas";
 export type Theme = "light" | "dark";
-export type DataSet = "example" | "example1" | "nonhomog" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty";
+export type DataSet = "example" | "example1" | "nonhomog" | "dam" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty";
 
 export interface Box {
   x: number;
@@ -607,6 +607,19 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "main-result-color-bar",
+    title: "Result view: Results › Color bar added below the material table (at the window's zoom)",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "all", showSlices: false })`);
+      await ctx.tab("Results");
+      await ctx.click("Color bar");
+      await ctx.store(`(s) => s.setSelectedAnnotations([])`);
+      await ctx.page.waitForTimeout(500);
+    },
+  },
+  {
     id: "anno-color-bar",
     title: "Result sidebar, color bar properties",
     area: "sidebar",
@@ -1135,7 +1148,33 @@ const windows: Scene[] = [
       return { page: win };
     },
   },
+  {
+    id: "win-results-plot-lambda-dam",
+    title: "Results plot window, F against λ of the dam (Fm and Ff within 0.002: the y labels)",
+    area: "windows",
+    data: "dam",
+    result: true,
+    open: async (ctx) => {
+      const win = await resultsWindow(ctx, "Results plot", "results-plot-dialog");
+      await win.locator('select:has(option[value="lambdaFmFf"])').selectOption("lambdaFmFf");
+      await win.waitForTimeout(800);
+      return { page: win };
+    },
+  },
   { id: "win-sensitivity", title: "Sensitivity analysis window", area: "windows", result: true, open: async (ctx) => ({ page: await resultsWindow(ctx, "Sensitivity", "sensitivity-dialog") }) },
+  {
+    id: "win-sensitivity-run",
+    title: "Sensitivity analysis window after a run (the count at the left of the button row)",
+    area: "windows",
+    result: true,
+    open: async (ctx) => {
+      const win = await resultsWindow(ctx, "Sensitivity", "sensitivity-dialog");
+      await win.getByRole("button", { name: "Run", exact: true }).click();
+      await win.getByRole("status").filter({ hasText: "values gave an F" }).waitFor({ timeout: 120_000 });
+      await win.waitForTimeout(800);
+      return { page: win };
+    },
+  },
   { id: "win-probabilistic", title: "Probabilistic analysis window", area: "windows", result: true, open: async (ctx) => ({ page: await resultsWindow(ctx, "Probabilistic", "reliability-dialog") }) },
   {
     id: "win-place-drawing-empty",
