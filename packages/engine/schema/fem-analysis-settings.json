@@ -1,0 +1,182 @@
+{
+  "$defs": {
+    "FemConvergence": {
+      "description": "Convergence test of the viscoplastic iteration.",
+      "enum": [
+        "increment",
+        "equilibrium"
+      ],
+      "type": "string"
+    },
+    "FemPorePressure": {
+      "description": "Pore pressures of the finite element analysis.",
+      "enum": [
+        "water-table",
+        "seepage"
+      ],
+      "type": "string"
+    },
+    "FlowRule": {
+      "description": "Flow rule of the finite element analysis.",
+      "enum": [
+        "davis-b",
+        "associated",
+        "non-associated"
+      ],
+      "type": "string"
+    },
+    "InitialStress": {
+      "description": "Initial stresses of the finite element analysis.",
+      "enum": [
+        "gravity",
+        "k0"
+      ],
+      "type": "string"
+    },
+    "NonAssociatedSolver": {
+      "description": "Solver of non-associated flow.",
+      "enum": [
+        "viscoplastic",
+        "newton"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "urn:cslope:schema:fem-analysis-settings:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Strength reduction by finite elements, run after the limit equilibrium\nanalysis when enabled (src/fem). Stiffness barely affects the factor of\nsafety; it scales the displacements.\n\nThe schema is stricter than the engine: the engine also reads values of another type as the app's earlier TypeScript engine did (a number of another type as no number, an unknown option as the default) and ignores unknown keys, while this schema accepts only JSON numbers, the documented strings, integers for counts, and known keys. cslope.validate (validate_definition) checks a document against it and adds the rules of the model (regions, boundaries, ranges).",
+  "properties": {
+    "convergence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FemConvergence"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Convergence test of the viscoplastic iteration: the displacement\nincrement (\"increment\"), or in addition the out-of-balance force of the\nstresses returned to the yield surface, at most 0.1 % of the load\n(\"equilibrium\", with Anderson acceleration of the iteration). Not set:\nincrement."
+    },
+    "dilationAngle": {
+      "description": "Dilation angle ψ (°), used by Davis B and non-associated flow.",
+      "format": "double",
+      "type": "number"
+    },
+    "elementSize": {
+      "default": null,
+      "description": "Initial element size (m); null: a twentieth of the model height.",
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "flowRule": {
+      "$ref": "#/$defs/FlowRule",
+      "description": "Davis B (default), associated, or non-associated with the dilation angle."
+    },
+    "initialStress": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/InitialStress"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Initial stresses: gravity applied in one increment (\"gravity\", default)\nor the K0 procedure (\"k0\"): σ′h = K0 σ′v from the overburden\n(fem/initial-stress.ts). With associated flow F does not depend on them."
+    },
+    "k0": {
+      "description": "K0 of every soil for the K0 procedure; null or not set: 1 − sin φ′ (Jaky).",
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "limitAnalysis": {
+      "description": "The lower and upper bounds of limit analysis (perfect plasticity,\nassociated flow, and with Davis B's reduced strength), which bracket\nthe factor of safety and converge as the mesh is refined: the finite\nelement factor of safety, the strength reduction a comparison; minutes\nof run time. Not set: off (files from before; on for new projects).",
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "materialStages": {
+      "additionalProperties": {
+        "format": "double",
+        "type": "number"
+      },
+      "description": "Construction stage per material name (0 by default); later stages are built after the earlier ones.",
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "nonAssociatedSolver": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/NonAssociatedSolver"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Solver of non-associated flow: the viscoplastic iteration of Griffiths\n& Lane (\"viscoplastic\", default) or Newton's method with the\nunsymmetric consistent tangent, F raised in increments (\"newton\", the\nimplicit method of most finite element programs; similar F, usually\nslower). Not set: viscoplastic."
+    },
+    "originalGroundLevel": {
+      "description": "Ground level before excavation (m) for the K0 procedure; null or not set: the present ground.",
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "poissonsRatio": {
+      "description": "Poisson's ratio ν of every soil.",
+      "format": "double",
+      "type": "number"
+    },
+    "porePressure": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FemPorePressure"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Pore pressures: hydrostatic below the water table (\"water-table\"), or\nfrom steady seepage with the water table as reservoir and tail water\nwhere it lies at or above the ground (\"seepage\"). Not set: water table."
+    },
+    "refinementLevels": {
+      "description": "Adaptive refinements of the mesh (0–3), for associated flow and Davis B.\nNot with non-associated flow: its factor has no limit as the mesh is\nrefined (it falls on every refinement, Sysala et al. 2021), so it is\ncomputed on the initial mesh only.",
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "tensionCutoff": {
+      "description": "Rankine tension cut-off at zero effective stress; default on for new\nprojects (soil carries no tension, the usual default of finite element\nprograms; it brought cSlope closer to a commercial program's verification\nvalues, RMS 4.6 % to 3.0 %).",
+      "type": "boolean"
+    },
+    "youngsModulus": {
+      "description": "Young's modulus E (kPa) of every soil.",
+      "format": "double",
+      "type": "number"
+    }
+  },
+  "required": [
+    "enabled",
+    "flowRule",
+    "youngsModulus",
+    "poissonsRatio",
+    "dilationAngle",
+    "tensionCutoff",
+    "refinementLevels"
+  ],
+  "title": "cSlope finite element settings",
+  "type": "object",
+  "x-cslope-schema-version": "0.1.0"
+}

@@ -20,11 +20,14 @@ export const FORCE_LABEL_MARGIN_PX = 12;
 
 /**
  * Label of a reinforcement force in kN/m. A passive force is an ultimate
- * capacity that the analysis divides by the factor of safety: "÷ FOS".
+ * capacity that the analysis divides by the factor of safety: "÷ F".
  */
 export function formatReinforcementForce(f: Pick<ReinforcementForce, "force" | "passive">): string {
-  return `${formatForceValue(f)}${f.passive ? " ÷ FOS" : ""}`;
+  return `${formatForceValue(f)}${f.passive ? ` ÷ ${FACTOR_SYMBOL}` : ""}`;
 }
+
+/** The factor of safety's symbol after the ÷ of a passive force (D-14). */
+export const FACTOR_SYMBOL = "F";
 
 /** The size of a force in kN/m, without the passive marker. */
 export function formatForceValue(f: Pick<ReinforcementForce, "force">): string {
@@ -468,7 +471,7 @@ export interface ForceSize {
 
 /** A force as drawn: its arrow, its label box and the leader from the label to its element. */
 export interface ForceLayout {
-  /** Full label text ("12.3 kN/m ÷ FOS"); drawn as `value` and, when passive, a ÷ sign and "FOS". */
+  /** Full label text ("12.3 kN/m ÷ F"); drawn as `value` and, when passive, a ÷ sign and "F". */
   text: string;
   value: string;
   passive: boolean;
@@ -490,12 +493,12 @@ const DIVIDE_EM = 0.6;
 
 /** Width of a force label's text (see forceLabelPieces). */
 export function forceLabelWidth(value: string, passive: boolean, measure: (t: string) => number, em: number): number {
-  return measure(value) + (passive ? 2 * measure(" ") + DIVIDE_EM * em + measure("FOS") : 0);
+  return measure(value) + (passive ? 2 * measure(" ") + DIVIDE_EM * em + measure(FACTOR_SYMBOL) : 0);
 }
 
 /**
  * Where the parts of a label go: the value from the left of the plate and,
- * for a passive force, the ÷ sign (its centre) and "FOS". The ÷ is drawn
+ * for a passive force, the ÷ sign (its centre) and "F". The ÷ is drawn
  * as a bar and two dots (divideSign) so it cannot read as "+" at screen
  * size, where a font's ÷ glyph at label size often does.
  */
@@ -1132,7 +1135,7 @@ export function drawReinforcementForces(
         ctx.arc(dx, dy, d.r, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillText("FOS", p.fosX, cy);
+      ctx.fillText(FACTOR_SYMBOL, p.fosX, cy);
     }
   }
   ctx.restore();

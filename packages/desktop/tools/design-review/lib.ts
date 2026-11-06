@@ -31,7 +31,7 @@ export const DPR = 2;
  * (Chromium's forced device scale factor; the DevTools emulation can't
  * change it, so a 150 % capture needs its own instance started at 1.5).
  */
-export async function launchApp(port: number, dpr = DPR): Promise<{ browser: Browser; page: Page; proc: ChildProcess }> {
+export async function launchApp(port: number, dpr = DPR, env: Record<string, string> = {}): Promise<{ browser: Browser; page: Page; proc: ChildProcess }> {
   const electronPath = createRequire(join(DESKTOP_DIR, "package.json"))("electron") as unknown as string;
   const proc = spawn(
     electronPath,
@@ -45,7 +45,7 @@ export async function launchApp(port: number, dpr = DPR): Promise<{ browser: Bro
     {
       cwd: DESKTOP_DIR,
       // CSLOPE_CAPTURE: no splash, no unsaved-changes prompt on quit.
-      env: { ...process.env, NODE_OPTIONS: "", CSLOPE_CAPTURE: "1", VITE_DEV_SERVER_URL: "" },
+      env: { ...process.env, ...env, NODE_OPTIONS: "", CSLOPE_CAPTURE: "1", VITE_DEV_SERVER_URL: "" },
       stdio: ["ignore", "ignore", "pipe"],
     },
   );
@@ -262,9 +262,29 @@ export interface LayoutMetric {
   primaryButtons: (Box & { text: string })[];
 }
 
+/** A window's size request in DIPs (electron/main.ts, dialogWindow). */
+export interface WindowSizeRecord {
+  requested: { width: number; height: number; minWidth?: number; minHeight?: number };
+  opened: { width: number; height: number; minWidth?: number; minHeight?: number };
+  workArea: { x: number; y: number; width: number; height: number };
+}
+
 export interface PageMetrics {
-  /** CSS px; `outerHeight` and the screen's available size in DIPs (Electron sizes windows in DIPs). */
-  window: { width: number; height: number; dpr: number; outerHeight: number; screen: { availWidth: number; availHeight: number } };
+  /**
+   * CSS px; `outerHeight` and the screen's available size in DIPs (Electron
+   * sizes windows in DIPs). `size`: for a dialog or tool window, the size it
+   * asked for, the size the app opened it at (capped to the work area) and
+   * that work area, as the app's main process records them in capture mode
+   * (#48); null for the main window.
+   */
+  window: {
+    width: number;
+    height: number;
+    dpr: number;
+    outerHeight: number;
+    screen: { availWidth: number; availHeight: number };
+    size?: WindowSizeRecord | null;
+  };
   focus: Box | null;
   texts: TextMetric[];
   controls: ControlMetric[];
@@ -598,6 +618,7 @@ function collectInPage(focus: Box | null) {
       dpr: window.devicePixelRatio,
       outerHeight: window.outerHeight,
       screen: { availWidth: screen.availWidth, availHeight: screen.availHeight },
+      size: (window as any).__CSLOPE_WINDOW_SIZE__ ?? null,
     },
     focus,
     texts,

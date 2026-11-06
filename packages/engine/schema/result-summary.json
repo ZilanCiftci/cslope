@@ -1,0 +1,423 @@
+{
+  "$defs": {
+    "AnalysisMethod": {
+      "description": "Supported analysis methods.",
+      "enum": [
+        "Bishop",
+        "Janbu",
+        "Morgenstern-Price"
+      ],
+      "type": "string"
+    },
+    "BothDirectionsSummary": {
+      "additionalProperties": false,
+      "description": "Both directions were analysed: the lower F is the result's.",
+      "properties": {
+        "otherDirectionFos": {
+          "description": "F of the other direction (automatic search limits); None: no valid surface.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "slidingDirection": {
+          "$ref": "#/$defs/SlopeOrientation",
+          "description": "The direction of the result's F."
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "slidingDirection",
+        "text"
+      ],
+      "type": "object"
+    },
+    "CriticalSurfaceSummary": {
+      "additionalProperties": false,
+      "description": "The critical surface: its shape and where it enters and leaves.",
+      "properties": {
+        "center": {
+          "description": "Centre of the circle (circle, composite) or the moment axis.",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "entry": {
+          "description": "Where the surface enters the ground (upslope).",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "entryExitText": {
+          "description": "Entry and exit in words.",
+          "type": "string"
+        },
+        "exit": {
+          "description": "Where it leaves the ground (downslope).",
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "type": "array"
+        },
+        "points": {
+          "description": "Points of a non-circular surface.",
+          "format": "uint",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "radius": {
+          "description": "Radius of the circle (0 for a non-circular surface).",
+          "format": "double",
+          "type": "number"
+        },
+        "shape": {
+          "description": "\"circle\", \"composite\" (a circle along the firm base) or \"non-circular\".",
+          "type": "string"
+        },
+        "text": {
+          "description": "The surface in words, as the app's summary gives it.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "shape",
+        "center",
+        "radius",
+        "entry",
+        "exit",
+        "text",
+        "entryExitText"
+      ],
+      "type": "object"
+    },
+    "CustomSurfaceSummary": {
+      "additionalProperties": false,
+      "description": "A custom search plane of the run: its F, or why it has none.",
+      "properties": {
+        "fos": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "name": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "text"
+      ],
+      "type": "object"
+    },
+    "FosLabel": {
+      "description": "What F is.",
+      "oneOf": [
+        {
+          "const": "factor of safety",
+          "description": "On characteristic values.",
+          "type": "string"
+        },
+        {
+          "const": "over-design factor",
+          "description": "On design values (partial factors applied).",
+          "type": "string"
+        }
+      ]
+    },
+    "PartialFactorsSummary": {
+      "additionalProperties": false,
+      "description": "The partial factors of a run on design values.",
+      "properties": {
+        "basis": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SwedishFactorBasis"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "How they were formed in Swedish practice, when they were."
+        },
+        "cohesion": {
+          "description": "γc′ on the effective cohesion.",
+          "format": "double",
+          "type": "number"
+        },
+        "cu": {
+          "description": "γcu on the undrained shear strength.",
+          "format": "double",
+          "type": "number"
+        },
+        "gammaD": {
+          "description": "γd of the basis' safety class.",
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "tanPhi": {
+          "description": "γφ′ on tan φ′.",
+          "format": "double",
+          "type": "number"
+        },
+        "text": {
+          "description": "The factors in words, with the basis.",
+          "type": "string"
+        },
+        "variableLoad": {
+          "description": "γQ on the variable loads.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cu",
+        "cohesion",
+        "tanPhi",
+        "variableLoad",
+        "text"
+      ],
+      "type": "object"
+    },
+    "SlopeOrientation": {
+      "enum": [
+        "ltr",
+        "rtl"
+      ],
+      "type": "string"
+    },
+    "SummaryWarning": {
+      "additionalProperties": false,
+      "description": "A warning of the summary.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "type": "object"
+    },
+    "SwedishFactorBasis": {
+      "additionalProperties": false,
+      "description": "The input of a set of Swedish partial factors (`swedish_partial_factors`).",
+      "properties": {
+        "etaCu": {
+          "description": "Conversion factor η on the undrained shear strength: γcu = 1.5 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "etaDrained": {
+          "description": "Conversion factor η on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.",
+          "format": "double",
+          "type": "number"
+        },
+        "safetyClass": {
+          "description": "Safety class 1, 2 or 3: γd = 0.83, 0.91 or 1.0 on the variable loads.",
+          "format": "uint8",
+          "maximum": 255,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "variableLoadBase": {
+          "description": "γQ before γd: γQ = variableLoadBase · γd. 1.3 gives the EN 1997-1 DA3\nload factor in safety class 3; some Swedish guidance uses 1.4 (for\nexample for traffic loads). The governing document decides.",
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "safetyClass",
+        "etaCu",
+        "etaDrained",
+        "variableLoadBase"
+      ],
+      "type": "object"
+    },
+    "ValueBasis": {
+      "description": "Which values the strengths and loads of the analysis were.",
+      "enum": [
+        "characteristic",
+        "design"
+      ],
+      "type": "string"
+    }
+  },
+  "$id": "urn:cslope:schema:result-summary:0.1.0",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "The summary of a result (see the module comment).",
+  "properties": {
+    "bothDirections": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/BothDirectionsSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Both directions analysed: the other one's F."
+    },
+    "criticalSurface": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CriticalSurfaceSummary"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "customSurfaces": {
+      "items": {
+        "$ref": "#/$defs/CustomSurfaceSummary"
+      },
+      "type": "array"
+    },
+    "discardedBySize": {
+      "description": "Trial surfaces below the minimum slip area or depth (skipped).",
+      "format": "uint",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "engineBuild": {
+      "description": "The engine that ran the analysis (version + commit, as given).",
+      "type": "string"
+    },
+    "fos": {
+      "description": "The minimum F; None when no surface gave one.",
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "fosHeading": {
+      "description": "The label as the app shows it, e.g. \"Over-design factor (design values)\".",
+      "type": "string"
+    },
+    "fosLabel": {
+      "$ref": "#/$defs/FosLabel",
+      "description": "\"factor of safety\" (characteristic values) or \"over-design factor\"\n(design values)."
+    },
+    "fosText": {
+      "description": "F to three decimals, or \"-\".",
+      "type": "string"
+    },
+    "method": {
+      "description": "The method as a reader would cite it.",
+      "type": "string"
+    },
+    "methodName": {
+      "$ref": "#/$defs/AnalysisMethod"
+    },
+    "nonConverged": {
+      "description": "Trial surfaces without a solution (left out of the minimum).",
+      "format": "uint",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "nonConvergedText": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "partialFactors": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PartialFactorsSummary"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The partial factors, when the values were design values."
+    },
+    "slidingDirection": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/SlopeOrientation"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The direction of sliding, when the result gives it."
+    },
+    "surfaces": {
+      "description": "Surfaces analysed.",
+      "format": "uint",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "surfacesBelowOne": {
+      "description": "Of them with F below 1.0.",
+      "format": "uint",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "surfacesText": {
+      "description": "e.g. \"1388 (12 below 1.0)\".",
+      "type": "string"
+    },
+    "valueBasis": {
+      "$ref": "#/$defs/ValueBasis"
+    },
+    "warnings": {
+      "description": "The warnings of the result, and of the critical surface's equilibrium.",
+      "items": {
+        "$ref": "#/$defs/SummaryWarning"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "fosLabel",
+    "fosHeading",
+    "fosText",
+    "valueBasis",
+    "method",
+    "methodName",
+    "surfaces",
+    "surfacesBelowOne",
+    "surfacesText",
+    "nonConverged",
+    "discardedBySize",
+    "customSurfaces",
+    "warnings",
+    "engineBuild"
+  ],
+  "title": "cSlope result summary",
+  "type": "object",
+  "x-cslope-schema-version": "0.1.0"
+}

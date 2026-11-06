@@ -19,7 +19,7 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReinforcementDirection {
     Axial,
@@ -27,17 +27,19 @@ pub enum ReinforcementDirection {
     Bisector,
     /// Any other string or value, which acts as "axial" (TypeScript's last
     /// branch). (`null` is absent: `r.direction ?? "axial"`.)
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum ReinforcementApplication {
     Active,
     Passive,
     /// Any other string or value, which is not "passive". (`null` is
     /// absent: `application ?? "active"`.)
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
@@ -58,7 +60,7 @@ pub enum ReinforcementApplication {
 ///   capacities × A with spacing 1 (per metre of slope), and coverage A;
 /// - "development": the tensile capacity develops linearly over the given
 ///   length from each end (0: that end is fully anchored).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(
     tag = "kind",
     rename_all = "lowercase",
@@ -94,16 +96,18 @@ pub enum ReinforcementPullout {
             default = "crate::types::json::nan",
             deserialize_with = "crate::types::json::num"
         )]
+        #[schemars(extend("x-required" = true))]
         length1: f64,
         #[serde(
             default = "crate::types::json::nan",
             deserialize_with = "crate::types::json::num"
         )]
+        #[schemars(extend("x-required" = true))]
         length2: f64,
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Reinforcement {
     /// End 1 (head / face end).
@@ -175,12 +179,13 @@ pub struct Reinforcement {
 ///
 /// Another string is kept (`Other`), as a JavaScript object keeps it, so
 /// that `Slope::set_piles` reports it with TypeScript's message.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PileForceDirection {
     Angle,
     Tangent,
     Perpendicular,
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
@@ -189,7 +194,7 @@ pub enum PileForceDirection {
 /// pressure on the pile above the slip surface ("centroid", the default),
 /// or where the slip surface crosses the pile ("slip-surface", as Cai &
 /// Ugai 2000, eq. 9, apply it). A given force acts at the crossing.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "kebab-case")]
 pub enum PileForceLocation {
     Centroid,
@@ -198,6 +203,7 @@ pub enum PileForceLocation {
     /// where the slip surface crosses the pile, as TypeScript's
     /// `(p.location ?? "centroid") === "centroid"` decides. (`null` is
     /// absent.)
+    #[schemars(skip)]
     #[serde(untagged)]
     Other(serde_json::Value),
 }
@@ -210,7 +216,7 @@ pub enum PileForceLocation {
 /// of the soil squeezing between the piles above the slip surface; either is
 /// limited by the pile's shear and bending capacity. Per metre of slope:
 /// divided by the spacing.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Pile {
     /// Pile head and tip.
@@ -304,7 +310,7 @@ pub struct Pile {
 }
 
 /// Applied reinforcement force, per metre of slope.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReinforcementForce {
     /// Index of the element in the slope's reinforcement (or pile) list.

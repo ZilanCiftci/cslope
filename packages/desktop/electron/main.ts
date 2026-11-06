@@ -1,9 +1,10 @@
-import { app, BrowserWindow, Menu, dialog, ipcMain, session, shell } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain, screen, session, shell, type BrowserWindowConstructorOptions } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import { randomBytes } from "node:crypto";
 import { DEV_CSP, PRODUCTION_CSP } from "./csp";
+import { fitWindowToWorkArea, maxContentHeight, withTaskbar, type Rect, type WindowSizeRequest } from "./window-size";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -178,10 +179,54 @@ function createWindow() {
 // One width per family of dialog windows (CSS px): lists of records
 // (boundaries, loads, lines, settings), forms (materials, reinforcement,
 // parameters) and the analysis windows (Sensitivity, Probabilistic). Each
-// opens at most DIALOG_HEIGHT high; the renderer then fits the height to
-// its content ("window:fitDialogHeight" below).
+// opens at most DIALOG_HEIGHT high (less on a small screen: dialogWindow);
+// the renderer then fits the height to its content
+// ("window:fitDialogHeight" below).
 const DIALOG_WIDTH = { list: 520, form: 760, analysis: 620 } as const;
 const DIALOG_HEIGHT = 760;
+
+/**
+ * The work area (the screen less the taskbar) of the display nearest a
+ * point. In capture mode CSLOPE_CAPTURE_TASKBAR (DIPs) takes a simulated
+ * taskbar off it: the design review's virtual screen has none (#48).
+ */
+function workAreaNear(point: { x: number; y: number }): Rect {
+  const area = screen.getDisplayNearestPoint(point).workArea;
+  return process.env.CSLOPE_CAPTURE ? withTaskbar(area, Number(process.env.CSLOPE_CAPTURE_TASKBAR ?? 0)) : area;
+}
+
+/** The work area of the display a dialog opens on: the main window's (else the pointer's). */
+function dialogWorkArea(): Rect {
+  if (win && !win.isDestroyed()) {
+    const b = win.getBounds();
+    return workAreaNear({ x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) });
+  }
+  return workAreaNear(screen.getCursorScreenPoint());
+}
+
+/**
+ * A dialog or tool window at the size it asks for, capped to the work area
+ * of the display it opens on and centered there (window-size.ts, #48).
+ */
+function dialogWindow(size: WindowSizeRequest, options: BrowserWindowConstructorOptions): BrowserWindow {
+  const workArea = dialogWorkArea();
+  const placed = fitWindowToWorkArea(size, workArea);
+  const child = new BrowserWindow({ ...options, ...placed });
+  if (process.env.CSLOPE_CAPTURE) exposeWindowSize(child, { requested: size, opened: placed, workArea });
+  return child;
+}
+
+/**
+ * Capture mode: tell the window's page the size it asked for, the size it
+ * opened at and the work area, for the design review's taller-than-screen
+ * check (window.__CSLOPE_WINDOW_SIZE__).
+ */
+function exposeWindowSize(child: BrowserWindow, info: { requested: WindowSizeRequest; opened: WindowSizeRequest; workArea: Rect }) {
+  const script = `window.__CSLOPE_WINDOW_SIZE__ = ${JSON.stringify(info)};`;
+  child.webContents.on("dom-ready", () => {
+    child.webContents.executeJavaScript(script).catch(() => {});
+  });
+}
 
 function createMaterialsWindow() {
   if (!win) return;
@@ -192,11 +237,7 @@ function createMaterialsWindow() {
     return;
   }
 
-  materialsWin = new BrowserWindow({
-    width: DIALOG_WIDTH.form,
-    height: DIALOG_HEIGHT,
-    minWidth: 640,
-    minHeight: 560,
+  materialsWin = dialogWindow({ width: DIALOG_WIDTH.form, height: DIALOG_HEIGHT, minWidth: 640, minHeight: 560 }, {
     title: "Materials",
     parent: win,
     modal: false,
@@ -232,11 +273,7 @@ function createMaterialAssignmentWindow() {
     return;
   }
 
-  materialAssignmentWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  materialAssignmentWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Assign materials",
     parent: win,
     modal: false,
@@ -274,11 +311,7 @@ function createGeometryWindow() {
     return;
   }
 
-  geometryWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  geometryWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Exterior boundary",
     parent: win,
     modal: false,
@@ -314,11 +347,7 @@ function createInteriorBoundariesWindow() {
     return;
   }
 
-  interiorBoundariesWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 560,
+  interiorBoundariesWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 560 }, {
     title: "Interior boundaries",
     parent: win,
     modal: false,
@@ -356,11 +385,7 @@ function createUdlWindow() {
     return;
   }
 
-  udlWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  udlWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Distributed loads",
     parent: win,
     modal: false,
@@ -396,11 +421,7 @@ function createLineLoadsWindow() {
     return;
   }
 
-  lineLoadsWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  lineLoadsWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Line loads",
     parent: win,
     modal: false,
@@ -436,11 +457,7 @@ function createReinforcementWindow() {
     return;
   }
 
-  reinforcementWin = new BrowserWindow({
-    width: DIALOG_WIDTH.form,
-    height: DIALOG_HEIGHT,
-    minWidth: 560,
-    minHeight: 520,
+  reinforcementWin = dialogWindow({ width: DIALOG_WIDTH.form, height: DIALOG_HEIGHT, minWidth: 560, minHeight: 520 }, {
     title: "Reinforcement",
     parent: win,
     modal: false,
@@ -476,11 +493,7 @@ function createPiezoWindow() {
     return;
   }
 
-  piezoWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  piezoWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Piezometric lines",
     parent: win,
     modal: false,
@@ -516,11 +529,7 @@ function createParametersWindow() {
     return;
   }
 
-  parametersWin = new BrowserWindow({
-    width: DIALOG_WIDTH.form,
-    height: DIALOG_HEIGHT,
-    minWidth: 640,
-    minHeight: 560,
+  parametersWin = dialogWindow({ width: DIALOG_WIDTH.form, height: DIALOG_HEIGHT, minWidth: 640, minHeight: 560 }, {
     title: "Parameters",
     parent: win,
     modal: false,
@@ -556,11 +565,7 @@ function createResultsPlotWindow() {
     return;
   }
 
-  resultsPlotWin = new BrowserWindow({
-    width: 980,
-    height: 760,
-    minWidth: 760,
-    minHeight: 560,
+  resultsPlotWin = dialogWindow({ width: 980, height: 760, minWidth: 760, minHeight: 560 }, {
     title: "Results plot",
     parent: win,
     modal: false,
@@ -612,11 +617,7 @@ function createToolWindow(tool: ToolWindow) {
   }
 
   const { title, hash, width, height, minWidth = 480, minHeight = 420 } = TOOL_WINDOWS[tool];
-  const child = new BrowserWindow({
-    width,
-    height,
-    minWidth,
-    minHeight,
+  const child = dialogWindow({ width, height, minWidth, minHeight }, {
     title,
     parent: win,
     modal: false,
@@ -652,11 +653,7 @@ function createSearchLimitsWindow() {
     return;
   }
 
-  searchLimitsWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  searchLimitsWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Search limits",
     parent: win,
     modal: false,
@@ -692,11 +689,7 @@ function createCustomSearchPlanesWindow() {
     return;
   }
 
-  customSearchPlanesWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 420,
-    minHeight: 520,
+  customSearchPlanesWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 420, minHeight: 520 }, {
     title: "Custom surfaces",
     parent: win,
     modal: false,
@@ -734,11 +727,7 @@ function createOptionsWindow() {
     return;
   }
 
-  optionsWin = new BrowserWindow({
-    width: DIALOG_WIDTH.list,
-    height: DIALOG_HEIGHT,
-    minWidth: 460,
-    minHeight: 560,
+  optionsWin = dialogWindow({ width: DIALOG_WIDTH.list, height: DIALOG_HEIGHT, minWidth: 460, minHeight: 560 }, {
     title: "Options",
     parent: win,
     modal: false,
@@ -774,8 +763,8 @@ ipcMain.on("app:ready", () => {
 // A dialog window opens at a fixed height. Once laid out, and again when
 // its content changes (rows added or removed), it asks to fit its content,
 // so short dialogs aren't mostly empty and growing ones grow back. Never
-// taller than it opened, never below 240 px, only dialog windows, and no
-// longer once the user has resized the window.
+// taller than it opened or than the work area, never below 240 px, only
+// dialog windows, and no longer once the user has resized the window.
 const dialogOpenHeight = new WeakMap<BrowserWindow, number>();
 const userSizedDialogs = new WeakSet<BrowserWindow>();
 /** The content height this handler last gave each dialog. */
@@ -797,10 +786,13 @@ ipcMain.on("window:fitDialogHeight", (event, height: unknown) => {
     // Emitted for resizes by the user only (not for setContentSize).
     child.on("will-resize", () => userSizedDialogs.add(child));
   }
-  const target = Math.round(Math.min(dialogOpenHeight.get(child)!, Math.max(240, height)));
+  const frame = child.getSize()[1] - current;
+  // Never past the work area of the display it is on (#48).
+  const b = child.getBounds();
+  const cap = maxContentHeight(workAreaNear({ x: Math.round(b.x + b.width / 2), y: Math.round(b.y + b.height / 2) }), frame);
+  const target = Math.round(Math.min(dialogOpenHeight.get(child)!, cap, Math.max(240, height)));
   if (target === current) return;
   dialogFittedHeight.set(child, target);
-  const frame = child.getSize()[1] - current;
   const [minWidth, minHeight] = child.getMinimumSize();
   if (minHeight > target + frame) child.setMinimumSize(minWidth, target + frame);
   child.setContentSize(width, target);

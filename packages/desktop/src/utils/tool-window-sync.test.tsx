@@ -103,7 +103,7 @@ describe("tool windows", () => {
     renderHook(() => useSensitivityWindowSync(true));
     bridge.emit("onSensitivityRequestState");
     bridge.emit("onSensitivityState", bridge.sentOf("sendSensitivityState")[0]);
-    expect(screen.queryByRole("status")).toBeNull();
+    expect(screen.queryByText("Waiting for the main window")).toBeNull();
     act(() => screen.getByRole("button", { name: "Run" }).click());
     expect(bridge.sentOf("sendSensitivityCommand")[0]).toMatchObject({ type: "run" });
   });

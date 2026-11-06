@@ -76,7 +76,7 @@ def clay_crust_with_load(load: float = 20.0) -> Dict[str, Any]:
             {"name": "Crust", "model": {"kind": "mohr-coulomb", "unitWeight": 18.0, "cohesion": 5.0, "frictionAngle": 30.0}},
             {"name": "Clay", "model": {"kind": "undrained", "unitWeight": 16.5, "undrainedShearStrength": 18.0}},
         ],
-        "materialBoundaries": [{"coordinates": [[-0.05, -1.5], [12.55, -1.5]], "materialName": ""}],
+        "materialBoundaries": [{"coordinates": [[-0.05, -1.5], [12.55, -1.5]]}],
         "regionAssignments": [
             {"point": [3.0, -0.5], "materialName": "Crust"},
             {"point": [15.0, -8.0], "materialName": "Clay"},
@@ -96,7 +96,7 @@ def two_layer_cut_left() -> Dict[str, Any]:
             {"name": "Sand", "model": {"kind": "mohr-coulomb", "unitWeight": 19.0, "cohesion": 3.0, "frictionAngle": 34.0}},
             {"name": "Firm clay", "model": {"kind": "mohr-coulomb", "unitWeight": 20.0, "cohesion": 12.0, "frictionAngle": 24.0}},
         ],
-        "materialBoundaries": [{"coordinates": [[15.95, 6.0], [44.05, 6.0]], "materialName": ""}],
+        "materialBoundaries": [{"coordinates": [[15.95, 6.0], [44.05, 6.0]]}],
         "regionAssignments": [
             {"point": [36.0, 9.0], "materialName": "Sand"},
             {"point": [20.0, 2.0], "materialName": "Firm clay"},

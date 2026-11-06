@@ -85,6 +85,14 @@ jobs:
       # Also fails when another product is named on the site.
       - name: Build website
         run: bun run --filter @cslope/website build
+      # The built site served as Vercel serves it (vercel.json's headers and
+      # rewrites), every page in Chromium in both themes: fails on a console
+      # error, a failed request or an accessibility violation (axe-core).
+      - name: Smoke test website
+        working-directory: packages/website
+        run: |
+          bunx playwright install --with-deps --only-shell chromium
+          bun run smoke
 
   # The engine's TypeScript API over the testing build of the WebAssembly
   # engine (internal functions the tests call): the quick set.
@@ -189,6 +197,11 @@ jobs:
       - name: Test
         working-directory: packages/engine-rs
         run: cargo test --release --all-features
+      # The JSON schemas (packages/engine/schema) and the Python TypedDicts
+      # generated from them (cslope-py's __init__.pyi) match the engine's
+      # types, as the committed WebAssembly build matches its sources.
+      - name: Schemas are fresh
+        run: bun packages/engine-rs/tools/schema.ts --check
       # Crates with a RustSec advisory fail the job (the weekly
       # verification-full workflow runs this too).
       - name: Audit crates

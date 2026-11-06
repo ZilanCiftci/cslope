@@ -51,7 +51,7 @@ describe("formatReinforcementForce", () => {
   });
 
   it("marks passive forces as divided by the factor of safety", () => {
-    expect(formatReinforcementForce({ force: 20, passive: true })).toBe("20.0 kN/m ÷ FOS");
+    expect(formatReinforcementForce({ force: 20, passive: true })).toBe("20.0 kN/m ÷ F");
   });
 
   it("tells forces that show as 0.0 kN/m", () => {
@@ -368,9 +368,9 @@ describe("drawReinforcementForces", () => {
     drawReinforcementForces(rec.ctx, [force({ fx: -120, fy: 0, force: 120, passive: true })], toCanvas, 2);
     const value = rec.findText("120 kN/m")!;
     expect(value.state.font).toBe("bold 20px sans-serif");
-    const fos = rec.findText("FOS")!;
+    const fos = rec.findText("F")!;
     expect(fos.x).toBeGreaterThan(value.x);
-    // ÷: a bar between two dots, between the value and "FOS".
+    // ÷: a bar between two dots, between the value and "F".
     const dots = rec.fills(REINFORCEMENT_COLOR).filter((p) => p.segments.some((s) => s.op === "arc"));
     expect(dots).toHaveLength(2);
     const [[d1x, d1y]] = pathPoints(dots[0]);

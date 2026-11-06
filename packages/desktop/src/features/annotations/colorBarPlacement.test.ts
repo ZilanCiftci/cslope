@@ -11,6 +11,9 @@ import {
   TOP_INSIDE_FRAME,
   type TextMeasure,
 } from "./colorBarPlacement";
+import { buildMaterialTableData, measureTable } from "../canvas/helpers";
+import { getPaperDimensions } from "../view/paper";
+import { MATERIAL_TABLE_MIN_TEXT_PX } from "../rendering/style-spec";
 
 /** A fixed text measure (the tests' canvas measures nothing): 0.55 em a glyph, bold 0.6. */
 const measure: TextMeasure = (text, px, bold) => text.length * px * (bold ? 0.6 : 0.55);
@@ -90,6 +93,76 @@ describe("color bar default position", () => {
   });
 });
 
+describe("color bar default position on screen (#70)", () => {
+  // The examples' table: 6 px text at the top right of the sheet.
+  const EXAMPLE_TABLE: Annotation = {
+    id: "t",
+    type: "material-table",
+    x: 0.94,
+    y: 0.065,
+    anchor: "top-right",
+    fontSize: 6,
+    tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
+  };
+  // The reporting tutorial's capture: the sheet 615 px high on screen.
+  const TUTORIAL_SHEET_SCALE = 615 / 600;
+  /** A canvas context that measures text as `measure` does (the tests' canvas measures nothing). */
+  const measuringCtx = () => {
+    let font = "";
+    return {
+      set font(f: string) {
+        font = f;
+      },
+      get font() {
+        return font;
+      },
+      measureText: (t: string) => {
+        const px = Number(/([\d.]+)px/.exec(font)![1]);
+        return { width: measure(t, px, font.startsWith("bold")) };
+      },
+    } as unknown as CanvasRenderingContext2D;
+  };
+  /** The bottom of the table as the canvas draws it at `sheetScale`, as a fraction of the paper height. */
+  const drawnBottom = (table: Annotation, mats: MaterialRow[], sheetScale: number) => {
+    const { columnKeys, header, rows } = buildMaterialTableData(table, mats, undefined);
+    const { h } = measureTable(measuringCtx(), columnKeys, header, rows, sheetScale, table.fontSize);
+    const { width, height } = getPaperDimensions(A4.paperSize, A4.landscape);
+    // Sheet px per paper height: the annotations scale with min(w, h) / 600.
+    const sheetH = (600 * sheetScale * height) / Math.min(width, height);
+    return table.y! + h / sheetH;
+  };
+
+  it("is below the table as drawn where its text is raised to the least size", () => {
+    const mats = materials(1);
+    // The table's text is below the least size at this scale: drawn larger than on paper.
+    expect(6 * TUTORIAL_SHEET_SCALE).toBeLessThan(MATERIAL_TABLE_MIN_TEXT_PX);
+    const paper = materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure);
+    const bottom = drawnBottom(EXAMPLE_TABLE, mats, TUTORIAL_SHEET_SCALE);
+    expect(bottom).toBeGreaterThan(paper.y + paper.h + 0.03);
+    // The box on screen is the drawn table.
+    const screen = materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure, TUTORIAL_SHEET_SCALE);
+    expect(screen.y + screen.h).toBeCloseTo(bottom, 9);
+    const pos = colorBarDefaultPosition([EXAMPLE_TABLE], mats, undefined, A4, measure, TUTORIAL_SHEET_SCALE);
+    expect(pos.x).toBe(RIGHT_INSIDE_FRAME);
+    expect(pos.y).toBeGreaterThan(bottom);
+    expect(pos.y - bottom).toBeCloseTo(0.025, 2);
+  });
+
+  it("is where the paper puts it on a sheet large enough for the table's own size", () => {
+    const mats = materials(3);
+    const scale = 2;
+    expect(6 * scale).toBeGreaterThanOrEqual(MATERIAL_TABLE_MIN_TEXT_PX);
+    expect(materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure, scale).h).toBeCloseTo(
+      materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure).h,
+      9,
+    );
+    expect(drawnBottom(EXAMPLE_TABLE, mats, scale)).toBeCloseTo(
+      materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure).y + materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure).h,
+      9,
+    );
+  });
+});
+
 describe("Color bar button", () => {
   beforeEach(() => {
     useAppStore.getState().newProject();
@@ -105,5 +178,19 @@ describe("Color bar button", () => {
     expect(bar).toMatchObject({ x: RIGHT_INSIDE_FRAME, anchor: "top-right" });
     expect(bar.y).toBeGreaterThan(box.y + box.h);
     expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
+  });
+
+  it("puts the bar below the table as drawn on a small sheet on screen", () => {
+    useAppStore.setState({ materials: materials(4) });
+    const s = useAppStore.getState();
+    const table = s.resultViewSettings.annotations.find((a) => a.type === "material-table")!;
+    // The new table's 8 px text at 7.2 px on screen: drawn at the least size.
+    const sheetScale = 0.9;
+    s.addAnnotation("color-bar", { sheetScale });
+    const bar = useAppStore.getState().resultViewSettings.annotations.find((a) => a.type === "color-bar")!;
+    const paper = materialTableBox(table, materials(4), undefined, s.resultViewSettings.paperFrame);
+    const screen = materialTableBox(table, materials(4), undefined, s.resultViewSettings.paperFrame, undefined, sheetScale);
+    expect(screen.h).toBeGreaterThan(paper.h);
+    expect(bar.y).toBeGreaterThan(screen.y + screen.h);
   });
 });

@@ -336,7 +336,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 "both",
                 "Both",
                 "Analyze both directions",
-                "Both directions: the model's own and the opposite one (with automatic search limits); the lower FOS governs.",
+                "Both directions: the model's own and the opposite one (with automatic search limits); the lower factor of safety governs.",
               )}
             </div>
           </div>
@@ -480,7 +480,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 style={{ color: "var(--color-vsc-text-muted)" }}
               >
                 Bishop&apos;s method is defined for circular surfaces; on a
-                non-circular surface its FOS depends on the moment axis. Use
+                non-circular surface its factor of safety depends on the moment axis. Use
                 Morgenstern-Price (constant function for Spencer).
               </p>
             )}
@@ -536,7 +536,7 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 })
               }
               aria-label="Pore pressure head"
-              title="Vertical head is the usual convention for a piezometric line. The cos²θ correction assumes a free phreatic surface with parallel flow and gives a higher FOS below a steep line."
+              title="Vertical head is the usual convention for a piezometric line. The cos²θ correction assumes a free phreatic surface with parallel flow and gives a higher factor of safety below a steep line."
             >
               <option value="vertical">Vertical head (conventional)</option>
               <option value="phreatic-correction">
@@ -716,7 +716,7 @@ function PartialFactorsFields({
       <div className="grid grid-cols-2 gap-x-3 items-center">
         <label
           className="flex items-center gap-1.5"
-          title="Divide strengths and multiply variable loads by partial factors (Eurocode 7). The FOS is then the over-design factor on design values: ≥ 1.0 satisfies the design."
+          title="Divide strengths and multiply variable loads by partial factors (Eurocode 7). F is then the over-design factor on design values: ≥ 1.0 satisfies the design."
         >
           <input
             type="checkbox"

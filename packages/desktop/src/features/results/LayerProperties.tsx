@@ -191,7 +191,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
               value={styles.customSurfaces?.fontSize}
               placeholder={styles.fosLabel?.fontSize ?? FOS_LABEL_FONT_PX}
               {...LAYER_STYLE_LIMITS.fontSize}
-              title="Size of their factors of safety (shown with the FOS label); empty: as the FOS label"
+              title="Size of their factors of safety (shown with the F label); empty: as the F label"
               onChange={(v) => set("customSurfaces", { fontSize: v })}
             />
           </div>

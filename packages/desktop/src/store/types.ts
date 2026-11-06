@@ -970,7 +970,13 @@ export interface ResultViewSlice {
   selectedResultLayer: DisplayLayerKey | null;
   setSelectedResultLayer: (key: DisplayLayerKey | null) => void;
   setResultViewSettings: (patch: Partial<ResultViewSettings>) => void;
-  addAnnotation: (type: PaperAnnotation["type"]) => void;
+  /**
+   * Adds an annotation. `sheetScale`: the sheet's scale on screen (px per
+   * annotation px; default: measured on the result canvas, when there is
+   * one), so a new color bar goes below the material table as the canvas
+   * draws it (see colorBarDefaultPosition).
+   */
+  addAnnotation: (type: PaperAnnotation["type"], options?: { sheetScale?: number }) => void;
   /** Adds a reference annotation (model coordinates) and selects it; returns its id. */
   addReferenceAnnotation: (anno: ReferenceSpec) => string;
   /**

@@ -88,3 +88,21 @@ export interface VerificationData {
   problems: VerificationProblem[];
   reliability: ReliabilityProblem[];
 }
+
+/** A verification example on the home page. */
+export interface HomeExample {
+  problem: Pick<VerificationProblem, "id" | "title">;
+  /** The analysis shown (cSlope's result and the other programs' range). */
+  result: VerificationResult;
+  /** The source's value shown next to it, if the problem has one. */
+  published: PublishedValue | null;
+}
+
+/**
+ * The shape of generated/home.json: the summary and the examples the home
+ * page shows, so that the home page does not load the whole table.
+ */
+export interface HomeData {
+  summary: VerificationData["summary"];
+  examples: HomeExample[];
+}

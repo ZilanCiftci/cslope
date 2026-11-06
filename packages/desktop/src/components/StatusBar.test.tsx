@@ -104,7 +104,7 @@ describe("StatusBar", () => {
   it("does not show result or analysing when idle", () => {
     render(<StatusBar {...defaultProps} />);
     expect(screen.queryByText("Analyzing")).not.toBeInTheDocument();
-    expect(screen.queryByText(/FOS:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/\bF:/)).not.toBeInTheDocument();
   });
 
   it("shows cursor world coordinates when available", () => {

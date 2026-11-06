@@ -45,6 +45,26 @@ print(result["criticalSurface"]["cx"],       # the critical circle
 print(len(result["criticalSlices"]))         # its slices, with forces
 ```
 
+Check a model before running it, and read what F is afterwards:
+
+```python
+issues = cslope.validate(slope)              # [] when valid; else dicts with
+for i in issues:                             # path, code, message, severity
+    print(i["severity"], i["path"], i["message"])
+
+summary = cslope.summarize(result)
+print(summary["fos"], summary["fosLabel"])   # "factor of safety" or, with
+print(summary["method"])                     # partial factors, "over-design factor"
+```
+
+Without options, `analyse` uses the app's defaults for a new model
+(Morgenstern-Price, 30 slices, 1000 + 500 trial surfaces, composite
+surfaces; `cslope.default_options()`). **Changed:** earlier versions used the
+engine's own defaults (Bishop, 25 slices, circles only), which `Slope` still
+uses. `analyse` also takes an analysis document, the model and its options
+in one dict: `{"format": "cslope-analysis", "formatVersion": 1,
+"definition": {...}, "options": {...}}`.
+
 A parameter study:
 
 ```python
@@ -63,10 +83,21 @@ for phi in range(20, 41, 5):
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | Finite element analysis as the app runs it: `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | Taylor series or Monte Carlo: `ReliabilityResult` |
 | `to_canonical(definition)` | The definition turned to slide towards +x |
+| `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
+| `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
+| `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |
+| `default_options()` | The defaults of `analyse` (the app's) |
+| `schema(name="analysis-document")`, `SCHEMA_NAMES`, `SCHEMA_VERSION` | The JSON schemas of the input and the results |
 | `validate_material_model(model)` | The errors of a material model (empty: valid) |
 | `Slope(definition)` | A slope analysed in place: `update_analysis_options`, `analyse`, `search` (every trial surface), `result()`, `fem(options)` |
 
-The package has type hints (`TypedDict`s for the main shapes).
+The package has type hints: `TypedDict`s for the shapes, generated from the
+JSON schemas. The schemas are stricter than the engine (no unknown keys,
+JSON numbers, integers for counts); `validate` checks against them and adds
+the rules of the model (every region assigned, boundaries that reach the
+outline, loads and water within the model, `unitWeightSat` below the water).
+Deprecated: `waterTable.followBoundary` (use `freeWater`, its opposite) and
+`materialBoundaries[].materialName` (use `regionAssignments`).
 
 ### Threads, progress and cancelling
 
