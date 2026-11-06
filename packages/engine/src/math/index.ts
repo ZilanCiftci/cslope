@@ -22,10 +22,7 @@ export {
   getYAtXMany,
   getYAtXStrict,
   getLineBetweenPoints,
-  interpolateIDW,
-  interpolateNearest,
 } from "./interpolation";
-export type { SpatialDataPoint } from "./interpolation";
 
 export { calculateAllLoads } from "./loads";
 export type { UdlData, LineLoadData } from "./loads";
@@ -43,4 +40,3 @@ export {
   getPrecision,
   MATERIAL_COLORS,
 } from "./helpers";
-export { cubicSpline, evalSpline, type CubicSpline } from "./spline";

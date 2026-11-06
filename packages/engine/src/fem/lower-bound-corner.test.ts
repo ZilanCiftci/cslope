@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
 import type { SlopeDefinition } from "../types/slope-definition";
-import { lowerBound, lowerBoundProblem } from "./lower-bound";
+import { lowerBound } from "./lower-bound";
 import { upperBound } from "./upper-bound";
 
 // A synthetic model: a 2 m deep trench (1:1.5 sides) next to a low fill
@@ -55,24 +55,4 @@ describe("lowerBound: strip loads ending at or near a corner of the ground surfa
     expect(lower[0]).toBeGreaterThan(0.9 * upper.factorOfSafety);
   }, 600000);
 
-  it("gives a load's end on a straight surface a fan of elements", () => {
-    // the load's end 2 mm from the corner: a fan of elements of at most 30° as seen from it, each in sectors
-    const { mesh } = lowerBoundProblem(buildSlope(toCanonicalSlopeDefinition(embankment(0.002))), { elementSize: 0.5 });
-    const { x, y, el } = mesh;
-    let node = -1;
-    for (let n = 0; n < x.length; n++) if (Math.abs(x[n] - (5 + H + 0.002)) < 1e-9 && Math.abs(y[n] - H) < 1e-9) node = n;
-    expect(node).toBeGreaterThanOrEqual(0);
-    let count = 0, widest = 0;
-    for (let e = 0; e < el.length / 3; e++) {
-      const k = [el[3 * e], el[3 * e + 1], el[3 * e + 2]].indexOf(node);
-      if (k < 0) continue;
-      const a = el[3 * e + ((k + 1) % 3)], b = el[3 * e + ((k + 2) % 3)];
-      const ax = x[a] - x[node], ay = y[a] - y[node], bx = x[b] - x[node], by = y[b] - y[node];
-      widest = Math.max(widest, Math.abs(Math.atan2(ax * by - ay * bx, ax * bx + ay * by)));
-      count++;
-    }
-    // 180° below a straight surface: at least six elements of at most 30°, four sectors each
-    expect(count).toBeGreaterThanOrEqual(24);
-    expect(widest).toBeLessThanOrEqual((30 * Math.PI) / 180 + 1e-9);
-  }, 120000);
 });

@@ -1,7 +1,9 @@
 /**
  * Strength from matric suction (φb) in the analysis: the negative pore
  * pressure above the water line at the slice bases, and the factor of
- * safety of surfaces above the line.
+ * safety of surfaces above the line. (Its finite element model, at the
+ * Gauss points, is tested in Rust:
+ * packages/engine-rs/crates/cslope-engine/tests/fem_model_unit.rs.)
  */
 
 import { describe, it, expect } from "vitest";
@@ -11,7 +13,6 @@ import { analyseSlope } from "./solvers";
 import { WATER_UNIT_WEIGHT } from "../types/constants";
 import type { SlopeDefinition } from "../types/slope-definition";
 import type { MaterialModel } from "../types/material-models";
-import { buildFeModel } from "../fem/model";
 
 const tan = (deg: number) => Math.tan((deg * Math.PI) / 180);
 
@@ -142,16 +143,4 @@ describe("factor of safety with suction strength", () => {
     expect(withPhiB.F).toBeGreaterThan(without.F * 1.05);
   });
 
-  it("is taken by the finite element model at its Gauss points", () => {
-    const m0 = buildFeModel(buildSlope(definition()), { elementSize: 3 });
-    const m1 = buildFeModel(buildSlope(definition({ phiB: 15, maxSuction: 60 })), { elementSize: 3 });
-    expect(m1.gpC.length).toBe(m0.gpC.length);
-    let checked = 0;
-    for (let i = 0; i < m0.gpC.length; i++) {
-      const suction = Math.max(0, WATER_UNIT_WEIGHT * (m0.gpY[i] + 15));
-      expect(m1.gpC[i]).toBeCloseTo(m0.gpC[i] + Math.min(suction, 60) * tan(15), 9);
-      if (suction > 0) checked++;
-    }
-    expect(checked).toBeGreaterThan(0);
-  });
 });

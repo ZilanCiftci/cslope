@@ -1,29 +1,9 @@
 /**
  * Non-circular optimisation of critical slip surfaces.
  *
- * The best circles of the search, and the best block surfaces through the
- * buried material layers, are polylines whose vertices are moved by the
- * alternating-variable method of Celestino & Duncan (1981), as built in
- * the Corps of Engineers manual of Edris & Wright (1987, paras 87–89):
- *
- * - Each interior vertex is shifted a distance Δ in both directions
- *   normal to the surface (the bisector at a kink); the entry and exit
- *   slide along the ground. One vertex at a time, the others fixed.
- * - A parabola through the three factors of safety gives each vertex its
- *   best position, and the whole surface is then moved permanently.
- * - Δ starts at a tenth of the shortest segment and is halved twice;
- *   up to six rounds per step size.
- *
- * Once converged the polyline is refined (vertices doubled) and optimised
- * again. The best surface of all seeds is then optimised further while a
- * cycle still lowers its FOS by more than the analysis tolerance: refined
- * once more, then restarted from its result with the first shift (Greco
- * 1996 repeats the search from the last surface until it no longer
- * improves). Surfaces stay admissible: below the ground, inside the model,
- * concave, and with entry and exit within the search limits. A candidate
- * without a complete-equilibrium solution gets no factor of safety.
- *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/model/optimize.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import type { SearchPlane, Slope } from "./slope";
 import type { Evaluate, PlaneSteps } from "./steps";

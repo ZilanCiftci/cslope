@@ -1,12 +1,14 @@
 /**
  * Search plane generation: every generated plane respects the search
  * limits, the minimum failure distance and the model boundary (property
- * checks on random models), plus the degenerate inputs.
+ * checks on random models), plus the degenerate inputs. (The refined and
+ * local plane generators, internal functions, are tested in Rust:
+ * packages/engine-rs/crates/cslope-engine/tests/model_core_search.rs.)
  */
 import { describe, it, expect } from "vitest";
 import { Material, Udl, LineLoad } from "../types/index";
 import { Slope } from "./slope";
-import { setEntryExitPlanes, addSingleEntryExitPlane, addSingleCircularPlane, generateRefinedPlanes, generateLocalPlanes, isPlaneWithinExternalBoundary } from "./search";
+import { setEntryExitPlanes, addSingleEntryExitPlane, addSingleCircularPlane, isPlaneWithinExternalBoundary } from "./search";
 import { analyseSlope } from "./solvers";
 import { rng, uniform, randomShape, shapeCoordinates } from "./property-helpers";
 
@@ -98,15 +100,5 @@ describe("individual planes", () => {
     expect(isPlaneWithinExternalBoundary(t, t.individualPlanes[1])).toBe(true);
     t.updateAnalysisOptions({ compositeBase: true });
     expect(isPlaneWithinExternalBoundary(t, t.individualPlanes[0])).toBe(true);
-  });
-
-  it("refined and local planes: nothing without a budget or valid seeds", () => {
-    expect(generateRefinedPlanes(s, [], 10)).toEqual([]);
-    const p = { lc: [5, 10] as [number, number], rc: [30, 0] as [number, number], cx: 20, cy: 20, radius: 18, fos: null, slices: null };
-    expect(generateRefinedPlanes(s, [p], 10)).toEqual([]);
-    expect(generateRefinedPlanes(s, [{ ...p, fos: 1.2 }], 0)).toEqual([]);
-    expect(generateLocalPlanes(s, [{ ...p, fos: 1.2 }], 0, 1)).toEqual([]);
-    const refined = generateRefinedPlanes(s, [{ ...p, fos: 1.2 }], 15);
-    expect(refined.length).toBeLessThanOrEqual(15);
   });
 });

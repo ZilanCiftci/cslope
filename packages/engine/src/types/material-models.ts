@@ -417,7 +417,7 @@ export interface ShearNormalModel extends MaterialModelBase {
 /**
  * A cubic spline through a table's points: natural (zero curvature) at an
  * end without a slope, clamped to the slope given; a straight line with
- * the end slope beyond the ends (math/spline.ts).
+ * the end slope beyond the ends (math/spline.rs in the engine).
  */
 export interface TableSpline {
   startSlope?: number;

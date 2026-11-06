@@ -35,14 +35,11 @@ export { hoekBrownOf, hoekBrownParameters, instantaneousAtNormalStress, instanta
 export {
   resolveStrength,
   suctionStrength,
-  designStrength,
   resolveUnitWeight,
   needsLayerTop,
   interpolateFunction,
-  shansepSu,
-  shearNormalAt,
 } from "./strength";
-export type { DesignStrength, ResolvedStrength, StrengthContext } from "./strength";
+export type { ResolvedStrength, StrengthContext } from "./strength";
 
 // Validation
 export { validateMaterialModel } from "./validation";

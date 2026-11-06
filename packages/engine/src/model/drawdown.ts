@@ -1,22 +1,12 @@
 /**
  * Rapid drawdown by the three-stage procedure of Duncan, Wright & Wong
- * (1990; Duncan, Wright & Brandon 2014, ch. 9):
+ * (1990; Duncan, Wright & Brandon 2014, ch. 9). The slope's own water is
+ * the state after drawdown; `Slope.drawdownBefore` is the same model with
+ * the water before it.
  *
- * 1. Before drawdown, with drained strengths and the pore pressures (and
- *    the reservoir on the slope) of the full reservoir: the consolidation
- *    stresses σ′fc and τfc on each slice base.
- * 2. After drawdown, the materials with a drawdown (R) envelope take the
- *    undrained strength τff at their consolidation stresses, interpolated
- *    by the consolidation ratio Kc between isotropic consolidation (Kc = 1,
- *    from the R envelope) and consolidation at failure (Kc = Kf, the
- *    effective envelope).
- * 3. Where the drained strength with the pore pressures after drawdown is
- *    lower than τff (dilating soil), the drained strength is used.
- *
- * The slope's own water is the state after drawdown; `Slope.drawdownBefore`
- * is the same model with the water before it.
- *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/model/drawdown.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import type { Slice } from "../types/geometry";
 import type { SearchPlane, Slope } from "./slope";

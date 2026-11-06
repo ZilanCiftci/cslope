@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { designStrength, resolveStrength, interpolateFunction, needsLayerTop } from "./strength";
+import { resolveStrength, interpolateFunction, needsLayerTop } from "./strength";
 import type {
   MohrCoulombModel,
   UndrainedModel,
@@ -13,8 +13,6 @@ import type {
 } from "./material-models";
 import type { StrengthContext } from "./strength";
 import { Material } from "./material";
-import { interpolateIDW, interpolateNearest } from "../math/interpolation";
-import type { SpatialDataPoint } from "../math/interpolation";
 
 // ── Helpers ────────────────────────────────────────────────────
 
@@ -652,96 +650,6 @@ describe("Material.model", () => {
   });
 });
 
-// ── interpolateIDW ─────────────────────────────────────────────
-
-describe("interpolateIDW", () => {
-  const pts: SpatialDataPoint[] = [
-    { x: 0, y: 0, values: [10, 20] },
-    { x: 10, y: 0, values: [30, 40] },
-  ];
-
-  it("returns empty array for empty input", () => {
-    expect(interpolateIDW([], 5, 5)).toEqual([]);
-  });
-
-  it("returns exact values for single point", () => {
-    const single: SpatialDataPoint[] = [{ x: 3, y: 4, values: [42, 99] }];
-    expect(interpolateIDW(single, 0, 0)).toEqual([42, 99]);
-  });
-
-  it("returns exact values when query coincides with a point", () => {
-    expect(interpolateIDW(pts, 0, 0)).toEqual([10, 20]);
-  });
-
-  it("returns average for equidistant query", () => {
-    const result = interpolateIDW(pts, 5, 0);
-    expect(result[0]).toBeCloseTo(20); // avg(10, 30)
-    expect(result[1]).toBeCloseTo(30); // avg(20, 40)
-  });
-
-  it("weights closer points more heavily (default p=2)", () => {
-    // Query at (1, 0): dist to P1=1, dist to P2=9
-    // w1 = 1, w2 = 1/81
-    const result = interpolateIDW(pts, 1, 0);
-    expect(result[0]).toBeGreaterThan(10);
-    expect(result[0]).toBeLessThan(15); // much closer to 10
-  });
-
-  it("uses custom power parameter", () => {
-    // p=1: w1 = 1/1 = 1, w2 = 1/9
-    const resultP1 = interpolateIDW(pts, 1, 0, 1);
-    // p=4: w1 = 1/1 = 1, w2 = 1/6561
-    const resultP4 = interpolateIDW(pts, 1, 0, 4);
-    // Higher power → closer to nearest point value (10)
-    expect(resultP4[0]).toBeLessThan(resultP1[0]);
-  });
-
-  it("handles 2D distances correctly", () => {
-    const pts2d: SpatialDataPoint[] = [
-      { x: 0, y: 0, values: [100] },
-      { x: 10, y: 10, values: [200] },
-    ];
-    // Query at (5, 5): equidistant → average
-    const result = interpolateIDW(pts2d, 5, 5);
-    expect(result[0]).toBeCloseTo(150);
-  });
-});
-
-// ── interpolateNearest ─────────────────────────────────────────
-
-describe("interpolateNearest", () => {
-  const pts: SpatialDataPoint[] = [
-    { x: 0, y: 0, values: [10, 20] },
-    { x: 10, y: 0, values: [30, 40] },
-    { x: 5, y: 8, values: [50, 60] },
-  ];
-
-  it("returns empty array for empty input", () => {
-    expect(interpolateNearest([], 5, 5)).toEqual([]);
-  });
-
-  it("picks the closest point", () => {
-    // (1, 0) is closest to (0, 0)
-    expect(interpolateNearest(pts, 1, 0)).toEqual([10, 20]);
-  });
-
-  it("picks the other closest point", () => {
-    // (9, 0) is closest to (10, 0)
-    expect(interpolateNearest(pts, 9, 0)).toEqual([30, 40]);
-  });
-
-  it("picks point considering 2D distance", () => {
-    // (5, 7) is closest to (5, 8), dist=1
-    expect(interpolateNearest(pts, 5, 7)).toEqual([50, 60]);
-  });
-
-  it("returns a copy, not the original array", () => {
-    const result = interpolateNearest(pts, 0, 0);
-    result[0] = 999;
-    expect(pts[0].values[0]).toBe(10); // original unchanged
-  });
-});
-
 describe("resolveStrength — linear variation never goes negative", () => {
   const c = { yBottom: -20, x: 0, yGround: 0, alpha: 0 };
   it("clamps S = f(datum) at zero", () => {
@@ -941,53 +849,5 @@ describe("resolveStrength — strength cutoff", () => {
   it("no cutoff when suMax is not set", () => {
     const m: StrengthFromDatumModel = { kind: "s-f-datum", unitWeight: 18, suRef: 40, yRef: 10, rate: 4 };
     expect(resolveStrength(m, ctx({ yBottom: -100 })).cohesion).toBeCloseTo(480, 9);
-  });
-});
-
-// ── Design strength ────────────────────────────────────────────
-
-describe("designStrength", () => {
-  const F = { cu: 1.4, cohesion: 1.25, tanPhi: 1.25, variableLoad: 1 };
-
-  it("lime-cement columns: each part of the composite strength takes its own factor (EN 1997-1)", () => {
-    // a 0.2, cu,soil 20, cu,col 150, c′col 30, φ′col 30°, γcu 1.4, γc′ 1.25.
-    const m: LimeCementColumnModel = {
-      kind: "lime-cement-columns",
-      unitWeight: 16,
-      soilSu: 20,
-      columnSu: 150,
-      areaRatio: 0.2,
-      columnCohesion: 30,
-      columnFrictionAngle: 30,
-    };
-    const st = resolveStrength(m, ctx());
-    expect(st.cohesion).toBeCloseTo(22, 12);
-    const d = designStrength(m.kind, st, F);
-    // 0.8·20/1.4 + 0.2·30/1.25 = 16.23 (all with γcu would give 15.71).
-    expect(d.cohesion).toBeCloseTo((0.8 * 20) / 1.4 + (0.2 * 30) / 1.25, 12);
-    expect(d.cohesion).toBeCloseTo(16.23, 2);
-    expect(d.tanPhi).toBeCloseTo((0.2 * Math.tan(Math.PI / 6)) / 1.25, 12);
-    expect(d.cohesionUndrained).toBeCloseTo((0.2 * 150 + 0.8 * 20) / 1.4, 12);
-    expect(d.undrained).toBe(false);
-    // Undrained columns: all of it is undrained strength.
-    const u = designStrength(m.kind, resolveStrength({ ...m, columnCohesion: undefined }, ctx()), F);
-    expect(u.cohesion).toBeCloseTo((0.2 * 150 + 0.8 * 20) / 1.4, 12);
-    expect(u.undrained).toBe(true);
-  });
-
-  it("other models: γcu on undrained strength, γc′ and γφ′ on drained; no factors: unchanged", () => {
-    const su: UndrainedModel = { kind: "undrained", unitWeight: 18, undrainedShearStrength: 28 };
-    expect(designStrength(su.kind, resolveStrength(su, ctx()), F)).toEqual({
-      cohesion: 20,
-      tanPhi: 0,
-      cohesionUndrained: 20,
-      undrained: true,
-    });
-    const mc: MohrCoulombModel = { kind: "mohr-coulomb", unitWeight: 18, cohesion: 10, frictionAngle: 30, cFactor: 1, cohesionUndrained: 28 };
-    const d = designStrength(mc.kind, resolveStrength(mc, ctx()), F);
-    expect(d.cohesion).toBeCloseTo(8, 12);
-    expect(d.tanPhi).toBeCloseTo(Math.tan(Math.PI / 6) / 1.25, 12);
-    expect(d.cohesionUndrained).toBeCloseTo(20, 12);
-    expect(designStrength(mc.kind, resolveStrength(mc, ctx()), null).cohesion).toBe(10);
   });
 });

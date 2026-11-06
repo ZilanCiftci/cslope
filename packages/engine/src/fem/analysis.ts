@@ -3,29 +3,15 @@
  * model, finds the factor of safety (srm.ts) and returns the fields for
  * display, optionally on adaptively refined meshes (adapt.ts).
  *
- * Implementation choices (not from the literature), with their reasons:
- * - Adaptive loop: up to `levels` refinements, stopping when F changes by
- *   less than 0.01; F on the coarser meshes to half that (the stop test's
- *   resolution), on the final mesh to `fTolerance`, continuing the
- *   bracket of the last search. When no factor is found on a refined mesh,
- *   the coarser mesh's result stands, with a warning.
- * - A refined mesh starts its search at 0.6 × the coarser mesh's F with
- *   steps of 4 %, guided by that F: a finer mesh usually gives a lower
- *   collapse load (de Borst & Vermeer 1984, Géotechnique 34(2), 199–210),
- *   and trials rising from converged states avoid the false failures of a
- *   cold start.
- * - The failure mechanism is shown by the shear strain of the displacement
- *   increment between the last two converged reductions, which shows the
- *   band that moves at failure; the accumulated plastic strain also covers
- *   zones that yielded early and stopped.
- *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts and fem/_handles.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/fem/analysis.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
-import { testCall,wasm } from "../facade/internal";
+import { wasm } from "../facade/internal";
 import type { FeModel,FeModelOptions } from "./model";
 import type { SrmOptions,SrmTrial,TrialBatch } from "./srm";
 import type { Slope } from "../model/slope";
-import { dataOptions,modelHandle,sizeFieldHandle,sizeFieldOf,slopeRef } from "../facade/fem/_handles";
+import { dataOptions, sizeFieldHandle, sizeFieldOf, slopeRef } from "../facade/fem/_handles";
 import type { InitialStressOptions } from "./initial-stress";
 
 export interface FemAnalysisOptions extends FeModelOptions, SrmOptions, InitialStressOptions {
@@ -120,16 +106,6 @@ export interface FemTrialBatch extends TrialBatch {
  * trial, which runs to the iteration limit.
  */
 export const DEFAULT_TRIALS_PER_ROUND = 1;
-
-/** In-plane maximum shear strain of the displacement change between two states, per element. */
-export function shearIncrementPerElement(model: FeModel, u: Float64Array, uPrev: Float64Array | null): Float64Array {
-  return testCall("fem/analysis::shearIncrementPerElement", [modelHandle(model), u, uPrev]);
-}
-
-/** Plastic shear strain (ε₁ − ε₃ of the viscoplastic strain) per element. */
-export function plasticShearPerElement(model: FeModel, evp: Float64Array): Float64Array {
-  return testCall("fem/analysis::plasticShearPerElement", [modelHandle(model), evp]);
-}
 
 /** The strength reduction of a slope, with refinement when asked (`options.onTrial` is called after each trial). */
 export function analyzeFem(slope: Slope, options: FemAnalysisOptions = {}): FemAnalysisResult {

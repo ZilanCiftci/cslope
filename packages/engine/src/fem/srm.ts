@@ -1,89 +1,9 @@
 /**
  * Strength reduction by finite elements (SRFEM).
  *
- * Method and sources:
- * - Strength reduction: c and tan φ divided by F until the slope fails;
- *   F at failure is the factor of safety (Zienkiewicz, Humpheson & Lewis
- *   1975, Géotechnique 25(4), 671–689; Matsui & San 1992, Soils Found.
- *   32(1), 59–70; Griffiths & Lane 1999, Géotechnique 49(3), 387–403).
- * - Viscoplastic algorithm (initial strain method) of Zienkiewicz &
- *   Cormeau (1974, IJNME 8(4), 821–845) as used for slopes by Griffiths &
- *   Lane (1999) and coded in Smith, Griffiths & Margetts (2014, Programming
- *   the Finite Element Method, 5th ed., Wiley, ch. 6): gravity is applied in
- *   one increment, the elastic stiffness is factorised once, and at every
- *   iteration the stress overshoot beyond the yield surface is relaxed by a
- *   viscoplastic strain increment f·∂Q/∂σ·Δt whose body loads enter the
- *   next solution.
- * - Failure: non-convergence within the iteration limit (Griffiths & Lane
- *   1999, 1000 iterations, tolerance on the displacement increment); with
- *   the "equilibrium" test a trial converges only when, in addition, the
- *   stresses returned to the yield surface balance the loads (the
- *   unbalanced-force test of explicit and implicit codes), and the
- *   iteration is then accelerated (Anderson 1965; Walker & Ni 2011;
- *   anderson.ts) on the viscoplastic strains and body loads.
- * - Yield: Mohr–Coulomb in principal stresses (tension positive),
- *   f = (σ₁ − σ₃)/2 + (σ₁ + σ₃)/2·sin φ − c cos φ, the normalisation of
- *   Smith & Griffiths; optional Rankine tension cut-off f_t = σ₁ ≤ 0,
- *   relaxed in the same way.
- * - Time step: the explicit update is stable for Δt below 2/a, a = n_fᵀ D n_g
- *   (Cormeau 1975, IJNME 9(1), 109–127; for associated flow this is the
- *   step of Smith & Griffiths, 4(1 + ν)(1 − 2ν)/(E(1 − 2ν + sin²φ))).
- * - Flow rules (Sysala, Hrubešová, Michalec & Tschuchnigg 2021,
- *   arXiv:2101.01005, eq. 2.1 and 4.6–4.8):
- *   "davis-b" (default): c and tan φ divided by
- *   q_B(F) = F(1 − sin ψ_F sin φ_F)/(cos ψ_F cos φ_F), tan φ_F = tan φ/F,
- *   tan ψ_F = tan ψ/F, with associated flow in the reduced material
- *   (Davis 1968; Tschuchnigg, Schweiger & Sloan 2015, Comput. Geotech. 70,
- *   169–177); "non-associated": c/F, tan φ/F, tan ψ/F, flow with ψ_F
- *   (Griffiths & Lane 1999); "associated": c/F, tan φ/F and ψ = φ_F.
- * - Associated flow is solved by Newton's method (newton.ts); a trial fails
- *   when Newton does not reach equilibrium, the criterion of implicit
- *   strength reduction. Non-associated flow can be solved the same way
- *   with the unsymmetric tangent (option), F raised in increments with
- *   cutback since the result depends on the path. (A viscoplastic iteration deciding Newton's failed
- *   trials was tried and removed: its displacement-increment test accepted
- *   creeping states and raised F, e.g. V068 1.161 against 1.132, and its
- *   iteration limit failed slowly converging ones, V056.)
- * - Search: F is bracketed and bisected (Dawson, Roth & Drescher 1999,
- *   Géotechnique 49(6), 835–840). A trial above a converged one starts
- *   from that converged state; with associated flow the limit load does not
- *   depend on the stress path (the uniqueness theorems of limit analysis),
- *   with non-associated flow the bounding theorems do not apply
- *   (Zienkiewicz, Humpheson & Lewis 1975) and it may, so F then rises in
- *   small equal steps as in Griffiths & Lane's incremental reduction.
- *
- * Implementation choices (not from the literature), with their reasons:
- * - Δt = 1/a, half the stability limit: a stress on one yield plane returns
- *   to it in one step, and the corners of the pyramid do not oscillate
- *   (`relaxation` = 1; 2 is the limit).
- * - Iteration limit 1000·√(elements/2500), at least 1000 (1500 with the
- *   accelerated equilibrium test): Griffiths &
- *   Lane's 1000 iterations are for meshes of a few hundred elements, and
- *   plastic flow must cross more elements on a finer mesh. The limit is a
- *   user parameter in every implementation of the non-convergence
- *   criterion, and F depends on it.
- * - Acceleration and limit, measured 2026-10-29 on the base meshes of 16
- *   problems of a program's verification manual and Pruska's 17 slopes
- *   (four programs, ψ = 0): without acceleration the iteration needs many
- *   thousands of iterations near the limit (58-5: 6168 at F = 0.69, no
- *   convergence at 0.71 in 20000), so the limit set F (−4.2 % against the
- *   programs' mean on Pruska's slopes). With 10 iterates mixed the same
- *   trials converge in 150–400 iterations; Pruska −2.7 %, all 33 cases
- *   2.8 % mean absolute deviation (3.3 % before) at 1.4 times the run time
- *   with a limit of 1500 (2.7 % at 3 times with 3000). On the verification
- *   problems it moved the factors both ways (16 of a program's manual:
- *   2.34 → 2.69 % mean absolute deviation, 19 published research results
- *   2.42 → 2.67 %; adaptive meshes), so it is an option, not the default.
- * - A trial that fails from the unloaded state does not bound F from
- *   above; only a failure from a converged state does, a converged trial
- *   overrides failures below it, and the bounding failure is confirmed
- *   from the final converged state (up to three times per search).
- * - Viscoplastic convergence must hold in two successive iterations.
- * - Beyond the apex of the Mohr–Coulomb pyramid σ₁ is relaxed towards the
- *   apex as by the Rankine cut-off (see solveAtF); it does not change the
- *   yield surface, only lets ψ < φ return a stress from beyond the apex.
- *
- * Implemented by the Rust engine (packages/engine-rs) through WebAssembly (see facade/internal.ts and fem/_handles.ts).
+ * Implemented in packages/engine-rs/crates/cslope-engine/src/fem/srm.rs,
+ * where the method, its sources and the implementation choices are
+ * documented; called through WebAssembly (facade/internal.ts).
  */
 import { testCall } from "../facade/internal";
 import type { FeModel } from "./model";
@@ -96,7 +16,7 @@ export interface SrmOptions {
   /**
    * "newton" (default for Davis B and associated flow): implicit return and
    * consistent tangent (newton.ts), which decides convergence sharply; with
-   * non-associated flow the tangent is unsymmetric (LU, sparse.ts) and F
+   * non-associated flow the tangent is unsymmetric (LU, sparse.rs) and F
    * rises in increments from the starting state (`runTrial`).
    * "viscoplastic" (default for non-associated flow): the explicit
    * iteration of Griffiths & Lane. Measured 2026-10-29 on five
@@ -122,7 +42,7 @@ export interface SrmOptions {
    */
   convergence?: "increment" | "extrapolated" | "equilibrium";
   /**
-   * Anderson acceleration of the viscoplastic iteration (anderson.ts): the
+   * Anderson acceleration of the viscoplastic iteration (fem/anderson.rs in the engine): the
    * number of past iterates mixed; 0 turns it off. Default 10 with the
    * "equilibrium" test, 0 otherwise: an accelerated iterate can have a small
    * displacement change without equilibrium, which the increment test
@@ -161,7 +81,7 @@ export interface SrmOptions {
   resume?: { lo: number; hi: number; state: SrmState; hiFrom?: number };
   /**
    * A starting state for the first trials, e.g. a coarser mesh's converged
-   * state transferred to this one (transfer.ts): the trials start from it
+   * state transferred to this one (fem/transfer.rs in the engine): the trials start from it
    * until one converges, but no F counts as converged from it alone.
    */
   warmStart?: SrmState;
@@ -247,29 +167,6 @@ export interface TrialOutcome {
 /** The options as the engine reads them: data, the warm start and onTrial (a function, called from the engine). */
 function trialOptions(options: SrmOptions): Record<string, unknown> {
   return { ...dataOptions(options), warmStart: options.warmStart, onTrial: options.onTrial };
-}
-
-/** Davis B divisor q_B(F) for friction φ and dilation ψ (radians); Sysala et al. 2021 eq. 4.6. */
-export function davisB(F: number, phi: number, psi: number): number {
-  return testCall("fem/srm::davisB", [F, phi, psi]);
-}
-
-export function emptyState(model: FeModel): SrmState {
-  return testCall("fem/srm::emptyState", [modelHandle(model)]);
-}
-
-/** The solver of the trials: Newton (default) or BFGS for associated flow, the viscoplastic iteration for non-associated flow unless another is asked for. */
-export function trialSolver(model: FeModel, options: SrmOptions = {}): "newton" | "bfgs" | "viscoplastic" {
-  return testCall("fem/srm::trialSolver", [modelHandle(model), dataOptions(options)]);
-}
-
-/** One trial (the element equation table `eqs` is the engine's own). */
-export function runTrial(model: FeModel, F: number, start: SrmState | null, options: SrmOptions = {}, _eqs?: Int32Array, startF = 0): TrialOutcome {
-  try {
-    return testCall("fem/srm::runTrial", [modelHandle(model), F, start, dataOptions(options), startF]);
-  } finally {
-    modelChanged(model);
-  }
 }
 
 /** Factor of safety by strength reduction, the trials run one after another. */
