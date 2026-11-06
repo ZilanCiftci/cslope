@@ -14,6 +14,8 @@ export interface VariableOption {
   variable: SensitivityVariable;
   /** Current value in the model. */
   value: number;
+  /** The unit ("kPa"), if the value has one. */
+  unit?: string;
 }
 
 export interface SensitivityPoint {
@@ -46,6 +48,23 @@ const FIELD_LABELS: Record<string, string> = {
   ru: "rᵤ",
 };
 
+/** The units of the fields above that have one. */
+const FIELD_UNITS: Record<string, string> = {
+  unitWeight: "kN/m³",
+  cohesion: "kPa",
+  frictionAngle: "°",
+  undrainedShearStrength: "kPa",
+  suRateOfChange: "kPa/m",
+  cohesionUndrained: "kPa",
+  cohesionRateOfChange: "kPa/m",
+  suRef: "kPa",
+  rate: "kPa/m",
+  depthRef: "m",
+  yRef: "m",
+  ucs: "kPa",
+  suMin: "kPa",
+};
+
 /** Variables of a model: its parameters and the materials' numbers. */
 export function listVariables(model: ModelEntry): VariableOption[] {
   const out: VariableOption[] = [];
@@ -68,6 +87,7 @@ export function listVariables(model: ModelEntry): VariableOption[] {
         label: `${m.name}: ${label}`,
         variable: { kind: "material", materialId: m.id, field },
         value,
+        ...(FIELD_UNITS[field] ? { unit: FIELD_UNITS[field] } : {}),
       });
     }
   }
