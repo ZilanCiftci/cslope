@@ -95,7 +95,7 @@ describe("ResultsMenu", () => {
     const plot = screen.getByRole("button", { name: "Results plot" });
     expect(plot).toHaveAttribute("aria-disabled", "true");
     expect(plot).toHaveAttribute("title", "Run the analysis first");
-    const pdf = screen.getByRole("button", { name: "Export PDF" });
+    const pdf = screen.getByRole("button", { name: "Export as PDF" });
     expect(pdf).toBeDisabled();
     expect(pdf).toHaveAttribute("title", "Run the analysis first");
     expect(screen.getByTitle("More export options")).toBeDisabled();

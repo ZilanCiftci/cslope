@@ -620,7 +620,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     border: "none",
                   }}
                   title={hasResult ? "Export as PDF…" : "Run the analysis first"}
-                  aria-label="Export PDF"
+                  aria-label="Export as PDF"
                   data-size="large"
                 >
                   <span className="flex items-center justify-center">

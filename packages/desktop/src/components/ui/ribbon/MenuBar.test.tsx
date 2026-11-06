@@ -363,7 +363,7 @@ describe("Compact ribbon", () => {
     expect(screen.getByTitle("Assign")).toHaveAttribute("data-size", "small");
     await userEvent.click(tab("Results"));
     expect(screen.getByRole("button", { name: "Results plot" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByRole("button", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByRole("button", { name: "Export as PDF" })).toHaveAttribute("data-size", "large");
     expect(screen.getByRole("button", { name: "Sheet settings" })).toHaveAttribute("data-size", "small");
   });
 

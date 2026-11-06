@@ -300,7 +300,7 @@ export function NewModelsWindow({
                         </span>
                       )}
                       <span className="text-[11px] w-4 text-center" title={!r ? "" : r.fit.ok ? "Calibrated" : r.fit.error} aria-label={r?.fit.ok ? "Calibrated" : "Not calibrated"}>
-                        {r?.fit.ok ? "✓" : "…"}
+                        {r?.fit.ok ? "✓" : "–"}
                       </span>
                       <button
                         className="btn text-[11px] px-1.5"
