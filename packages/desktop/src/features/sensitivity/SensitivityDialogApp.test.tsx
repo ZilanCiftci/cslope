@@ -51,7 +51,7 @@ describe("Sensitivity window", () => {
   it("waits for the main window", () => {
     render(<SensitivityWindow state={null} onCommand={onCommand} />);
     expect(screen.getByText("Sensitivity analysis")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window");
   });
 
   it("lists parameters and material values with ±20 % as the default range", () => {

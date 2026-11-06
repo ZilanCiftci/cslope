@@ -356,14 +356,14 @@ describe("Compact ribbon", () => {
     expect(screen.getByTitle("New (Ctrl+N)")).toHaveAttribute("data-size", "large");
     expect(screen.getByTitle("Save (Ctrl+S)")).toHaveAttribute("data-size", "large");
     expect(screen.getByTitle("Import")).toHaveAttribute("data-size", "small");
-    expect(screen.getByTitle("Save as (Ctrl+Shift+S)")).toHaveAttribute("data-size", "small");
+    expect(screen.getByTitle("Save as… (Ctrl+Shift+S)")).toHaveAttribute("data-size", "small");
     expect(screen.getByTitle("Exit")).toHaveAttribute("data-size", "small");
     await userEvent.click(tab("Model"));
     expect(screen.getByTitle("Materials")).toHaveAttribute("data-size", "large");
     expect(screen.getByTitle("Assign")).toHaveAttribute("data-size", "small");
     await userEvent.click(tab("Results"));
     expect(screen.getByRole("button", { name: "Results plot" })).toHaveAttribute("data-size", "large");
-    expect(screen.getByRole("button", { name: "Export PDF" })).toHaveAttribute("data-size", "large");
+    expect(screen.getByRole("button", { name: "Export as PDF" })).toHaveAttribute("data-size", "large");
     expect(screen.getByRole("button", { name: "Sheet settings" })).toHaveAttribute("data-size", "small");
   });
 

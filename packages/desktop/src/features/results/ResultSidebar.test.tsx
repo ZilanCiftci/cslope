@@ -177,7 +177,7 @@ describe("ResultSidebar summary", () => {
     // The reason is only in the banner over the canvas.
     expect(screen.getByText("Analysis failed.")).toBeInTheDocument();
     expect(screen.queryByText(/Bad geometry/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Search limits…" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Search limits" })).toBeNull();
     act(() => useAppStore.setState({ runState: "idle" }));
     expect(screen.getByText("No results yet.")).toBeInTheDocument();
   });
@@ -195,7 +195,7 @@ describe("ResultSidebar summary", () => {
     render(<ResultSidebar />);
     expect(screen.getByText("Analysis failed.")).toBeInTheDocument();
     expect(screen.queryByText(/No valid slip surface/)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Search limits…" }));
+    fireEvent.click(screen.getByRole("button", { name: "Search limits" }));
     expect(useAppStore.getState().canvasSelection).toEqual({ object: { type: "searchLimits" }, point: null });
   });
 

@@ -158,8 +158,8 @@ describe("App — VS Code dark layout", () => {
     const cancelBtn = screen.getByTitle("Cancel running analysis");
     expect(cancelBtn).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeInTheDocument();
-    // StatusBar shows "Analyzing..."
-    expect(screen.getByText("Analyzing...")).toBeInTheDocument();
+    // StatusBar shows "Analyzing"
+    expect(screen.getByText("Analyzing")).toBeInTheDocument();
   });
 
   it("shows FOS result in status bar when analysis is done", () => {

@@ -63,7 +63,7 @@ describe("Probabilistic analysis window", () => {
   it("waits for the main window", () => {
     render(<ReliabilityWindow state={null} onCommand={() => {}} />);
     expect(screen.getByText("Probabilistic analysis")).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window");
   });
 
   it("starts with the first strength value as a random variable with a typical σ", () => {

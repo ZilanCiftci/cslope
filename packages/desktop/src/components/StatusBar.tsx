@@ -148,7 +148,7 @@ export function StatusBar({
           <>
             <span style={{ color: "var(--color-vsc-border)" }}>|</span>
             <span style={{ fontWeight: 600 }}>
-              Analyzing...
+              Analyzing
             </span>
             {runStage && (
               <span data-testid="status-run-stage" className="truncate" title={runStage}>

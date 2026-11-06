@@ -505,7 +505,7 @@ export function ResultsPlotDialogApp() {
             className="text-[10px] shrink-0"
             style={{ color: "var(--color-vsc-text-muted)" }}
           >
-            Waiting for the main window…
+            Waiting for the main window
           </div>
         )}
       </div>

@@ -321,7 +321,7 @@ describe("Explorer — context menu", () => {
   it("edits model properties and saves them to the model", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties" }));
     expect(screen.getByText("Model properties")).toBeInTheDocument();
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.clear(title);
@@ -335,7 +335,7 @@ describe("Explorer — context menu", () => {
   it("closes the properties without saving on Cancel", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties" }));
     const before = structuredClone(store().models.find((m) => m.name === "Beta")!.projectInfo);
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.type(title, "X");
@@ -347,7 +347,7 @@ describe("Explorer — context menu", () => {
   it("closes the properties without saving on Escape", async () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Beta"));
-    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties…" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Model properties" }));
     const before = structuredClone(store().models.find((m) => m.name === "Beta")!.projectInfo);
     const title = screen.getByText("Title").parentElement!.querySelector("input")!;
     await userEvent.type(title, "X");

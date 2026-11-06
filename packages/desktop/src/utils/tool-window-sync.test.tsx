@@ -99,7 +99,7 @@ describe("tool windows", () => {
   it("ask the main window for the state, wait for it and send commands back", () => {
     render(<SensitivityDialogApp />);
     expect(bridge.callNames()).toContain("requestSensitivityState");
-    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window…");
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for the main window");
     renderHook(() => useSensitivityWindowSync(true));
     bridge.emit("onSensitivityRequestState");
     bridge.emit("onSensitivityState", bridge.sentOf("sendSensitivityState")[0]);

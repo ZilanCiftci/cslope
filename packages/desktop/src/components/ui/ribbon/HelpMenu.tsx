@@ -35,9 +35,9 @@ import { openDocumentation } from "../../../utils/docs";
 /** The keyboard shortcuts of the main window, as listed in Help. */
 const KEYBOARD_SHORTCUTS: [keys: string, action: string][] = [
   ["Ctrl+N", "New project"],
-  ["Ctrl+O", "Open project"],
+  ["Ctrl+O", "Open project…"],
   ["Ctrl+S", "Save"],
-  ["Ctrl+Shift+S", "Save as"],
+  ["Ctrl+Shift+S", "Save as…"],
   ["Ctrl+Z", "Undo"],
   ["Ctrl+Y or Ctrl+Shift+Z", "Redo"],
   ["F5 or Ctrl+Enter", "Run the analysis"],

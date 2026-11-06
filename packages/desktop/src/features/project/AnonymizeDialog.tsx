@@ -95,7 +95,7 @@ export function AnonymizeDialog({ snapshot, fileName, onClose }: Props) {
               Cancel
             </button>
             <button type="button" onClick={() => void save()} disabled={busy} className="btn btn-primary">
-              {busy ? "Saving…" : "Save…"}
+              {busy ? "Saving" : "Save…"}
             </button>
           </>
         )
