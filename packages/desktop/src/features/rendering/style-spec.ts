@@ -147,6 +147,23 @@ export const MIN_SLIP_MASS_BAND_OPACITY = 0.3;
 export const CRACK_WATER_WIDTH_PX = 5;
 /** Opacity of that band (POND_COLOR). */
 export const CRACK_WATER_OPACITY = 0.85;
+/** The critical surface's line (logical px; the thickest result line). */
+export const CRITICAL_SURFACE_LINE_WIDTH_PX = 1.5;
+/** The other slip surfaces' lines (Surfaces: all, filter). */
+export const SLIP_SURFACE_LINE_WIDTH_PX = 1;
+/** The center's radius lines to the entry and exit. */
+export const CENTER_LINE_WIDTH_PX = 1;
+/** The radius of the center's dot. */
+export const CENTER_DOT_RADIUS_PX = 3;
+/** The FOS label's text (px at paper zoom 1, bold sans-serif) and its decimals. */
+export const FOS_LABEL_FONT_PX = 12;
+export const FOS_LABEL_DECIMALS = 3;
+/** The finite element mesh's lines and their opacity (in the theme's line color). */
+export const FEM_MESH_LINE_WIDTH_PX = 0.4;
+export const FEM_MESH_OPACITY = 0.35;
+/** The plastic zone's shade: its color and the opacity of the most strained elements. */
+export const FEM_PLASTIC_ZONE_COLOR: DualColor = { hex: "#d62828", rgb: [214, 40, 40] };
+export const FEM_PLASTIC_ZONE_OPACITY = 0.85;
 
 // ── Annotations ────────────────────────────────────────────────
 

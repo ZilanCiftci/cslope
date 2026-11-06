@@ -803,3 +803,49 @@ describe("persistence of the layers' order", () => {
     expect(parseProjectFile(json).models[0].resultViewSettings?.layerOrder).toEqual(["t", "slices", "soilColor", "r"]);
   });
 });
+
+describe("persistence of the display layers' styles", () => {
+  const STYLES = {
+    soilColor: { opacity: 0.5 },
+    fosLabel: { fontSize: 16, fontFamily: "serif", color: "#cc0000", bold: false, decimals: 2 },
+    center: { color: "#00cc00", size: 4, radiusLines: false },
+  };
+
+  it("reads the styles back from a project file", () => {
+    const json = makeBaseProject([
+      {
+        id: "m1",
+        name: "Styles",
+        coordinates: [
+          [0, 0],
+          [0, 10],
+          [10, 5],
+          [10, 0],
+        ],
+        materials: [{ id: "mat-1", name: "M1", unitWeight: 20, frictionAngle: 30, cohesion: 5, color: "#6d5f2a" }],
+        resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [], layerStyles: STYLES },
+      },
+    ]);
+    expect(parseProjectFile(json).models[0].resultViewSettings?.layerStyles).toEqual(STYLES);
+    // and a template (the same reading)
+    expect(normalizeResultView(JSON.parse(JSON.stringify({ annotations: [], layerStyles: STYLES }))).layerStyles).toEqual(STYLES);
+  });
+
+  it("drops bad values and unknown layers and fields without an error; absent when nothing is left", () => {
+    const view = normalizeResultView({
+      annotations: [],
+      layerStyles: {
+        soilColor: { opacity: 2 },
+        slices: { color: "red", width: -1 },
+        criticalSurface: { color: "#CC0000", width: 3, dash: "dotted" },
+        fosLabel: { fontSize: "big", fontFamily: "Comic", decimals: 2.5, bold: "yes" },
+        center: [],
+        nonsense: { color: "#000000" },
+      },
+    });
+    expect(view.layerStyles).toEqual({ criticalSurface: { color: "#cc0000", width: 3 } });
+    expect("layerStyles" in normalizeResultView({ annotations: [], layerStyles: { slices: { width: 99 } } })).toBe(false);
+    expect("layerStyles" in normalizeResultView({ annotations: [], layerStyles: "bold" })).toBe(false);
+    expect("layerStyles" in normalizeResultView({ annotations: [] })).toBe(false);
+  });
+});

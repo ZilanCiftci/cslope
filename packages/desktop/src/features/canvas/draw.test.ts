@@ -2086,3 +2086,72 @@ describe("drawCanvas — layer order", () => {
     expect(Math.min(...sliceStrokes(rec))).toBeGreaterThan(dot);
   });
 });
+
+describe("drawCanvas — display layer styles", () => {
+  const styled = (layerStyles: ResultViewSettings["layerStyles"], over: Partial<ResultViewSettings> = {}, res = result()) =>
+    draw({ mode: "result", result: res, resultViewSettings: rvs({ layerStyles, ...over }) });
+  const c = toC(CIRCLE.cx, CIRCLE.cy);
+
+  it("draws the FOS label in its font, size, color and decimals", () => {
+    const rec = styled({ fosLabel: { fontSize: 18, fontFamily: "serif", bold: false, color: "#0066cc", decimals: 2 } }, { showFosLabel: true });
+    expect(rec.findText("1.234")).toBeUndefined();
+    const label = rec.findText("1.23")!;
+    expect(label.state.font).toBe("18px serif");
+    expect(label.state.fillStyle).toBe("#0066cc");
+    // offsets scale with the size
+    expect(label.y).toBe(c[1] - 4 * 1.5);
+    expect(rec.strokes("#0066cc").some((p) => close(pathPoints(p)[0], [c[0] + 9, c[1] + 2]))).toBe(true);
+    // absent: bold 12 px sans-serif, three decimals
+    expect(styled(undefined, { showFosLabel: true }).findText("1.234")!.state.font).toBe("bold 12px sans-serif");
+  });
+
+  it("draws the critical surface, the center and the slices in their colors and widths, over the soil and the sheet alike", () => {
+    const rec = styled(
+      {
+        criticalSurface: { color: "#cc0000", width: 3 },
+        center: { color: "#00cc00", size: 6, radiusLines: false },
+        slices: { color: "#0066cc", width: 2 },
+      },
+      { showCentreMarker: true, showSlices: true },
+      result({ criticalSlices: [slice(8, 12), slice(12, 16)] }),
+    );
+    const arcs = rec.strokes().filter((p) => pathPoints(p).length > 20 && p.state.lineWidth === 3);
+    expect(arcs.map((p) => p.state.strokeStyle)).toEqual(["#cc0000"]);
+    const dot = rec.fills("#00cc00").find((p) => p.segments[0].op === "arc")!;
+    expect(dot.segments[0]).toMatchObject({ op: "arc", r: 6 });
+    // no radius lines
+    expect(rec.strokes().filter((p) => pathPoints(p).length === 2 && close(pathPoints(p)[0], c))).toHaveLength(0);
+    const slices = rec.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
+    expect(slices.length).toBeGreaterThan(0);
+    expect(new Set(slices.map((p) => p.state.strokeStyle))).toEqual(new Set(["#0066cc"]));
+    expect(slices.every((p) => p.state.lineWidth >= 2 * 0.6)).toBe(true);
+  });
+
+  it("draws the other surfaces with their width and opacity, and the soil colors with their opacity", () => {
+    const two = surface({ fos: 1.6, cy: 16 });
+    const rec = styled(
+      { surfaces: { width: 2.5, opacity: 0.3 }, soilColor: { opacity: 0.4 } },
+      { surfaceDisplay: "all" },
+      result({ allSurfaces: [surface(), two] }),
+    );
+    const other = rec.strokes().filter((p) => pathPoints(p).length > 20 && p.state.lineWidth === 2.5);
+    expect(other).toHaveLength(1);
+    expect(other[0].state.globalAlpha).toBe(0.3);
+    const soil = rec.fills(DEFAULT_MATERIAL.color);
+    expect(soil.length).toBeGreaterThan(0);
+    expect(soil.every((p) => p.state.globalAlpha === 0.4)).toBe(true);
+    // In the edit view the soil stays opaque.
+    const edit = draw({ resultViewSettings: rvs({ layerStyles: { soilColor: { opacity: 0.4 } } }) });
+    expect(edit.fills(DEFAULT_MATERIAL.color).every((p) => p.state.globalAlpha === 1)).toBe(true);
+  });
+
+  it("draws the custom surfaces and their labels in their color, width and label size", () => {
+    const custom = surface({ fos: 1.5, cy: 17, entryPoint: [ENTRY_X + 1, 10] });
+    const res = result({ customSurfaces: [{ kind: "circle", index: 0, surface: custom }] });
+    const rec = styled({ customSurfaces: { color: "#6600cc", width: 2.5, fontSize: 16 } }, { showCustomSurfaces: true, showFosLabel: true }, res);
+    expect(rec.strokes("#6600cc").some((p) => p.state.lineWidth === 2.5 && p.state.lineDash.length > 0)).toBe(true);
+    const label = rec.findText("1.500")!;
+    expect(label.state.fillStyle).toBe("#6600cc");
+    expect(label.state.font).toBe("bold 16px sans-serif");
+  });
+});

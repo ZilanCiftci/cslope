@@ -24,6 +24,7 @@ import { clampMinorTicks } from "../utils/ruler";
 import { isFosSchemeId, isHexColor } from "../utils/fos-color";
 import { normalizeReferenceAnnotation } from "../features/annotations/reference";
 import { normalizeLayerOrder } from "../features/results/layers";
+import { normalizeLayerStyles } from "../features/results/layer-styles";
 import { normalizeLocks } from "./canvas-selection";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
@@ -806,6 +807,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
   };
   const annotations = normalizeAnnotations(view.annotations).map(normalizeColorBarScale);
   const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
+  const layerStyles = normalizeLayerStyles((view as { layerStyles?: unknown }).layerStyles);
 
   return {
     surfaceDisplay:
@@ -855,6 +857,8 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
       : {}),
     // The layers' order: only the keys of known layers and annotations.
     ...(layerOrder ? { layerOrder } : {}),
+    // The display layers' styles: only valid values of known fields.
+    ...(layerStyles ? { layerStyles } : {}),
   };
 }
 

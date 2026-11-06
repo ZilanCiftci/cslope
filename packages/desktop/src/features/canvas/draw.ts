@@ -87,7 +87,17 @@ import {
   SLIP_SURFACE_OPACITY,
   MODEL_HATCH_PATTERNS,
   COLOR_BAR_PLATE_PAD,
+  CENTER_DOT_RADIUS_PX,
+  CENTER_LINE_WIDTH_PX,
+  CRITICAL_SURFACE_LINE_WIDTH_PX,
+  FEM_MESH_LINE_WIDTH_PX,
+  FEM_MESH_OPACITY,
+  FEM_PLASTIC_ZONE_COLOR,
+  FEM_PLASTIC_ZONE_OPACITY,
+  FOS_LABEL_FONT_PX,
+  SLIP_SURFACE_LINE_WIDTH_PX,
 } from "../rendering/style-spec";
+import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb } from "../results/layer-styles";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import {
   canvasForceLayout,
@@ -691,6 +701,9 @@ export function drawCanvas(
   // The drawing's ink: the print colours in the light theme, lighter ones
   // on the dark theme's dark sheet (see ink.ts).
   const INK = themeInk();
+  // The display layers' styles (Properties › Layers): overrides of the
+  // constants above; a chosen color is drawn as chosen in both themes.
+  const LS = resultViewSettings.layerStyles ?? {};
   const GRID_COLOR = INK.gridLine;
   const GRID_TEXT_COLOR = cssVar("--color-canvas-grid-text");
   const POLY_STROKE = cssVar("--color-canvas-poly-stroke");
@@ -1181,7 +1194,11 @@ export function drawCanvas(
 
       if (fill) {
         ctx.fillStyle = mat.color;
+        // (the Soil colors layer's opacity, over a result)
+        const soilAlpha = mode === "result" ? LS.soilColor?.opacity : undefined;
+        if (soilAlpha !== undefined) ctx.globalAlpha = soilAlpha;
         ctx.fill(region.holes ? "evenodd" : "nonzero");
+        if (soilAlpha !== undefined) ctx.globalAlpha = 1;
       }
 
       if (outline) {
@@ -2523,14 +2540,22 @@ export function drawCanvas(
       // The finite element mesh (its last refinement), thin and faint under
       // the plastic zone and the surfaces, to show where it was refined.
       if (result.fem && rvs.showFemMesh === true) {
-        drawFemMesh(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), POLY_STROKE, FEM_MESH_LINE_WIDTH_PX * paperZoom);
+        drawFemMesh(
+          ctx,
+          result.fem,
+          (x, y) => worldToCanvas(x, y, w, h),
+          LS.femMesh?.color ?? POLY_STROKE,
+          (LS.femMesh?.width ?? FEM_MESH_LINE_WIDTH_PX) * paperZoom,
+          LS.femMesh?.opacity ?? FEM_MESH_OPACITY,
+        );
       }
     };
     const drawPlasticZoneLayer = () => {
       // Plastic zone of the finite element analysis: elements shaded by the
       // shear strain of the last displacement increment before failure,
       // relative to the largest, so the failure mechanism shows as a band.
-      if (result.fem && rvs.showFemPlasticZone !== false) drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), INK.feLabel);
+      if (result.fem && rvs.showFemPlasticZone !== false)
+        drawFemPlasticZone(ctx, result.fem, (x, y) => worldToCanvas(x, y, w, h), INK.feLabel, LS.femPlasticZone);
     };
 
     // ── Reference annotations: the lines, under the surfaces ──
@@ -2568,8 +2593,8 @@ export function drawCanvas(
 
           const arcPts = getArcPoints(surf);
           ctx.strokeStyle = fosScale.colorOf(surf.fos);
-          ctx.lineWidth = 1 * paperZoom;
-          ctx.globalAlpha = SLIP_SURFACE_OPACITY;
+          ctx.lineWidth = (LS.surfaces?.width ?? SLIP_SURFACE_LINE_WIDTH_PX) * paperZoom;
+          ctx.globalAlpha = LS.surfaces?.opacity ?? SLIP_SURFACE_OPACITY;
           ctx.beginPath();
           for (let i = 0; i < arcPts.length; i++) {
             const [px, py] = worldToCanvas(arcPts[i][0], arcPts[i][1], w, h);
@@ -2594,11 +2619,12 @@ export function drawCanvas(
           )
         : [];
     // A FOS label's box: the text above its underline, as drawn below.
-    const fosLabelBox = (labelX: number, cy: number, tw: number): Box => ({
+    // (k: the label's size relative to the default)
+    const fosLabelBox = (labelX: number, cy: number, tw: number, k = fosLabelScale(LS.fosLabel)): Box => ({
       left: labelX - 1 * paperZoom,
-      top: cy - 11 * paperZoom,
+      top: cy - 11 * k * paperZoom,
       right: labelX + tw + 1 * paperZoom,
-      bottom: cy + 3 * paperZoom,
+      bottom: cy + 3 * k * paperZoom,
     });
     let criticalLabelBox: Box | null = null;
     // The custom surfaces' FOS labels' boxes, kept clear by the reference labels.
@@ -2619,12 +2645,12 @@ export function drawCanvas(
           ctx.setLineDash([]);
           ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
           ctx.globalAlpha = 0.55;
-          ctx.lineWidth = 4 * paperZoom;
+          ctx.lineWidth = Math.max(4, (LS.customSurfaces?.width ?? 0) + 2.5) * paperZoom;
           path();
           ctx.stroke();
-          ctx.strokeStyle = CUSTOM_SURFACE;
+          ctx.strokeStyle = LS.customSurfaces?.color ?? CUSTOM_SURFACE;
           ctx.globalAlpha = 1;
-          ctx.lineWidth = CUSTOM_SURFACE_LINE_WIDTH_PX * paperZoom;
+          ctx.lineWidth = (LS.customSurfaces?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX) * paperZoom;
           ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
           path();
           ctx.stroke();
@@ -2636,7 +2662,9 @@ export function drawCanvas(
     const cs = result.criticalSurface;
     // The critical surface and its radius lines: the theme's ink, black
     // over a light soil fill (paintAgainstFills).
-    const paintCritical = (paint: (color: string) => void) => paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
+    // A color chosen for the layer: as chosen, over the sheet and the fills.
+    const paintCritical = (paint: (color: string) => void, chosen?: string) =>
+      chosen ? paint(chosen) : paintAgainstFills(INK.critical, CRITICAL_SURFACE_COLOR.hex, paint);
 
     const drawSlicesLayer = () => {
       if (!cs) return;
@@ -2671,7 +2699,7 @@ export function drawCanvas(
         );
 
         ctx.save();
-        ctx.lineWidth = SLICE_LINE_WIDTH_PX * paperZoom * Math.max(0.6, density);
+        ctx.lineWidth = (LS.slices?.width ?? SLICE_LINE_WIDTH_PX) * paperZoom * Math.max(0.6, density);
         ctx.globalAlpha = SLICE_LINE_OPACITY * density;
         for (const x of xBounds) {
           const topY = surfaceYAtX(x);
@@ -2682,7 +2710,8 @@ export function drawCanvas(
             // or white over a dark one.
             const dark = part.region !== null && regionDark.get(part.region) === true;
             ctx.strokeStyle =
-              part.region === null ? INK.critical : dark ? SLICE_LINE_ON_DARK_COLOR.hex : CRITICAL_SURFACE_COLOR.hex;
+              LS.slices?.color ??
+              (part.region === null ? INK.critical : dark ? SLICE_LINE_ON_DARK_COLOR.hex : CRITICAL_SURFACE_COLOR.hex);
             const [sx, sy] = worldToCanvas(x, part.y1, w, h);
             const [, ey] = worldToCanvas(x, part.y0, w, h);
             ctx.beginPath();
@@ -2716,23 +2745,25 @@ export function drawCanvas(
 
         // Radius lines (solid, bold — same style as the arc)
         paintCritical((color) => {
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1 * paperZoom;
-          ctx.beginPath();
-          ctx.moveTo(ccx, ccy);
-          ctx.lineTo(epx, epy);
-          ctx.stroke();
-          ctx.beginPath();
-          ctx.moveTo(ccx, ccy);
-          ctx.lineTo(xpx, xpy);
-          ctx.stroke();
+          if (LS.center?.radiusLines !== false) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = CENTER_LINE_WIDTH_PX * paperZoom;
+            ctx.beginPath();
+            ctx.moveTo(ccx, ccy);
+            ctx.lineTo(epx, epy);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(ccx, ccy);
+            ctx.lineTo(xpx, xpy);
+            ctx.stroke();
+          }
 
           // Small filled circle at centre
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(ccx, ccy, 3 * paperZoom, 0, Math.PI * 2);
+          ctx.arc(ccx, ccy, (LS.center?.size ?? CENTER_DOT_RADIUS_PX) * paperZoom, 0, Math.PI * 2);
           ctx.fill();
-        });
+        }, LS.center?.color);
       }
     };
 
@@ -2743,20 +2774,22 @@ export function drawCanvas(
         if (rvs.showFosLabel) {
           const [ax, ay] = fosLabelAnchor(cs);
           const [ccx2, ccy2] = worldToCanvas(ax, ay, w, h);
-          const fosText = cs.fos.toFixed(3);
-          ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+          const fosText = fosLabelText(cs.fos, LS.fosLabel);
+          const k = fosLabelScale(LS.fosLabel);
+          ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * k * paperZoom);
           const tw = ctx.measureText(fosText).width;
           const labelX = ccx2 + 10 * paperZoom;
           criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
+          const fosColor = LS.fosLabel?.color ?? INK.critical;
 
           // Text
-          ctx.fillStyle = INK.critical;
+          ctx.fillStyle = fosColor;
           ctx.textAlign = "left";
           ctx.textBaseline = "middle";
-          ctx.fillText(fosText, labelX, ccy2 - 4 * paperZoom);
+          ctx.fillText(fosText, labelX, ccy2 - 4 * k * paperZoom);
 
           // Underline
-          ctx.strokeStyle = INK.critical;
+          ctx.strokeStyle = fosColor;
           ctx.lineWidth = 1 * paperZoom;
           ctx.beginPath();
           ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
@@ -2771,27 +2804,30 @@ export function drawCanvas(
       if (customSurfaces.length > 0 && rvs.showFosLabel) {
         const placed: Box[] = criticalLabelBox ? [criticalLabelBox] : [];
         ctx.save();
-        ctx.font = `bold ${12 * paperZoom}px sans-serif`;
+        // In the FOS label's font, at the custom surfaces' label size.
+        const ck = fosLabelScale({ fontSize: LS.customSurfaces?.fontSize ?? LS.fosLabel?.fontSize });
+        const customColor = LS.customSurfaces?.color ?? CUSTOM_SURFACE;
+        ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * ck * paperZoom);
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         ctx.setLineDash([]);
         for (const surf of customSurfaces) {
           const [ax, ay] = fosLabelAnchor(surf);
           const [lx, ly] = worldToCanvas(ax, ay, w, h);
-          const fosText = surf.fos.toFixed(3);
+          const fosText = fosLabelText(surf.fos, LS.fosLabel);
           const tw = ctx.measureText(fosText).width;
           const labelX = lx + 10 * paperZoom;
           let cy = ly;
-          let box = fosLabelBox(labelX, cy, tw);
+          let box = fosLabelBox(labelX, cy, tw, ck);
           for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
             cy += box.bottom - box.top + 2 * paperZoom;
-            box = fosLabelBox(labelX, cy, tw);
+            box = fosLabelBox(labelX, cy, tw, ck);
           }
           placed.push(box);
           customLabelBoxes.push(box);
-          ctx.fillStyle = CUSTOM_SURFACE;
-          ctx.fillText(fosText, labelX, cy - 4 * paperZoom);
-          ctx.strokeStyle = CUSTOM_SURFACE;
+          ctx.fillStyle = customColor;
+          ctx.fillText(fosText, labelX, cy - 4 * ck * paperZoom);
+          ctx.strokeStyle = customColor;
           ctx.lineWidth = 1 * paperZoom;
           ctx.beginPath();
           ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
@@ -2891,7 +2927,7 @@ export function drawCanvas(
       // tension crack (its face is part of the slip surface) to the exit.
       paintCritical((color) => {
         ctx.strokeStyle = color;
-        ctx.lineWidth = 1.5 * paperZoom;
+        ctx.lineWidth = (LS.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX) * paperZoom;
         ctx.beginPath();
         if (crack) {
           const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);
@@ -2903,7 +2939,7 @@ export function drawCanvas(
           else ctx.lineTo(px, py);
         }
         ctx.stroke();
-      });
+      }, LS.criticalSurface?.color);
 
       if (step.withCenter) drawCentreLayer();
 
@@ -2999,9 +3035,10 @@ export function drawCanvas(
           if (rvs.showFosLabel) {
             // The FOS label's box, as drawn above.
             const [lx, ly] = toC(...fosLabelAnchor(cs));
-            ctx.font = `bold ${12 * paperZoom}px sans-serif`;
-            const tw = ctx.measureText(cs.fos.toFixed(3)).width;
-            refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * paperZoom });
+            const k = fosLabelScale(LS.fosLabel);
+            ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * k * paperZoom);
+            const tw = ctx.measureText(fosLabelText(cs.fos, LS.fosLabel)).width;
+            refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * k * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * k * paperZoom });
           }
         }
         // The custom surfaces' dashed lines and FOS labels, as drawn above.
@@ -3541,9 +3578,6 @@ export function drawCanvas(
   }
 }
 
-/** Line width of the finite element mesh (px of the paper at zoom 1). */
-const FEM_MESH_LINE_WIDTH_PX = 0.4;
-
 /**
  * The edges of the finite element mesh, each once (an edge between two
  * elements is not drawn twice, which would make it darker).
@@ -3570,11 +3604,12 @@ function drawFemMesh(
   toC: (x: number, y: number) => [number, number],
   color: string,
   lineWidth: number,
+  opacity = FEM_MESH_OPACITY,
 ): void {
   const { x, y } = fem;
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.globalAlpha = 0.35;
+  ctx.globalAlpha = opacity;
   ctx.lineWidth = lineWidth;
   ctx.beginPath();
   for (const [a, b] of femMeshEdges(fem.triangles)) {
@@ -3598,8 +3633,11 @@ function drawFemPlasticZone(
   fem: NonNullable<AnalysisResult["fem"]>,
   toC: (x: number, y: number) => [number, number],
   labelColor: string,
+  style?: { color?: string; opacity?: number },
 ): void {
   const field = fem.shearIncrement ?? fem.plasticShear;
+  const [cr, cg, cb] = style?.color ? hexRgb(style.color) : FEM_PLASTIC_ZONE_COLOR.rgb;
+  const peak = style?.opacity ?? FEM_PLASTIC_ZONE_OPACITY;
   let max = 0;
   for (const v of field) if (v > max) max = v;
   if (!(max > 0)) return;
@@ -3614,7 +3652,7 @@ function drawFemPlasticZone(
     const [bx, by] = toC(x[t[3 * e + 1]], y[t[3 * e + 1]]);
     const [cx, cy] = toC(x[t[3 * e + 2]], y[t[3 * e + 2]]);
     for (const [px, py] of [[ax, ay], [bx, by], [cx, cy]]) if (py < topY) { topY = py; topX = px; }
-    ctx.fillStyle = `rgba(214, 40, 40, ${(0.85 * r).toFixed(3)})`;
+    ctx.fillStyle = `rgba(${cr}, ${cg}, ${cb}, ${(peak * r).toFixed(3)})`;
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(bx, by);
