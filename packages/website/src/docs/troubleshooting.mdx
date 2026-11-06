@@ -1,0 +1,94 @@
+---
+title: Troubleshooting
+description: The messages and warnings of an analysis, what causes them and what to do.
+section: Reference
+order: 4
+---
+
+When a run fails, a banner over the canvas gives the whole message, with a button to the cause where there is one; the status bar says *Analysis failed* (see [Running the analysis](/docs/analysis#running-the-analysis)). Warnings of a finished run are listed in the result summary and on the PDF's [summary pages](/docs/reporting#analysis-summary-pages). Each section below starts with the message as cSlope writes it; *…* stands for the part that depends on the model.
+
+## No valid slip surface was found
+
+> No valid slip surface was found. Check the search limits, the geometry and the material strengths.
+
+No trial surface gave a factor of safety. Every surface was skipped for one of the reasons in [Surfaces that are not analyzed](/docs/search#surfaces-that-are-not-analyzed): it entered bedrock or high strength material, had no driving force in the sliding direction, did not reach equilibrium, was below the minimum size, or had a slice with $m_\alpha \le 0$. The banner has a **Search limits** button.
+
+- **Search limits drawn for the other direction.** When the entry range lies wholly on the toe side of the exit range, the banner first says so, for example *The entry range lies right of the exit range, but the sliding direction is left to right.*, with a button **Use right to left** (or **Use left to right**). The same warning shows in the Search limits window and the options before any run. Turn the direction round, or move the ranges: the entry range belongs on the crest side.
+- **Ranges that miss the slope.** Ranges on level ground, or so narrow that no circle between them passes through the soil, find nothing. Widen them, or untick **Restrict entry/exit ranges** to let surfaces enter and exit anywhere on the ground.
+- **Minimum size.** A **Min. slip depth**, **Min. slip area** or **Min. entry–exit distance** larger than the slope leaves no surface. Set them to 0.
+- **Bedrock or high strength** under the whole sliding mass: surfaces that would enter it are not analyzed. Turn on **Composite surfaces along bedrock** (on by default) so that circles follow its top.
+- **Custom surfaces only.** With **Only analyze these surfaces**, the message adds why each custom surface has no factor, for example *Custom surface 1: …*.
+
+### Steep entry
+
+> No valid slip surface was found. Moment and force equilibrium do not meet where … of the surfaces enter the slope at up to …°: cohesion along a nearly vertical base can only hold it with tension at the base. A tension crack cutting off the steep part (Options › Crack at base angle, for example 60–70°) usually gives a solution.
+
+With Morgenstern-Price (or Spencer) and surfaces entering steeper than 70°, the moment and force factors never meet. Set **Crack at base angle** in the options, for example 60–70°, so that the steep part of each surface is cut off at a vertical crack ([Tension crack](/docs/analysis#tension-crack)).
+
+## Critical surface at a search limit
+
+The search only tries surfaces whose entry and exit lie within the ranges. When the critical surface enters or exits at the end of a range, a surface just beyond it may have a lower factor. Widen that range and run again until the critical surface lies inside both ([Search limits](/docs/search#search-limits)).
+
+## Shallow slides in cohesionless soil
+
+> The critical surface (F = …) is a shallow slide, on average … m and at most … m below the ground, with … % of its base in cohesionless soil. If the stability of the slope as a whole is sought, set a minimum slip depth, slip area or entry–exit distance (Options › Search) to analyze the deeper surfaces.
+
+> The ground surface from (…, …) to (…, …) in … (c′ = 0, design φ′ = …°) is inclined at …°: a shallow slide parallel to it has F = tan φ′/tan β = …, below …. The analysis cannot represent so thin a slide; the slope face governs.
+
+In a soil with c′ = 0 the factor of safety falls as the surface gets shallower, toward tan φ′/tan β of the face, so the search ends at a thin slide at the surface. The first warning comes when the critical surface's base lies on average less than 1 m (or a tenth of the ground relief around it) below the ground, with half its base or more in cohesionless soil. The second comes when a face of the ground surface in such soil has a lower infinite-slope factor than the critical surface: the face governs, and the slices cannot represent a slide that thin.
+
+The face's factor may be the answer sought. When the stability of the slope as a whole is, set **Min. slip depth**, **Min. slip area** or **Min. entry–exit distance** ([Shallow surfaces](/docs/search#shallow-surfaces)).
+
+## Warnings about the slices of the critical surface
+
+| Warning | Cause and what to do |
+| --- | --- |
+| *… slices of the critical surface have negative effective normal force (N′ < 0) at the base.* | The base would need tension, which soil cannot take, usually near the crest. Add a tension crack ([Tension crack](/docs/analysis#tension-crack)). |
+| *… slices of the critical surface have m_α below 0.2 (steep base); the factor of safety may be unreliable.* | $m_\alpha = \cos\alpha + \sin\alpha \tan\varphi/F$ is small where the base is steep, and the normal force on it becomes large and uncertain. A tension crack at a base angle, or more slices, helps. |
+| *The surface enters the slope at …° and … slices on its steep part rely on tension at the base (N′ < 0 or a low m_α), which soil cannot take; …* | As for the steep entry above, with any method. Set **Crack at base angle**. |
+| *Bishop's simplified method is defined for circular surfaces (Bishop 1955); on a non-circular surface … its factor of safety depends on the moment axis. Use Spencer or Morgenstern-Price for them.* | The critical surface is not a circle (a custom polyline, a non-circular optimization or a composite circle). Change the method to Morgenstern-Price. |
+| *Material boundary … ends inside a region and does not split it; check its end points.* | An end of an interior boundary does not reach the outline or another boundary, so the layer it was meant to bound is not in the model. Drag the end point onto the other line; it snaps there. |
+
+The result summary can also say *No complete equilibrium: force equilibrium met within … (closest λ)*: Morgenstern-Price found no λ at which the moment and force factors meet, and the factor given satisfies moment equilibrium, force equilibrium only within that gap.
+
+## Surfaces discarded or skipped
+
+The notes under the summary count the trial surfaces left out: *… surfaces were discarded because they did not reach equilibrium* and *… surfaces smaller than the minimum slip area or depth were skipped*. A few discarded surfaces are normal; many can point to a search range that reaches unrealistic surfaces. See [Notes](/docs/results#notes).
+
+## Slow searches
+
+The time of a run grows with the number of trial surfaces (**Iterations** plus **Refined iterations**), the number of slices, the non-circular optimization, Hoek-Brown and shear-normal materials (which solve each surface several times) and the finite element analysis. The status bar counts the seconds while it runs; **■ Cancel** stops it.
+
+> Analysis timed out after … seconds.
+
+A run is stopped after 60 seconds for up to 1500 trial surfaces, and proportionally longer for more, with extra time for a finite element analysis. To make a search faster:
+
+- Narrow the search limits to the part of the slope you are assessing.
+- Start with the default 1000 iterations and 500 refined; raise them for the final analysis, until doubling them no longer lowers the factor noticeably.
+- Run the finite element analysis only when needed: it takes from seconds to minutes, and longer with refinement or non-associated flow.
+
+## Input that cannot be evaluated
+
+> Cannot run: … expression(s) cannot be evaluated — …
+
+An expression in a coordinate, a material property or a load refers to a parameter that does not exist or does not evaluate. The message names it; correct it or define the [parameter](/docs/geometry#parameters).
+
+A material with an invalid value stops the run with its name and the problem, for example *Material "Rock": σci must be > 0.* The Materials window lists the same problems in red under the form.
+
+## The Taylor series does not run
+
+> Mean − σ of … (material …) is negative; use Monte Carlo, which truncates the samples.
+
+The Taylor series analyzes each variable at its mean ± σ, and a strength or unit weight cannot be negative. Lower σ, or choose **Monte Carlo**, which redraws a sample that falls outside the valid range.
+
+> No valid slip surface at the mean values.
+
+The model has no valid slip surface with every variable at its mean: run the analysis itself first and solve that ([Sensitivity and probability](/docs/sensitivity)).
+
+## An imported model cannot be edited on the canvas
+
+A model imported from another program or from a DXF or DWG drawing starts with its exterior and material boundaries locked, so that a stray drag does not move them. The status bar shows *Geometry is locked (imported) · Unlock*, and the pointer over a locked point *Locked · right-click to unlock*. Click **Unlock** in the status bar, or right-click the boundary and choose **Unlock** ([Editing on the canvas](/docs/interface#editing-on-the-canvas)). The tables in the boundary windows can be edited while the geometry is locked.
+
+## A DWG or DXF import fails
+
+The import message says why, for example *The drawing has no closed polyline for the model boundary. Draw the outline of the slope as one closed polyline.*, *Not an ASCII DXF file (binary DXF is not supported).*, or for a DWG file that it is not one, that its version is older than R11, or that it may be damaged. See [Import from DXF](/docs/geometry#import-from-dxf) and [Import from DWG](/docs/geometry#import-from-dwg).

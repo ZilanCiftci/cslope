@@ -22,6 +22,8 @@ You can also select the search limits on the canvas and drag their markers (open
 
 Restrict the ranges to the part of the slope you are assessing, and keep them wide enough that the critical surface does not end at a limit. If it does, widen the range and run again.
 
+The entry range belongs on the crest side and the exit range on the toe side of the [sliding direction](#analysis-direction). When the entry range lies wholly on the toe side of the exit range, the limits are drawn for the other direction and no surface can be found. The Search limits window and the options then show a warning before any run, for example *The entry range lies right of the exit range, but the sliding direction is left to right. No slip surface will be found.*, with a button that turns the direction round (**Use right to left** or **Use left to right**). The same sentence and button head the error banner when a run finds no surface for this reason.
+
 ## Search settings
 
 The size of the search is set in **Model › Analysis › Options**:

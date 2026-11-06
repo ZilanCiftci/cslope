@@ -1,6 +1,6 @@
 ---
 title: Geometry
-description: Define the exterior boundary of the section and the boundaries between materials, import them from DXF, and use parameters.
+description: Define the exterior boundary of the section and the boundaries between materials, import them from DXF or DWG, and use parameters.
 section: Modeling
 order: 1
 ---
@@ -17,7 +17,7 @@ Open **Model › Boundaries › Exterior**. The window lists the points of the b
 - **+ Add point** adds a point 5 m to the right of the last one.
 - The button at the end of a row removes the point. The boundary keeps at least three points.
 
-On the canvas you can also right-click an edge and choose **Add point**, or right-click a point and choose **Delete point**. <Kbd>Delete</Kbd> removes the selected point. A model imported from another program or a DXF drawing starts with its exterior and material boundaries locked; click **Unlock** in the status bar, or right-click the boundary and choose **Unlock**, to edit them on the canvas.
+On the canvas you can also right-click an edge and choose **Add point**, or right-click a point and choose **Delete point**. <Kbd>Delete</Kbd> removes the selected point. A model imported from another program or a DXF or DWG drawing starts with its exterior and material boundaries locked; click **Unlock** in the status bar, or right-click the boundary and choose **Unlock**, to edit them on the canvas.
 
 The top of the exterior boundary is the ground surface. Slip surfaces enter and leave the slope there.
 
@@ -44,7 +44,7 @@ The status bar has a **Snap** checkbox and a grid size from 0.1 m to 5 m. With S
 
 ## Import from DXF
 
-**File › Import › DXF file** reads a section from a CAD drawing and adds it to the project as a new model, named after the file.
+**File › Import › DXF file…** reads a section from a CAD drawing and adds it to the project as a new model, named after the file.
 
 - The **closed polyline with the largest area** becomes the exterior boundary. The drawing must contain one.
 - **Open polylines on a water layer** become piezometric lines: a layer whose name contains *water*, *piezo*, *vatten* or *grundvatten*, or the word *gw* or *wt*.
@@ -57,6 +57,19 @@ After the import, assign materials to the regions, add the materials' properties
 <Callout type="tip">
   Draw the outline of the slope as one closed polyline, and each layer boundary as one polyline that reaches the outline at both ends.
 </Callout>
+
+## Import from DWG
+
+**File › Import › DWG file…** reads a DWG drawing (version R11 or later) the same way: the polylines and lines of the model space are read, and the model is made from them by the same rules as from a DXF file (the outline, the water layers, the interior boundaries, the units). The model is named after the file.
+
+- Arc segments of polylines are read as straight segments; the import message says how many polylines had them.
+- Entities in paper space (layouts) are not read, and the message says how many there were. Other entity types, as for DXF, are skipped and listed.
+- The message gives the file's DWG version, for example *DWG version AC1032 (2018)*.
+- A file with errors is read again in a recovery mode that keeps what it can; the message then says so, with the reason, and asks you to check the imported geometry.
+
+The reader is loaded the first time it is used. A file it cannot read gives a message with the reason, for example *Not a DWG file (it does not start with a DWG version code).*, *This DWG version is not supported: …* for a drawing older than R11, or *Reading the DWG file took more than 60 seconds; the file may be damaged.*
+
+To place a DWG drawing under a model and pick its lines instead, see [Drawings](/docs/drawings).
 
 ## Import and export .gsz project files
 
