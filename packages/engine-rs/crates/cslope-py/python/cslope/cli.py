@@ -16,6 +16,7 @@ import io
 import json
 import math
 import os
+import re
 import sys
 from typing import Any, Dict, List, Optional, Sequence, TextIO
 
@@ -161,11 +162,24 @@ def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
 PROJECT_SCHEMA_VERSION = 3
 
 
+def _free_water(definition: Dict[str, Any]) -> Dict[str, Any]:
+    """The definition with the water's deprecated ``followBoundary`` (which
+    the app writes) as ``freeWater``, its opposite (D-24; the engine reads
+    them the same)."""
+    tables = [definition.get("waterTable")] + list(definition.get("waterTables") or [])
+    for w in tables:
+        if isinstance(w, dict) and "followBoundary" in w and "freeWater" not in w:
+            w["freeWater"] = not w.pop("followBoundary")
+    return definition
+
+
 def export_document(model: Dict[str, Any]) -> Dict[str, Any]:
     """The analysis document of a model of a project file (its
-    ``model.json`` as a dict): the engine's definition as the app makes it,
-    in the model's own orientation, and the model's options as the app runs
-    them (absent: the app's defaults, which ``analyse`` takes anyway).
+    ``model.json`` as a dict), as the app runs it: the model read as the app
+    reads it on open (``cslope.normalize_model``), the engine's definition
+    as the app makes it, in the model's own orientation (the water's free
+    water as ``freeWater``, and each region the app leaves to the first
+    material assigned to it explicitly), and the complete options.
 
     The project's ``inputHash`` (docs/file-format.md, section 5) is the hash
     of the definition in canonical orientation (sliding towards +x), so for
@@ -175,19 +189,33 @@ def export_document(model: Dict[str, Any]) -> Dict[str, Any]:
 
     from .build import DOCUMENT_FORMAT, DOCUMENT_FORMAT_VERSION
 
-    doc: Dict[str, Any] = {
+    from . import _native
+
+    opened = cslope.normalize_model(model)
+    definition = cslope.model_to_definition(opened, normalize=False)
+    # each region the app leaves to the first material, said explicitly (#85)
+    definition = _native.assign_unassigned_regions(definition)
+    return {
         "format": DOCUMENT_FORMAT,
         "formatVersion": DOCUMENT_FORMAT_VERSION,
-        "definition": cslope.model_to_definition(model),
+        "definition": _free_water(definition),
+        "options": opened["options"],
     }
-    if isinstance(model.get("options"), dict):
-        doc["options"] = model["options"]
-    return doc
 
 
 def _open_project(path: str) -> Any:
     from . import project
 
+    try:
+        with open(path, "rb") as f:
+            head = f.read(4096)
+    except OSError as e:
+        raise _Invalid([{"path": "", "message": "Cannot read {}: {}".format(path, e.strerror or e)}]) from None
+    text = head.lstrip(b"\xef\xbb\xbf").lstrip()
+    if text.startswith(b"{") and b'"cslope-analysis"' in head:
+        raise _Invalid(
+            [{"path": "", "message": "{} is an analysis document, not a project file; run it with `cslope analyse`.".format(path)}]
+        )
     try:
         p = project.read(path)
     except OSError as e:
@@ -209,6 +237,19 @@ def _open_project(path: str) -> Any:
             [{"path": "", "message": "{} was saved by a newer cSlope (project schema version {}); update cslope to export it.".format(path, p.version)}]
         )
     return p
+
+
+_SAFE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def _file_name(model_id: str, index: int, used: set) -> str:
+    """A file name for a model: its id when that is a plain name, else its place."""
+    base = model_id if _SAFE_NAME.match(model_id) else "model-{}".format(index + 1)
+    name, k = base, 2
+    while name in used:
+        name, k = "{}-{}".format(base, k), k + 1
+    used.add(name)
+    return name + ".json"
 
 
 def _cmd_export(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
@@ -234,20 +275,30 @@ def _cmd_export(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
                 docs.append((m, export_document(m.data)))
             except ValueError as e:
                 raise _Invalid([{"path": "", "message": "Model {!r}: {}".format(m.name, e)}]) from None
-    if args.all and args.output:
-        os.makedirs(args.output, exist_ok=True)
-        for m, doc in docs:
-            target = os.path.join(args.output, m.id + ".json")
-            with open(target, "w", encoding="utf-8", newline="\n") as f:
-                f.write(dumps(doc))
-            out.write("{}\t{}\n".format(target, m.name))
-        return EXIT_OK
-    text = dumps(docs[0][1]) if not args.all else json.dumps([d for _, d in docs], ensure_ascii=False) + "\n"
-    if args.output:
-        with open(args.output, "w", encoding="utf-8", newline="\n") as f:
-            f.write(text)
-    else:
-        out.write(text)
+    try:
+        if args.all and args.output:
+            if os.path.exists(args.output) and not os.path.isdir(args.output):
+                raise _Invalid([{"path": "", "message": "{} is a file; with --all, -o names a folder.".format(args.output)}])
+            os.makedirs(args.output, exist_ok=True)
+            used: set = set()
+            for i, (m, doc) in enumerate(docs):
+                target = os.path.join(args.output, _file_name(m.id, i, used))
+                with open(target, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(dumps(doc))
+                out.write("{}\t{}\n".format(target, m.name))
+            return EXIT_OK
+        if args.all:
+            listed = [{"id": m.id, "name": m.name, "document": d} for m, d in docs]
+            text = json.dumps(listed, ensure_ascii=False) + "\n"
+        else:
+            text = dumps(docs[0][1])
+        if args.output:
+            with open(args.output, "w", encoding="utf-8", newline="\n") as f:
+                f.write(text)
+        else:
+            out.write(text)
+    except OSError as e:
+        raise _Invalid([{"path": "", "message": "Cannot write {}: {}".format(e.filename or args.output, e.strerror or e)}]) from None
     return EXIT_OK
 
 
@@ -301,7 +352,7 @@ def _parser() -> argparse.ArgumentParser:
     e.add_argument("project", help="a project file (.cslp)")
     which = e.add_mutually_exclusive_group()
     which.add_argument("--model", metavar="NAME", help="the model of this name (or id)")
-    which.add_argument("--all", action="store_true", help="every model: a JSON list, or with -o a folder of <model id>.json files")
+    which.add_argument("--all", action="store_true", help="every model: a JSON list of {id, name, document}, or with -o a folder of <model id>.json files")
     e.add_argument("-o", "--output", metavar="PATH", help="write to this file (with --all: folder) instead of printing")
     e.set_defaults(run=_cmd_export)
     s = sub.add_parser("schema", help="print a JSON schema (cslope info lists the names)")

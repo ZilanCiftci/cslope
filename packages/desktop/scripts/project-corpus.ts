@@ -12,7 +12,11 @@
  * - synthetic definitions through `modelFromDefinition`, and the
  *   definitions it refuses with their messages;
  * - boundary ids of the forms the app writes, in its order (localeCompare),
- *   which the Rust conversion's byte order must give too.
+ *   which the Rust conversion's byte order must give too;
+ * - models as saved (`model.json`, sparse, older or hand-made) with the
+ *   definition and the options the app runs after opening them
+ *   (`parseProjectData`, store/persistence.ts), for the Rust
+ *   `normalize_for_run`.
  *
  * Run it after a change to the conversion (store/helpers.ts,
  * store/definition-model.ts, utils/reinforcement.ts) or to a verification
@@ -43,6 +47,7 @@ const { verificationModels } = await import("../src/store/verification-models");
 const { buildModelSpaceSlopeDTO } = await import("../src/store/helpers");
 const { modelFromDefinition } = await import("../src/store/definition-model");
 const { APP_DEFAULT_ANALYSIS_OPTIONS, MATERIAL_COLORS, PIEZO_COLORS } = await import("../src/store/defaults");
+const { parseProjectData } = await import("../src/store/persistence");
 type ModelEntry = import("../src/store/types").ModelEntry;
 
 const OUT = join(import.meta.dirname, "../../engine-rs/golden/project-corpus.json");
@@ -150,7 +155,7 @@ const SYNTHETIC_FULL = {
     { id: "mat-a", name: "Clay", color: "#aa8844", model: mc(18, 10, 25), modelExpressions: { cohesion: "10" } },
     // the same name twice: the engine gets "Clay (2)"
     { id: "mat-b", name: "Clay", color: "#884422", depthRange: [0, 5], model: mc(19, 5, 30) },
-    { id: "mat-c", name: "Clay (2)", color: "#448822", model: { kind: "undrained", unitWeight: 17, cohesion: 30 } },
+    { id: "mat-c", name: "Clay (2)", color: "#448822", model: { kind: "undrained", unitWeight: 17, undrainedShearStrength: 30 } },
     { id: "mat-d", name: "Sand", color: "#cccc44", model: mc(20, 0, 35) },
   ],
   materialBoundaries: [
@@ -392,6 +397,127 @@ const REFUSED: { name: string; definition: SlopeDefinition }[] = [
   { name: "a material without a model", definition: { coordinates: GROUND, materials: [{ name: "A", unitWeight: 19 }] } as SlopeDefinition },
 ];
 
+// ── Models as saved (the app's load) ───────────────────────────
+
+/** The fixture of a project saved by this schema version, as files hold it (without the run). */
+const FIXTURE_MODELS = (
+  JSON.parse(readFileSync(join(import.meta.dirname, "../src/features/project/fixtures/legacy-json-v3.json"), "utf8")) as { models: Record<string, unknown>[] }
+).models.map((m) => {
+  const { runState: _s, progress: _p, result: _r, errorMessage: _e, ...rest } = m;
+  void [_s, _p, _r, _e];
+  return rest;
+});
+
+/** Saved models whose fields the app's load fills, clamps or drops. */
+const SAVED: { name: string; raw: Record<string, unknown> }[] = [
+  ...FIXTURE_MODELS.map((raw) => ({ name: `fixture legacy-json-v3: ${String(raw.name)}`, raw })),
+  {
+    name: "fields missing: orientation, options, limits, water",
+    raw: {
+      id: "sparse",
+      // faces left (inferred), no orientation
+      coordinates: [[0, 0], [0, 20], [20, 20], [40, 10], [60, 10], [60, 0]],
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+    },
+  },
+  {
+    name: "options of an older file, out of range and unknown",
+    raw: {
+      id: "old-options",
+      coordinates: GROUND,
+      orientation: "ltr",
+      materials: [{ id: "m1", name: "Soil", color: "#999999", model: mc(18, 5, 28) }],
+      analysisLimits: { enabled: true, entryLeftX: 18, entryRightX: "x", exitLeftX: 42 },
+      options: {
+        method: "Spencer",
+        slices: 5,
+        iterations: 50,
+        refinedIterations: -3,
+        tolerance: 0.5,
+        maxIterations: 0,
+        minFailureDist: -1,
+        tensionCrackDepth: -2,
+        tensionCrackWater: 3,
+        intersliceFunction: "trapezoidal",
+        intersliceDataPoints: [[0, "0.5"], ["1", 1], ["", 2], [3]],
+        janbuCorrection: "yes",
+        porePressureHead: "phreatic-correction",
+        minSlipDepth: 0,
+        minSlipArea: 2,
+        seismicHorizontal: 0.1,
+        seismicVertical: 2,
+        tensionCrackAngle: 45,
+        nonCircularOptimization: true,
+        searchMethod: "grid",
+        blockActiveAngle: [40, 60],
+        blockPassiveAngle: [60, 40],
+        bothDirections: true,
+        partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.3, basis: { safetyClass: 3, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 } },
+        fem: { enabled: true, poissonsRatio: 0.6, refinementLevels: 2.4, elementSize: -1, limitAnalysis: true, k0: 9, materialStages: { Soil: 2, Other: 1.5 } },
+        sgi3d: { enabled: true, length: -1, excludeMaterials: ["Soil", "Soil", 3] },
+        unknownOption: 1,
+      },
+    },
+  },
+  {
+    name: "rows the load drops or mends",
+    raw: {
+      id: "rows",
+      coordinates: GROUND,
+      orientation: "ltr",
+      materials: [
+        { id: "m1", name: "Flat", unitWeight: 19, cohesion: -2, frictionAngle: 30 },
+        { id: "m2", name: "Sat", color: "", model: { ...mc(18, 5, 28), unitWeightSat: 600, phiB: 15, maxSuction: -1, drawdownStrength: { cohesion: 2, frictionAngle: 95 } } },
+        { id: "m3", name: "Su", model: { kind: "undrained", unitWeight: 17, undrainedShearStrength: 30, suMax: 0, anisotropy: [], phiB: 10, bBar: 3, ru: 0.2 } },
+        { id: "m4", name: "Deep", depthRange: [0, "5"], model: { kind: "s-f-depth", unitWeight: 18, suTop: 10, rate: 1, depthReference: "datum", aboveWater: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 5, aboveWater: { kind: "x" } } } },
+      ],
+      materialBoundaries: [{ id: "b2", coordinates: [[0, 3], [60, "4"], [60, 4]] }, { id: "b1", coordinates: [[0, 6], [60, 6]], extra: 1 }],
+      regionMaterials: [{ point: [5, 1], materialId: "m2" }, { point: [5, 4] }, { point: [5, "x"], materialId: "m3" }, { point: [5, 8], materialId: "m4" }],
+      piezometricLine: {
+        enabled: true,
+        lines: [{ id: "w1", name: "W", color: "#000000", coordinates: [[0, 8], [30, "x"], [60, 12]] }, { id: "w2", coordinates: [[0, 7], [60, 9]] }],
+        activeLineId: "nope",
+        mainLineId: "nope",
+        materialAssignment: { m3: "w2", m4: 7 },
+        rapidDrawdown: { waterBefore: [[0, 9], [0, 10]] },
+      },
+      udls: [
+        { id: "u1", magnitude: 5, x1: 3, x2: 3 },
+        { id: "", magnitude: 5, x1: 1, x2: 3 },
+        { id: "u3", magnitude: "5", x1: 45, x2: 55, direction: "normal", excessPorePressure: [{ materialId: "m3", ratio: 1.5 }, { materialId: "m3", ratio: 0.5 }] },
+      ],
+      lineLoads: [{ id: "l1", magnitude: 10, x: 50, angle: 200, y: 3 }, { id: "l2", magnitude: 10, x: 30, angle: -30 }, { magnitude: 1, x: 2 }],
+      reinforcements: [
+        { type: "nail", x1: 34, y1: 16, x2: 24, y2: 13 },
+        { type: "rope", x1: 1, y1: 1, x2: 2, y2: 2 },
+        { id: "r3", type: "geosynthetic", x1: 45, y1: 18, x2: 35, y2: 18, interfaceFriction: 95, spacing: 0, pullout: "glue" },
+        { id: "r4", type: "tieback", x1: 32, y1: 15, x2: 20, y2: "10" },
+      ],
+      piles: [
+        { type: "pile", x1: 30, y1: 15, x2: 30, y2: 0, diameter: -1, angle: 120, direction: "up", location: "top" },
+        { id: "p2", type: "sheet-pile", x1: 40, y1: 20, x2: 40, y2: 2, mode: "force", force: -5, bendingStiffness: 0 },
+      ],
+      customSearchPlanes: [{ id: "c1", cx: 25, cy: 40, radius: 0 }, { id: "c2", cx: 25, cy: 40, radius: 30 }, { id: "c3", points: [[15, 10], ["x", 1], [45, 20]] }],
+      customPlanesOnly: "true",
+      blockSearchObjects: [{ id: "o1", points: [[20, 4]] }],
+      waternet: { headLines: [{ id: "h1", points: [[0, 9], [60, 16]] }, { points: [] }], referenceLines: [{ points: [[0, 4], [60, 4]], topHeadLineId: "h1", bottomHeadLineId: 2 }], phreaticLineId: 1 },
+      earlierStage: {
+        coordinates: GROUND,
+        materials: [{ name: "Soil", model: mc(18, 5, 28), color: 3 }, { name: "Bad", model: mc(-1, 5, 28) }, { name: "Gone" }],
+        materialBoundaries: [{ coordinates: [[0, 3], [60, 4]], materialName: "Bad" }, { coordinates: [[0, 1]] }],
+        regionAssignments: [{ point: [1, 1], materialName: "Soil" }, { point: [1, 2], materialName: "Bad" }],
+        topRegionMaterialName: "Bad",
+        waterTable: { mode: "custom", value: [[0, 6], [60, 12]], followBoundary: "yes" },
+        waterTables: [{ id: "x", coordinates: [[0, 5], [60, 5]], followBoundary: true, freeWater: true }, { coordinates: [[0, 1], [60, 1]] }],
+        udls: [{ magnitude: 3, x1: 1, x2: 1 }, { magnitude: 3, x1: 1, x2: 4, excessPorePressure: [{ material: "Bad", ratio: 0.5 }, { material: "Soil", ratio: 0.5 }] }],
+        earlierStage: { coordinates: GROUND, materials: [] },
+        unknownStageField: 1,
+      },
+      options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, searchMethod: "block" },
+    },
+  },
+];
+
 // ── Boundary order ──────────────────────────────────────────────
 
 /** Ids of the forms the app writes (nextId with and without crypto, modelFromDefinition, older files). */
@@ -469,6 +595,12 @@ const definitions = [
   return { ...d, definition: json(d.definition), model: comparable(m), roundTrip: json(buildModelSpaceSlopeDTO(m)) };
 });
 
+// Opened as the app opens a project of this schema version.
+const saved = SAVED.map(({ name, raw }) => {
+  const [model] = parseProjectData({ version: 3, models: [raw] }).models;
+  return { name, raw: json(raw), definition: json(buildModelSpaceSlopeDTO(model)), options: json(model.options) };
+});
+
 const refused = REFUSED.map((r) => {
   try {
     modelFromDefinition(r.definition, { id: "x", name: "x" });
@@ -490,9 +622,10 @@ const corpus = {
   models,
   verification,
   definitions,
+  saved,
   refused,
 };
 
 const text = JSON.stringify(corpus) + "\n";
 writeFileSync(full ? fullPath : OUT, text);
-console.log(`${full ? fullPath : OUT}: ${models.length} models, ${verification.length} verification problems, ${definitions.length} definitions, ${refused.length} refused; ${(text.length / 1024).toFixed(0)} kB`);
+console.log(`${full ? fullPath : OUT}: ${models.length} models, ${verification.length} verification problems, ${definitions.length} definitions, ${saved.length} saved, ${refused.length} refused; ${(text.length / 1024).toFixed(0)} kB`);

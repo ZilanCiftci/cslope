@@ -83,7 +83,8 @@ for phi in range(20, 41, 5):
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | Finite element analysis as the app runs it: `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | Taylor series or Monte Carlo: `ReliabilityResult` |
 | `to_canonical(definition)` | The definition turned to slide towards +x |
-| `model_to_definition(model)` | The engine's definition of a model of a project file (`cslope.project`), as the app makes it |
+| `model_to_definition(model, *, normalize=True)` | The engine's definition of a model of a project file (`cslope.project`), as the app makes it after opening the file |
+| `normalize_model(model)` | A model of a project file as the app reads it on open (the fields the analysis takes, and complete options) |
 | `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
 | `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
 | `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |

@@ -14,15 +14,21 @@
 pub mod convert;
 pub mod digest;
 pub mod model;
+pub mod normalize;
+pub mod regions;
 
 pub use convert::{
     app_default_options, definition_to_model, model_to_definition, ConvertError,
     DefinitionModelInfo,
 };
 pub use model::ModelEntry;
+pub use normalize::{normalize_for_run, normalize_model_json};
+pub use regions::assign_unassigned_regions;
 
-/// The definition of a model, as JSON (the shape the engine reads).
-pub fn model_to_definition_json(model: serde_json::Value) -> Result<serde_json::Value, String> {
-    let model = ModelEntry::from_json(model)?;
+/// The definition of a model as saved in a project, as JSON (the shape the
+/// engine reads), with the model first read as the app opens it
+/// ([`normalize_for_run`]).
+pub fn model_to_definition_json(model: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let model = normalize_for_run(model).map_err(|e| e.0)?;
     serde_json::to_value(model_to_definition(&model)).map_err(|e| e.to_string())
 }

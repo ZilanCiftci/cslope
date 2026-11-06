@@ -73,6 +73,14 @@ jobs:
       # it byte for byte when the engine changes.
       - name: Engine build is fresh
         run: bun packages/engine-rs/tools/check-wasm-fresh.ts
+      # The golden corpus of the model conversion (crates/cslope-project)
+      # is made by the app's code: a change to the app's conversion or load
+      # (store/helpers.ts, definition-model.ts, persistence.ts, ...) must
+      # regenerate it, and the rust job then holds the Rust port to it.
+      - name: Project corpus is fresh
+        run: |
+          bun packages/desktop/scripts/project-corpus.ts
+          git diff --exit-code -- packages/engine-rs/golden/project-corpus.json
       - name: Typecheck
         run: bun run typecheck
       - name: Lint

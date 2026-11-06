@@ -150,10 +150,17 @@ result = cslope.analyse(definition, model["options"])
 The model's dict is the app's shape, not the engine's: `model_to_definition`
 converts it as the app does before a run (the port of the app's
 `buildModelSpaceSlopeDTO` in the crate `cslope-project`, held to the app's
-by a golden corpus), in the model's own orientation. From the command line,
+by a golden corpus), in the model's own orientation. It first reads the
+model as the app does when it opens the project (`normalize_model`: missing
+fields filled, out-of-range options clamped, unusable rows dropped, the
+options complete; a model saved before `compositeSurfaces` existed keeps
+circles only, as in the app); `normalize=False` converts the dict as it is. From the command line,
 `cslope export site.cslp [--model NAME | --all] [-o PATH]` writes a model as
 an analysis document (`{"format": "cslope-analysis", ...}`) with its
-options, which `cslope validate` and `cslope analyse` take. It reads
+complete options, which `cslope validate` and `cslope analyse` take; the
+water is written with `freeWater`, and a region the app leaves to the first
+material gets that assignment explicitly (the app runs such a model; a
+hand-written document without it fails validation). It reads
 projects of the current schema version only: a file saved by an earlier
 cSlope is refused (open it in the app and save it; the app migrates it).
 The `inputHash` of a saved result is over the definition in canonical

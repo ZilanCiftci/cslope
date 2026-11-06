@@ -15,7 +15,8 @@ use cslope_project::convert::engine_boundary_order;
 use cslope_project::digest::digest;
 use cslope_project::model::{MaterialBoundaryRow, MATERIAL_COLORS, PIEZO_COLORS};
 use cslope_project::{
-    app_default_options, definition_to_model, model_to_definition, DefinitionModelInfo, ModelEntry,
+    app_default_options, definition_to_model, model_to_definition, normalize_for_run,
+    DefinitionModelInfo, ModelEntry,
 };
 use serde_json::{Map, Value};
 use std::collections::HashMap;
@@ -234,6 +235,117 @@ fn definitions_give_the_apps_model() {
             &d["roundTrip"],
         );
     }
+}
+
+#[test]
+fn saved_models_run_as_the_app_opens_them() {
+    // The app's load (parseProjectData) fills, clamps and drops fields of a
+    // saved model; normalize_for_run does the same for what the analysis
+    // takes: the definition and the options.
+    let saved = corpus()["saved"].as_array().unwrap();
+    assert!(saved.len() >= 5);
+    for s in saved {
+        let name = s["name"].as_str().unwrap();
+        let model = normalize_for_run(&s["raw"]).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_same(
+            &format!("{name}: the definition"),
+            &to_json(&model_to_definition(&model)),
+            &s["definition"],
+        );
+        assert_same(
+            &format!("{name}: the options"),
+            &Value::Object(model.options.clone().unwrap()),
+            &s["options"],
+        );
+    }
+}
+
+/// The codes of the region rules the export's assignments must satisfy.
+const REGION_CODES: [&str; 3] = [
+    "unassigned-region",
+    "missing-region-assignments",
+    "duplicate-region-assignment",
+];
+
+fn region_errors(def: &SlopeDefinition) -> Vec<String> {
+    let issues = cslope_engine::types::validate_definition::validate(&to_json(def), None);
+    to_json(&issues)
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|i| {
+            i["severity"] == "error" && REGION_CODES.contains(&i["code"].as_str().unwrap_or(""))
+        })
+        .map(|i| i["message"].as_str().unwrap().to_owned())
+        .collect()
+}
+
+#[test]
+fn every_region_gets_an_explicit_assignment_for_export() {
+    // the corpus's models (examples, synthetic, saved) and the verification
+    // problems as the app opens them
+    let c = corpus();
+    let mut defs: Vec<(String, SlopeDefinition)> = Vec::new();
+    for m in c["models"].as_array().unwrap() {
+        defs.push((
+            m["name"].as_str().unwrap().into(),
+            definition(&m["definition"]),
+        ));
+    }
+    for s in c["saved"].as_array().unwrap() {
+        defs.push((
+            s["name"].as_str().unwrap().into(),
+            definition(&s["definition"]),
+        ));
+    }
+    let vd = verification_definitions();
+    for e in c["verification"].as_array().unwrap() {
+        let id = e["case"].as_str().unwrap();
+        let model = definition_to_model(&definition(&vd[id]), &info(&e["info"])).unwrap();
+        defs.push((id.into(), model_to_definition(&model)));
+    }
+    let mut changed = 0;
+    for (name, def) in defs {
+        let before = region_errors(&def);
+        let mut out = def.clone();
+        let n = cslope_project::assign_unassigned_regions(&mut out);
+        changed += usize::from(n > 0);
+        assert_eq!(
+            region_errors(&out),
+            Vec::<String>::new(),
+            "{name} (before: {before:?})"
+        );
+        if before.is_empty() {
+            assert_eq!(
+                n, 0,
+                "{name}: assignments added to a definition without region errors"
+            );
+        }
+        // the assignments of the model stay first, unchanged
+        let had = def.region_assignments.clone().unwrap_or_default();
+        assert_eq!(
+            out.region_assignments.unwrap_or_default()[..had.len()],
+            had[..],
+            "{name}"
+        );
+    }
+    assert!(
+        changed >= 2,
+        "the corpus has models with regions left to the first material ({changed})"
+    );
+}
+
+#[test]
+fn a_hand_written_definition_with_an_unassigned_region_stays_an_error() {
+    let def: SlopeDefinition = serde_json::from_value(serde_json::json!({
+        "coordinates": [[0, 0], [0, 10], [20, 10], [40, 0]],
+        "materials": [{ "name": "A", "model": { "kind": "mohr-coulomb", "unitWeight": 18, "cohesion": 5, "frictionAngle": 30 } },
+                      { "name": "B", "model": { "kind": "mohr-coulomb", "unitWeight": 18, "cohesion": 5, "frictionAngle": 30 } }],
+        "materialBoundaries": [{ "coordinates": [[0, 5], [30, 5]] }],
+        "regionAssignments": [{ "point": [5, 7], "materialName": "B" }]
+    }))
+    .unwrap();
+    assert_eq!(region_errors(&def).len(), 1);
 }
 
 #[test]
