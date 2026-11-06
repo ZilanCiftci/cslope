@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import type { ContextMenuItem, ContextMenuState } from "./types";
+import { DISABLED_COLOR } from "../../components/ui/disabled-style";
 
 interface ContextMenuOverlayProps {
   menu: ContextMenuState | null;
@@ -8,7 +9,7 @@ interface ContextMenuOverlayProps {
 const MENU_STYLE = {
   background: "var(--color-vsc-input-bg)",
   border: "1px solid var(--color-vsc-border)",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+  boxShadow: "var(--color-vsc-shadow-float)",
 } as const;
 
 /** The box a menu must stay in: the canvas area the menu is placed in (it clips what sticks out). */
@@ -60,9 +61,9 @@ function MenuItems({ items }: { items: ContextMenuItem[] }) {
             aria-expanded={item.submenu ? open === item.label : undefined}
             onClick={item.disabled ? undefined : item.submenu ? () => setOpen(item.label) : item.action}
             disabled={item.disabled}
-            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:cursor-default"
             style={{
-              color: item.danger ? "var(--color-vsc-error)" : "var(--color-vsc-text)",
+              color: item.disabled ? DISABLED_COLOR : item.danger ? "var(--color-vsc-error)" : "var(--color-vsc-text)",
               background: open === item.label ? "var(--color-vsc-list-hover)" : undefined,
             }}
             onMouseEnter={(e) => {

@@ -13,6 +13,8 @@ export interface VariableItem {
   description: string;
   /** The current value, when the model has one. */
   preview: string | null;
+  /** Listed under the project information heading. */
+  group?: "project";
 }
 
 /** The menu's entries: every built-in tag, then the model's parameters. */
@@ -28,6 +30,7 @@ export function variableItems(
     description: t.description,
     // A parameter of the same name wins on the sheet.
     preview: has(t.tag) ? formatNumber(resolved[t.tag]) : t.value(ctx),
+    ...(t.group ? { group: t.group } : {}),
   }));
   const listed = new Set(items.map((it) => it.insert));
   for (const p of parameters) {

@@ -31,7 +31,9 @@ describe("ContextMenuOverlay", () => {
     const delBtn = screen.getByRole("menuitem", { name: "Delete point" });
     expect(screen.getByRole("menu").style.left).toBe("40px");
     expect(delBtn).toBeDisabled();
-    expect(delBtn.style.color).toBe("var(--color-vsc-error)");
+    // Disabled looks the same in every menu, a dangerous item too: muted, not faded.
+    expect(delBtn.style.color).toBe("var(--color-vsc-text-muted)");
+    expect(delBtn.style.opacity).toBe("");
     fireEvent.click(addBtn);
     fireEvent.click(delBtn);
     expect(add).toHaveBeenCalledTimes(1);

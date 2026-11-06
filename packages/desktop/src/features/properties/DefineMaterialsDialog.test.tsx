@@ -105,8 +105,10 @@ describe("DefineMaterialsDialog — material list", () => {
   it("closes from the footer, the header and with Escape in popup mode", async () => {
     const onClose = vi.fn();
     render(<DefineMaterialsDialog onClose={onClose} />);
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    await userEvent.click(screen.getByTitle("Close"));
+    // The header's close button and the footer's Close.
+    const [header, footer] = screen.getAllByRole("button", { name: "Close" });
+    await userEvent.click(footer);
+    await userEvent.click(header);
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(3);
   });

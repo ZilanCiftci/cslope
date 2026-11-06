@@ -59,8 +59,8 @@ describe("importDwg", () => {
     expect(s.materialBoundaries).toHaveLength(1);
     expect(s.materialBoundaries[0].coordinates).toHaveLength(3);
     expect(s.piezometricLine.lines).toHaveLength(1);
-    expect(message).toContain("1 ARC");
-    expect(message).toContain("AutoCAD 2004 (AC1018)");
+    expect(message).toContain("Not imported: 1 arc");
+    expect(message).toContain("DWG version AC1018 (2004).");
     expect(useAppStore.temporal.getState().pastStates).toHaveLength(0);
   });
 

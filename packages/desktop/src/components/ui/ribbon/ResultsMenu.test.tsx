@@ -85,16 +85,16 @@ describe("ResultsMenu", () => {
     expect(tab).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(tab);
     expect(onActivate).toHaveBeenCalled();
-    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("toolbar")).toBeNull();
   });
 
   it("disables the results plot and export without a result", () => {
     renderMenu({ withResult: false });
     // The tooltip says why.
-    const plot = screen.getByRole("menuitem", { name: "Results plot" });
+    const plot = screen.getByRole("button", { name: "Results plot" });
     expect(plot).toHaveAttribute("aria-disabled", "true");
     expect(plot).toHaveAttribute("title", "Run the analysis first");
-    const pdf = screen.getByRole("menuitem", { name: "Export PDF" });
+    const pdf = screen.getByRole("button", { name: "Export PDF" });
     expect(pdf).toBeDisabled();
     expect(pdf).toHaveAttribute("title", "Run the analysis first");
     expect(screen.getByTitle("More export options")).toBeDisabled();
@@ -190,7 +190,12 @@ describe("ResultsMenu", () => {
     expect(screen.getByTitle("Surfaces: All")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "All surfaces" })).toBeNull();
 
-    await userEvent.click(screen.getByTitle("Surfaces: All"));
+    const surfaces = screen.getByTitle("Surfaces: All");
+    await userEvent.click(surfaces);
+    expect(surfaces).toHaveAttribute("aria-expanded", "true");
+    // The current mode is the pressed one.
+    expect(screen.getByRole("button", { name: "All surfaces" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Critical only" })).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(screen.getByRole("button", { name: "Filter by FOS" }));
     await userEvent.click(screen.getByTitle("Surfaces: Filter"));
     const max = screen.getByLabelText("Maximum FOS shown");
@@ -498,7 +503,7 @@ describe("ResultsMenu reference lines", () => {
 
   it("adds a reference polyline and circle from the Annotations menu, through the middle of the model", async () => {
     renderMenu();
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("button", { name: "Reference line" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Polyline" }));
     expect(refs()).toHaveLength(1);
     const line = refs()[0] as { shape: string; points: [number, number][] };
@@ -510,7 +515,7 @@ describe("ResultsMenu reference lines", () => {
     expect(line.points[2][0]).toBeCloseTo(xMin + 0.7 * (xMax - xMin), 1);
     expect(store().selectedAnnotationIds).toEqual([refs()[0].id]);
 
-    await userEvent.click(screen.getByRole("menuitem", { name: "Reference line" }));
+    await userEvent.click(screen.getByRole("button", { name: "Reference line" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Circle" }));
     expect(refs()).toHaveLength(2);
     expect(refs()[1]).toMatchObject({ shape: "circle", clip: "ground" });

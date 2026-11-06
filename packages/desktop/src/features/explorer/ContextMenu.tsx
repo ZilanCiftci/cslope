@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Copy, Pencil, SlidersHorizontal, Trash2, type LucideIcon } from "lucide-react";
+import { DISABLED_COLOR } from "../../components/ui/disabled-style";
 
 export interface MenuPos {
   x: number;
@@ -105,7 +106,7 @@ export function ContextMenu({
         top: pos.y,
         background: "var(--color-vsc-input-bg)",
         border: "1px solid var(--color-vsc-border)",
-        boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+        boxShadow: "var(--color-vsc-shadow-float)",
       }}
       role="menu"
     >
@@ -114,11 +115,13 @@ export function ContextMenu({
           key={item.label}
           onClick={item.disabled ? undefined : item.action}
           disabled={item.disabled}
-          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          className="w-full flex items-center gap-2.5 px-3 py-1.5 text-[12px] text-left cursor-pointer transition-colors disabled:cursor-default"
           style={{
-            color: item.danger
-              ? "var(--color-vsc-error)"
-              : "var(--color-vsc-text)",
+            color: item.disabled
+              ? DISABLED_COLOR
+              : item.danger
+                ? "var(--color-vsc-error)"
+                : "var(--color-vsc-text)",
           }}
           onMouseEnter={(e) => {
             if (!item.disabled)
@@ -135,7 +138,7 @@ export function ContextMenu({
             strokeWidth={1.75}
             className="shrink-0"
             aria-hidden
-            color={item.danger ? "currentColor" : "var(--color-vsc-text-muted)"}
+            color={item.danger || item.disabled ? "currentColor" : "var(--color-vsc-text-muted)"}
           />
           {item.label}
         </button>

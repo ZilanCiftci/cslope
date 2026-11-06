@@ -1,10 +1,15 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
+import { ChevronDown } from "lucide-react";
+import { DISABLED_COLOR } from "../../components/ui/disabled-style";
 import type { ParameterDef } from "../../store/types";
 import type { AnnotationTagContext } from "./resolveAnnotationText";
 import { insertAtCaret, variableItems, type VariableItem } from "./insertVariable";
 
 const MENU_WIDTH = 280;
+
+/** The heading over the project information tags, said once for all of them. */
+const PROJECT_HEADING = "Project information (empty if not set)";
 
 /**
  * "Insert variable ▾" under a text annotation's Text field: lists the
@@ -150,6 +155,47 @@ export function InsertVariableMenu({
     }
   };
 
+  const renderItem = ({ item, index: i }: { item: VariableItem; index: number }) => (
+    <button
+      key={item.insert}
+      ref={(el) => {
+        itemRefs.current[i] = el;
+      }}
+      type="button"
+      role="menuitem"
+      tabIndex={i === active ? 0 : -1}
+      // A project information tag: its name says what it is.
+      title={item.group ? undefined : item.description}
+      onClick={() => choose(item)}
+      onMouseEnter={() => setActive(i)}
+      className="w-full block px-3 py-1 text-left cursor-pointer"
+      style={{
+        background: i === active ? "var(--color-vsc-list-hover)" : "transparent",
+        color: "var(--color-vsc-text)",
+      }}
+    >
+      <span className="flex items-baseline gap-2">
+        <span className="text-[11px] font-mono">{item.insert}</span>
+        {item.preview !== null && item.preview !== "" && (
+          <span
+            className="ml-auto text-[10px] tabular-nums truncate"
+            style={{ color: "var(--color-vsc-text-muted)" }}
+          >
+            ({item.preview})
+          </span>
+        )}
+      </span>
+      {!item.group && (
+        <span
+          className="block text-[10px] leading-tight"
+          style={{ color: "var(--color-vsc-text-muted)" }}
+        >
+          {item.description}
+        </span>
+      )}
+    </button>
+  );
+
   return (
     <>
       <button
@@ -165,19 +211,17 @@ export function InsertVariableMenu({
         aria-expanded={open}
         onClick={() => (open ? close(false) : openMenu(0))}
         onKeyDown={onButtonKeyDown}
-        className="mt-1 text-[10px] px-1.5 py-0.5 rounded cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+        className="mt-1 text-[10px] pl-1.5 pr-1 py-0.5 rounded inline-flex items-center gap-1 cursor-pointer disabled:cursor-default"
         style={{
           background: open
             ? "var(--color-vsc-list-active)"
             : "var(--color-vsc-list-hover)",
-          color: "var(--color-vsc-text)",
+          color: disabled ? DISABLED_COLOR : "var(--color-vsc-text)",
           border: "1px solid var(--color-vsc-border)",
         }}
       >
-        Insert variable{" "}
-        <span style={{ fontSize: 7, opacity: 0.6 }} aria-hidden>
-          ▾
-        </span>
+        Insert variable
+        <ChevronDown size={12} strokeWidth={1.75} style={{ color: "var(--color-vsc-text-muted)" }} aria-hidden />
       </button>
       {open && (
         <div
@@ -193,49 +237,41 @@ export function InsertVariableMenu({
             maxHeight: pos.maxHeight,
             background: "var(--color-vsc-input-bg)",
             border: "1px solid var(--color-vsc-border)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+            boxShadow: "var(--color-vsc-shadow-float)",
           }}
         >
-          {items.map((item, i) => (
-            <button
-              key={item.insert}
-              ref={(el) => {
-                itemRefs.current[i] = el;
-              }}
-              type="button"
-              role="menuitem"
-              tabIndex={i === active ? 0 : -1}
-              title={item.description}
-              onClick={() => choose(item)}
-              onMouseEnter={() => setActive(i)}
-              className="w-full block px-3 py-1 text-left cursor-pointer"
-              style={{
-                background:
-                  i === active ? "var(--color-vsc-list-hover)" : "transparent",
-                color: "var(--color-vsc-text)",
-              }}
-            >
-              <span className="flex items-baseline gap-2">
-                <span className="text-[11px] font-mono">{item.insert}</span>
-                {item.preview !== null && item.preview !== "" && (
-                  <span
-                    className="ml-auto text-[10px] tabular-nums truncate"
+          {runs(items).map((run) =>
+            run.group ? (
+              <Fragment key={run.group}>
+                <div role="group" aria-label={PROJECT_HEADING}>
+                  <div
+                    className="px-3 pt-1 pb-0.5 text-[10px]"
                     style={{ color: "var(--color-vsc-text-muted)" }}
+                    aria-hidden
                   >
-                    ({item.preview})
-                  </span>
-                )}
-              </span>
-              <span
-                className="block text-[10px] leading-tight"
-                style={{ color: "var(--color-vsc-text-muted)" }}
-              >
-                {item.description}
-              </span>
-            </button>
-          ))}
+                    {PROJECT_HEADING}
+                  </div>
+                  {run.items.map(renderItem)}
+                </div>
+                <div role="separator" className="my-1 h-px" style={{ background: "var(--color-vsc-border)" }} />
+              </Fragment>
+            ) : (
+              run.items.map(renderItem)
+            ),
+          )}
         </div>
       )}
     </>
   );
+}
+
+/** The items in runs of the same group, each with its index in the whole list. */
+function runs(items: VariableItem[]): { group?: "project"; items: { item: VariableItem; index: number }[] }[] {
+  const out: { group?: "project"; items: { item: VariableItem; index: number }[] }[] = [];
+  items.forEach((item, index) => {
+    const last = out.at(-1);
+    if (last && last.group === item.group) last.items.push({ item, index });
+    else out.push({ group: item.group, items: [{ item, index }] });
+  });
+  return out;
 }

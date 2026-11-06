@@ -173,7 +173,6 @@ export function FileMenu({
             : "var(--color-vsc-text-muted)",
           background: isOpen ? "var(--color-vsc-tab-active)" : "transparent",
         }}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         File
@@ -188,7 +187,7 @@ export function FileMenu({
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-stretch gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="toolbar" aria-label="File">
             <RibbonGroup label="Project">
               <RibbonButton
                 icon={<NewIcon {...LARGE_ICON} />}
@@ -208,7 +207,7 @@ export function FileMenu({
                   label="Import"
                   items={[
                     { label: "DXF file…", title: "Import a DXF file", onClick: handleImportDxf },
-                    { label: "DWG file…", title: "Import a DWG drawing (AutoCAD Release 11 or later)", onClick: handleImportDwg },
+                    { label: "DWG file…", title: "Import a DWG drawing (version R11 or later)", onClick: handleImportDwg },
                     {
                       label: "New models from drawing…",
                       title: "Frame each section of a drawing (PDF, DWG, DXF or image) and make a model of each, the drawing placed under it",

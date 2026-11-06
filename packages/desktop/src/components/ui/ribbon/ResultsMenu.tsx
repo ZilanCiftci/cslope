@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Check } from "lucide-react";
 import { useAppStore } from "../../../store/app-store";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
@@ -45,6 +46,7 @@ import {
   RibbonStack,
   RIBBON_POPUP_Z,
 } from "./RibbonParts";
+import { DISABLED_COLOR } from "../disabled-style";
 import {
   defaultReferenceCircle,
   defaultReferencePolyline,
@@ -303,7 +305,6 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
             : "var(--color-vsc-text-muted)",
           background: isOpen ? "var(--color-vsc-tab-active)" : "transparent",
         }}
-        aria-haspopup="menu"
         aria-expanded={isOpen}
       >
         Results
@@ -318,7 +319,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       {isOpen &&
         panelHost &&
         createPortal(
-          <div className="h-full flex items-stretch gap-0" role="menu">
+          <div className="h-full flex items-stretch gap-0" role="toolbar" aria-label="Results">
             <RibbonGroup label="Plots">
               <RibbonButton
                 icon={<ResultsPlotIcon {...LARGE_ICON} />}
@@ -348,6 +349,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     title={`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`}
                     onClick={() => setDisplayMenuOpen((o) => !o)}
                     hasDropdown
+                    expanded={displayMenuOpen}
                   />
                   {displayMenuOpen && (
                     <div
@@ -355,10 +357,12 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       style={{
                         background: "var(--color-vsc-panel)",
                         border: "1px solid var(--color-vsc-border)",
-                        minWidth: 110,
-                        boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                        minWidth: 150,
+                        boxShadow: "var(--color-vsc-shadow-float)",
                       }}
-                      role="menu"
+                      // Choices and fields, not only commands: a group.
+                      role="group"
+                      aria-label="Surfaces"
                     >
                       {(
                         [
@@ -373,16 +377,20 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             setRvs({ surfaceDisplay: item.value });
                             setDisplayMenuOpen(false);
                           }}
-                          className="w-full text-left px-3 py-1.5 text-[11px] cursor-pointer flex items-center gap-2 whitespace-nowrap"
+                          className="w-full text-left pl-2 pr-3 py-1.5 text-[11px] cursor-pointer flex items-center gap-1.5 whitespace-nowrap hover:bg-[var(--color-vsc-list-hover)]"
                           style={{
-                            background:
-                              rvs.surfaceDisplay === item.value
-                                ? "var(--color-vsc-list-active)"
-                                : "transparent",
+                            background: "transparent",
                             border: "none",
                             color: "var(--color-vsc-text)",
                           }}
+                          aria-pressed={rvs.surfaceDisplay === item.value}
                         >
+                          {/* The current mode has a check mark. */}
+                          <span className="w-3 shrink-0 flex items-center justify-center" aria-hidden>
+                            {rvs.surfaceDisplay === item.value && (
+                              <Check size={12} strokeWidth={1.75} style={{ color: "var(--color-vsc-text-muted)" }} />
+                            )}
+                          </span>
                           {item.label}
                         </button>
                       ))}
@@ -397,7 +405,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                         >
                           <input
                             type="checkbox"
-                            className="accent-blue-500"
+                            className="accent-[var(--color-vsc-accent)]"
                             checked={rvs.showCustomSurfaces === true}
                             onChange={(e) => setRvs({ showCustomSurfaces: e.target.checked })}
                             aria-label="Show custom surfaces"
@@ -407,7 +415,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       )}
                       {rvs.surfaceDisplay === "filter" && (
                         <label
-                          className="flex items-center gap-2 px-3 py-1.5 text-[11px]"
+                          className="flex items-center gap-2 px-3 py-1.5 text-[11px] whitespace-nowrap"
                           style={{
                             color: "var(--color-vsc-text)",
                             borderTop: "1px solid var(--color-vsc-border)",
@@ -621,17 +629,14 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <button
                   onClick={handleExportPdf}
                   disabled={!hasResult}
-                  className={`min-w-[58px] h-[50px] pl-2 pr-4 rounded-xs flex flex-col items-center justify-center gap-[5px] cursor-pointer ${hasResult ? "hover:bg-[var(--color-vsc-list-hover)]" : ""}`}
+                  className={`min-w-[58px] h-[50px] pl-2 pr-4 rounded-xs flex flex-col items-center justify-center gap-[5px] ${hasResult ? "cursor-pointer hover:bg-[var(--color-vsc-list-hover)]" : "cursor-default"}`}
                   style={{
-                    color: "var(--color-vsc-text)",
+                    color: hasResult ? "var(--color-vsc-text)" : DISABLED_COLOR,
                     background: "transparent",
-                    opacity: hasResult ? 1 : 0.4,
                     border: "none",
                   }}
                   title={hasResult ? "Export PDF" : "Run the analysis first"}
                   aria-label="Export PDF"
-                  role="menuitem"
-                  aria-disabled={!hasResult}
                   data-size="large"
                 >
                   <span className="flex items-center justify-center">
@@ -651,15 +656,15 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                     setExportMenuOpen(!exportMenuOpen);
                   }}
                   disabled={!hasResult}
-                  className="absolute bottom-[3px] right-0 w-4 h-4 flex items-center justify-center cursor-pointer"
+                  // 16 px wide in the button's right padding, 24 px tall.
+                  className={`absolute bottom-0 right-0 w-4 h-6 rounded-xs flex items-center justify-center ${hasResult ? "cursor-pointer hover:bg-[var(--color-vsc-list-hover)]" : "cursor-default"}`}
                   style={{
                     background: "transparent",
                     border: "none",
                     padding: 0,
-                    opacity: hasResult ? 1 : 0.4,
                   }}
-                  aria-haspopup="menu"
                   aria-expanded={exportMenuOpen}
+                  aria-label="More export options"
                   title="More export options"
                 >
                   <Chevron />
@@ -672,9 +677,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       background: "var(--color-vsc-panel)",
                       border: "1px solid var(--color-vsc-border)",
                       minWidth: 160,
-                      boxShadow: "0 6px 16px rgba(0,0,0,0.2)",
+                      boxShadow: "var(--color-vsc-shadow-float)",
                     }}
-                    role="menu"
+                    // Commands and options: a group, not a menu.
+                    role="group"
+                    aria-label="Export options"
                   >
                     <button
                       onClick={() => {
@@ -713,7 +720,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                             type="checkbox"
                             checked={pdfPageOptions(rvs)[option]}
                             onChange={(e) => setRvs({ [key]: e.target.checked })}
-                            className="accent-blue-500 w-3 h-3"
+                            className="accent-[var(--color-vsc-accent)] w-3 h-3"
                           />
                           {label}
                         </label>
