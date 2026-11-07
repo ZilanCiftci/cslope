@@ -72,6 +72,14 @@ fn region_of(p: Pt, regions: &[Vec<Pt>]) -> Option<usize> {
     regions.iter().position(|r| in_polygon(p, r))
 }
 
+/// The index of the region of `def` (the outline cut by its boundaries, as
+/// the validation splits it) that holds `p`, or None when no region does or
+/// the boundaries cannot be split. For assigning a material to a region
+/// (the Python `Model.assign` replaces the region's earlier assignment).
+pub fn region_index(def: &SlopeDefinition, p: Pt) -> Option<usize> {
+    region_of(p, &regions(def)?)
+}
+
 /// A point strictly inside region `r`: on a horizontal line between two
 /// vertex levels (widest gaps first), the middle of the widest stretch
 /// inside the ring; accepted when `r` is the first region containing it
@@ -176,4 +184,29 @@ pub fn assign_unassigned_regions(def: &mut SlopeDefinition) -> usize {
         def.region_assignments = Some(all);
     }
     n
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use cslope_engine::types::MaterialBoundary;
+
+    #[test]
+    fn region_index_tells_the_regions_apart() {
+        let mut def: SlopeDefinition = serde_json::from_value(serde_json::json!({
+            "coordinates": [[0, 0], [0, 10], [20, 10], [20, 0]],
+            "materials": [{"name": "A", "model": {"kind": "mohr-coulomb", "unitWeight": 18, "cohesion": 5, "frictionAngle": 30}}],
+        }))
+        .unwrap();
+        assert_eq!(region_index(&def, [5.0, 5.0]), Some(0));
+        assert_eq!(region_index(&def, [50.0, 5.0]), None);
+        def.material_boundaries = Some(vec![MaterialBoundary {
+            coordinates: vec![[0.0, 5.0], [20.0, 5.0]],
+            material_name: String::new(),
+        }]);
+        let above = region_index(&def, [5.0, 8.0]);
+        let below = region_index(&def, [5.0, 2.0]);
+        assert!(above.is_some() && below.is_some() && above != below);
+        assert_eq!(region_index(&def, [15.0, 9.0]), above);
+    }
 }
