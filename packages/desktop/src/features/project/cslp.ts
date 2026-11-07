@@ -44,7 +44,7 @@ import { adoptProjectAssets, openedProjectAssets, type ProjectAsset } from "../d
 import { isLegacyEntry, normalizeBackgrounds } from "../drawings/placement";
 import { imageSize } from "../drawings/image-size";
 import { markResultOutOfDate } from "../../store/out-of-date";
-import { rememberResultHash, resultInputHash } from "../../store/result-input";
+import { errorInputHash, rememberErrorHash, rememberResultHash, resultInputHash } from "../../store/result-input";
 
 export { adoptProjectAssets, openedProjectAssets, normalizeBackgrounds, type ProjectAsset };
 
@@ -261,9 +261,11 @@ async function resultJson(model: ModelEntry): Promise<CslpResult | null> {
     errorMessage: model.runState === "error" ? (model.errorMessage ?? null) : null,
     // The hash of the input the result was computed for (kept since the
     // run, or since the file it was read from); computed from the model now
-    // only for a result whose input is not known (an error, a result of an
-    // earlier JSON project).
-    inputHash: (await resultInputHash(model.result)) ?? (await analysisInputHash(model)),
+    // only for a result whose input is not known (a result of an earlier
+    // JSON project).
+    inputHash:
+      (model.runState === "done" ? await resultInputHash(model.result) : await errorInputHash(model.id, model.errorMessage)) ??
+      (await analysisInputHash(model)),
     engine: { ...ENGINE_BUILD },
   };
 }
@@ -365,7 +367,9 @@ export async function readProject(bytes: Uint8Array, limits: ProjectZipLimits = 
   // edited after the run) stays, marked as out of date.
   for (const model of opened.file.models) {
     const saved = opened.results.get(model.id);
-    if (model.runState !== "done" || !model.result || !saved) continue;
+    if (!saved) continue;
+    if (model.runState === "error" && model.errorMessage) rememberErrorHash(model.id, model.errorMessage, saved.inputHash);
+    if (model.runState !== "done" || !model.result) continue;
     rememberResultHash(model.result, saved.inputHash);
     if (saved.inputHash !== (await analysisInputHash(model))) markResultOutOfDate(model.result);
   }

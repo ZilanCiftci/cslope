@@ -140,11 +140,24 @@ def test_a_model_changed_keeps_no_result_and_the_thumbnail_goes(tmp_path):
     # a change that is not part of the input keeps it
     p.model("model-2").data["name"] = "Renamed"
     report = p.save(tmp_path / "x.cslp")
-    assert report == {"droppedResults": ["model-1"], "droppedThumbnail": True}
+    # (the thumbnail shows the active model, model-2, whose result stays)
+    assert report == {"droppedResults": ["model-1"], "droppedThumbnail": False}
     names = entries(tmp_path / "x.cslp")
-    assert "models/model-1/result.json" not in names and "thumbnail.png" not in names
+    assert "models/model-1/result.json" not in names and "thumbnail.png" in names
     assert "models/model-2/result.json" in names
-    assert m.result is None and p.thumbnail() is None
+    assert m.result is None
+    p.active_model.data["materials"][0]["model"]["unitWeight"] += 1
+    assert p.save(tmp_path / "y.cslp") == {"droppedResults": ["model-2"], "droppedThumbnail": True}
+    assert "thumbnail.png" not in entries(tmp_path / "y.cslp") and p.thumbnail() is None
+
+
+@needs_fixtures
+def test_a_result_a_newer_cslope_extended_is_left_out_with_a_warning(tmp_path):
+    src = FIXTURES / "cslp-v1.cslp"
+    newer = rewritten(src, tmp_path / "n.cslp", "models/model-1/result.json", lambda v: v["result"].update(newField=1))
+    with pytest.warns(UserWarning, match="model-1 was left out.*newField"):
+        p = project.open(newer)
+    assert p.model("model-1").result is None and p.model("model-2").result is not None
 
 
 @needs_fixtures
@@ -187,3 +200,11 @@ def test_analyse_prints_without_writing(tmp_path):
     doc.write_text(json.dumps({"format": "cslope-analysis", "formatVersion": 1, "definition": {}}))
     code, _, err = run("analyse", doc, "--write")
     assert code == 2 and "for a project file" in err
+
+
+@needs_fixtures
+def test_a_name_that_is_not_unicode_is_named(tmp_path):
+    p = project.open(FIXTURES / "cslp-v1.cslp")
+    p.models[0].data["name"] = "a\ud800b"
+    with pytest.raises(ValueError, match=r"models\[0\]\.model\.name holds a lone surrogate"):
+        p.save(tmp_path / "x.cslp")

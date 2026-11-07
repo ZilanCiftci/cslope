@@ -2094,9 +2094,7 @@ fn earlier_stage(raw: Option<&Value>, cx: &Ctx) -> Option<Value> {
                     return None;
                 }
                 let mut o = json!({ "id": id, "coordinates": c });
-                if w.get("followBoundary") == Some(&Value::Bool(true)) {
-                    o["followBoundary"] = json!(true);
-                }
+                stage_water_flags(w, &mut o);
                 Some(o)
             })
             .collect();
@@ -2116,10 +2114,19 @@ fn earlier_stage(raw: Option<&Value>, cx: &Ctx) -> Option<Value> {
     Some(stage)
 }
 
+/// `stageWaterFlags`: `followBoundary` and `freeWater` when booleans (a
+/// false one too: the engine's default for a missing one is not false).
+fn stage_water_flags(w: &Value, out: &mut Value) {
+    for key in ["followBoundary", "freeWater"] {
+        if let Some(Value::Bool(b)) = w.get(key) {
+            out[key] = json!(b);
+        }
+    }
+}
+
 /// `normalizeStageWaterTable`.
 fn stage_water_table(raw: Option<&Value>) -> Option<Value> {
     let w = raw?.as_object()?;
-    let follow = w.get("followBoundary") == Some(&Value::Bool(true));
     let mut out = match str_of(w.get("mode")) {
         Some("custom") => {
             let value = points(w.get("value"));
@@ -2131,9 +2138,7 @@ fn stage_water_table(raw: Option<&Value>) -> Option<Value> {
         Some(mode @ ("height" | "depth")) => json!({ "mode": mode, "value": num(w.get("value"))? }),
         _ => return None,
     };
-    if follow {
-        out["followBoundary"] = json!(true);
-    }
+    stage_water_flags(&Value::Object(w.clone()), &mut out);
     Some(out)
 }
 

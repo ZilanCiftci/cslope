@@ -32,7 +32,9 @@ first .cslp layout, an older schema) is refused with a message to open it
 in the app and save it (the app migrates it), a newer one with a message to
 update; a member or entry the format does not define is an error naming
 it, never carried over. A model dict changed in Python is checked the same
-way when the project is saved.
+way when the project is saved. A saved result the reader cannot read (one
+a newer cSlope wrote with a member this version does not know) is left out
+with a warning; the model opens without it.
 
 Results: a result belongs to the input it was computed for (its
 ``inputHash``). A model whose input changed since its result keeps no
@@ -279,6 +281,9 @@ class Project:
             "models": [{"id": m.id, "model": m.data, "result": m.result, "backgrounds": m.backgrounds} for m in self.models],
             "assets": [{"id": a.id, "mime": a.mime, "originalName": a.original_name, "addedAt": a.added_at} for a in self.assets],
         }
+        bad = _lone_surrogate(doc, "")
+        if bad is not None:
+            raise ValueError("{} holds a lone surrogate (text that is not valid Unicode); a project file is UTF-8".format(bad or "the project"))
         report = _native.project_write(
             doc,
             {a.id: a.data for a in self.assets},
@@ -304,6 +309,30 @@ class Project:
         self.close()
 
 
+def _lone_surrogate(value: Any, path: str) -> Optional[str]:
+    """The path of the first string (or key) in ``value`` that cannot be UTF-8, or None."""
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            return path
+        return None
+    if isinstance(value, dict):
+        for k, v in value.items():
+            p = "{}.{}".format(path, k) if path else str(k)
+            if isinstance(k, str) and _lone_surrogate(k, p) is not None:
+                return p
+            found = _lone_surrogate(v, p)
+            if found is not None:
+                return found
+    elif isinstance(value, (list, tuple)):
+        for i, v in enumerate(value):
+            found = _lone_surrogate(v, "{}[{}]".format(path, i))
+            if found is not None:
+                return found
+    return None
+
+
 def open(path: Union[str, "os.PathLike[str]"]) -> Project:  # noqa: A001 - the module's verb
     """Open a ``.cslp`` project file saved by the cSlope app (this schema version).
 
@@ -311,6 +340,10 @@ def open(path: Union[str, "os.PathLike[str]"]) -> Project:  # noqa: A001 - the m
     earlier or newer version, an unknown member, a damaged archive) and
     ``OSError`` when the file cannot be read."""
     doc, data, thumbnail = _native.project_read(os.fspath(path))
+    # a result.json this reader cannot read (damaged, or with a member a
+    # newer cSlope added) is left out; the model opens without it
+    for message in doc.get("warnings") or []:
+        warnings.warn(message, stacklevel=2)
     models = [Model(m["id"], m["model"], m.get("result"), list(m.get("backgrounds") or [])) for m in doc["models"]]
     assets = [Asset(a["id"], a["mime"], a["originalName"], a["addedAt"], builtins.bytes(data[a["id"]])) for a in doc["assets"]]
     return Project(

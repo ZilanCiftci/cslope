@@ -30,9 +30,30 @@ pub fn json_number(x: f64) -> String {
     }
 }
 
-/// JavaScript's default sort of object keys: by UTF-16 code units.
+/// An array index as JavaScript orders object keys: a canonical decimal
+/// integer below 2^32 − 1 ("0", "7", "10"; not "01" or "-1").
+fn array_index(k: &str) -> Option<u32> {
+    if k.is_empty() || (k.len() > 1 && k.starts_with('0')) || !k.bytes().all(|b| b.is_ascii_digit())
+    {
+        return None;
+    }
+    k.parse::<u64>()
+        .ok()
+        .filter(|n| *n < u64::from(u32::MAX))
+        .map(|n| n as u32)
+}
+
+/// The order of an object's keys in the app's canonical JSON: the keys are
+/// sorted by UTF-16 code units (JavaScript's default sort), but an object
+/// lists its array-index keys first, in numeric order, whatever order they
+/// were added in (so JSON.stringify writes "2" before "10").
 fn key_order(a: &str, b: &str) -> std::cmp::Ordering {
-    a.encode_utf16().cmp(b.encode_utf16())
+    match (array_index(a), array_index(b)) {
+        (Some(x), Some(y)) => x.cmp(&y),
+        (Some(_), None) => std::cmp::Ordering::Less,
+        (None, Some(_)) => std::cmp::Ordering::Greater,
+        (None, None) => a.encode_utf16().cmp(b.encode_utf16()),
+    }
 }
 
 fn indent(level: usize, out: &mut String) {
@@ -110,6 +131,16 @@ mod tests {
             .map(|k| text.find(k).unwrap())
             .collect();
         assert!(order.windows(2).all(|w| w[0] < w[1]), "{text}");
+    }
+
+    #[test]
+    fn array_index_keys_come_first_in_numeric_order() {
+        let v =
+            json!({ "b": 1, "10": 2, "2": 3, "1": 4, "01": 5, "4294967295": 6, "4294967294": 7 });
+        assert_eq!(
+            canonical_json(&v).replace(['\n', ' '], ""),
+            r#"{"1":4,"2":3,"10":2,"4294967294":7,"01":5,"4294967295":6,"b":1}"#
+        );
     }
 
     #[test]

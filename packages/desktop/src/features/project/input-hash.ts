@@ -15,14 +15,34 @@
  * water, loads, reinforcement, piles, boundaries and region assignments,
  * search limits, an earlier stage) and the analysis options. Nothing else
  * of the model (its name, views, annotations, result settings) is in it.
+ *
+ * The model is taken as a reader reads it back from the file
+ * (`parseProjectData` of its saved JSON): the app holds values the load
+ * normalizes away (an option at its default, such as `bothDirections:
+ * false`), and a result's hash must be the same when it is computed at the
+ * end of a run and when the file is opened again.
  */
 import { buildSlopeDTOFromModel } from "../../store/helpers";
+import { parseProjectData, PROJECT_FILE_VERSION, RUN_FIELDS } from "../../store/persistence";
 import type { ModelEntry } from "../../store/types";
 import { canonicalJson } from "../../utils/canonical-json";
 
 /** The text that is hashed: the model's analysis input as canonical JSON. */
 export function analysisInputJson(model: ModelEntry): string {
-  return canonicalJson({ definition: buildSlopeDTOFromModel(model), options: model.options });
+  const read = readBack(model);
+  return canonicalJson({ definition: buildSlopeDTOFromModel(read), options: read.options });
+}
+
+/** The model as it reads back from its model.json (the model itself when it cannot be read). */
+function readBack(model: ModelEntry): ModelEntry {
+  const saved: Record<string, unknown> = JSON.parse(JSON.stringify(model));
+  for (const f of RUN_FIELDS) delete saved[f];
+  delete saved.backgrounds;
+  try {
+    return parseProjectData({ version: PROJECT_FILE_VERSION, models: [saved] }).models[0];
+  } catch {
+    return model;
+  }
 }
 
 /** The model's input hash (SHA-256 of analysisInputJson, lowercase hex). */

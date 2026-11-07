@@ -159,6 +159,10 @@ The outcome of the model's last analysis. Absent when the model has no outcome (
 
 The outcome is read from `result.json` only: run fields in `model.json` are ignored. A reader keeps a result whose `inputHash` differs from the model's current input (the file may have been edited by hand, or the hash's definition may have changed between versions); it may show it as out of date. The app does (an amber run-state dot in the Models panel, "Result out of date", the result still viewable); `check-project.ts` reports it.
 
+The Python reader (`cslope.project`) reads `model.json` and the other entries strictly (an unknown member is an error naming it) but `result.json` leniently: a result it cannot read, damaged or with a member a newer cSlope added, is left out with a warning and the model opens without it (the result can be computed again; a model cannot). An earlier stage's water tables keep their `followBoundary` and `freeWater` when they are booleans, false too (a reader that dropped a false one changed the stage's water: the engine reads a missing `followBoundary` as true).
+
+The input hash is taken of the model as it reads back from its `model.json`: a writer that holds values the load normalizes (an option at its default, such as `bothDirections: false`) hashes the model read back, so a result's hash at the end of its run is the hash of the model the file opens as.
+
 A writer that changes a model without running it again must not write the model's old result with a new hash: it writes no `result.json` for that model, and leaves `thumbnail.png` out (it shows a result). The Python writer applies this policy on every save; `cslope analyse site.cslp --write` runs models again and writes their results with the current hash and `engine: { "version": <the cslope version>, "sourceHash": "" }`.
 
 ### 4.5 models/\<id\>/backgrounds.json

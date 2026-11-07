@@ -73,7 +73,7 @@ export function ModelRow({
       : hasResult && outOfDate
         ? {
             label: "Result out of date",
-            title: "Result out of date: the model was changed after this result was computed. Run the analysis again to update it.",
+            title: "The model was changed after this result was computed. Run the analysis again to update it.",
             fill: "var(--color-vsc-warning)",
           }
         : hasResult

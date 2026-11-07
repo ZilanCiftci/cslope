@@ -170,11 +170,6 @@ def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     return EXIT_OK
 
 
-#: The project schema version ``cslope export`` reads (the app's
-#: PROJECT_FILE_VERSION): an older project is migrated by the app on open.
-PROJECT_SCHEMA_VERSION = 3
-
-
 def _free_water(definition: Dict[str, Any]) -> Dict[str, Any]:
     """The definition with the water's deprecated ``followBoundary`` (which
     the app writes) as ``freeWater``, its opposite (D-24; the engine reads

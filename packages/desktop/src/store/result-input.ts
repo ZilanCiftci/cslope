@@ -1,6 +1,7 @@
 /**
  * The analysis input each result was computed for, kept with the result in
- * memory (by the result object; never saved itself): the model's input as
+ * memory (by the result object, and for a failed run by the model's id and
+ * its message; never saved itself): the model's input as
  * canonical JSON when a run completes, or the `inputHash` of the
  * result.json it was read from. The project writer saves this hash with
  * the result (docs/file-format.md section 4.4), never one computed from the
@@ -28,4 +29,35 @@ export async function resultInputHash(result: AnalysisResult | null | undefined)
   if (!known) return undefined;
   if (known.hash === undefined && known.json !== undefined) known.hash = await sha256Hex(new TextEncoder().encode(known.json));
   return known.hash;
+}
+
+const errorInputs = new Map<string, { message: string; json?: string; hash?: string }>();
+
+/** A run of `model` (as it was run) failed with `message`. */
+export function rememberErrorInput(modelId: string, message: string, model: ModelEntry): void {
+  errorInputs.set(modelId, { message, json: analysisInputJson(model) });
+}
+
+/** The model's failed run was read from a result.json with this `inputHash`. */
+export function rememberErrorHash(modelId: string, message: string, hash: string): void {
+  errorInputs.set(modelId, { message, hash });
+}
+
+/** The hash of the input the model's failed run (with this message) was for, or undefined when it is not known. */
+export async function errorInputHash(modelId: string, message: string | null | undefined): Promise<string | undefined> {
+  const known = errorInputs.get(modelId);
+  if (!known || known.message !== message) return undefined;
+  if (known.hash === undefined && known.json !== undefined) known.hash = await sha256Hex(new TextEncoder().encode(known.json));
+  return known.hash;
+}
+
+/**
+ * A changed copy of a model (anonymized: other names, other id) whose run
+ * outcome still belongs to it: the copy's outcome is stamped with the copy's
+ * input when the original's input was known.
+ */
+export function restampCopy(from: ModelEntry, to: ModelEntry): void {
+  if (from.result && to.result && inputs.has(from.result)) rememberResultInput(to.result, to);
+  const error = errorInputs.get(from.id);
+  if (error && from.errorMessage === error.message && to.errorMessage) rememberErrorInput(to.id, to.errorMessage, to);
 }

@@ -58,6 +58,7 @@ const { buildModelSpaceSlopeDTO } = await import("../src/store/helpers");
 const { modelFromDefinition } = await import("../src/store/definition-model");
 const { APP_DEFAULT_ANALYSIS_OPTIONS, MATERIAL_COLORS, PIEZO_COLORS } = await import("../src/store/defaults");
 const { parseProjectData, RUN_FIELDS } = await import("../src/store/persistence");
+const { OPTION_VARIANTS } = await import("../src/test/option-variants");
 const { analysisInputHash } = await import("../src/features/project/input-hash");
 type ModelEntry = import("../src/store/types").ModelEntry;
 
@@ -610,6 +611,30 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
     },
   },
 ];
+
+// Every value of every option control on the first example, and a model
+// whose materials are named like array indices (keys JavaScript orders
+// first): their input hash as the app computes it, for the Rust one.
+const FIRST_EXAMPLE = JSON.parse(JSON.stringify(BENCHMARK_MODELS[0])) as Record<string, unknown>;
+for (const k of ["result", "runState", "progress", "errorMessage"]) delete FIRST_EXAMPLE[k];
+SAVED.push(
+  ...OPTION_VARIANTS.map(({ name, patch }) => ({
+    name: `option: ${name}`,
+    raw: { ...FIRST_EXAMPLE, id: "variant", options: { ...(FIRST_EXAMPLE.options as object), ...patch } },
+  })),
+  {
+    name: "materials named 1, 10 and 2",
+    raw: {
+      id: "numbered",
+      coordinates: GROUND,
+      orientation: "ltr",
+      materials: ["1", "10", "2"].map((n, i) => ({ id: `m${i}`, name: n, color: "#999999", model: mc(18 + i, 5, 28) })),
+      materialBoundaries: [{ id: "b1", coordinates: [[0, 4], [60, 5]] }, { id: "b2", coordinates: [[0, 7], [60, 8]] }],
+      regionMaterials: [{ point: [5, 2], materialId: "m1" }, { point: [5, 9], materialId: "m2" }],
+      options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, fem: { enabled: true, flowRule: "davis-b", materialStages: { "1": 0, "10": 2, "2": 1 } } },
+    },
+  },
+);
 
 // ── Boundary order ──────────────────────────────────────────────
 

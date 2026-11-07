@@ -1,4 +1,4 @@
-import { rememberResultInput } from "../result-input";
+import { rememberErrorInput, rememberResultInput } from "../result-input";
 import type {
   AnalysisOptions,
   AnalysisResult,
@@ -622,10 +622,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       );
     } catch (err) {
       stopProgressInterval();
+      const errorMessage = analysisErrorText(err);
+      rememberErrorInput(runModelId, errorMessage, modelSnapshot);
       set({
         runState: "error",
         progress: 0,
-        errorMessage: analysisErrorText(err),
+        errorMessage,
       });
       activeHandle = null;
       activeRunModelId = null;
@@ -690,10 +692,12 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       })
       .catch((err) => {
         if (err instanceof AnalysisCancelledError) return;
+        const errorMessage = analysisErrorText(err);
+        rememberErrorInput(runModelId, errorMessage, modelSnapshot);
         finish({
           runState: "error",
           result: null,
-          errorMessage: analysisErrorText(err),
+          errorMessage,
         });
       });
   },
@@ -897,6 +901,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       } catch (err) {
         finishModel(freshModel.id, "failed");
         const errorMessage = analysisErrorText(err);
+        rememberErrorInput(freshModel.id, errorMessage, freshModel);
         set((s) => ({
           progress: batchProgress(),
           runAll: batchStatus(),
@@ -957,6 +962,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
         }
         finishModel(freshModel.id, "failed");
         const errorMessage = analysisErrorText(err);
+        rememberErrorInput(freshModel.id, errorMessage, freshModel);
         set((s) => ({
           progress: batchProgress(),
           runAll: batchStatus(),

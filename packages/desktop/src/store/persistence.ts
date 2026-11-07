@@ -494,11 +494,9 @@ function normalizeEarlierStage(raw: unknown): Pick<ModelEntry, "earlierStage"> {
   else delete stage.waterTable;
   if (stage.waterTables !== undefined) {
     stage.waterTables = Array.isArray(stage.waterTables)
-      ? (stage.waterTables as { id?: unknown; coordinates?: unknown; followBoundary?: unknown }[]).flatMap((w) => {
+      ? (stage.waterTables as { id?: unknown; coordinates?: unknown; followBoundary?: unknown; freeWater?: unknown }[]).flatMap((w) => {
           const coords = normalizePoints(w?.coordinates);
-          return typeof w?.id === "string" && coords.length >= 2
-            ? [{ id: w.id, coordinates: coords, ...(w.followBoundary === true ? { followBoundary: true } : {}) }]
-            : [];
+          return typeof w?.id === "string" && coords.length >= 2 ? [{ id: w.id, coordinates: coords, ...stageWaterFlags(w) }] : [];
         })
       : [];
   }
@@ -535,11 +533,24 @@ const STAGE_FIELDS: Record<Exclude<keyof StageDefinition, "coordinates" | "mater
   blockSearchObjects: true,
 };
 
+/**
+ * A stage water table's `freeWater` and `followBoundary` when they are
+ * booleans. Both are kept, false too: the engine reads a missing one as
+ * its default (`followBoundary` true), so dropping a false one changed the
+ * stage's water after a save and reopen.
+ */
+function stageWaterFlags(w: { followBoundary?: unknown; freeWater?: unknown }): { followBoundary?: boolean; freeWater?: boolean } {
+  return {
+    ...(typeof w.followBoundary === "boolean" ? { followBoundary: w.followBoundary } : {}),
+    ...(typeof w.freeWater === "boolean" ? { freeWater: w.freeWater } : {}),
+  };
+}
+
 /** An earlier stage's water table (an engine definition's) with finite numbers, or undefined. */
 function normalizeStageWaterTable(raw: unknown): StageDefinition["waterTable"] {
   if (!raw || typeof raw !== "object") return undefined;
   const w = raw as Record<string, unknown>;
-  const followBoundary = w.followBoundary === true ? { followBoundary: true } : {};
+  const followBoundary = stageWaterFlags(w);
   if (w.mode === "custom") {
     const value = normalizePoints(w.value);
     return value.length >= 2 ? { mode: "custom", value, ...followBoundary } : undefined;

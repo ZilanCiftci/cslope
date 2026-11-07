@@ -5,7 +5,8 @@
 //! orientation, as the app sends it to the engine>, "options": <the
 //! model's options as saved> }`. Nothing else of the model (its name,
 //! views, annotations, result settings) is in it. A result whose hash is
-//! not the model's was computed for other input.
+//! not the model's was computed for other input. The model is taken as it
+//! reads back from its `model.json` (as the app takes it).
 
 use crate::canonical::canonical_json;
 use crate::convert::model_to_definition;
@@ -18,6 +19,15 @@ use sha2::{Digest, Sha256};
 /// (`analysisInputJson`), or why the definition cannot be turned to its
 /// canonical orientation.
 pub fn analysis_input_json(model: &ModelEntry) -> Result<String, String> {
+    // the model as it reads back from its model.json (as the app hashes it)
+    let model = &crate::normalize::read_model(
+        &model.to_json(),
+        &crate::normalize::ReadOptions {
+            strict: false,
+            today: &model.project_info.date,
+        },
+    )
+    .map_err(|e| e.0)?;
     let definition =
         to_canonical_slope_definition(&model_to_definition(model), None).map_err(|e| e.message)?;
     let definition = serde_json::to_value(definition).map_err(|e| e.to_string())?;

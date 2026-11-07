@@ -126,14 +126,75 @@ fn a_result_whose_input_changed_is_dropped_with_the_thumbnail() {
     m.model = ModelEntry::from_json(model).unwrap();
     let (out, report) = write_project(&mut project, &writer()).unwrap();
     assert_eq!(report.dropped_results, vec!["model-1".to_owned()]);
-    assert!(report.dropped_thumbnail);
+    // (the thumbnail shows the active model, model-2, whose result stays)
+    assert!(!report.dropped_thumbnail);
     let names: Vec<String> = entries(&out).into_iter().map(|(n, ..)| n).collect();
     assert!(
         !names.contains(&"models/model-1/result.json".to_owned()),
         "{names:?}"
     );
     assert!(names.contains(&"models/model-2/result.json".to_owned()));
+    assert!(names.contains(&"thumbnail.png".to_owned()));
+    // the active model changed: its result and the thumbnail go
+    let mut model = project.models[1].model.to_json();
+    model["materials"][0]["model"]["unitWeight"] = json!(30);
+    project.models[1].model = ModelEntry::from_json(model).unwrap();
+    let (out, report) = write_project(&mut project, &writer()).unwrap();
+    assert_eq!(report.dropped_results, vec!["model-2".to_owned()]);
+    assert!(report.dropped_thumbnail);
+    let names: Vec<String> = entries(&out).into_iter().map(|(n, ..)| n).collect();
     assert!(!names.contains(&"thumbnail.png".to_owned()));
+}
+
+/// The archive with the uncompressed size its central directory declares
+/// for `name` set to `size`.
+fn declare_size(mut bytes: Vec<u8>, name: &str, size: u32) -> Vec<u8> {
+    let mut at = 0;
+    while let Some(p) = bytes[at..].windows(4).position(|w| w == b"PK\x01\x02") {
+        let p = at + p;
+        let len = u16::from_le_bytes([bytes[p + 28], bytes[p + 29]]) as usize;
+        if &bytes[p + 46..p + 46 + len] == name.as_bytes() {
+            bytes[p + 24..p + 28].copy_from_slice(&size.to_le_bytes());
+            return bytes;
+        }
+        at = p + 4;
+    }
+    panic!("no entry {name}");
+}
+
+#[test]
+fn archives_that_declare_too_much_are_refused_before_reading() {
+    use std::io::Write;
+    // six deflated attachments declaring 90 MB each: 540 MB together
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    let deflated = zip::write::SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+    for (name, data) in [("manifest.json", "{}"), ("project.json", "{}")] {
+        zip.start_file(name, deflated).unwrap();
+        zip.write_all(data.as_bytes()).unwrap();
+    }
+    for i in 0..6 {
+        zip.start_file(format!("assets/a{i}.png"), deflated)
+            .unwrap();
+        zip.write_all(&[0u8; 64]).unwrap();
+    }
+    let mut bytes = zip.finish().unwrap().into_inner();
+    for i in 0..6 {
+        bytes = declare_size(bytes, &format!("assets/a{i}.png"), 90 * 1024 * 1024);
+    }
+    let err = read_project(bytes, &options()).unwrap_err();
+    assert!(err.contains("more than 500 MB"), "{err}");
+    // and one entry above 100 MB
+    let mut zip = zip::ZipWriter::new(Cursor::new(Vec::new()));
+    zip.start_file("manifest.json", deflated).unwrap();
+    zip.write_all(b"{}").unwrap();
+    let bytes = declare_size(
+        zip.finish().unwrap().into_inner(),
+        "manifest.json",
+        150 * 1024 * 1024,
+    );
+    let err = read_project(bytes, &options()).unwrap_err();
+    assert!(err.contains("too large (150 MB unpacked"), "{err}");
 }
 
 #[test]
@@ -201,18 +262,6 @@ fn unknown_members_and_entries_are_refused_with_their_path() {
             "models/model-1/model.json: unknown member udls[0].foo",
         ),
         (
-            edited(rel, "models/model-2/result.json", &|v| {
-                v["note"] = json!("x")
-            }),
-            "unknown field `note`",
-        ),
-        (
-            edited(rel, "models/model-1/result.json", &|v| {
-                v["result"]["glow"] = json!(1)
-            }),
-            "models/model-1/result.json: unknown member result.glow",
-        ),
-        (
             edited(rel, "manifest.json", &|v| v["signature"] = json!("x")),
             "unknown field `signature`",
         ),
@@ -228,6 +277,34 @@ fn unknown_members_and_entries_are_refused_with_their_path() {
     for (bytes, expected) in cases {
         let err = read_project(bytes, &options()).expect_err(expected);
         assert!(err.contains(expected), "{err} (expected {expected})");
+    }
+}
+
+#[test]
+fn a_result_this_reader_cannot_read_is_left_out_with_a_warning() {
+    // (a newer cSlope may add a member to a result: the model still opens)
+    let rel = FIXTURES[0];
+    for (name, edit, expected) in [
+        (
+            "models/model-2/result.json",
+            &(|v: &mut Value| v["note"] = json!("x")) as &dyn Fn(&mut Value),
+            "unknown field `note`",
+        ),
+        (
+            "models/model-1/result.json",
+            &|v: &mut Value| v["result"]["glow"] = json!(1),
+            "unknown member result.glow",
+        ),
+    ] {
+        let project = read_project(edited(rel, name, edit), &options()).unwrap();
+        let id = name.split('/').nth(1).unwrap();
+        assert!(project.model(id).unwrap().result.is_none());
+        assert_eq!(project.warnings.len(), 1);
+        assert!(
+            project.warnings[0].contains(id) && project.warnings[0].contains(expected),
+            "{:?}",
+            project.warnings
+        );
     }
 }
 

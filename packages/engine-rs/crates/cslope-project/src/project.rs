@@ -234,6 +234,8 @@ pub struct Project {
     pub models: Vec<ProjectModel>,
     pub assets: Vec<Asset>,
     pub thumbnail: Option<Vec<u8>>,
+    /// What was left out on reading (a `result.json` that cannot be read).
+    pub warnings: Vec<String>,
 }
 
 /// What a save did to the results ([`Project::apply_save_policy`]).
@@ -272,7 +274,8 @@ pub fn extension_of(mime: &str) -> &'static str {
 
 fn parse_json(name: &str, bytes: &[u8]) -> Result<Value, String> {
     let text = std::str::from_utf8(bytes).map_err(|_| format!("{name} is not UTF-8 text"))?;
-    serde_json::from_str(text).map_err(|_| format!("The project's {name} is not valid JSON."))
+    // (serde's message says where: a lone surrogate in a name, for one)
+    serde_json::from_str(text).map_err(|e| format!("The project's {name} is not valid JSON ({e})."))
 }
 
 /// The canonical bytes of a JSON entry.
@@ -1110,6 +1113,7 @@ impl Project {
             strict: true,
             today: &options.today,
         };
+        let mut warnings = Vec::new();
         let mut models = Vec::new();
         for id in &ids {
             let dir = format!("models/{id}/");
@@ -1123,15 +1127,22 @@ impl Project {
             }
             let mut model = read_model(&raw, &read_options)
                 .map_err(|e| format!("models/{id}/model.json: {}", e.0))?;
+            // A result.json is read leniently: one this reader cannot read
+            // (damaged, or with a member a newer cSlope added) is dropped
+            // with a warning, and the model opens without its result.
             let result = if has(&format!("{dir}result.json")) {
-                let raw = parse_json(
-                    &format!("{dir}result.json"),
-                    &src.read(&format!("{dir}result.json"))?,
-                )?;
-                Some(SavedResult::checked(
-                    raw,
-                    &format!("models/{id}/result.json"),
-                )?)
+                let name = format!("models/{id}/result.json");
+                match parse_json(&name, &src.read(&name)?)
+                    .and_then(|raw| SavedResult::checked(raw, &name))
+                {
+                    Ok(r) => Some(r),
+                    Err(e) => {
+                        warnings.push(format!(
+                            "The saved result of the model {id} was left out: {e}"
+                        ));
+                        None
+                    }
+                }
             } else {
                 None
             };
@@ -1188,6 +1199,7 @@ impl Project {
             models,
             assets,
             thumbnail,
+            warnings,
         })
     }
 
@@ -1224,7 +1236,8 @@ impl Project {
                 }
             }
         }
-        if !report.dropped_results.is_empty() && self.thumbnail.is_some() {
+        // the thumbnail shows the active model's result
+        if report.dropped_results.contains(&self.active_model_id) && self.thumbnail.is_some() {
             self.thumbnail = None;
             report.dropped_thumbnail = true;
         }
@@ -1349,6 +1362,7 @@ impl Project {
                 "result": m.result,
                 "backgrounds": m.backgrounds,
             })).collect::<Vec<_>>(),
+            "warnings": self.warnings,
             "assets": self.assets.iter().map(|a| json!({
                 "id": a.id,
                 "mime": a.mime,
@@ -1368,7 +1382,8 @@ impl Project {
     ) -> Result<Project, String> {
         let o = doc.as_object().ok_or("The project is not an object")?;
         for k in o.keys() {
-            if !["manifest", "activeModelId", "models", "assets"].contains(&k.as_str()) {
+            if !["manifest", "activeModelId", "models", "assets", "warnings"].contains(&k.as_str())
+            {
                 return Err(format!("unknown member {k} of the project"));
             }
         }
@@ -1477,6 +1492,7 @@ impl Project {
             models,
             assets,
             thumbnail,
+            warnings: Vec::new(),
         })
     }
 }
