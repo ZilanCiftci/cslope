@@ -4,14 +4,14 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-84.5, -25],
-      [-84.5, 0],
+      [-89, -28],
+      [-89, 0],
       [-38, 0],
       [-20, 6],
       [0, 6],
       [18, 0],
-      [64.5, 0],
-      [64.5, -25]
+      [69, 0],
+      [69, -28]
     ],
     "materials": [
       {
@@ -46,7 +46,7 @@
     ],
     "regionAssignments": [
       {
-        "point": [-83.5, -12.5],
+        "point": [-88, -14],
         "materialName": "Clay"
       },
       {
@@ -70,7 +70,7 @@
       "entryLeftX": -38,
       "entryRightX": 0,
       "exitLeftX": 0,
-      "exitRightX": 64.5
+      "exitRightX": 69
     }
   },
   "options": {

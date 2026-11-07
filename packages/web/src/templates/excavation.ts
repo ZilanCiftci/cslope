@@ -49,6 +49,7 @@ import {
   partialFactorsOf,
   Problems,
   SLOPE,
+  TENSION_CRACK_DEPTH,
   WATER_LEVEL,
   type FieldProblem,
   type Fill,
@@ -102,7 +103,7 @@ export const EXCAVATION_PARAMETERS = {
   excavationDepth: p("excavationDepth", "Excavation depth H (m)", "m", 0.5, 20, 0.1, "From the ground to the bottom of the excavation."),
   slope: SLOPE,
   bottomWidth: p("bottomWidth", "Bottom width (m)", "m", 1, 300, 0.5, "The flat bottom from the toe to the edge of the model; as wide as the model needs when left out, and never narrower."),
-  tensionCrackDepth: p("tensionCrackDepth", "Tension crack depth (m)", "m", 0, 10, 0.1, "A dry tension crack at the top of each slip surface; 0 for none, as in the app."),
+  tensionCrackDepth: TENSION_CRACK_DEPTH,
   waterLevel: WATER_LEVEL,
   layer: {
     ...LAYER_PARAMETERS,

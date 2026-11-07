@@ -129,9 +129,24 @@ function Group({ title, children, className }: { title: string; children: ReactN
 }
 
 /** A row of exclusive choices: toggle buttons with aria-pressed. With `wrap`, a long label wraps within its button (on a phone). */
-export function Choices<T extends string>({ label, options, value, onChange, wrap }: { label: string; options: { value: T; label: string }[]; value: T | ""; onChange: (v: T) => void; wrap?: boolean }) {
+export function Choices<T extends string>({
+  label,
+  labelledBy,
+  options,
+  value,
+  onChange,
+  wrap,
+}: {
+  /** The group's name; or `labelledBy`, the id of a visible label. */
+  label?: string;
+  labelledBy?: string;
+  options: { value: T; label: string }[];
+  value: T | "";
+  onChange: (v: T) => void;
+  wrap?: boolean;
+}) {
   return (
-    <div role="group" aria-label={label} className="inline-flex rounded-md border border-input p-0.5">
+    <div role="group" aria-label={labelledBy ? undefined : label} aria-labelledby={labelledBy} className="inline-flex rounded-md border border-input p-0.5">
       {options.map((o) => (
         <button
           key={o.value}

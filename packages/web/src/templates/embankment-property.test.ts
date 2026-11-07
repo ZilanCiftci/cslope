@@ -9,7 +9,7 @@
 import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { MIN_LAYER_THICKNESS } from "./common";
-import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentProblems, type EmbankmentParams } from "./embankment";
+import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentProblems, modelDepth, type EmbankmentParams } from "./embankment";
 import { material, random, randomValues, value } from "./random-params";
 import { regionCount } from "./regions";
 
@@ -38,9 +38,10 @@ function randomParams(rnd: () => number): EmbankmentParams {
     fill: { gamma: value(rnd, P.fill.gamma), gammaSat: rnd() < 0.5 ? value(rnd, P.fill.gammaSat) : undefined, c: value(rnd, P.fill.c), phi: value(rnd, P.fill.phi) },
     crestLoad: rnd() < 0.6 ? value(rnd, P.crestLoad) : null,
     layers: [...levels, deepest].map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
-    // The water anywhere from well below the base to above the crest.
-    waterLevel: rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * embankmentHeight, groundLevel + embankmentHeight + 1) : null,
+    // The water anywhere from well below the base to the crest.
+    waterLevel: rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * embankmentHeight, groundLevel + embankmentHeight) : null,
     values: randomValues(rnd),
+    ...(rnd() < 0.3 ? { tensionCrackDepth: value(rnd, P.tensionCrackDepth, 0, 3) } : {}),
   };
 }
 
@@ -63,7 +64,7 @@ describe("random embankments within the bounds", () => {
       expect(regionCount(doc.definition), where).toBe(params.layers.length + 1);
       const G = params.groundLevel;
       if (params.crestLoad) seen.load++;
-      if (params.layers[params.layers.length - 1].bottomLevel > G - 2 * params.embankmentHeight) seen.shallowLayers++;
+      if (params.layers[params.layers.length - 1].bottomLevel > G - modelDepth(params)) seen.shallowLayers++;
       if (params.waterLevel !== null && params.waterLevel > G) seen.waterInEmbankment++;
       if (params.layers.some((l, k) => (k === 0 ? G : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
       if (params.values.basis === "design") seen.design++;

@@ -14,7 +14,8 @@
  *   ground ── (−B − nh, G)                    toe (nh, G) ── ground ── edge
  *
  * - The model reaches EXTENT_FACTOR × its depth (crest to base), and at
- *   least 3h, beyond each toe; its base is 2h below the ground, or the
+ *   least 3h, beyond each toe; its base is MODEL_DEPTH below the ground
+ *   (3h, and half the embankment's width at its foot), or the
  *   deepest layer's bottom when that is deeper. A test widens every
  *   example 2× and finds F unchanged.
  * - Each layer level is a vertex of the outline at both edges, and its
@@ -22,7 +23,9 @@
  * - The embankment is its own region above the ground, its line on the
  *   ground from toe to toe (both vertices of the outline); the load acts
  *   vertically over the crest's width.
- * - Water: a level, cut at the ground and the embankment (no free water).
+ * - Water: a level, cut at the ground and the embankment (no free water):
+ *   a level above the ground seeps out of the embankment's faces, and one
+ *   above the crest is refused.
  * - Surfaces enter on the embankment (its crest, and its far side, where a
  *   deep circle under a narrow crest enters) and exit anywhere from the
  *   crest's edge to the right edge: in the face (a shallow slide in the
@@ -36,6 +39,7 @@ import {
   DESIGN_PARAMETERS,
   EXTENT_FACTOR,
   FILL_PARAMETERS,
+  fmt,
   GROUND_LEVEL,
   LAYER_PARAMETERS,
   lastLayerNote,
@@ -43,6 +47,7 @@ import {
   partialFactorsOf,
   Problems,
   SLOPE,
+  TENSION_CRACK_DEPTH,
   WATER_LEVEL,
   type FieldProblem,
   type Fill,
@@ -66,9 +71,11 @@ export interface EmbankmentParams {
   crestLoad: number | null;
   /** From the top down; the first starts at the ground. */
   layers: Layer[];
-  /** The ground-water level (m); null: dry. */
+  /** The ground-water level (m), not above the crest; null: dry. */
   waterLevel: number | null;
   values: Values;
+  /** The depth of a tension crack (m), an analysis option; not set: 0, as in the excavation. */
+  tensionCrackDepth?: number;
 }
 
 /** The parameters, with their bounds: the form renders from these. */
@@ -77,6 +84,7 @@ export const EMBANKMENT_PARAMETERS = {
   embankmentHeight: p("embankmentHeight", "Embankment height h (m)", "m", 0.5, 15, 0.1, "From the ground to the crest."),
   crestWidth: p("crestWidth", "Crest width B (m)", "m", 1, 60, 0.5, "The width of the embankment's top; a load on the crest acts over it."),
   slope: { ...SLOPE, description: `${SLOPE.description} Both sides of the embankment.` },
+  tensionCrackDepth: TENSION_CRACK_DEPTH,
   crestLoad: p("crestLoad", "Load on the crest q (kPa)", "kPa", 0, 100, 1, "A vertical load over the crest's width, a variable load (traffic, a stockpile); leave out for none."),
   waterLevel: WATER_LEVEL,
   fill: FILL_PARAMETERS,
@@ -102,12 +110,24 @@ export interface EmbankmentGeometry {
   levels: number[];
 }
 
+/**
+ * How deep the model reaches below the ground when the layers do not go
+ * deeper: 3h, and half the embankment's width at its foot (B + 2nh), since
+ * a wide embankment on uniform clay fails deep, and a base closer than that
+ * acts as a firm bottom and raises F. A test deepens every example 2× and
+ * finds F unchanged.
+ */
+export function modelDepth(params: Pick<EmbankmentParams, "embankmentHeight" | "crestWidth" | "slope">): number {
+  const h = params.embankmentHeight;
+  return Math.max(3 * h, (params.crestWidth + 2 * params.slope * h) / 2);
+}
+
 export function embankmentGeometry(params: EmbankmentParams): EmbankmentGeometry {
   const G = params.groundLevel;
   const h = params.embankmentHeight;
   const nh = params.slope * h;
   const last = params.layers[params.layers.length - 1];
-  const base = Math.min(G - 2 * h, last ? last.bottomLevel : Infinity);
+  const base = Math.min(G - modelDepth(params), last ? last.bottomLevel : Infinity);
   const reach = Math.max(3 * h, EXTENT_FACTOR * (G + h - base));
   const crestLeft = -params.crestWidth;
   const farToe = crestLeft - nh;
@@ -134,7 +154,12 @@ export function embankmentFieldProblems(params: EmbankmentParams): FieldProblem[
   out.check("slope", params.slope, P.slope);
   out.fill(params.fill, "fill", "Embankment: ");
   if (params.crestLoad !== null) out.check("crestLoad", params.crestLoad, P.crestLoad);
-  if (params.waterLevel !== null) out.check("waterLevel", params.waterLevel, P.waterLevel);
+  if (params.waterLevel !== null) {
+    out.check("waterLevel", params.waterLevel, P.waterLevel);
+    const crest = params.groundLevel + params.embankmentHeight;
+    if (params.waterLevel > crest) out.add("waterLevel", `The ground-water level must not be above the crest (${fmt(crest)} m).`);
+  }
+  if (params.tensionCrackDepth !== undefined) out.check("tensionCrackDepth", params.tensionCrackDepth, P.tensionCrackDepth);
   out.layers(params.layers, params.groundLevel, { reserved: { name: EMBANKMENT_FILL_NAME, what: "the embankment's material" } });
   out.values(params.values);
   return out.list;
@@ -144,11 +169,17 @@ export function embankmentProblems(params: EmbankmentParams): string[] {
   return embankmentFieldProblems(params).map((x) => x.message);
 }
 
-/** What the model does that the parameters do not say: the last layer going on below its bottom level. */
+/** The note on a ground-water level above the ground. */
+export const WATER_ABOVE_GROUND = "The water above the ground seeps out of the embankment's faces; no free water stands beside it.";
+
+/** What the model does that the parameters do not say: the last layer going on below its bottom level, the water above the ground seeping out of the faces. */
 export function embankmentNotes(params: EmbankmentParams): string[] {
   if (embankmentProblems(params).length) return [];
-  const note = lastLayerNote(params.layers, embankmentGeometry(params).base, "2h below the ground");
-  return note ? [note] : [];
+  const out: string[] = [];
+  const note = lastLayerNote(params.layers, embankmentGeometry(params).base, "3h, or half the embankment's width at its foot, below the ground");
+  if (note) out.push(note);
+  if (params.waterLevel !== null && params.waterLevel > params.groundLevel) out.push(WATER_ABOVE_GROUND);
+  return out;
 }
 
 /** The outline: the base, the left edge, the ground to the far toe, the embankment, the ground to the right edge, with a vertex at each layer level on both edges. */
@@ -193,7 +224,10 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   // Entry on the embankment, from the far toe to the crest's edge; exit from the crest's edge on: the face, the toe, the ground.
   d.searchLimits([g.farToe, 0], [0, g.right]);
   const factors = partialFactorsOf(params.values);
-  return d.toDocument(factors ? { partialFactors: factors } : {});
+  return d.toDocument({
+    ...(factors ? { partialFactors: factors } : {}),
+    ...(params.tensionCrackDepth ? { tensionCrackDepth: params.tensionCrackDepth } : {}),
+  });
 }
 
 export const embankmentTemplate: Template<EmbankmentParams> = {

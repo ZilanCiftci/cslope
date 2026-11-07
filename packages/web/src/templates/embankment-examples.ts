@@ -124,7 +124,7 @@ export const EMBANKMENT_EXAMPLES: Record<string, EmbankmentParams> = {
     waterLevel: -1,
     values: characteristic,
   },
-  /** Three layers (saturated unit weights below the water), the water in the embankment, design values in safety class 3. */
+  /** Three layers (saturated unit weights below the water), the water 0.5 m above the ground, seeping out of the embankment's faces, design values in safety class 3. */
   "three-layers-design-sk3": {
     groundLevel: 2,
     embankmentHeight: 4,

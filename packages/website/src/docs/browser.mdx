@@ -5,7 +5,7 @@ section: Getting started
 order: 1.5
 ---
 
-[app.cslope.com](https://app.cslope.com) analyzes a slope from a template, in the browser, without installing anything. You fill in a form; the page draws the section and computes F with the cSlope engine on your own computer. Nothing you type is sent anywhere: the parameters are kept in the page's address, so that a link opens the same section.
+[app.cslope.com](https://app.cslope.com) analyzes a slope from a template, in the browser, without installing anything. You fill in a form; the page draws the section and computes F with the cSlope engine on your own computer. The analysis runs in your browser. The parameters travel only in the page's address, so a link you share carries them and opens the same section.
 
 <Callout type="warning">
   A template calculation, not a design: check the model and the result before you use them.
@@ -15,20 +15,20 @@ order: 1.5
 
 Choose the template at the top of the page. The address carries its name (`t=excavation` or `t=embankment`); a link without it opens the excavation.
 
-- **Excavation in clay with a working road.** An excavation of depth H with a slope 1:n and a flat bottom, in level ground. Behind the crest an optional working road: a fill with sides 1:1.5, its own drained material and a traffic load q over its top. An optional tension crack depth.
-- **Embankment on clay.** An embankment of height h with a crest of width B and both sides 1:n, on level ground, of a drained fill. An optional load q over the crest.
+- **Excavation in clay with a working road.** An excavation of depth H with a slope 1:n and a flat bottom, in level ground. Behind the crest an optional working road: a fill with sides 1:1.5, its own drained material and a traffic load q over its top. - **Embankment on clay.** An embankment of height h with a crest of width B and both sides 1:n, on level ground, of a drained fill. An optional load q over the crest.
 
 Both have:
 
 - **Layers**, from the ground down, each with its bottom level (an elevation, not a depth) and a material: Su constant, Su increasing with depth, drained c′ and φ′, or rock (impenetrable). A layer is at least 0.05 m thick.
-- **A ground-water level**, a horizontal line cut at the ground: there is no free water above the ground. Empty for a dry slope.
+- **A ground-water level**, a horizontal line cut at the ground: there is no free water above the ground. Empty for a dry slope. Under an embankment the level may stand above the ground, up to the crest: the water above the ground seeps out of the embankment's faces; no free water stands beside it. A level above the crest is refused.
+- **An optional tension crack depth**: a dry crack at the top of each slip surface.
 - **Safety**: characteristic or design values (see [Reading the result](#reading-the-result)).
 
 No strength or unit weight has a default: the fields stay empty until you fill them in, and F is computed once every required field is. The page runs the analysis by itself a moment after each change, and the section drawing follows as you type.
 
 ### What the template decides for you
 
-- **The model's extent.** Each side reaches 1.5 times the model's depth beyond the slope, and at least 3 times its height; the base is 2H below the excavation bottom, or 2h below the ground under an embankment, or the deepest layer's bottom when that is deeper. When the last layer has to go on below its bottom level, a note under the form says so.
+- **The model's extent.** Each side reaches 1.5 times the model's depth beyond the slope, and at least 3 times its height; the base is 2H below the excavation bottom, or, under an embankment, 3h or half the embankment's width at its foot (B + 2nh) below the ground, whichever is deeper; or the deepest layer's bottom when that is deeper still. When the last layer has to go on below its bottom level, a note under the form says so.
 - **The search limits.** In the excavation, slip surfaces enter on the ground (and the road) behind the crest and exit anywhere from the crest to the model's right edge, in the face or the bottom. On the embankment, they enter on the embankment (its crest and its far side) and exit anywhere from the crest's edge to the right edge: in the face, at the toe or on the ground beyond it. A fill with a low φ′ and no cohesion can govern by a shallow slide in the slope, with F close to tan φ′/tan β; the engine's warning says so.
 - **The options** of a new model in the app: Morgenstern-Price with a half-sine interslice function, 30 slices, the circular search with composite surfaces along rock ([Analysis options](/docs/analysis), [Slip surface search](/docs/search)).
 - **The direction.** The slope slides to the right, as drawn. The embankment is symmetric, so its left side has the same F.
@@ -58,7 +58,7 @@ Under F: the method, the critical surface's entry and exit points, the surface (
 **Warnings from the engine** are listed under the result, in the engine's own words; they are the warnings of the app's result summary, and [Troubleshooting](/docs/troubleshooting) explains each. Read them before you use F. Common ones on these sections:
 
 - a shallow slide in the face of a cohesionless fill or crust, where F approaches tan φ′/tan β ([Shallow slides in cohesionless soil](/docs/troubleshooting#shallow-slides-in-cohesionless-soil));
-- a steep entry or slices with a small $m_\alpha$ near the crest, which a tension crack (in the excavation) usually removes ([Warnings about the slices](/docs/troubleshooting#warnings-about-the-slices-of-the-critical-surface)).
+- a steep entry or slices with a small $m_\alpha$ near the crest, which a tension crack (the tension crack depth) usually removes ([Warnings about the slices](/docs/troubleshooting#warnings-about-the-slices-of-the-critical-surface)).
 
 While a new analysis runs, the last result stays in view, dimmed and marked *Previous result*. A field marked in red says what is wrong with it; the status line says how many fields are still empty. On a phone, a bar at the bottom keeps F in view.
 
@@ -69,9 +69,9 @@ While a new analysis runs, the last result stays in view, dimmed and marked *Pre
 **Download JSON** saves the analysis document of the section (`cslope-excavation.json` or `cslope-embankment.json`): the model and the options in the engine's own format (`"format": "cslope-analysis"`). It runs with the command line of the `cslope` Python package and gives the same F as the page:
 
 ```
-cslope analyse cslope-embankment.json
+cslope analyze cslope-embankment.json
 ```
 
 The Python package is not yet published on PyPI; until it is, build it from its source in the [repository](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine-rs/crates/cslope-py).
 
-The cSlope app cannot open the JSON file: it opens project files (`.cslp`). To go on in the app, for example to add reinforcement or another analysis, build the section there from the same values. **Download .cslp** is shown but not available yet; **Open in cSlope** leads to the [download page](/download).
+The cSlope app cannot open the JSON file: it opens project files (`.cslp`). Its **Open** dialog also offers `.json`, for projects saved by older versions; the analysis document is not one, and opening it there ends with the message *Unable to open project: File must include at least one model.* To go on in the app, for example to add reinforcement or another analysis, build the section there from the same values. **Download .cslp** is shown but not available yet; **Open in cSlope** leads to the [download page](/download).

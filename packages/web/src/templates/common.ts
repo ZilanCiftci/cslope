@@ -81,6 +81,7 @@ export const p = (name: string, label: string, unit: string | null, min: number,
 
 export const GROUND_LEVEL = p("groundLevel", "Ground level (m)", "m", -100, 1000, 0.1, "The elevation of the ground surface; the levels of the layers and the water are elevations too.");
 export const SLOPE = p("slope", "Slope 1:n", null, 0.5, 5, 0.1, "n horizontal per 1 vertical: 1:2 is flatter than 1:1.");
+export const TENSION_CRACK_DEPTH = p("tensionCrackDepth", "Tension crack depth (m)", "m", 0, 10, 0.1, "A dry tension crack at the top of each slip surface; 0 for none, as in the app.");
 export const WATER_LEVEL = p("waterLevel", "Ground-water level (m)", "m", -100, 1000, 0.1, "The elevation of the ground water, cut at the ground; leave out for a dry slope.");
 
 /** A layer's fields. */

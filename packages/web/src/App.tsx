@@ -69,6 +69,11 @@ export function App({ client }: { client: AnalysisClient }) {
   const [notice, setNotice] = useState<string | null>(null);
   const runs = useRef(0);
 
+  // The tab's title names the template.
+  useEffect(() => {
+    document.title = `${spec.template.title} — cSlope`;
+  }, [spec]);
+
   useEffect(() => {
     let current = true;
     client.ready().then(
@@ -186,8 +191,10 @@ export function App({ client }: { client: AnalysisClient }) {
       <Header />
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 lg:pb-6">
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-          <span className="text-xs text-muted-foreground">Template</span>
-          <Choices wrap label="Template" value={draft.template} onChange={switchTo} options={SPECS.map((s) => ({ value: s.template.id as TemplateId, label: s.template.title }))} />
+          <span id="template-label" className="text-xs text-muted-foreground">
+            Template
+          </span>
+          <Choices wrap labelledBy="template-label" value={draft.template} onChange={switchTo} options={SPECS.map((s) => ({ value: s.template.id as TemplateId, label: s.template.title }))} />
         </div>
         <h1 className="text-xl font-semibold tracking-tight">{spec.template.title}</h1>
         <p className="mt-1 max-w-prose text-sm text-muted-foreground">
@@ -202,7 +209,7 @@ export function App({ client }: { client: AnalysisClient }) {
               ) : (
                 <p className="p-6 text-sm text-muted-foreground">The section is drawn when the geometry is filled in.</p>
               )}
-              <figcaption className="mt-1 text-xs text-muted-foreground">Elevation and distance from the crest (m).</figcaption>
+              <figcaption className="mt-1 text-xs text-muted-foreground">{spec.caption}</figcaption>
             </figure>
             <ResultCard
               state={state}

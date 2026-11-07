@@ -244,10 +244,14 @@ describe("App", () => {
     const embankment = within(picker).getByRole("button", { name: "Embankment on clay" });
     expect(excavation).toHaveAttribute("aria-pressed", "true");
     expect(embankment).toHaveAttribute("aria-pressed", "false");
+    expect(document.title).toBe("Excavation in clay with a working road — cSlope");
     type("Excavation depth H (m)", "4");
     fireEvent.click(embankment);
     expect(screen.getByRole("heading", { level: 1, name: "Embankment on clay" })).toBeInTheDocument();
     expect(embankment).toHaveAttribute("aria-pressed", "true");
+    expect(document.title).toBe("Embankment on clay — cSlope");
+    expect(screen.getByText("Elevation, and distance from the crest's right edge (m).")).toBeInTheDocument();
+    expect(picker).toHaveAttribute("aria-labelledby");
     expect(screen.queryByLabelText("Excavation depth H (m)")).toBeNull();
     expect(field("Embankment height h (m)").value).toBe("3");
     await flush();

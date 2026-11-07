@@ -46,6 +46,8 @@ export interface FormSpec<P> {
   initial: Record<string, string>;
   /** The file name of the JSON download. */
   fileName: string;
+  /** The drawing's caption: what its axes measure. */
+  caption: string;
   params(read: Read): P;
   /** The fields of a parameter set (layers and values aside), and the optional groups on. */
   toFields(params: P): { fields: Record<string, string>; on: string[] };
@@ -98,6 +100,7 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
   short: { groundLevel: "ground", excavationDepth: "H", waterLevel: "water", tensionCrackDepth: "crack" },
   initial: { groundLevel: "0", excavationDepth: "3", slope: "1.5" },
   fileName: "cslope-excavation.json",
+  caption: "Elevation and distance from the crest (m).",
   params(read) {
     const { num, opt } = read;
     const tension = opt("tensionCrackDepth");
@@ -152,14 +155,16 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
 export const embankmentSpec: FormSpec<EmbankmentParams> = {
   template: embankmentTemplate,
   before: [
-    { id: "geometry", title: "Geometry", keys: ["groundLevel", "embankmentHeight", "crestWidth", "slope"] },
+    { id: "geometry", title: "Geometry", keys: ["groundLevel", "embankmentHeight", "crestWidth", "slope", "tensionCrackDepth"] },
     { id: "embankment", title: "Embankment", keys: [...fillKeys("fill"), "crestLoad"] },
   ],
   after: [{ id: "water", title: "Water", keys: ["waterLevel"] }],
-  short: { groundLevel: "ground", embankmentHeight: "h", crestWidth: "B", waterLevel: "water", crestLoad: "q" },
+  short: { groundLevel: "ground", embankmentHeight: "h", crestWidth: "B", waterLevel: "water", crestLoad: "q", tensionCrackDepth: "crack" },
   initial: { groundLevel: "0", embankmentHeight: "3", crestWidth: "6", slope: "2" },
   fileName: "cslope-embankment.json",
+  caption: "Elevation, and distance from the crest's right edge (m).",
   params(read) {
+    const tension = read.opt("tensionCrackDepth");
     return {
       groundLevel: read.num("groundLevel"),
       embankmentHeight: read.num("embankmentHeight"),
@@ -170,6 +175,7 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
       layers: read.layers,
       waterLevel: read.opt("waterLevel"),
       values: read.values,
+      ...(tension === null ? {} : { tensionCrackDepth: tension }),
     };
   },
   toFields: (p) => ({
@@ -178,6 +184,7 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
       embankmentHeight: text(p.embankmentHeight),
       crestWidth: text(p.crestWidth),
       slope: text(p.slope),
+      tensionCrackDepth: text(p.tensionCrackDepth),
       ...fillFields(p.fill, "fill"),
       crestLoad: text(p.crestLoad),
       waterLevel: text(p.waterLevel),
