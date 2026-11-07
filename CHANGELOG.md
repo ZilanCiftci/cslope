@@ -127,6 +127,10 @@ The first public release.
 - File › Save as anonymized… saves a copy of the project to share, for example in a public issue: without the project information, drawings and their files, with generic names for models, materials, water lines and other objects, the free text of annotations replaced (variables such as #FOS kept), and optionally without results or moved to a local origin (every coordinate and datum elevation shifted alike, so the factor of safety is the same). The copy has no thumbnail or original file names; the open project and its file are not changed.
 - Security: imported ZIP archives are checked against size limits before they are unpacked, and files above 50 MB are refused; .gsz files with a DOCTYPE are refused; project files keep only the fields the program knows; a stricter content security policy; the packaged app refuses to start when its archive differs from the one it was built with (asar integrity), and cannot be used to run other scripts.
 
+### In the browser
+
+- cSlope in the browser at app.cslope.com, linked from the website's home and download pages: one template, an excavation in clay with a working road (ground level, depth and slope, horizontal layers (drained, or undrained with a constant strength or one increasing with depth), a ground-water level, a tension crack and an optional working road with a traffic load), analyzed by the same engine on the user's own computer as soon as the form is complete. It shows the section with the critical surface and F with its method, on characteristic values or on design values with the Swedish partial factors of a safety class; the address holds the parameters, so a link opens the same section, and the analysis downloads as JSON.
+
 ### Verification
 
 - 177 verification problems with 356 reference values from the literature and from other programs, run by the automated tests on every change.

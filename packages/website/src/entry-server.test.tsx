@@ -17,6 +17,13 @@ describe("pre-rendering", () => {
     expect(page.html).toContain("<h1");
   });
 
+  it("links the home and download pages to the browser version", async () => {
+    for (const path of ["/", "/download"]) {
+      const { html } = await render(path);
+      expect(html).toMatch(/<a href="https:\/\/app\.cslope\.com" target="_blank" rel="noopener noreferrer"[^>]*>Try in the browser/);
+    }
+  });
+
   it("renders a lazy docs page in full", async () => {
     const page = await render("/docs/theory");
     expect(page.title).toBe("Theory · Docs · cSlope");

@@ -1,0 +1,82 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-30, -20],
+      [-30, -1.5],
+      [-30, 0],
+      [0, 0],
+      [3, -1.5],
+      [8, -4],
+      [38, -4],
+      [38, -20]
+    ],
+    "materials": [
+      {
+        "name": "Crust",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 18,
+          "unitWeightSat": 18,
+          "cohesion": 2,
+          "frictionAngle": 32
+        }
+      },
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 16.5,
+          "unitWeightSat": 16.5,
+          "undrainedShearStrength": 18
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-30, -1.5],
+          [3, -1.5]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-29, -0.75],
+        "materialName": "Crust"
+      },
+      {
+        "point": [-29, -10.75],
+        "materialName": "Clay"
+      }
+    ],
+    "waterTable": {
+      "mode": "height",
+      "value": -1,
+      "freeWater": false
+    },
+    "analysisLimits": {
+      "entryLeftX": -30,
+      "entryRightX": 0,
+      "exitLeftX": 0,
+      "exitRightX": 38
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false
+  }
+}
