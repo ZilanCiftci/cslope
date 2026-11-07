@@ -6,10 +6,11 @@
 
 use crate::error::Result;
 use crate::js;
+use crate::model::search::plane_key;
 use crate::model::slope::{SearchPlane, Slope};
 use crate::model::solvers::{janbu_correction_factor, solved_effective_normals};
 use crate::model::surface_slide::{frictional_surface_slide, surface_slide_message};
-use crate::types::analysis::{AnalysisMethod, AnalysisWarning, AnalysisWarningCode};
+use crate::types::analysis::{AnalysisMethod, AnalysisWarning, AnalysisWarningCode, SearchMethod};
 use crate::types::geometry::Slice;
 use crate::types::material::Material;
 use std::f64::consts::PI;
@@ -137,6 +138,194 @@ pub fn dangling_boundary_message(n: usize) -> String {
     )
 }
 
+/// Tolerance, as a fraction of the ground's width, within which an end of
+/// the critical surface counts as at an end of its search range. The
+/// searches put a surface at the end of a range (the grid's outer points,
+/// the local search and the optimisation clamped to it) when the factor of
+/// safety still falls towards it; the local search's last steps can leave
+/// it a little inside (5e-5 m on a 50 m model). A minimum inside the range
+/// is not found this close to its end by chance. On the verification
+/// problems 1e-6 to 1e-3 flag the same analyses.
+const SEARCH_EDGE_TOLERANCE: f64 = 1e-4;
+
+/// Tolerance (°) within which a block surface's end segment counts as at an
+/// end of its angle range (the draws are clamped to the range).
+const SEARCH_EDGE_ANGLE_TOLERANCE: f64 = 1e-6;
+
+/// The critical surface lies on the edge of the search space: its entry or
+/// exit at an end of the entry or exit range of the search limits, or, for
+/// a block surface as drawn (not optimised), an end segment at an end of
+/// its angle range or a base point at an end of a search object that is a
+/// line. The minimum may then lie outside, where the search did not look.
+/// None when it does not apply.
+///
+/// Conservative: only ends that could be widened count. Not
+/// - custom surfaces, and analyses of custom surfaces only (nothing searched);
+/// - a range of one point (fixed on purpose);
+/// - an end of a range on the model's edge or beyond (the ground ends there),
+///   on a vertex of the ground (the toe, the crest, a trench's bottom: the
+///   factor of safety has a kink there and its minimum often lies on the
+///   vertex) or at the edge of a load (the same);
+/// - an angle range ending at 0° or 90°, and a search object whose end lies
+///   on the edge of the soil (the model's edge, the ground).
+///
+/// The radius (sagitta) of the circles has no limit to widen: the local
+/// search and the refinement go deeper or shallower than the grid as far as
+/// the circles stay in the model. Left and right are in model space.
+pub fn search_edge_message(slope: &Slope, crit: &SearchPlane) -> Option<String> {
+    if slope.custom_planes_only() || crit.custom_plane.is_some() {
+        return None;
+    }
+    let ground = slope.surface_line_xy()?;
+    if ground.x.len() < 2 {
+        return None;
+    }
+    // a surface added as an individual plane through the API
+    let key = plane_key(crit);
+    if slope
+        .individual_planes()
+        .iter()
+        .any(|p| plane_key(p) == key)
+    {
+        return None;
+    }
+    let x0 = js::math::min_of(&ground.x);
+    let x1 = js::math::max_of(&ground.x);
+    let tol = SEARCH_EDGE_TOLERANCE * (x1 - x0);
+    if !(tol > 0.0) {
+        return None;
+    }
+    let kinks: Vec<f64> = ground
+        .x
+        .iter()
+        .copied()
+        .chain(slope.line_loads().iter().map(|l| l.x))
+        .chain(slope.udls().iter().flat_map(|u| [u.x1, u.x2]))
+        .collect();
+    // An end of a range the search could be widened past.
+    let widenable =
+        |x: f64| x > x0 + tol && x < x1 - tol && !kinks.iter().any(|&k| (k - x).abs() <= tol);
+    // (canonical left/right to model space)
+    let side = |left: bool| {
+        if left != slope.mirrored() {
+            "left"
+        } else {
+            "right"
+        }
+    };
+    let mut parts: Vec<String> = Vec::new();
+    let mut widen: Vec<&str> = Vec::new();
+
+    let [entry_l, entry_r, exit_l, exit_r] = slope.limits();
+    for (what, x, lo, hi) in [
+        ("entry", crit.lc[0], entry_l, entry_r),
+        ("exit", crit.rc[0], exit_l, exit_r),
+    ] {
+        if !(hi - lo > tol) {
+            continue;
+        }
+        // Some(true): at the (canonical) left end
+        let end = if (x - lo).abs() <= tol && widenable(lo) {
+            Some(true)
+        } else if (x - hi).abs() <= tol && widenable(hi) {
+            Some(false)
+        } else {
+            None
+        };
+        if let Some(left) = end {
+            parts.push(format!("{what} at the {} end of its range", side(left)));
+        }
+    }
+    if !parts.is_empty() {
+        widen.push("the search limits");
+    }
+    block_edge_parts(slope, crit, tol, &mut parts, &mut widen);
+    if parts.is_empty() {
+        return None;
+    }
+    let widen = match widen.len() {
+        1 => widen[0].to_string(),
+        n => format!("{} and {}", widen[..n - 1].join(", "), widen[n - 1]),
+    };
+    Some(format!(
+        "The critical surface lies on the edge of the search limits ({}); the minimum may lie outside. Widen {widen}.",
+        parts.join("; ")
+    ))
+}
+
+/// The block search's part of search_edge_message: a block surface as drawn
+/// (not optimised) with an end segment at an end of its angle range (not 0°
+/// or 90°), or a base point at an end of a search object that is a line,
+/// where the line could go on in the soil.
+fn block_edge_parts(
+    slope: &Slope,
+    crit: &SearchPlane,
+    tol: f64,
+    parts: &mut Vec<String>,
+    widen: &mut Vec<&'static str>,
+) {
+    if slope.search_method() != SearchMethod::Block || crit.optimised == Some(true) {
+        return;
+    }
+    let Some(pts) = crit.points.as_deref().filter(|p| p.len() >= 3) else {
+        return;
+    };
+    let n = pts.len();
+    let degrees = |dy: f64, dx: f64| (js::math::atan2(dy, dx) * 180.0) / PI;
+    let active = degrees(pts[0][1] - pts[1][1], pts[1][0] - pts[0][0]);
+    let passive = degrees(pts[n - 1][1] - pts[n - 2][1], pts[n - 1][0] - pts[n - 2][0]);
+    let t = SEARCH_EDGE_ANGLE_TOLERANCE;
+    let mut angles = false;
+    for (what, angle, range) in [
+        ("upslope end angle", active, slope.block_active_angle()),
+        ("downslope end angle", passive, slope.block_passive_angle()),
+    ] {
+        let Some([lo, hi]) = range else {
+            continue;
+        };
+        if !(hi - lo > t) {
+            continue;
+        }
+        let end = if (angle - lo).abs() <= t && lo > t {
+            "lower"
+        } else if (angle - hi).abs() <= t && hi < 90.0 - t {
+            "upper"
+        } else {
+            continue;
+        };
+        parts.push(format!("{what} at the {end} end of its range"));
+        angles = true;
+    }
+    if angles {
+        widen.push("the end angle ranges");
+    }
+    let base = &pts[1..n - 1];
+    let at_line_end = slope.block_search_objects().iter().any(|o| {
+        if o.len() != 2 {
+            return false;
+        }
+        [(o[0], o[1]), (o[1], o[0])].iter().any(|&(end, other)| {
+            if !base
+                .iter()
+                .any(|p| js::math::hypot(&[p[0] - end[0], p[1] - end[1]]) <= tol)
+            {
+                return false;
+            }
+            // a little further along the line: still in the soil?
+            let x = end[0] + 0.01 * (end[0] - other[0]);
+            let y = end[1] + 0.01 * (end[1] - other[1]);
+            slope.is_inside_external_boundary(x, y)
+                && slope
+                    .get_external_y_intersection(x)
+                    .is_ok_and(|g| g.is_finite() && y < g)
+        })
+    });
+    if at_line_end {
+        parts.push("a base point at an end of its search object".to_string());
+        widen.push("the search objects");
+    }
+}
+
 /// Warnings for an analysed slope (after analyse_slope):
 ///
 /// - "dangling-boundary": a material boundary with an end inside a region
@@ -179,6 +368,9 @@ pub fn dangling_boundary_message(n: usize) -> String {
 /// - "steep-entry-tension": the critical surface enters steeper than
 ///   STEEP_ENTRY_LIMIT and slices on its entry side rely on tension
 ///   (N′ < 0 or low m_α), with any method (steep_entry_tension_message).
+/// - "search-edge": the critical surface lies on the edge of the search
+///   space, at an end of a search range that could be widened
+///   (search_edge_message): the minimum may lie outside.
 ///
 /// Only the critical surface is checked (all surfaces when none solved).
 /// `effective_normals` are its base N′ when the caller already has them
@@ -278,6 +470,9 @@ pub fn analysis_warnings(
             AnalysisWarningCode::SteepEntryNoEquilibrium,
             m.clone(),
         ));
+    }
+    if let Some(m) = crit.and_then(|c| search_edge_message(slope, c)) {
+        warnings.push(warn(AnalysisWarningCode::SearchEdge, m));
     }
     let Some(crit) = crit else {
         return Ok(warnings);

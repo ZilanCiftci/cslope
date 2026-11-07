@@ -690,6 +690,7 @@ pub enum AnalysisWarningCode {
     ShallowCohesionlessSurface,
     SteepEntryNoEquilibrium,
     SteepEntryTension,
+    SearchEdge,
 }
 
 /// Something about the input or the critical surface that the factor of

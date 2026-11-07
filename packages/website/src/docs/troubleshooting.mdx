@@ -27,7 +27,11 @@ With Morgenstern-Price (or Spencer) and surfaces entering steeper than 70°, the
 
 ## Critical surface at a search limit
 
-The search only tries surfaces whose entry and exit lie within the ranges. When the critical surface enters or exits at the end of a range, a surface just beyond it may have a lower factor. Widen that range and run again until the critical surface lies inside both ([Search limits](/docs/search#search-limits)).
+> The critical surface lies on the edge of the search limits (exit at the right end of its range); the minimum may lie outside. Widen the search limits.
+
+The search only tries surfaces whose entry and exit lie within the ranges. When the critical surface enters or exits at the end of a range, a surface just beyond it may have a lower factor. Widen that range and run again until the critical surface lies inside both ([Search limits](/docs/search#search-limits)). With the block search the warning also names an end angle at the end of its range, or a base point at the end of a search object that is a line.
+
+The warning is only given for an end the search could go past. An end on the model's edge, on a corner of the ground (the toe, the crest, the bottom of a trench) or at the edge of a load is not reported, nor is a range of a single point: the critical surface often lies exactly there for a reason.
 
 ## Shallow slides in cohesionless soil
 

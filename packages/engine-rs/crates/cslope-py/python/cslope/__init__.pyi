@@ -112,7 +112,7 @@ class AnalysisWarning(TypedDict):
     count: NotRequired[Optional[int]]
     message: str
 
-AnalysisWarningCode = Literal["dangling-boundary", "negative-effective-normal", "low-m-alpha", "bishop-non-circular", "frictional-surface-slide", "shallow-cohesionless-surface", "steep-entry-no-equilibrium", "steep-entry-tension"]
+AnalysisWarningCode = Literal["dangling-boundary", "negative-effective-normal", "low-m-alpha", "bishop-non-circular", "frictional-surface-slide", "shallow-cohesionless-surface", "steep-entry-no-equilibrium", "steep-entry-tension", "search-edge"]
 
 AngleRange = Optional[Tuple[float, float]]
 

@@ -204,3 +204,38 @@ describe("steep entry without complete equilibrium", () => {
     }
   });
 });
+
+describe("the critical surface on the edge of the search limits", () => {
+  /** A 2:1 slope 10 m high, crest at x = 20, toe at x = 40 (a synthetic example). */
+  const slope = (exit: [number, number]): SlopeDefinition =>
+    ({
+      coordinates: [
+        [0, 0],
+        [0, 15],
+        [20, 15],
+        [40, 5],
+        [60, 5],
+        [60, 0],
+      ],
+      materials: [{ name: "Clay", model: mc(19, 8, 28) }],
+      materialBoundaries: [],
+      regionAssignments: [{ point: [30, 1], materialName: "Clay" }],
+      analysisLimits: { entryLeftX: 2, entryRightX: 19, exitLeftX: exit[0], exitRightX: exit[1] },
+    }) as SlopeDefinition;
+  const edge = (exit: [number, number]) =>
+    analysisWarnings(runVerification(slope(exit), "Bishop").slope).find((x) => x.code === "search-edge");
+
+  it("warns when the critical circle exits at the end of its range", () => {
+    // The toe circle would exit at the toe (x = 40), 2 m outside the range.
+    expect(edge([42, 55])).toEqual({
+      code: "search-edge",
+      message:
+        "The critical surface lies on the edge of the search limits (exit at the left end of its range); the minimum may lie outside. Widen the search limits.",
+    });
+  });
+
+  it("does not warn with wide limits or at the toe", () => {
+    expect(edge([30, 55])).toBeUndefined();
+    expect(edge([40, 55])).toBeUndefined(); // a corner of the ground
+  });
+});
