@@ -59,15 +59,6 @@ export const LAYER_KINDS: { kind: LayerModel; label: string }[] = (["undrained",
   label: MATERIAL_MODEL_LABELS[kind],
 }));
 
-/** The model of a layer's kind in an address: the app's, or the names of older links. */
-const KIND_ALIASES: Record<string, LayerModel> = {
-  undrained: "undrained",
-  "undrained-increasing": "undrained",
-  "mohr-coulomb": "mohr-coulomb",
-  drained: "mohr-coulomb",
-  impenetrable: "impenetrable",
-};
-
 /** The fields of a layer of each model, in the form's order. */
 export const LAYER_FIELDS: Record<LayerModel, Exclude<keyof typeof LAYER_PARAMETERS, "bottomLevel">[]> = {
   undrained: ["gamma", "su", "suRate"],
@@ -295,9 +286,8 @@ export function toQuery(draft: Draft): string {
 
 /**
  * The draft of an address's query; the template's first visit when it has
- * no fields. A query without "t" (an older link) is the excavation's.
- * Unknown keys are ignored, also the design values of older links
- * ("values=design&safetyClass=2&…"): they open on characteristic values.
+ * no fields. A query without "t" is the excavation's; unknown keys are
+ * ignored.
  */
 export function fromQuery(search: string): Draft {
   const q = new URLSearchParams(search);
@@ -314,18 +304,11 @@ export function fromQuery(search: string): Draft {
     for (const k of g.keys) draft.fields[k] = get(spec.short[k] ?? k);
   }
   const count = Math.max(1, Math.min(12, Math.floor(Number(q.get("layers"))) || 1));
-  // Older links give each layer's bottom level ("layer1.bottomLevel=-15"): the thickness is the distance from the ground or the layer above.
-  let top = parseNumber(draft.fields.groundLevel ?? "") ?? NaN;
   draft.layers = Array.from({ length: count }, (_, i) => {
     const p = `layer${i + 1}.`;
-    const kind = KIND_ALIASES[q.get(p + "kind") ?? ""] ?? "undrained";
-    let thickness = get(p + "t");
-    if (!q.has(p + "t") && q.has(p + "bottomLevel")) {
-      const level = parseNumber(get(p + "bottomLevel")) ?? NaN;
-      thickness = Number.isFinite(top) && Number.isFinite(level) ? String(thicknesses(top, [level])[0]) : "";
-      top = level;
-    } else top -= parseNumber(thickness) ?? NaN;
-    const layer: LayerDraft = { ...emptyLayer(thickness, layerColorOf(q.get(p + "color")) ?? defaultLayerColor(i)), name: get(p + "name"), kind };
+    const given = q.get(p + "kind") ?? "";
+    const kind = Object.hasOwn(LAYER_FIELDS, given) ? (given as LayerModel) : "undrained";
+    const layer: LayerDraft = { ...emptyLayer(get(p + "t"), layerColorOf(q.get(p + "color")) ?? defaultLayerColor(i)), name: get(p + "name"), kind };
     for (const k of LAYER_FIELDS[kind]) layer[k] = get(p + k);
     return layer;
   });

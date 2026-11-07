@@ -29,20 +29,20 @@ const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.mi
  * parameters): a crust over clay with a haul road.
  */
 export const FILLED =
-  "ground=0&H=4&slope=2&water=-1&layers=2&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
-  "&layer2.name=Clay&layer2.kind=undrained-increasing&layer2.bottomLevel=-20&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
+  "t=excavation&ground=0&H=4&slope=2&water=-1&layers=2&layer1.name=Crust&layer1.kind=mohr-coulomb&layer1.t=1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
+  "&layer2.name=Clay&layer2.kind=undrained&layer2.t=18.5&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
   "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20";
 
 /** A filled-in embankment, as its link gives it ("t=embankment"): a crust over clay with a load on the crest. */
 export const EMBANKMENT =
   "t=embankment&ground=0&h=3&B=10&slope=2&fill.gamma=20&fill.c=0&fill.phi=38&q=10&water=-1&layers=2" +
-  "&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=3&layer1.phi=30" +
-  "&layer2.name=Clay&layer2.kind=undrained&layer2.bottomLevel=-20&layer2.gamma=16&layer2.su=14";
+  "&layer1.name=Crust&layer1.kind=mohr-coulomb&layer1.t=1.5&layer1.gamma=18&layer1.c=3&layer1.phi=30" +
+  "&layer2.name=Clay&layer2.kind=undrained&layer2.t=18.5&layer2.gamma=16&layer2.su=14";
 
 /** A one-sided excavation with ponded water 2 m above its bottom (the example clay-5m-ponded): F 2.273. */
 export const PONDED =
-  "t=excavation&ground=10&H=5&slope=2&water=7&pond=1&layers=2&layer1.kind=undrained&layer1.bottomLevel=-10&layer1.gamma=16&layer1.su=25" +
-  "&layer2.kind=impenetrable&layer2.bottomLevel=-20&layer2.gamma=24";
+  "t=excavation&ground=10&H=5&slope=2&water=7&layers=2&layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25" +
+  "&layer2.kind=impenetrable&layer2.t=10&layer2.gamma=24&pond=1";
 
 /** The value F of the result card, once it shows one ("F 1.234"). */
 const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
