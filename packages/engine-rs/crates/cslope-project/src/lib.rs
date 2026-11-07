@@ -1,15 +1,17 @@
 //! cSlope projects: the app's model of a `.cslp` file and its conversion to
 //! and from the engine's slope definition (issue #57, part 1).
 //!
-//! - [`model`]: the app's `ModelEntry`, the fields the analysis reads typed
-//!   and the rest kept as it is;
+//! - [`model`]: the app's `ModelEntry`, every member typed;
+//!   [`normalize`]: the app's reading of a saved model (lenient as the app,
+//!   or strict: unknown members refused);
 //! - [`convert`]: [`model_to_definition`] (the app's
 //!   `buildModelSpaceSlopeDTO`) and [`definition_to_model`]
 //!   (`modelFromDefinition`), held to the app's own results by
-//!   tests/golden.rs.
-//!
-//! The archive itself (reading and writing `.cslp` files) is part 2; the
-//! Python package reads it with the standard library (`cslope.project`).
+//!   tests/golden.rs;
+//! - [`canonical`] and [`hash`]: the app's canonical JSON and a result's
+//!   input hash (issue #58);
+//! - [`project`]: a whole project and its JSON entries, with the save
+//!   policy; [`archive`] (feature `native`): the `.cslp` ZIP container.
 
 pub mod canonical;
 pub mod convert;
@@ -18,7 +20,11 @@ pub mod hash;
 pub mod model;
 pub mod normalize;
 pub mod options;
+pub mod project;
 pub mod regions;
+
+#[cfg(feature = "native")]
+pub mod archive;
 
 pub use convert::{definition_to_model, model_to_definition, ConvertError, DefinitionModelInfo};
 pub use hash::{analysis_input_json, input_hash};
