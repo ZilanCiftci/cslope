@@ -61,7 +61,18 @@ function Hero() {
               </Link>
             </Button>
           </div>
-          <p className="mt-4 text-sm text-muted-foreground">Free and open source under the {SITE.licence} license.</p>
+          <p className="mt-4 text-sm text-muted-foreground">
+            Free and open source under the {SITE.licence} license.{" "}
+            <a
+              href={SITE.app}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center font-medium text-primary hover:underline"
+            >
+              Try in the browser
+              <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
+            </a>
+          </p>
         </div>
         {/* The whole program, wide enough to read: below the text, not beside it. */}
         <Screenshot

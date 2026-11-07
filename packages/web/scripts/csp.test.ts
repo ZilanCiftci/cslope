@@ -29,3 +29,13 @@ describe("content security policy", () => {
     expect(allowsDataFonts(vercel()!)).toBe(false);
   });
 });
+
+describe("vercel.json", () => {
+  it("deploys main only and installs and builds as the website's", () => {
+    const config = (dir: string) => JSON.parse(readFileSync(join(root, dir, "vercel.json"), "utf8")) as Record<string, unknown>;
+    const pick = ({ git, ignoreCommand, installCommand, buildCommand, outputDirectory }: Record<string, unknown>) =>
+      ({ git, ignoreCommand, installCommand, buildCommand, outputDirectory });
+    expect(config(".").git).toEqual({ deploymentEnabled: { "**": false, main: true } });
+    expect(pick(config("."))).toEqual(pick(config("../website")));
+  });
+});
