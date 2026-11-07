@@ -96,6 +96,17 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Download JSON" })).toBeEnabled();
   });
 
+  it("resets every field to the template's defaults", async () => {
+    const { requests } = renderApp();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    fireEvent.change(field("Excavation depth H (m)"), { target: { value: "3.5" } });
+    expect(field("Excavation depth H (m)").value).toBe("3.5");
+    fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+    expect(field("Excavation depth H (m)").value).toBe("2.5");
+    expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
+    expect(screen.getByRole("button", { name: /^Dry crust/ })).toHaveTextContent("Undrained · 1 m (0 to −1 m) · Su 30 kPa");
+  });
+
   it("asks for the empty strengths of a plain section without running", async () => {
     plain();
     const { requests } = renderApp();

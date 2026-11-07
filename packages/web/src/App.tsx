@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ResultSummary, SliceData } from "@cslope/engine";
 import { Header } from "@/components/Header";
+import { Button } from "@/components/ui/button";
 import { CancelledError, type AnalysisClient, type RunOutcome } from "@/engine/client";
 import { dumps, type AnalysisDocument } from "@/engine/document";
 import { draftFields, formState, fromQuery, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
@@ -66,6 +67,12 @@ export function App({ client }: { client: AnalysisClient }) {
     drafts.current[draft.template] = draft;
     setDraft(drafts.current[id] ?? initialDraft(id));
     setPrevious(null);
+  };
+  // Back to the template's defaults (the first visit's values).
+  const resetDraft = () => {
+    setDraft(initialDraft(draft.template));
+    setPrevious(null);
+    setNotice("Reset to the template's defaults.");
   };
   const [run, setRun] = useState<Run | null>(null);
   const [previous, setPrevious] = useState<ResultSummary | null>(null);
@@ -203,6 +210,9 @@ export function App({ client }: { client: AnalysisClient }) {
             Template
           </span>
           <Choices wrap labelledBy="template-label" value={draft.template} onChange={switchTo} options={SPECS.map((s) => ({ value: s.template.id as TemplateId, label: s.template.title }))} />
+          <Button size="sm" variant="outline" className="sm:ml-auto" onClick={resetDraft} title="Put every field back to the template's defaults.">
+            Reset to defaults
+          </Button>
         </div>
         <h1 className="text-xl font-semibold tracking-tight">{spec.template.title}</h1>
         <p className="mt-1 max-w-prose text-sm text-muted-foreground">
