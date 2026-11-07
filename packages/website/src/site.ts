@@ -7,6 +7,8 @@ export const SITE = {
   github: "https://github.com/ZilanCiftci/cslope",
   releases: "https://github.com/ZilanCiftci/cslope/releases",
   issues: "https://github.com/ZilanCiftci/cslope/issues",
+  /** cSlope in the browser (packages/web), one template without installing. */
+  app: "https://app.cslope.com",
   company: { name: "Ibirico", url: "https://ibirico.se" },
   licence: "MIT",
 } as const;
