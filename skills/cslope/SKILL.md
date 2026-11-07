@@ -18,7 +18,7 @@ cSlope's engine, the one in the cSlope app, as a Python package with a `cslope` 
 Until the package is on PyPI (issue #61), install it from a wheel: the `cslope-*.whl` of your platform from the artifacts of the repository's "Python wheels" workflow, or one you were given.
 
 ```
-uv run --with ./cslope-0.1.0-cp39-abi3-manylinux_2_35_x86_64.whl cslope info
+uv run --with ./cslope-0.1.0-cp310-abi3-manylinux_2_35_x86_64.whl cslope info
 uv run --with ./cslope-*.whl python my_slope.py     # a script that imports cslope
 pip install ./cslope-*.whl                          # or into a virtual environment
 ```
@@ -30,7 +30,7 @@ uvx cslope info                              # the command
 uv run --with cslope python my_slope.py      # a script that imports cslope
 ```
 
-Python 3.9 or later. `cslope info` prints the package version, the engine build and the schema version.
+Python 3.10 or later. `cslope info` prints the package version, the engine build and the schema version.
 
 ## The workflow
 

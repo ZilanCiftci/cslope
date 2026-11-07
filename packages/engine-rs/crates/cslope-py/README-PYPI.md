@@ -13,7 +13,7 @@ from Rust.
 - **Reliability**: Taylor series and Monte Carlo.
 
 One wheel per platform (Linux x86_64 and aarch64, macOS, Windows x64) for
-CPython 3.9 and later, with no dependencies.
+CPython 3.10 and later, with no dependencies.
 
 ## Install
 

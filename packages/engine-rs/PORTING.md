@@ -211,7 +211,7 @@ types, data and docs and calls the engine), and the steps below apply to
 | wasm + facade | crates/cslope-wasm, packages/engine (TypeScript API over WebAssembly) | done: every module, api/run-analysis and the parallel evaluator path over the engine; every test file of packages/engine ran unchanged on it (see "The limit equilibrium facade", "FE facade") |
 | cutover | the app, the tests, the website, the report on the Rust engine; the TypeScript engine removed | done 2026-11-04 (see "Cutover") |
 | FE facade | crates/cslope-wasm/src/api/fem.rs, fem_testing.rs; packages/engine/src/facade/fem | done: the 21 fem modules shimmed; the 14 FE test files (70 tests) pass unchanged on the Rust engine, no known differences; the slope crosses as the model facade's handle (`_h`) (see "FE facade" below) |
-| python | crates/cslope-py | done: `cslope` (pyo3 + pythonize, abi3-py39): analyse, fem_summary, reliability, to_canonical, validate_material_model, Slope, CancelToken; results equal the native engine bit for bit and TypeScript within 1e-6 (tests/test_parity.py); any thread count bit for bit; wheels workflow .github/workflows/python.yml; see "Python binding" below |
+| python | crates/cslope-py | done: `cslope` (pyo3 + pythonize, abi3-py310): analyse, fem_summary, reliability, to_canonical, validate_material_model, Slope, CancelToken; results equal the native engine bit for bit and TypeScript within 1e-6 (tests/test_parity.py); any thread count bit for bit; wheels workflow .github/workflows/python.yml; see "Python binding" below |
 
 ## Decisions
 
@@ -1254,7 +1254,7 @@ porters. Each names where it lives.
 ### Python binding (crates/cslope-py)
 
 - **Shape**: ARCHITECTURE.md §4; developer notes in crates/cslope-py/README.md.
-  pyo3 `=0.29.3` (abi3-py39) and pythonize `=0.29.0` (its minor version
+  pyo3 `=0.29.3` (abi3-py310) and pythonize `=0.29.0` (its minor version
   must match pyo3's), maturin `==1.15.0` (pyproject.toml and the wheels
   workflow). The extension is `cslope._native`; `python/cslope/__init__.py`
   wraps it (FE arrays), and its `Slope` subclasses the Rust class to add

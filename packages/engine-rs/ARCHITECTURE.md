@@ -464,7 +464,7 @@ s.fem(options) -> FemResult                      # .factor_of_safety, .mesh (x, 
   - `progress` callbacks take the GIL briefly, are throttled by count, and may return `False` to cancel.
   - `KeyboardInterrupt` comes through `py.check_signals()` in the same hook and becomes `CancelToken`.
 - **Wheels.**
-  - `abi3-py39`, so one wheel per platform: manylinux x86_64/aarch64, macOS universal2, Windows x64.
+  - `abi3-py310`, so one wheel per platform: manylinux x86_64/aarch64, macOS universal2, Windows x64.
   - A handwritten `__init__.pyi` holds `TypedDict`s for the main shapes.
   - The verification problems are **not** shipped: they cite other programs, and the check-names policy applies.
   - A `cslope.examples` module carries a few clean demo models.
@@ -683,7 +683,7 @@ pub struct Serial;                                         // default; wasm
   - `--omit-default-module-path` means Vite sees no `new URL(..., import.meta.url)` and does not emit a second copy.
   - `jsts` and `highs` leave both package.jsons; the desktop does not use them directly (checked).
 - **Website (Vercel):** the build only typechecks the scripts that import the engine and runs no analysis. `generate-data.ts` is run by developers and then needs only the committed wasm. Nothing changes for Vercel.
-- **Python:** `python.yml` triggers on tags `py-v*` and by hand. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64; one abi3 wheel each for CPython 3.9 and later) and runs the crate's pytest suite against each wheel on Python 3.9 and 3.13, with the crate's and the skill's examples (the demo models against pinned F within 1e-6; the tests that need other parts of the repository skip). Publishing to PyPI is written out but off (`if: false`): no trusted publisher is configured yet (#61). Until then the package is installed from the run's wheel artifacts or built from the source; enabling it is the PyPI project with this workflow as its trusted publisher and removing that line. The ordinary CI (`ci.yml`, job `python`) builds the package in place and runs the same tests when the engine changes.
+- **Python:** `python.yml` triggers on tags `py-v*` and by hand. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64; one abi3 wheel each for CPython 3.10 and later) and runs the crate's pytest suite against each wheel on Python 3.10 and 3.13, with the crate's and the skill's examples (the demo models against pinned F within 1e-6; the tests that need other parts of the repository skip). Publishing to PyPI is written out but off (`if: false`): no trusted publisher is configured yet (#61). Until then the package is installed from the run's wheel artifacts or built from the source; enabling it is the PyPI project with this workflow as its trusted publisher and removing that line. The ordinary CI (`ci.yml`, job `python`) builds the package in place and runs the same tests when the engine changes.
 
 ---
 

@@ -22,7 +22,8 @@ cslope-project = { path = "../cslope-project", features = ["native"] }
 serde.workspace = true
 serde_json.workspace = true
 # Exact pins (PORTING.md rule 5): pythonize must match pyo3's minor version.
-# abi3-py39: one wheel per platform for CPython 3.9 and later.
-pyo3 = { version = "=0.29.3", features = ["abi3-py39"] }
+# abi3-py310: one wheel per platform for CPython 3.10 and later (3.9 is
+# end-of-life and gone from GitHub's runners).
+pyo3 = { version = "=0.29.3", features = ["abi3-py310"] }
 pythonize = "=0.29.0"
 rayon = "1"

@@ -3,7 +3,7 @@ name: Python wheels
 # The wheels of the Python binding (packages/engine-rs/crates/cslope-py,
 # ARCHITECTURE.md §8.5): built on a tag py-v* (e.g. py-v0.1.0) or by hand,
 # never on ordinary pushes, so the other workflows are not affected. One
-# abi3 wheel per platform serves CPython 3.9 and later; each is installed
+# abi3 wheel per platform serves CPython 3.10 and later; each is installed
 # and smoke-tested (the crate's tests, with its examples and the skill's) on
 # the oldest and a recent Python.
 on:
@@ -68,7 +68,7 @@ jobs:
       fail-fast: false
       matrix:
         name: [linux-x86_64, linux-aarch64, macos-universal2, windows-x64]
-        python: ["3.9", "3.13"]
+        python: ["3.10", "3.13"]
         include:
           - { name: linux-x86_64, os: ubuntu-latest }
           - { name: linux-aarch64, os: ubuntu-24.04-arm }
