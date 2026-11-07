@@ -951,6 +951,15 @@ def swedish_partial_factors(
     eta_drained: float,
     variable_load_base: float,
 ) -> PartialFactors: ...
+def analyze(
+    definition: Union[SlopeDefinition, AnalysisDocument],
+    options: Optional[AnalysisOptions] = None,
+    *,
+    both_directions: bool = False,
+    progress: Optional[ProgressCallback] = None,
+    threads: Optional[int] = None,
+    cancel: Optional[CancelToken] = None,
+) -> AnalysisResult: ...
 def analyse(
     definition: Union[SlopeDefinition, AnalysisDocument],
     options: Optional[AnalysisOptions] = None,

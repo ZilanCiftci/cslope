@@ -1353,7 +1353,7 @@ class Model:
         data = _native.definition_to_model(definition, id="model-1", name=_check_name(name), options=options)
         return cls._of(_native.normalize_model(data), None, [])
 
-    def analyse(
+    def analyze(
         self,
         *,
         threads: Optional[int] = None,
@@ -1393,6 +1393,8 @@ class Model:
         result = self.result
         assert result is not None
         return result
+
+    analyse = analyze  # the same method, in British spelling
 
     @property
     def result(self) -> Optional[Result]:

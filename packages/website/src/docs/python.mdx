@@ -1,0 +1,81 @@
+---
+title: Python
+description: Build, open, analyze and save cSlope projects from Python, read the results, and run analysis documents with the cslope command.
+section: Reference
+order: 2.2
+---
+
+import newProject from "../../../engine-rs/crates/cslope-py/examples/new_project.py?raw";
+import changeAndRerun from "../../../engine-rs/crates/cslope-py/examples/change_and_rerun.py?raw";
+import readResults from "../../../engine-rs/crates/cslope-py/examples/read_results.py?raw";
+import singleSlope from "../../../../skills/cslope/examples/single_slope.py?raw";
+
+The Python package `cslope` is the cSlope app's engine, compiled from the same Rust sources, with a `cslope` command. It builds a model from nothing or opens a `.cslp` project, runs it as the app runs it and saves a project the app opens with the results current. The examples on this page are files in the repository, run by its tests as they are shown.
+
+## Install
+
+Python 3.9 or later, on Windows (x64), macOS and Linux (x86_64, aarch64); no other dependencies.
+
+<Callout title="Not on PyPI yet">
+  The package is not published yet, so `pip install cslope` does not work. Until it is, install a wheel from the repository's builds or build it from the source.
+</Callout>
+
+**From a wheel.** On GitHub, open *Actions › Python wheels*, a finished run, and download the artifact of your platform (`wheel-windows-x64`, `wheel-macos-universal2`, `wheel-linux-x86_64` or `wheel-linux-aarch64`). Unzip it and install the `.whl` file in it:
+
+```
+pip install ./cslope-0.1.0-*.whl              # numpy too, for the finite element arrays: pip install numpy
+cslope info                                    # the package version, the engine build and the schema version
+```
+
+**From the source.** With Rust (the version in `packages/engine-rs/rust-toolchain.toml`) installed:
+
+```
+git clone https://github.com/ZilanCiftci/cslope
+cd cslope/packages/engine-rs/crates/cslope-py
+pip install maturin==1.15.0
+maturin build --release --out dist
+pip install dist/cslope-*.whl
+```
+
+## Build a project
+
+`Project`, `Model` and their methods use the app's names: *Exterior*, *Materials*, *Interior boundaries*, *Assign*, *Piezometric lines*, *Distributed loads*, *Line loads*, *Reinforcement*, *Search limits*, *Custom surfaces* and *Options*. Units are m, kPa, kN/m (line loads), kN/m³ and degrees; points are `(x, y)` with x to the right and y up. A new model takes the app's defaults for a new model (Morgenstern-Price, 30 slices, composite surfaces).
+
+<CodeFile path="packages/engine-rs/crates/cslope-py/examples/new_project.py" code={newProject} />
+
+Each call checks its input at once: a value the app would not keep, a boundary that does not reach the exterior or a load outside the model raises a `ValueError` that says what is wrong. `m.data` is the model as the app holds it, for what has no method of its own (the title block, a waternet, rapid drawdown, parameters).
+
+## Open, change, run and save
+
+<CodeFile path="packages/engine-rs/crates/cslope-py/examples/change_and_rerun.py" code={changeAndRerun} />
+
+A saved result carries a hash of the input it was computed for. When a model changes, its result is out of date (`m.result_is_current` is `False`), as the app marks it. `Project.save` writes what the app writes, with one rule: a model changed since its result and not run again is saved without the result, so that the file never shows an F for a model it was not computed for. For a model with the finite element analysis switched on, `analyze` gives the limit equilibrium result with a warning but does not keep it on the model: the finite element part runs in the app only.
+
+## Read the results
+
+<CodeFile path="packages/engine-rs/crates/cslope-py/examples/read_results.py" code={readResults} />
+
+`fos_label` says what F is: a *factor of safety* on characteristic values, or an *over-design factor* on design values when partial factors are applied (see [Analysis](/docs/analysis)). `r.data` is the whole result as the engine returns it, `r.summary` the summary the [For agents](/docs/agents) page describes.
+
+## The command
+
+```
+cslope analyze site.cslp                       # the active model, as the app runs it
+cslope analyze site.cslp --all --write         # every model, the results saved to the project
+cslope export site.cslp --model "Section A" -o section-a.json
+cslope validate section-a.json                 # the issues, each with its path in the document
+cslope analyze section-a.json --json           # the summary and the full result as JSON
+cslope schema analysis-document                # the JSON schema of a document
+```
+
+The exit status is 0 when the analysis ran, 1 when it failed and 2 when the input is not valid (each issue is printed with its path). `--threads N` limits the threads; the result is the same for any number.
+
+## Analysis documents (JSON)
+
+An **analysis document** is one model and its options as JSON: `{"format": "cslope-analysis", "formatVersion": 1, "definition": {...}, "options": {...}}`. It is what an agent or a script writes and the `cslope` command runs. `cslope.build.Definition` writes one with the same names as above and checks it as it goes; `cslope export` and `m.save_definition(path)` write one of a project's model, and `Model.from_definition(path)` makes a model of one.
+
+<CodeFile path="skills/cslope/examples/single_slope.py" code={singleSlope} />
+
+`cslope.analyze(doc)` and `cslope.summarize(result, doc)` run a document from Python and give the result and its summary as dicts. The JSON schemas of the document, the options, the result and the summary are in [packages/engine/schema](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine/schema), and `cslope schema <name>` prints them; their names are listed by `cslope info`. A key the schema does not define is an error, not ignored.
+
+The full list of names, the functions of the engine (finite elements, reliability, the `Slope` class) and the notes on threads, progress and cancelling are in the package's [README](https://github.com/ZilanCiftci/cslope/blob/main/packages/engine-rs/crates/cslope-py/README-PYPI.md). The format of a project file is in [Project files](/docs/file-format).

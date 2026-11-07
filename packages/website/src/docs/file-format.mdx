@@ -61,7 +61,7 @@ For each model, `model.json` holds:
 
 Because the result is saved with the model, a project opens with its results, ready to report. The results (slip surfaces, slices, finite element meshes) are most of a project's size; packed, a project with results takes about a seventh of the space of the plain JSON files of earlier versions. The JSON files are written in a fixed form (sorted keys, one time stamp), so saving the same project twice gives the same file, and two versions of a project can be compared file by file. Any ZIP tool can unpack a `.cslp` file, and the model files can be kept under version control.
 
-A project saved by a newer version of cSlope in a format this version cannot read is not opened; cSlope says which version saved it, so you know to update. Files from earlier versions of cSlope are converted when they are opened. The format is specified in `docs/file-format.md` in the repository.
+A project saved by a newer version of cSlope in a format this version cannot read is not opened; cSlope says which version saved it, so you know to update. Files from earlier versions of cSlope are converted when they are opened. The format is specified in `docs/file-format.md` in the repository. The [Python package](/docs/python) opens, changes, runs and saves project files too.
 
 ## Examples and benchmarks
 

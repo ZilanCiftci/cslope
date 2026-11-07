@@ -2,6 +2,8 @@
 
 This is the specification of the `.cslp` project file, format version 1. The reader and writer the app uses are `packages/desktop/src/features/project/cslp.ts` (with `zip.ts`, `canonical-json.ts` and `input-hash.ts` beside it); `packages/desktop/scripts/check-project.ts` opens a file and prints what it holds. The Python package opens, changes and saves one with `cslope.project.open` and `Project.save`, on the reader and writer of the Rust crate `cslope-project` (`packages/engine-rs/crates/cslope-project`, `project.rs` and `archive.rs`): a strict reader of this version's files (a member, entry or value it does not know is an error naming it; earlier versions are refused with a message to open them in the app and save them) and a writer that writes what the app writes. The user documentation is `packages/website/src/docs/file-format.mdx`.
 
+The Rust reader is the reference for what a file of this version may hold: a file that conforms to this specification opens in `cslope-project` (the app's reader is more lenient: it also repairs and migrates). Where this document and the Rust reader disagree, one of them is wrong and is fixed, in the same change as the other when the format changes; a change to the format changes the app's reader and writer, the Rust crate and this document together (CI checks that their version constants are equal). The save policy for a result whose model changed is in section 5.
+
 The words *must*, *must not* and *may* are used in their usual normative sense. A *reader* is any program that opens a project file; a *writer* any program that saves one.
 
 ## 1. Container
