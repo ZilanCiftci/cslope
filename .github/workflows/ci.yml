@@ -83,7 +83,9 @@ jobs:
       # they are (BUILD-INFO.json; no Rust needed). The rust job reproduces
       # it byte for byte when the engine changes.
       - name: Engine build is fresh
-        run: bun packages/engine-rs/tools/check-wasm-fresh.ts
+        run: |
+          bun packages/engine-rs/tools/check-wasm-fresh.ts
+          bun packages/engine-rs/tools/check-wasm-fresh.ts project
       # The golden corpus of the model conversion (crates/cslope-project)
       # is made by the app's code: a change to the app's conversion or load
       # (store/helpers.ts, definition-model.ts, persistence.ts, ...) must
@@ -229,6 +231,7 @@ jobs:
         run: |
           cargo clippy --all-targets --all-features -- -D warnings
           cargo clippy -p cslope-wasm --target wasm32-unknown-unknown --all-features -- -D warnings
+          cargo clippy -p cslope-project-wasm --target wasm32-unknown-unknown -- -D warnings
       # Unit tests, and the verification checks with the golden results
       # (golden/verification.json, tests/verification_native.rs)
       - name: Test
@@ -245,7 +248,9 @@ jobs:
         working-directory: packages/engine-rs
         run: cargo audit
       - name: Build WebAssembly
-        run: bun packages/engine-rs/tools/build-wasm.ts product
+        run: |
+          bun packages/engine-rs/tools/build-wasm.ts product
+          bun packages/engine-rs/tools/build-wasm.ts project
       # The committed build (the wasm, the glue and BUILD-INFO.json) is
       # reproduced byte for byte: the build remaps machine paths, leaves the
       # producers section out, and the same wasm-bindgen CLI runs on both
@@ -253,20 +258,22 @@ jobs:
       # this build, to compare or to commit.
       - name: Committed build matches the rebuild
         id: compare
-        run: git diff --exit-code --stat -- packages/engine/src/wasm
+        run: git diff --exit-code --stat -- packages/engine/src/wasm packages/engine/src/wasm-project
       - name: Show the difference
         if: failure() && steps.compare.outcome == 'failure'
         run: |
           git show HEAD:packages/engine/src/wasm/cslope_wasm_bg.wasm > committed.wasm
           echo "$(cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | wc -l) bytes differ; the first:"
           cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | head -20
-          git diff -- packages/engine/src/wasm/BUILD-INFO.json
+          git diff -- packages/engine/src/wasm/BUILD-INFO.json packages/engine/src/wasm-project/BUILD-INFO.json
       - name: Upload the rebuild
         if: failure() && steps.compare.outcome == 'failure'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: engine-wasm-rebuild
-          path: packages/engine/src/wasm
+          path: |
+            packages/engine/src/wasm
+            packages/engine/src/wasm-project
       # The size budget of the product build (ARCHITECTURE.md §3.5)
       - name: Size budget
         run: test "$(stat -c %s packages/engine/src/wasm/cslope_wasm_bg.wasm)" -le 4194304

@@ -1,148 +1,34 @@
-//! The `.cslp` ZIP container (docs/file-format.md section 1; feature
-//! `native`): reading with the reader's limits, and writing the entries
-//! of [`Project::entries`] as the app lays them out (the JSON entries
-//! deflated, the attachments and the thumbnail stored, one time stamp).
+//! The `.cslp` ZIP container (docs/file-format.md section 1): writing the
+//! entries of [`Project::entries`] as the app lays them out (the JSON
+//! entries deflated, the attachments and the thumbnail stored, one time
+//! stamp), in memory (feature `write`, which the WebAssembly build takes);
+//! reading with the reader's limits and saving to a file atomically
+//! (feature `native`).
 //!
 //! The bytes are not the app's: the app deflates with the browser's
 //! `CompressionStream` and stamps local time; this deflates with miniz_oxide
 //! and stamps the manifest's `modified` in UTC. The entries' content is the
-//! same.
+//! same. The same project and time give the same bytes.
 
-use crate::project::{iso_parts, EntrySource, Project, ProjectReadOptions, SaveReport};
-use std::io::{Cursor, Read, Write};
+use crate::convert::{definition_to_model, DefinitionModelInfo};
+use crate::hash::{definition_input_json, sha256_hex};
+use crate::model::MATERIAL_COLORS;
+use crate::project::{iso_parts, EngineInfo, Project, SaveReport, SavedResult};
+use cslope_engine::js::math as jmath;
+use cslope_engine::types::{SlopeDefinition, WaterTableMode, WaterTableValue};
+use serde_json::Value;
+use std::io::{Cursor, Write};
 use zip::write::SimpleFileOptions;
-use zip::{CompressionMethod, DateTime, ZipArchive, ZipWriter};
+use zip::{CompressionMethod, DateTime, ZipWriter};
 
-/// The largest project file (its drawings are stored in it).
-pub const MAX_FILE_BYTES: u64 = 500 * 1024 * 1024;
-/// The largest an entry may declare to unpack to.
-pub const MAX_ENTRY_BYTES: u64 = 100 * 1024 * 1024;
-/// The deflated entries together, but the attachments (the app's
-/// `ZIP_LIMITS.totalBytes`).
-pub const MAX_JSON_BYTES: u64 = 200 * 1024 * 1024;
-/// The deflated attachments together (the app's `PROJECT_ZIP_LIMITS.assets`).
-pub const MAX_ASSET_BYTES: u64 = 500 * 1024 * 1024;
-/// The most entries an archive may have (a ZIP without ZIP64 holds at most
-/// 65535, as the app reads them).
-pub const MAX_ENTRIES: usize = 65_535;
+#[cfg(feature = "native")]
+pub use read::{
+    read_project, save_atomically, MAX_ASSET_BYTES, MAX_ENTRIES, MAX_ENTRY_BYTES, MAX_FILE_BYTES,
+    MAX_JSON_BYTES,
+};
 
-fn megabytes(n: u64) -> String {
-    format!("{} MB", n.div_ceil(1024 * 1024))
-}
-
-struct Archive {
-    zip: ZipArchive<Cursor<Vec<u8>>>,
-    names: Vec<String>,
-}
-
-impl EntrySource for Archive {
-    fn names(&self) -> Vec<String> {
-        self.names.clone()
-    }
-
-    fn read(&mut self, name: &str) -> Result<Vec<u8>, String> {
-        let mut f = self
-            .zip
-            .by_name(name)
-            .map_err(|e| format!("The project file is damaged ({name}: {e})."))?;
-        let size = f.size();
-        let mut out = Vec::with_capacity(size as usize);
-        // never further than the declared size
-        (&mut f)
-            .take(size + 1)
-            .read_to_end(&mut out)
-            .map_err(|e| format!("The project file is damaged ({name}: {e})."))?;
-        if out.len() as u64 > size {
-            return Err(format!(
-                "The project file is damaged (the entry {name} unpacks to more than its declared size)."
-            ));
-        }
-        Ok(out)
-    }
-}
-
-/// Open the bytes of a `.cslp` file (strictly, see [`crate::project`]).
-pub fn read_project(bytes: Vec<u8>, options: &ProjectReadOptions) -> Result<Project, String> {
-    if bytes.len() as u64 > MAX_FILE_BYTES {
-        return Err("The file is too large to be a cSlope project.".into());
-    }
-    if bytes.len() < 4 || bytes[..4] != *b"PK\x03\x04" {
-        let text = String::from_utf8_lossy(&bytes[..bytes.len().min(4096)]);
-        let text = text.trim_start_matches('\u{feff}').trim_start();
-        return Err(if text.starts_with('{') {
-            "The file is a project of an earlier cSlope (a JSON project); open it in the cSlope app and save it.".into()
-        } else {
-            "The file is not a cSlope project (neither a .cslp archive nor a JSON project file)."
-                .into()
-        });
-    }
-    let mut zip = ZipArchive::new(Cursor::new(bytes))
-        .map_err(|e| format!("The file is not a readable cSlope project: {e}"))?;
-    if zip.has_overlapping_entries().unwrap_or(true) || zip.has_duplicate_names() {
-        return Err("The file is not a readable cSlope project: entries overlap or repeat.".into());
-    }
-    if zip.len() > MAX_ENTRIES {
-        return Err(format!(
-            "The file is not a readable cSlope project: {} entries (at most {MAX_ENTRIES}).",
-            zip.len()
-        ));
-    }
-    let mut names = Vec::new();
-    let mut json_total = 0u64;
-    let mut asset_total = 0u64;
-    for i in 0..zip.len() {
-        let f = zip
-            .by_index_raw(i)
-            .map_err(|e| format!("The file is not a readable cSlope project: {e}"))?;
-        let name = f
-            .name()
-            .map_err(|e| format!("The file is not a readable cSlope project: {e}"))?
-            .into_owned();
-        if f.encrypted() {
-            return Err(format!("The project file's entry {name} is encrypted."));
-        }
-        if !matches!(
-            f.compression(),
-            CompressionMethod::Stored | CompressionMethod::Deflated
-        ) {
-            return Err(format!(
-                "The project file's entry {name} is neither stored nor deflated."
-            ));
-        }
-        if f.size() > MAX_ENTRY_BYTES {
-            return Err(format!(
-                "The archive's entry {name} is too large ({} unpacked; at most {}).",
-                megabytes(f.size()),
-                megabytes(MAX_ENTRY_BYTES)
-            ));
-        }
-        // (declared sizes, before anything is unpacked; a stored entry is
-        // the bytes the file holds)
-        if f.compression() == CompressionMethod::Stored && f.size() != f.compressed_size() {
-            return Err(format!(
-                "The project file is damaged (the stored entry {name} declares another size than it holds)."
-            ));
-        }
-        if f.compression() == CompressionMethod::Deflated {
-            let is_asset = name.starts_with("assets/") && name != "assets/index.json";
-            let (total, limit) = if is_asset {
-                (&mut asset_total, MAX_ASSET_BYTES)
-            } else {
-                (&mut json_total, MAX_JSON_BYTES)
-            };
-            *total += f.size();
-            if *total > limit {
-                return Err(format!(
-                    "The archive is too large (its entries unpack to more than {}).",
-                    megabytes(limit)
-                ));
-            }
-        }
-        names.push(name);
-    }
-    let mut src = Archive { zip, names };
-    Project::from_entries(&mut src, options)
-}
+#[cfg(feature = "native")]
+mod read;
 
 /// Who writes a file, for the manifest.
 #[derive(Debug, Clone)]
@@ -192,54 +78,118 @@ pub fn write_project(
     Ok((bytes, report))
 }
 
-/// Write `bytes` to `path` atomically (docs/file-format.md section 8):
-/// to a temporary file next to it, flushed, then renamed over it.
-pub fn save_atomically(path: &std::path::Path, bytes: &[u8]) -> Result<(), String> {
-    let dir = path
-        .parent()
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or(std::path::Path::new("."));
-    let name = path
-        .file_name()
-        .ok_or("No file name")?
-        .to_string_lossy()
-        .into_owned();
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.subsec_nanos())
-        .unwrap_or(0);
-    let tmp = dir.join(format!("{name}.tmp-{}-{nanos:08x}", std::process::id()));
-    let result = (|| {
-        // a new file (never one that is there), with the permissions of the
-        // file it replaces
-        let mut f = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()?;
-        drop(f);
-        if let Ok(meta) = std::fs::metadata(path) {
-            std::fs::set_permissions(&tmp, meta.permissions())?;
+/// What [`project_from_definition`] makes a project of, besides the
+/// definition.
+#[derive(Debug, Clone, Default)]
+pub struct DefinitionProject {
+    /// The model's id and name, and its analysis options over the app's
+    /// defaults (those the result was computed with).
+    pub info: DefinitionModelInfo,
+    /// The model's date (YYYY-MM-DD, its `projectInfo.date`); default the
+    /// date of the writer's `modified`.
+    pub date: Option<String>,
+    /// The result of an analysis of the definition with the options (the
+    /// engine's `AnalysisResult` in the definition's coordinates), or none
+    /// (no analysis, or one of other input: the caller leaves out a result
+    /// that is out of date).
+    pub result: Option<Value>,
+    /// The engine that computed the result.
+    pub engine: EngineInfo,
+}
+
+/// A `.cslp` project of one model made from an engine definition (the
+/// app's `modelFromDefinition`, [`definition_to_model`]), with the result
+/// of its last analysis, written in memory as [`write_project`] writes it.
+///
+/// The result is stamped with the input hash of what it was computed for
+/// (the definition and the model's options, docs/file-format.md section
+/// 5), and the save policy keeps it only when that is the model's own
+/// input, so that the app opens the project with the result current. A
+/// model that would not read back as the definition (and so would not
+/// give that result in the app) is saved without the result; the report
+/// names it then.
+pub fn project_from_definition(
+    definition: &SlopeDefinition,
+    project: &DefinitionProject,
+    writer: &Writer,
+) -> Result<(Vec<u8>, SaveReport), String> {
+    let definition = &as_the_app_holds_it(definition);
+    let model = definition_to_model(definition, &project.info).map_err(|e| e.0)?;
+    let date = project
+        .date
+        .clone()
+        .or_else(|| {
+            writer
+                .modified
+                .as_ref()
+                .and_then(|m| m.get(..10))
+                .map(str::to_owned)
+        })
+        .unwrap_or_else(|| model.project_info.date.clone());
+    // the model as the app reads it back from its model.json
+    let mut json = model.to_json();
+    json["projectInfo"]["date"] = Value::String(date.clone());
+    let model = crate::normalize::read_model(
+        &json,
+        &crate::normalize::ReadOptions {
+            strict: false,
+            today: &date,
+        },
+    )
+    .map_err(|e| e.0)?;
+    let result = match &project.result {
+        None => None,
+        Some(r) => {
+            let mut saved = SavedResult::done(&model, r.clone(), project.engine.clone())?;
+            saved.input_hash =
+                sha256_hex(definition_input_json(definition, &model.options)?.as_bytes());
+            Some(saved)
         }
-        // (on Windows a reader such as a virus scanner may hold the target
-        // for a moment: try again a few times)
-        let mut tries = 0;
-        loop {
-            match std::fs::rename(&tmp, path) {
-                Ok(()) => return Ok(()),
-                Err(e) if cfg!(windows) && tries < 5 => {
-                    let _ = e;
-                    tries += 1;
-                    std::thread::sleep(std::time::Duration::from_millis(100 * tries));
-                }
-                Err(e) => return Err(e),
+    };
+    write_project(&mut Project::of_model(model, result), writer)
+}
+
+/// The definition as the app's model holds it, for the same analysis:
+/// each material without a colour with the colour the model gives it
+/// (colours do not change the analysis, but they are in the input hash),
+/// the water's free water as the model writes it, and a level water table
+/// (mode "height" or "depth", which the model does not have) as the line
+/// it stands for. The engine draws a level across
+/// the outline, from its least to its greatest x, at the height (or at
+/// the depth below the outline's top), so the line gives the same pore
+/// pressures (`Slope::set_water_table`).
+pub fn as_the_app_holds_it(definition: &SlopeDefinition) -> SlopeDefinition {
+    let mut def = definition.clone();
+    for (i, m) in def.materials.iter_mut().enumerate() {
+        if m.color.is_none() {
+            m.color = Some(MATERIAL_COLORS[i % MATERIAL_COLORS.len()].into());
+        }
+    }
+    if let Some(w) = &mut def.water_table {
+        // (the model writes each line's `followBoundary`, the inverse of
+        // `freeWater`, D-24; the other lines' default follows the main
+        // line's free water)
+        let main_free = w.free_water;
+        for e in def.water_tables.iter_mut().flatten() {
+            e.follow_boundary = Some(e.follows_boundary(main_free));
+            e.free_water = None;
+        }
+        w.follow_boundary = Some(w.follows_boundary().unwrap_or(true));
+        w.free_water = None;
+        if let WaterTableValue::Level(v) = w.value {
+            let xs: Vec<f64> = def.coordinates.iter().map(|c| c[0]).collect();
+            let ys: Vec<f64> = def.coordinates.iter().map(|c| c[1]).collect();
+            let level = match w.mode {
+                WaterTableMode::Height => Some(v),
+                WaterTableMode::Depth => Some(jmath::max_of(&ys) - v),
+                _ => None,
+            };
+            if let (Some(h), false) = (level, xs.is_empty()) {
+                w.mode = WaterTableMode::Custom;
+                w.value =
+                    WaterTableValue::Points(vec![[jmath::min_of(&xs), h], [jmath::max_of(&xs), h]]);
             }
         }
-    })();
-    if let Err(e) = result {
-        let _ = std::fs::remove_file(&tmp);
-        return Err(format!("Cannot write {}: {e}", path.display()));
     }
-    Ok(())
+    def
 }

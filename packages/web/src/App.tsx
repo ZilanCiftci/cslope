@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ResultSummary, SliceData } from "@cslope/engine";
+import type { AnalysisResult, ResultSummary, SliceData } from "@cslope/engine";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { CancelledError, type AnalysisClient, type RunOutcome } from "@/engine/client";
 import { dumps, type AnalysisDocument } from "@/engine/document";
+import { projectFileName, writeProject as writeEngineProject, type ProjectFile } from "@/engine/project";
 import { draftFields, formState, fromQuery, headerIdOf, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
 import { Choices, Form } from "@/form/Form";
 import { issuesByField } from "@/form/issues";
@@ -53,8 +54,8 @@ function buildDocument(spec: AnySpec, form: FormState): { doc: AnalysisDocument 
   }
 }
 
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+function download(name: string, data: string | Uint8Array<ArrayBuffer>, type = "application/json") {
+  const url = URL.createObjectURL(new Blob([data], { type }));
   const a = document.createElement("a");
   a.href = url;
   a.download = name;
@@ -64,7 +65,13 @@ function download(name: string, text: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function App({ client }: { client: AnalysisClient }) {
+export interface AppProps {
+  client: AnalysisClient;
+  /** Writes the .cslp project (default: the engine's project writer, loaded on the first download). */
+  writeProject?: (doc: AnalysisDocument, result: AnalysisResult | null, name: string) => Promise<ProjectFile>;
+}
+
+export function App({ client, writeProject = writeEngineProject }: AppProps) {
   const [engine, setEngine] = useState<EngineState>({ kind: "loading" });
   const [draft, setDraft] = useState(() => fromQuery(window.location.search));
   const spec = specOf(draft.template);
@@ -223,6 +230,25 @@ export function App({ client }: { client: AnalysisClient }) {
   else if (outcome?.kind === "complete") state = { kind: "complete", summary: outcome.summary };
   else state = engine.kind === "loading" ? { kind: "loading" } : { kind: "waiting" };
 
+  // The project of the section, with the result only when it is this document's (a run of other
+  // input, or one not finished, leaves the project without a result).
+  const [writing, setWriting] = useState(false);
+  const downloadProject = () => {
+    if (!doc || writing) return;
+    const result = outcome?.kind === "complete" ? outcome.result : null;
+    const fileName = projectFileName(spec.fileName);
+    setWriting(true);
+    writeProject(doc, result, spec.template.title)
+      .then(
+        (file) => {
+          download(fileName, file.bytes as Uint8Array<ArrayBuffer>, "application/zip");
+          if (!file.resultSaved) setNotice("Downloaded without a result: F is not computed yet.");
+        },
+        (err: unknown) => setNotice(`The project could not be written: ${err instanceof Error ? err.message : String(err)}`),
+      )
+      .finally(() => setWriting(false));
+  };
+
   const slices: SliceData[] | null = outcome?.kind === "complete" ? outcome.result.criticalSlices : null;
   const drawn = lastShape.template === draft.template ? lastShape.params : null;
   const outlineOnly = !!drawn && !shape && layersBroken;
@@ -268,6 +294,8 @@ export function App({ client }: { client: AnalysisClient }) {
               onRun={() => doc && key && start(doc, key)}
               onCancel={() => client.cancel()}
               onDownload={() => doc && download(spec.fileName, dumps(doc))}
+              canDownloadProject={!!doc && !writing}
+              onDownloadProject={downloadProject}
               onCopyLink={() => {
                 const copied = navigator.clipboard?.writeText(window.location.href);
                 if (!copied) setNotice("Copy the address from the address bar.");

@@ -4,6 +4,7 @@ members = [
     "crates/cslope-engine",
     "crates/cslope-project",
     "crates/cslope-wasm",
+    "crates/cslope-project-wasm",
     "crates/cslope-py",
 ]
 # The Python binding needs a Python interpreter to build (pyo3) and is built
@@ -14,6 +15,7 @@ default-members = [
     "crates/cslope-engine",
     "crates/cslope-project",
     "crates/cslope-wasm",
+    "crates/cslope-project-wasm",
 ]
 
 [workspace.package]
@@ -59,3 +61,11 @@ strip = "debuginfo"
 
 [profile.test]
 opt-level = 2
+
+# The project writer's WebAssembly (crates/cslope-project-wasm, built by
+# tools/build-wasm.ts as the "project" flavour): optimized for size, as it
+# is downloaded when a project is saved from the browser and its speed
+# does not matter (no float semantics change with the level).
+[profile.wasm-project]
+inherits = "wasm-release"
+opt-level = "z"
