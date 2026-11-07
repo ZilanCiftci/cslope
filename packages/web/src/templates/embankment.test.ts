@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * The embankment template: the geometry rules, the eleven named sets against
+ * The embankment template: the geometry rules, the ten named sets against
  * their pinned F and their committed fixtures, the model's extent, and the
  * monotonic checks (F falls with a higher embankment, a larger load on the
  * crest and a lower Su).
@@ -78,7 +78,7 @@ describe("the geometry rules", () => {
   });
 
   it("ends each layer boundary on the outline's vertices at both edges, with a region per layer", () => {
-    const params = EMBANKMENT_EXAMPLES["three-layers-design-sk3"];
+    const params = EMBANKMENT_EXAMPLES["three-layers"];
     const g = embankmentGeometry(params);
     const def = embankmentDocument(params).definition;
     expect(def.coordinates.slice(0, 4)).toEqual([
@@ -121,12 +121,9 @@ describe("the geometry rules", () => {
     expect(embankmentFieldProblems({ ...base, waterLevel: 3.1 })).toEqual([{ field: "waterLevel", message: "The ground-water level must not be above the crest (3 m)." }]);
   });
 
-  it("uses the app's options without a tension crack, with the partial factors of the safety class on design values", () => {
+  it("uses the app's options without a tension crack, on characteristic values (no partial factors)", () => {
     expect(embankmentDocument(base).options).toEqual(APP_OPTIONS);
-    expect(embankmentDocument(EMBANKMENT_EXAMPLES["clay-3m-design-sk2"]).options).toEqual({
-      ...APP_OPTIONS,
-      partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.183, basis: { safetyClass: 2, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 } },
-    });
+    expect(embankmentDocument(EMBANKMENT_EXAMPLES["clay-3m-traffic"]).options).not.toHaveProperty("partialFactors");
   });
 
   it("refuses what it cannot build, with a sentence each at its field", () => {
@@ -138,7 +135,6 @@ describe("the geometry rules", () => {
       fill: { gamma: 19, c: 0, phi: 90 },
       crestLoad: -5,
       layers: [{ ...clay(15), name: "Embankment" }, { bottomLevel: -14.98, material: { kind: "undrained", gamma: 16, su: -1 } }],
-      values: { basis: "design", safetyClass: 4 as never, etaCu: 1, etaDrained: 1, variableLoadBase: 2 },
     };
     expect(embankmentFieldProblems(params)).toEqual([
       { field: "embankmentHeight", message: "Must be from 0.5 to 15 m.", general: "Embankment height h must be from 0.5 to 15 m." },
@@ -148,8 +144,6 @@ describe("the geometry rules", () => {
       { field: "layers.1.bottomLevel", message: "Layer 2: the bottom level -14.98 must be at least 0.05 m below the layer above (-15)." },
       { field: "layers.1.su", message: "Must be at least 0 kPa.", general: "Layer 2: Su must be at least 0 kPa." },
       { field: "layers.0.name", message: 'A layer is named "Embankment", which is the embankment\'s material.' },
-      { field: "values.safetyClass", message: "The safety class must be 1, 2 or 3." },
-      { field: "values.variableLoadBase", message: "Must be from 1 to 1.5.", general: "γQ / γd must be from 1 to 1.5." },
     ]);
     expect(() => embankmentDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
   });
@@ -161,10 +155,10 @@ describe("the geometry rules", () => {
   });
 });
 
-describe("the eleven named sets", () => {
+describe("the ten named sets", () => {
   const names = Object.keys(EMBANKMENT_EXAMPLES);
-  it("are eleven, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(11);
+  it("are ten, with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(10);
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 
@@ -183,10 +177,8 @@ describe("the eleven named sets", () => {
     });
   }
 
-  it("say what F is: a factor of safety on characteristic values, an over-design factor on design values", () => {
-    expect(expected["clay-3m-traffic"].fosLabel).toBe("factor of safety");
-    expect(expected["clay-3m-design-sk2"].fosLabel).toBe("over-design factor");
-    expect(expected["clay-3m-design-sk2"].fos).toBeLessThan(expected["clay-3m-traffic"].fos);
+  it("say what F is: a factor of safety on characteristic values, for every set", () => {
+    for (const name of names) expect(expected[name].fosLabel, name).toBe("factor of safety");
   });
 });
 

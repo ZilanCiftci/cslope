@@ -3,15 +3,14 @@
  * turned into a parameter set with the problems of each field, and written
  * to and read from the page's address, so that a link opens the same
  * section of the same template. Pure TypeScript, without React. What each
- * template's fields are is in specs.ts; the layers and the safety values
- * are the same for every template.
+ * template's fields are is in specs.ts; the layers are the same for every
+ * template. The values are characteristic: F is a factor of safety.
  *
- * Strengths and unit weights start empty (decision B5); so do the safety
- * class and η (they are the engineer's choice). The geometry starts at a
- * plain section that the drawing can show.
+ * Strengths and unit weights start empty (decision B5). The geometry
+ * starts at a plain section that the drawing can show.
  */
-import { MATERIAL_MODEL_LABELS, type SafetyClass } from "@cslope/engine";
-import { LAYER_PARAMETERS, type Layer, type LayerMaterial, type Values } from "../templates/common";
+import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
+import { LAYER_PARAMETERS, type Layer, type LayerMaterial } from "../templates/common";
 import { defaultLayerColor, LAYER_COLORS, layerColorOf } from "../templates/colors";
 import { bottomLevels, newThickness, thicknesses, thicknessProblems } from "./layers";
 import { groupsOf, specOf, type GroupSpec, type TemplateId } from "./specs";
@@ -42,8 +41,6 @@ export interface LayerDraft {
   phi: string;
 }
 
-export type Basis = "characteristic" | "design";
-
 export interface Draft {
   /** The template's id: "excavation", "embankment". */
   template: TemplateId;
@@ -54,11 +51,6 @@ export interface Draft {
   layers: LayerDraft[];
   /** Water above the ground stands as ponded (free) water. */
   ponded: boolean;
-  basis: Basis;
-  safetyClass: string;
-  etaCu: string;
-  etaDrained: string;
-  variableLoadBase: string;
 }
 
 /** The material models of a layer, as the form offers them, with the app's names. */
@@ -95,8 +87,6 @@ export function strengthSummary(layer: LayerDraft): string {
       return "";
   }
 }
-
-const VALUE_KEYS = ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const;
 
 /** The bottom level of each layer of a draft (NaN where a thickness, or the ground, is not a number). */
 export function draftLevels(draft: Draft): number[] {
@@ -162,11 +152,6 @@ export function initialDraft(template: TemplateId = "excavation"): Draft {
     on: [],
     layers: [{ ...emptyLayer("15"), name: "Clay" }],
     ponded: false,
-    basis: "characteristic",
-    safetyClass: "",
-    etaCu: "",
-    etaDrained: "",
-    variableLoadBase: "",
   };
 }
 
@@ -212,7 +197,6 @@ export function draftFields(draft: Draft): [string, string][] {
     for (const k of LAYER_FIELDS[layer.kind]) out.push([`layers.${i}.${k}`, layer[k]]);
   });
   spec.after.filter(shownGroup(draft)).forEach(group);
-  if (draft.basis === "design") for (const k of VALUE_KEYS) out.push([`values.${k}`, draft[k]]);
   return out;
 }
 
@@ -239,18 +223,6 @@ function layerOf(l: LayerDraft, index: number, bottomLevel: number): Layer {
   return { ...(l.name.trim() ? { name: l.name.trim() } : {}), bottomLevel, material, ...(l.color !== defaultLayerColor(index) ? { color: l.color } : {}) };
 }
 
-function valuesOf(draft: Draft): Values {
-  return draft.basis === "design"
-    ? {
-        basis: "design",
-        safetyClass: required(draft.safetyClass) as SafetyClass,
-        etaCu: required(draft.etaCu),
-        etaDrained: required(draft.etaDrained),
-        variableLoadBase: required(draft.variableLoadBase),
-      }
-    : { basis: "characteristic" };
-}
-
 export function formState(draft: Draft): FormState {
   const spec = specOf(draft.template);
   const levels = draftLevels(draft);
@@ -259,7 +231,6 @@ export function formState(draft: Draft): FormState {
     opt: (k) => parseNumber(draft.fields[k] ?? ""),
     on: new Set(draft.on),
     layers: draft.layers.map((l, i) => layerOf(l, i, levels[i])),
-    values: valuesOf(draft),
     ponded: draft.ponded,
   });
   const errors = new Map<string, string>();
@@ -319,17 +290,14 @@ export function toQuery(draft: Draft): string {
     q.set(g.id, "on");
     for (const k of g.keys) put(spec.short[k] ?? k, draft.fields[k]);
   }
-  if (draft.basis === "design") {
-    q.set("values", "design");
-    for (const k of VALUE_KEYS) put(k, draft[k]);
-  }
   return q.toString();
 }
 
 /**
  * The draft of an address's query; the template's first visit when it has
  * no fields. A query without "t" (an older link) is the excavation's.
- * Unknown keys are ignored.
+ * Unknown keys are ignored, also the design values of older links
+ * ("values=design&safetyClass=2&…"): they open on characteristic values.
  */
 export function fromQuery(search: string): Draft {
   const q = new URLSearchParams(search);
@@ -362,13 +330,6 @@ export function fromQuery(search: string): Draft {
     return layer;
   });
   draft.ponded = q.get("pond") === "1";
-  if (q.get("values") === "design") {
-    draft.basis = "design";
-    for (const k of VALUE_KEYS) draft[k] = get(k);
-    // "2.0" is class 2, which the form's buttons show as "2".
-    const c = parseNumber(draft.safetyClass);
-    if (c !== null && Number.isFinite(c)) draft.safetyClass = String(c);
-  }
   return draft;
 }
 
@@ -378,9 +339,8 @@ function modelOf(m: LayerMaterial): LayerModel {
 }
 
 /** The draft of a template's parameter set (the form filled in with it). */
-export function draftOf(template: TemplateId, params: { groundLevel: number; layers: Layer[]; values: Values; ponded?: boolean }): Draft {
+export function draftOf(template: TemplateId, params: { groundLevel: number; layers: Layer[]; ponded?: boolean }): Draft {
   const t = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
-  const v = params.values;
   const { fields, on } = specOf(template).toFields(params);
   const ts = thicknesses(params.groundLevel, params.layers.map((l) => l.bottomLevel));
   return {
@@ -401,10 +361,5 @@ export function draftOf(template: TemplateId, params: { groundLevel: number; lay
       };
     }),
     ponded: params.ponded === true,
-    basis: v.basis,
-    safetyClass: v.basis === "design" ? t(v.safetyClass) : "",
-    etaCu: v.basis === "design" ? t(v.etaCu) : "",
-    etaDrained: v.basis === "design" ? t(v.etaDrained) : "",
-    variableLoadBase: v.basis === "design" ? t(v.variableLoadBase) : "",
   };
 }

@@ -128,23 +128,25 @@ describe("App", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The engine found errors in the model.");
   });
 
-  it("opens the section of a shared link, and switches to the over-design factor", async () => {
+  it("opens the section of a shared link on characteristic values, without a safety section", async () => {
     window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])));
     const { requests } = renderApp();
     expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
     expect(field("Traffic load q (kPa)").value).toBe("20");
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].document.options.partialFactors).toBeUndefined();
-    fireEvent.click(screen.getByRole("button", { name: "Design values" }));
-    expect(screen.getByRole("button", { name: "Design values" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/^F is an over-design factor/)).toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent("fill in 4 empty fields");
-    fireEvent.click(screen.getByRole("button", { name: "2" }));
-    type("η undrained", "1");
-    type("η drained", "1");
-    type("γQ / γd", "1.3");
-    await waitFor(() => expect(requests).toHaveLength(2));
-    expect(requests[1].document.options.partialFactors).toMatchObject({ cu: 1.5, variableLoad: 1.183 });
+    expect(screen.queryByRole("heading", { name: "Safety" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Design values" })).toBeNull();
+    expect(screen.queryByLabelText("η undrained")).toBeNull();
+    expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
+  });
+
+  it("opens an older link with design values on characteristic values", async () => {
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])) + "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3");
+    const { requests } = renderApp();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].document.options.partialFactors).toBeUndefined();
+    expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_EXAMPLES["clay-road"]));
   });
 
   it("adds a layer open with the focus on its name, and after a remove puts the focus on the header of the layer before", () => {

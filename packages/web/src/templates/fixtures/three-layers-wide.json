@@ -132,18 +132,6 @@
     "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
-    "bothDirections": false,
-    "partialFactors": {
-      "cu": 1.667,
-      "cohesion": 1.3,
-      "tanPhi": 1.3,
-      "variableLoad": 1.4,
-      "basis": {
-        "safetyClass": 3,
-        "etaCu": 0.9,
-        "etaDrained": 1,
-        "variableLoadBase": 1.4
-      }
-    }
+    "bothDirections": false
   }
 }

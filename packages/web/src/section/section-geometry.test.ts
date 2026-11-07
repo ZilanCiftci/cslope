@@ -26,7 +26,7 @@ describe("the section's shapes", () => {
   });
 
   it("gives each layer its band of the outline, the road, the water in the ground and the load", () => {
-    const p = EXCAVATION_EXAMPLES["clay-road-design-sk2"];
+    const p = EXCAVATION_EXAMPLES["clay-road"];
     const s = excavationShapes(p);
     const g = geometry(p);
     expect(s.layers).toHaveLength(1);
@@ -77,7 +77,7 @@ describe("the section's shapes", () => {
   });
 
   it("draws water above the ground along the ground, and in the road's fill up to its level", () => {
-    const p = EXCAVATION_EXAMPLES["clay-road-design-sk2"];
+    const p = EXCAVATION_EXAMPLES["clay-road"];
     const high = excavationShapes({ ...p, waterLevel: 2 });
     expect(lineAt(high.water, -20)).toBe(0);
     expect(lineAt(high.water, -5)).toBe(0.8);

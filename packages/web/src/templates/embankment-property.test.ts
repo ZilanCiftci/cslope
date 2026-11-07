@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { MIN_LAYER_THICKNESS } from "./common";
 import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentNotes, embankmentProblems, modelDepth, type EmbankmentParams } from "./embankment";
-import { material, random, randomValues, value } from "./random-params";
+import { material, random, value } from "./random-params";
 import { regionCount } from "./regions";
 import { bottomLevels } from "../form/layers";
 
@@ -47,7 +47,6 @@ function randomParams(rnd: () => number): EmbankmentParams {
     layers: bottomLevels(groundLevel, ts).map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
     // The water anywhere from well below the base to the crest.
     waterLevel: rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * embankmentHeight, groundLevel + embankmentHeight) : null,
-    values: randomValues(rnd),
     // Now and then ponded water beside the embankment (nothing without water).
     ...(rnd() < 0.3 ? { ponded: true } : {}),
   };
@@ -58,7 +57,7 @@ describe("random embankments within the bounds", () => {
     await initEngine();
     const seed = 20261107;
     const rnd = random(seed);
-    const seen = { load: 0, shallowLayers: 0, deepLayers: 0, waterInEmbankment: 0, thin: 0, design: 0, layered: 0 };
+    const seen = { load: 0, shallowLayers: 0, deepLayers: 0, waterInEmbankment: 0, thin: 0, layered: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -78,7 +77,6 @@ describe("random embankments within the bounds", () => {
       else seen.deepLayers++;
       if (params.waterLevel !== null && params.waterLevel > G) seen.waterInEmbankment++;
       if (params.layers.some((l, k) => (k === 0 ? G : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
-      if (params.values.basis === "design") seen.design++;
       if (params.layers.length > 2) seen.layered++;
     }
     for (const [what, count] of Object.entries(seen)) expect(count, what).toBeGreaterThan(10);

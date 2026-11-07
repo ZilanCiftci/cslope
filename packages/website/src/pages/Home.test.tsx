@@ -24,7 +24,7 @@ describe("Home page", () => {
     }
   });
 
-  it("links to a filled-in excavation with a haul road on app.cslope.com", () => {
+  it("links to a filled-in excavation with a haul road on app.cslope.com, on characteristic values", () => {
     const url = new URL(SITE.appExample);
     expect(url.origin).toBe(new URL(SITE.app).origin);
     expect(url.pathname).toBe("/");
@@ -33,6 +33,8 @@ describe("Home page", () => {
     expect(url.searchParams.get("road")).toBe("on");
     expect(Number(url.searchParams.get("layers"))).toBe(2);
     for (const field of ["H", "slope", "layer1.c", "layer1.phi", "layer2.su"]) expect(url.searchParams.get(field), field).toMatch(/^\d/);
+    // On characteristic values: the web app computes a factor of safety, with no design values in the link.
+    for (const key of ["values", "safetyClass", "etaCu", "etaDrained", "variableLoadBase"]) expect(url.searchParams.has(key), key).toBe(false);
   });
 
   it("keeps the short link under the hero", () => {

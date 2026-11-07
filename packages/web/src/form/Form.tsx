@@ -2,14 +2,13 @@
  * A template's form, rendered from its spec (specs.ts) and its parameter
  * descriptions: one field per parameter, with its unit in the label, its
  * description as the tooltip and its problem under it. The template's
- * groups (Geometry, Water, Haul road, Embankment) around the Layers,
- * then Safety.
+ * groups (Geometry, Water, Haul road, Embankment) around the Layers.
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { ArrowDown, ArrowUp, BetweenHorizontalStart, ChevronDown, ChevronRight, CircleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
-import { DESIGN_PARAMETERS, LAYER_PARAMETERS } from "@/templates/common";
+import { LAYER_PARAMETERS } from "@/templates/common";
 import { draftLevels, emptyText, formState, LAYER_FIELDS, LAYER_KINDS, moveLayer, parseNumber, strengthSummary, withGroup, withNewLayer, type Draft, type LayerDraft } from "./draft";
 import { ColorPicker, Swatch } from "./ColorPicker";
 import { LAYER_THICKNESS, rangeText } from "./layers";
@@ -85,9 +84,6 @@ const HINTS: Record<string, string> = {
   waterLevel: "An elevation; empty for a dry slope.",
   suRate: "Per meter below the layer's top.",
   distanceFromCrest: "To the near edge of the road's top.",
-  etaCu: "γcu = 1.5 / η.",
-  etaDrained: "γc′ = γφ′ = 1.3 / η.",
-  variableLoadBase: "γQ = this factor × γd.",
 };
 
 /** The ids an input is described by: its problem or hint, and its description. */
@@ -484,47 +480,6 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
 
       {groups(spec.after)}
 
-      <Group title="Safety">
-        <Choices
-          label="Values"
-          value={draft.basis}
-          onChange={(b) => set("basis", b)}
-          options={[
-            { value: "characteristic", label: "Characteristic values" },
-            { value: "design", label: "Design values" },
-          ]}
-        />
-        <p className="mt-2 text-xs text-muted-foreground">
-          {draft.basis === "design"
-            ? "F is an over-design factor: on design values, with the Swedish partial factors of the safety class and η."
-            : "F is a factor of safety: on characteristic values, without partial factors."}
-        </p>
-        {draft.basis === "design" && (
-          <div className="mt-3 space-y-2">
-            <div>
-              <p className="mb-1 text-xs text-muted-foreground">
-                Safety class
-              </p>
-              <Choices
-                label="Safety class"
-                value={draft.safetyClass as "1" | "2" | "3" | ""}
-                onChange={(c) => set("safetyClass", c)}
-                options={[
-                  { value: "1", label: "1" },
-                  { value: "2", label: "2" },
-                  { value: "3", label: "3" },
-                ]}
-              />
-              {errors.get("values.safetyClass") && <ErrorText>{errors.get("values.safetyClass")}</ErrorText>}
-            </div>
-            <div className={grid}>
-              {(["etaCu", "etaDrained", "variableLoadBase"] as const).map((k) => (
-                <NumberField key={k} field={`values.${k}`} desc={DESIGN_PARAMETERS[k]} value={draft[k]} onChange={(v) => set(k, v)} errors={errors} />
-              ))}
-            </div>
-          </div>
-        )}
-      </Group>
 
       {notes.length > 0 && (
         <ul className="space-y-1 border-t pt-3 text-xs text-muted-foreground">

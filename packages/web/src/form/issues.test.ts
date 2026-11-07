@@ -12,20 +12,20 @@ import { embankmentSpec, excavationSpec } from "./specs";
 
 beforeAll(() => initEngine());
 
-const params = EXCAVATION_EXAMPLES["clay-road-design-sk2"];
+const params = EXCAVATION_EXAMPLES["clay-road"];
 const targets = excavationSpec.targets(params);
 /** The fields the form shows for these parameters. */
 const shown = new Set(draftFields(draftOf("excavation", params)).map(([f]) => f));
 
 describe("the engine's issues at the fields", () => {
-  it("maps the materials to the layers and the road's fill, the loads, the water and the factors", () => {
+  it("maps the materials to the layers and the road's fill, the loads and the water", () => {
     expect(issueField("/definition/materials/0/model/undrainedShearStrength", targets)).toBe("layers.0.su");
     expect(issueField("/definition/materials/0/model/unitWeight", targets)).toBe("layers.0.gamma");
     expect(issueField("/definition/materials/1/model/frictionAngle", targets)).toBe("road.phi");
     expect(issueField("/definition/regionAssignments/0/point", targets)).toBe("layers.0.thickness");
     expect(issueField("/definition/udls/0/magnitude", targets)).toBe("road.trafficLoad");
     expect(issueField("/definition/waterTable/value", targets)).toBe("waterLevel");
-    expect(issueField("/options/partialFactors/cu", targets)).toBe("values.etaCu");
+    expect(issueField("/options/partialFactors/cu", targets)).toBeNull();
     expect(issueField("/options/tensionCrackDepth", targets)).toBeNull();
     expect(issueField("/definition/coordinates/3", targets)).toBeNull();
     expect(issueField("/definition/materials/5/model/cohesion", targets)).toBeNull();

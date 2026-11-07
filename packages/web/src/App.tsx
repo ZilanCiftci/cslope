@@ -41,6 +41,9 @@ function buildDocument(spec: AnySpec, form: FormState): { doc: AnalysisDocument 
   }
 }
 
+/** "factor of safety" as a label: "Factor of safety". */
+const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function download(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
   const a = document.createElement("a");
@@ -238,7 +241,7 @@ export function App({ client }: { client: AnalysisClient }) {
         <aside aria-label="Result summary" className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur lg:hidden">
           <div className="mx-auto flex h-11 max-w-6xl items-center gap-3 px-4 text-sm">
             <span className="font-semibold tabular">F {state.summary.fosText}</span>
-            <span className="min-w-0 truncate text-muted-foreground">{state.summary.fosLabel === "over-design factor" ? "Over-design factor" : "Factor of safety"}</span>
+            <span className="min-w-0 truncate text-muted-foreground">{sentenceCase(state.summary.fosLabel)}</span>
             <a href="#result" className="ml-auto text-primary underline-offset-4 hover:underline">
               Result
             </a>
