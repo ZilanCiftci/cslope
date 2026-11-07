@@ -20,7 +20,8 @@ testing = ["dep:cslope-project"]
 
 [dependencies]
 cslope-engine = { path = "../cslope-engine" }
-cslope-project = { path = "../cslope-project", optional = true }
+# (without `native`: no ZIP code in WebAssembly)
+cslope-project = { path = "../cslope-project", optional = true, default-features = false }
 serde.workspace = true
 serde_json.workspace = true
 wasm-bindgen.workspace = true

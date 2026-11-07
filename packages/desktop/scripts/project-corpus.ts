@@ -4,7 +4,8 @@
  * (crate cslope-project, tests/golden.rs), made by the app's own code:
  *
  * - every example model (`BENCHMARK_MODELS`) and the synthetic models below,
- *   with the definition `buildModelSpaceSlopeDTO` gives them, in full;
+ *   with the definition `buildModelSpaceSlopeDTO` gives them once opened
+ *   (`parseProjectData`), in full;
  * - every verification problem as Help › Benchmarks opens it
  *   (`modelFromDefinition`, store/verification-models.ts) and that model's
  *   definition, as digests (the problems' definitions are in
@@ -16,7 +17,16 @@
  * - models as saved (`model.json`, sparse, older or hand-made) with the
  *   definition and the options the app runs after opening them
  *   (`parseProjectData`, store/persistence.ts), for the Rust
- *   `normalize_for_run`.
+ *   `normalize_for_run`;
+ * - for every model and saved model, the model as the app holds it after
+ *   opening and writes back to `model.json` (`parsed`: parseProjectData,
+ *   without the run fields and the drawings; the date of a title block the
+ *   raw model lacked is 1970-01-01, as the Rust test reads it) and its
+ *   input hash (`inputHash`, features/project/input-hash.ts), for the Rust
+ *   reader, writer and `input_hash`;
+ * - a seeded sample of random doubles and the special values as
+ *   `JSON.stringify` writes them (`jsNumbers`), for the canonical JSON
+ *   writer's number formatting.
  *
  * Run it after a change to the conversion (store/helpers.ts,
  * store/definition-model.ts, utils/reinforcement.ts) or to a verification
@@ -47,7 +57,8 @@ const { verificationModels } = await import("../src/store/verification-models");
 const { buildModelSpaceSlopeDTO } = await import("../src/store/helpers");
 const { modelFromDefinition } = await import("../src/store/definition-model");
 const { APP_DEFAULT_ANALYSIS_OPTIONS, MATERIAL_COLORS, PIEZO_COLORS } = await import("../src/store/defaults");
-const { parseProjectData } = await import("../src/store/persistence");
+const { parseProjectData, RUN_FIELDS } = await import("../src/store/persistence");
+const { analysisInputHash } = await import("../src/features/project/input-hash");
 type ModelEntry = import("../src/store/types").ModelEntry;
 
 const OUT = join(import.meta.dirname, "../../engine-rs/golden/project-corpus.json");
@@ -113,6 +124,88 @@ function digest(v: unknown): string {
   const h = new Fnv();
   feed(h, json(v));
   return h.h.toString(16).padStart(16, "0");
+}
+
+/** The date of a title block a raw model lacked (the app writes today's; the Rust test reads with this one). */
+const NO_DATE = "1970-01-01";
+
+/** A raw model as the app holds it after opening a project of this schema version. */
+function parsedModel(raw: Record<string, unknown>): ModelEntry {
+  const [model] = parseProjectData({ version: 3, models: [raw] }).models;
+  return model;
+}
+
+/**
+ * A parsed model as the app writes it to model.json (cslp.ts `modelJson`):
+ * without the run fields and the drawings. The ids the app made up for
+ * rows without one (`nextId`, random) are numbered in the order they were
+ * made, from 101, as the Rust reader numbers them.
+ */
+function asModelJson(raw: Record<string, unknown>, model: ModelEntry): Record<string, unknown> {
+  const out: Record<string, unknown> = json({ ...model });
+  for (const f of RUN_FIELDS) delete out[f];
+  delete out.backgrounds;
+  if (!raw.projectInfo) (out.projectInfo as { date: string }).date = NO_DATE;
+  let n = 100;
+  const madeUp = /^(bnd|piezo|reinf|pile|plane|bso)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  const renumber = (v: unknown): void => {
+    if (Array.isArray(v)) v.forEach(renumber);
+    else if (v && typeof v === "object") {
+      const o = v as Record<string, unknown>;
+      const m = typeof o.id === "string" ? madeUp.exec(o.id) : null;
+      if (m) o.id = `${m[1]}-${++n}`;
+      for (const k of Object.keys(o)) renumber(o[k]);
+    }
+  };
+  renumber(out);
+  return out;
+}
+
+/** The model as the app writes it back, and its input hash. */
+async function parsedAndHash(raw: Record<string, unknown>): Promise<{ parsed: Record<string, unknown>; inputHash: string }> {
+  const model = parsedModel(raw);
+  return { parsed: asModelJson(raw, model), inputHash: await analysisInputHash(model) };
+}
+
+// ── JSON.stringify numbers ──────────────────────────────────────
+
+/** A seeded 32-bit generator (mulberry32), so the sample is the same every run. */
+function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return (t ^ (t >>> 14)) >>> 0;
+  };
+}
+
+/** [the bits as 16 hex digits, JSON.stringify(x)] of special values and seeded random doubles. */
+function jsNumbers(): [string, string][] {
+  const dv = new DataView(new ArrayBuffer(8));
+  const out: [string, string][] = [];
+  const emit = (x: number) => {
+    dv.setFloat64(0, x);
+    out.push([dv.getBigUint64(0).toString(16).padStart(16, "0"), JSON.stringify(x)]);
+  };
+  const specials = [0, -0, 1, -1, 5, 0.1, 0.2, 0.3, 0.1 + 0.2, 1e21, 1e20, 999999999999999900000, 1e-7, 1e-6, 123456789, 2 ** 53, 2 ** 53 + 2, 2 ** 63, 2 ** 64, 1.7976931348623157e308, 5e-324, 2.2250738585072014e-308, NaN, Infinity, -Infinity, 1.5, 100, 1e22, 1e-5, 1e-10, 123.456, 0.5, 1 / 3, Math.PI, 4.35, 0.000035, 9007199254740993, 2 ** -25, 2 ** -24];
+  for (const x of specials) emit(x);
+  for (let e = -324; e <= 308; e += 4) emit(Number(`1.2345e${e}`));
+  const next = mulberry32(58);
+  for (let i = 0; i < 700; i++) {
+    dv.setUint32(0, next());
+    dv.setUint32(4, next());
+    emit(dv.getFloat64(0));
+  }
+  // doubles near the decimal boundaries (short decimals of few digits)
+  for (let i = 0; i < 300; i++) {
+    const digits = 1 + (next() % 17);
+    const m = next() % 10 ** Math.min(digits, 9);
+    const e = (next() % 60) - 30;
+    emit(Number(`${m}e${e}`));
+  }
+  return out;
 }
 
 // ── Models ──────────────────────────────────────────────────────
@@ -469,7 +562,7 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
         { id: "m1", name: "Flat", unitWeight: 19, cohesion: -2, frictionAngle: 30 },
         { id: "m2", name: "Sat", color: "", model: { ...mc(18, 5, 28), unitWeightSat: 600, phiB: 15, maxSuction: -1, drawdownStrength: { cohesion: 2, frictionAngle: 95 } } },
         { id: "m3", name: "Su", model: { kind: "undrained", unitWeight: 17, undrainedShearStrength: 30, suMax: 0, anisotropy: [], phiB: 10, bBar: 3, ru: 0.2 } },
-        { id: "m4", name: "Deep", depthRange: [0, "5"], model: { kind: "s-f-depth", unitWeight: 18, suTop: 10, rate: 1, depthReference: "datum", aboveWater: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 5, aboveWater: { kind: "x" } } } },
+        { id: "m4", name: "Deep", depthRange: [0, "5"], model: { kind: "s-f-depth", unitWeight: 18, suRef: 10, depthRef: 0, rate: 1, depthReference: "datum", aboveWater: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 5, aboveWater: { kind: "x" } } } },
       ],
       materialBoundaries: [{ id: "b2", coordinates: [[0, 3], [60, "4"], [60, 4]] }, { id: "b1", coordinates: [[0, 6], [60, 6]], extra: 1 }],
       regionMaterials: [{ point: [5, 1], materialId: "m2" }, { point: [5, 4] }, { point: [5, "x"], materialId: "m3" }, { point: [5, 8], materialId: "m4" }],
@@ -566,25 +659,31 @@ const orderCheck = (ids: string[]) => {
 };
 orderCheck(ORDER_SAMPLES);
 
-const models = [...BENCHMARK_MODELS.map((m) => ["example", m] as const), ...[SYNTHETIC_FULL, SYNTHETIC_PLAIN, SYNTHETIC_SPARSE, SYNTHETIC_NO_WATER].map((m) => ["synthetic", m] as const)].map(([source, m]) => {
+const models = [];
+for (const [source, m] of [...BENCHMARK_MODELS.map((m) => ["example", m] as const), ...[SYNTHETIC_FULL, SYNTHETIC_PLAIN, SYNTHETIC_SPARSE, SYNTHETIC_NO_WATER].map((m) => ["synthetic", m] as const)]) {
   orderCheck((m.materialBoundaries ?? []).map((b) => b.id));
-  return { name: m.name, source, model: stripped(m), definition: json(buildModelSpaceSlopeDTO(m)) };
-});
+  const model = stripped(m) as Record<string, unknown>;
+  // (the definition of the model as the app holds it after opening: a
+  // synthetic model may lack members the app fills, such as the limits)
+  models.push({ name: m.name, source, model, definition: json(buildModelSpaceSlopeDTO(parsedModel(model))), ...(await parsedAndHash(model)) });
+}
 
 // Help › Benchmarks: modelFromDefinition with the problem's options.
-const verification = verificationModels().map((m, i) => {
+const verification = [];
+for (const [i, m] of verificationModels().entries()) {
   const c = VERIFICATION_CASES[i];
   if (m.id !== `verification-${c.id}`) throw new Error(`verificationModels() is not in the order of VERIFICATION_CASES (${m.id})`);
   orderCheck(m.materialBoundaries.map((b) => b.id));
   const model = comparable(m);
   const definition = json(buildModelSpaceSlopeDTO(m));
-  return {
+  verification.push({
     case: c.id,
     info: { id: m.id, name: m.name, options: optionsDelta(m.options as unknown as Record<string, unknown>) },
     inputDigest: digest(c.definition),
+    inputHash: await analysisInputHash(m),
     ...(full ? { input: json(c.definition), model, definition } : { modelDigest: digest(model), definitionDigest: digest(definition) }),
-  };
-});
+  });
+}
 
 const definitions = [
   { name: "every field", info: { id: "def-full", name: "Every field", options: { method: "Bishop" as const, slices: 40 } }, definition: DEF_FULL },
@@ -596,10 +695,11 @@ const definitions = [
 });
 
 // Opened as the app opens a project of this schema version.
-const saved = SAVED.map(({ name, raw }) => {
-  const [model] = parseProjectData({ version: 3, models: [raw] }).models;
-  return { name, raw: json(raw), definition: json(buildModelSpaceSlopeDTO(model)), options: json(model.options) };
-});
+const saved = [];
+for (const { name, raw } of SAVED) {
+  const model = parsedModel(raw);
+  saved.push({ name, raw: json(raw), definition: json(buildModelSpaceSlopeDTO(model)), options: json(model.options), ...(await parsedAndHash(raw)) });
+}
 
 const refused = REFUSED.map((r) => {
   try {
@@ -612,13 +712,14 @@ const refused = REFUSED.map((r) => {
 
 const corpus = {
   $comment:
-    "The golden corpus of the conversion between the app's models and the engine's definition (crates/cslope-project, tests/golden.rs), made by the app's code with packages/desktop/scripts/project-corpus.ts; do not edit. Verification entries are digests (FNV-1a 64 over the JSON value, see the script) of the model Help › Benchmarks opens and its definition; their problems are in golden/verification.json.",
+    "The golden corpus of the conversion between the app's models and the engine's definition, of the app's reading of a saved model and its input hash (crates/cslope-project, tests/golden.rs), made by the app's code with packages/desktop/scripts/project-corpus.ts; do not edit. Verification entries are digests (FNV-1a 64 over the JSON value, see the script) of the model Help › Benchmarks opens and its definition; their problems are in golden/verification.json.",
   appDefaultOptions: json(APP_DEFAULT_ANALYSIS_OPTIONS),
   materialColors: MATERIAL_COLORS,
   piezoColors: PIEZO_COLORS,
   // the digest of a value with what it treats apart, for the Rust digest to match
   digestSample: { value: DIGEST_SAMPLE, digest: digest(DIGEST_SAMPLE) },
   boundaryOrder: [...ORDER_SAMPLES].sort((a, b) => a.localeCompare(b)),
+  jsNumbers: jsNumbers(),
   models,
   verification,
   definitions,

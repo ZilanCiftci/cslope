@@ -6,8 +6,25 @@ license.workspace = true
 description = "cSlope project models: the app's model of a .cslp file and its conversion to and from the engine's slope definition"
 publish = false
 
+[features]
+# Reading and writing `.cslp` archives (the ZIP container, `archive`):
+# off by default, so that the WebAssembly build (cslope-wasm, which takes
+# this crate with `default-features = false`) carries no ZIP code.
+native = ["dep:zip", "dep:flate2"]
+
 [dependencies]
 cslope-engine = { path = "../cslope-engine" }
 serde.workspace = true
 serde_json.workspace = true
+serde_ignored.workspace = true
 serde_path_to_error.workspace = true
+# The input hash of a result (SHA-256, docs/file-format.md section 5).
+sha2 = "=0.11.1"
+# Numbers as JavaScript's `Number.prototype.toString` writes them (the
+# canonical JSON of section 2; the engine's `js::num::to_string` breaks an
+# exact tie of the shortest digits the other way, e.g. 2^-25).
+ryu-js = "=1.0.3"
+# The ZIP container (feature `native`): the deflate of flate2's pure Rust
+# backend only, no other compression, no encryption.
+zip = { version = "=9.4.1", default-features = false, features = ["deflate-flate2"], optional = true }
+flate2 = { version = "=1.1.11", default-features = false, features = ["rust_backend"], optional = true }

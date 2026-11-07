@@ -17,8 +17,10 @@
 //! must be made on the other.
 
 use crate::model::*;
+use crate::normalize::today;
+use crate::options::{app_default_options, AnalysisOptions};
 use cslope_engine::js;
-use cslope_engine::model::canonical::{resolve_orientation, SlopeOrientation};
+use cslope_engine::model::canonical::resolve_orientation;
 use cslope_engine::types::{
     material_model_of, AnalysisLimits, BlockSearchObject, CustomSearchPlane, CustomSurface,
     LineLoadDefinition, MaterialBoundary, Pile, RapidDrawdown, RegionAssignment, Reinforcement,
@@ -172,9 +174,8 @@ pub fn to_engine_pile(row: &PileRow) -> Pile {
 /// its orientation (`buildModelSpaceSlopeDTO`).
 pub fn model_to_definition(model: &ModelEntry) -> SlopeDefinition {
     let materials = &model.materials;
-    let analysis_limits = model.analysis_limits.unwrap_or(DEFAULT_ANALYSIS_LIMITS);
-    let default_piezo = PiezometricLineState::default();
-    let piezo = model.piezometric_line.as_ref().unwrap_or(&default_piezo);
+    let analysis_limits = model.analysis_limits;
+    let piezo = &model.piezometric_line;
 
     // The engine looks materials up by name, but users can give two
     // materials the same name: every material gets a unique engine name
@@ -199,7 +200,7 @@ pub fn model_to_definition(model: &ModelEntry) -> SlopeDefinition {
             .iter()
             .map(|m| SlopeMaterialDefinition {
                 name: engine_name(&m.id).unwrap_or_else(|| m.name.clone()),
-                model: m.model.clone(),
+                model: Some(m.model.clone()),
                 unit_weight: None,
                 friction_angle: None,
                 cohesion: None,
@@ -207,12 +208,12 @@ pub fn model_to_definition(model: &ModelEntry) -> SlopeDefinition {
                 cohesion_rate_of_change: None,
                 cohesion_undrained: None,
                 depth_range: m.depth_range,
-                color: m.color.clone(),
+                color: Some(m.color.clone()),
                 water_table_id: None,
             })
             .collect(),
     );
-    def.orientation = Some(model.orientation.unwrap_or(SlopeOrientation::Ltr));
+    def.orientation = Some(model.orientation);
 
     if !model.material_boundaries.is_empty() {
         // Coordinates only (the materials come from the region
@@ -394,17 +395,12 @@ pub fn model_to_definition(model: &ModelEntry) -> SlopeDefinition {
         if !polylines.is_empty() {
             def.custom_surfaces = Some(polylines);
         }
-        def.custom_planes_only = Some(model.custom_planes_only.unwrap_or(false));
+        def.custom_planes_only = Some(model.custom_planes_only);
     }
 
     // Block search objects matter only to a block search; objects still
     // being entered (no point yet) are left out.
-    let block_search = model
-        .options
-        .as_ref()
-        .and_then(|o| o.get("searchMethod"))
-        .and_then(Value::as_str)
-        == Some("block");
+    let block_search = model.options.search_method.as_deref() == Some("block");
     let objects: Vec<BlockSearchObject> = model
         .block_search_objects
         .iter()
@@ -436,21 +432,6 @@ pub struct DefinitionModelInfo {
     pub name: String,
     /// Analysis options on top of the app's defaults (method, slices, ...).
     pub options: Option<Map<String, Value>>,
-}
-
-/// The app's options for a new model (`APP_DEFAULT_ANALYSIS_OPTIONS`): the
-/// engine's defaults with the public ones (D-23) over them.
-pub fn app_default_options() -> Map<String, Value> {
-    let mut out = match serde_json::to_value(cslope_engine::types::default_analysis_options()) {
-        Ok(Value::Object(m)) => m,
-        _ => Map::new(),
-    };
-    if let Ok(Value::Object(patch)) =
-        serde_json::to_value(cslope_engine::types::public_default_options())
-    {
-        out.extend(patch);
-    }
-    out
 }
 
 /// The app's reinforcement row for an engine reinforcement, with the
@@ -639,10 +620,10 @@ fn piezometric_line(
     }
     let mut lines = vec![PiezoLine {
         id: main_id.clone(),
-        name: "Water table".into(),
-        color: "#3b82f6".into(),
+        name: Some("Water table".into()),
+        color: Some("#3b82f6".into()),
         coordinates: main.clone(),
-        extra: Map::new(),
+        coordinate_expressions: None,
     }];
     for (i, w) in extra
         .iter()
@@ -651,10 +632,10 @@ fn piezometric_line(
     {
         lines.push(PiezoLine {
             id: line_id[w.id.as_str()].clone(),
-            name: w.id.clone(),
-            color: PIEZO_COLORS[(i + 1) % PIEZO_COLORS.len()].into(),
+            name: Some(w.id.clone()),
+            color: Some(PIEZO_COLORS[(i + 1) % PIEZO_COLORS.len()].into()),
             coordinates: w.coordinates.clone(),
-            extra: Map::new(),
+            coordinate_expressions: None,
         });
     }
     let mut material_assignment = BTreeMap::new();
@@ -676,7 +657,6 @@ fn piezometric_line(
         free_water: Some(!follow_boundary),
         main_line_id: Some(main_id),
         rapid_drawdown: None,
-        extra: Map::new(),
     })
 }
 
@@ -717,14 +697,13 @@ pub fn definition_to_model(
             Ok(MaterialRow {
                 id: material_id(i),
                 name: m.name.clone(),
-                color: Some(
-                    m.color
-                        .clone()
-                        .unwrap_or_else(|| MATERIAL_COLORS[i % MATERIAL_COLORS.len()].into()),
-                ),
+                color: m
+                    .color
+                    .clone()
+                    .unwrap_or_else(|| MATERIAL_COLORS[i % MATERIAL_COLORS.len()].into()),
                 depth_range: m.depth_range,
-                model: Some(material_model_of(m).map_err(|e| ConvertError(e.message))?),
-                extra: Map::new(),
+                model: material_model_of(m).map_err(|e| ConvertError(e.message))?,
+                model_expressions: None,
             })
         })
         .collect::<Result<Vec<_>, ConvertError>>()?;
@@ -759,8 +738,17 @@ pub fn definition_to_model(
     Ok(ModelEntry {
         id: id.to_owned(),
         name: info.name.clone(),
-        orientation: Some(resolve_orientation(def.orientation, &def.coordinates)),
+        orientation: resolve_orientation(def.orientation, &def.coordinates),
+        // A project block of its own (the app: `createDefaultProjectInfo()`
+        // with the model's name as its title) and the default sheet; the
+        // corpus compares neither.
+        project_info: ProjectInfo {
+            title: info.name.clone(),
+            ..ProjectInfo::default_for(&today())
+        },
         coordinates: def.coordinates.clone(),
+        coordinate_expressions: None,
+        parameters: None,
         materials,
         material_boundaries: def
             .material_boundaries
@@ -772,7 +760,7 @@ pub fn definition_to_model(
                 // boundaries by id).
                 id: format!("{id}-boundary-{:03}", i + 1),
                 coordinates: b.coordinates.clone(),
-                extra: Map::new(),
+                coordinate_expressions: None,
             })
             .collect(),
         region_materials: def
@@ -788,7 +776,7 @@ pub fn definition_to_model(
                     })
             })
             .collect(),
-        piezometric_line: Some(piezometric_line),
+        piezometric_line,
         udls: def
             .udls
             .iter()
@@ -801,7 +789,7 @@ pub fn definition_to_model(
                 x2: u.x2,
                 direction: (u.direction == Some(UdlDirection::Normal)).then(|| "normal".into()),
                 excess_pore_pressure: excess(&u.excess_pore_pressure),
-                extra: Map::new(),
+                expressions: None,
             })
             .collect(),
         line_loads: def
@@ -818,7 +806,7 @@ pub fn definition_to_model(
                     x: l.x,
                     angle,
                     y: angle.and(l.y),
-                    extra: Map::new(),
+                    expressions: None,
                 }
             })
             .collect(),
@@ -864,7 +852,7 @@ pub fn definition_to_model(
                     }),
             )
             .collect(),
-        custom_planes_only: Some(def.custom_planes_only.unwrap_or(false)),
+        custom_planes_only: def.custom_planes_only.unwrap_or(false),
         block_search_objects: Some(
             def.block_search_objects
                 .iter()
@@ -879,8 +867,8 @@ pub fn definition_to_model(
         // Kept as they are (both in model coordinates, as the definition's).
         waternet: def.waternet.clone(),
         earlier_stage: def.earlier_stage.clone(),
-        options: Some(options),
-        analysis_limits: Some(match &def.analysis_limits {
+        options: AnalysisOptions::from_map(options).map_err(ConvertError)?,
+        analysis_limits: match &def.analysis_limits {
             Some(l) => AnalysisLimitsState {
                 enabled: true,
                 entry_left_x: l.entry_left_x,
@@ -895,7 +883,16 @@ pub fn definition_to_model(
                 exit_left_x: x_min,
                 exit_right_x: x_max,
             },
-        }),
-        extra: Map::new(),
+        },
+        edit_view_offset: None,
+        edit_view_scale: None,
+        result_view_offset: None,
+        result_view_scale: None,
+        import_notes: None,
+        result_view_settings: default_result_view_settings(),
+        view_offset: None,
+        view_scale: None,
+        mode: None,
+        locks: None,
     })
 }

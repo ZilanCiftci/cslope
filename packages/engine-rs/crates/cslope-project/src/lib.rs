@@ -11,18 +11,20 @@
 //! The archive itself (reading and writing `.cslp` files) is part 2; the
 //! Python package reads it with the standard library (`cslope.project`).
 
+pub mod canonical;
 pub mod convert;
 pub mod digest;
+pub mod hash;
 pub mod model;
 pub mod normalize;
+pub mod options;
 pub mod regions;
 
-pub use convert::{
-    app_default_options, definition_to_model, model_to_definition, ConvertError,
-    DefinitionModelInfo,
-};
+pub use convert::{definition_to_model, model_to_definition, ConvertError, DefinitionModelInfo};
+pub use hash::{analysis_input_json, input_hash};
 pub use model::ModelEntry;
-pub use normalize::{normalize_for_run, normalize_model_json};
+pub use normalize::{normalize_for_run, normalize_model_json, read_model, ReadOptions};
+pub use options::{app_default_options, AnalysisOptions};
 pub use regions::assign_unassigned_regions;
 
 /// The definition of a model as saved in a project, as JSON (the shape the
