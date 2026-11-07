@@ -51,3 +51,7 @@ self.onmessage = (event: MessageEvent<WorkerRequest>) => {
     post({ type: "error", id, error: err instanceof Error ? err.message : String(err) });
   }
 };
+
+// A request that could not be read (it did not survive the structured
+// clone): the page learns it at once instead of waiting for an answer.
+self.onmessageerror = () => post({ type: "error", id: "unknown", error: "The analysis worker could not read the request." });

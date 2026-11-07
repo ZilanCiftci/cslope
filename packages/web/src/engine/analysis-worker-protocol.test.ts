@@ -55,6 +55,11 @@ describe("worker protocol", () => {
     expect(posted[0]).toMatchObject({ id: "unknown" });
   });
 
+  it("answers a request it could not read with an error", () => {
+    (self as unknown as { onmessageerror: () => void }).onmessageerror();
+    expect(posted).toEqual([{ type: "error", id: "unknown", error: "The analysis worker could not read the request." }]);
+  });
+
   it("runs T-ACADS Simple to F 0.984, with progress on the way and the summary", () => {
     const last = run(document(T_ACADS_SIMPLE));
     if (last.type !== "complete") throw new Error(JSON.stringify(last));

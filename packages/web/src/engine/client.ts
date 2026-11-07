@@ -19,6 +19,7 @@ export interface WorkerLike {
   postMessage(message: WorkerRequest): void;
   onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null;
   onerror: ((event: ErrorEvent) => void) | null;
+  onmessageerror?: ((event: MessageEvent) => void) | null;
   terminate(): void;
 }
 
@@ -55,6 +56,11 @@ export class AnalysisClient {
   private worker: WorkerLike | null = null;
   private pending: Pending | null = null;
   private nextId = 1;
+  /**
+   * Counts the runs asked for and the cancels: a run that was waiting for
+   * the engine goes on only when nothing came after it.
+   */
+  private generation = 0;
 
   constructor({ loadEngine = loadEngineModule, createWorker = createAnalysisWorker }: AnalysisClientOptions = {}) {
     this.loadEngine = loadEngine;
@@ -81,7 +87,10 @@ export class AnalysisClient {
    */
   async run(document: AnalysisDocument, onProgress?: (surfaces: number) => void): Promise<RunOutcome> {
     this.cancel();
+    const generation = this.generation;
     const engine = await this.ready();
+    // Another run or a cancel came while the engine loaded: this one is stale.
+    if (generation !== this.generation) throw new CancelledError();
     const id = String(this.nextId++);
     return new Promise<RunOutcome>((resolve, reject) => {
       this.pending = { id, resolve, reject, onProgress };
@@ -90,8 +99,9 @@ export class AnalysisClient {
     });
   }
 
-  /** Stops the run going on, if any: its promise rejects with CancelledError. */
+  /** Stops the run going on, or waiting for the engine, if any: its promise rejects with CancelledError. */
   cancel(): void {
+    this.generation++;
     const pending = this.pending;
     if (!pending) return;
     this.pending = null;
@@ -104,13 +114,17 @@ export class AnalysisClient {
     const worker = this.createWorker();
     worker.onmessage = (event) => this.receive(event.data);
     worker.onerror = (event) => this.fail(event.message || "The analysis worker failed.");
+    worker.onmessageerror = () => this.fail("The answer of the analysis worker could not be read.");
     this.worker = worker;
     return worker;
   }
 
   private receive(message: WorkerResponse): void {
     const pending = this.pending;
-    if (!pending || message.id !== pending.id) return; // an answer of a cancelled run
+    if (!pending) return;
+    // The worker could not read the request (it answers without the id).
+    if (message.type === "error" && message.id === "unknown") return this.fail(message.error);
+    if (message.id !== pending.id) return; // an answer of a cancelled run
     switch (message.type) {
       case "progress":
         pending.onProgress?.(message.surfaces);

@@ -118,11 +118,67 @@ describe("AnalysisClient", () => {
     expect(workers[0].terminated).toBe(true);
   });
 
+  it("rejects when the worker could not read the request, or its answer could not be read", async () => {
+    const { c, workers } = client();
+    const run = c.run(doc);
+    await tick();
+    workers[0].answer({ type: "error", id: "unknown", error: "The analysis worker could not read the request." });
+    await expect(run).rejects.toThrow("could not read the request");
+    const next = c.run(doc);
+    await tick();
+    workers[1].onmessageerror?.({} as MessageEvent);
+    await expect(next).rejects.toThrow("could not be read");
+  });
+
   it("tries to load the engine again after a failure", async () => {
     const loadEngine = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({} as WebAssembly.Module);
     const c = new AnalysisClient({ loadEngine, createWorker: fakeWorker });
     await expect(c.ready()).rejects.toThrow("offline");
     await expect(c.ready()).resolves.toBeDefined();
     expect(loadEngine).toHaveBeenCalledTimes(2);
+  });
+
+  describe("while the engine loads", () => {
+    function deferred() {
+      let resolve!: (m: WebAssembly.Module) => void;
+      const promise = new Promise<WebAssembly.Module>((r) => (resolve = r));
+      return { promise, resolve };
+    }
+    function loading() {
+      const engine = deferred();
+      const workers: ReturnType<typeof fakeWorker>[] = [];
+      const c = new AnalysisClient({
+        loadEngine: () => engine.promise,
+        createWorker: () => {
+          const w = fakeWorker();
+          workers.push(w);
+          return w;
+        },
+      });
+      return { c, engine, workers };
+    }
+
+    it("a second run makes the first one reject, and only the second is sent", async () => {
+      const { c, engine, workers } = loading();
+      const first = c.run(doc);
+      const second = c.run(doc);
+      engine.resolve({} as WebAssembly.Module);
+      await expect(first).rejects.toBeInstanceOf(CancelledError);
+      await tick();
+      expect(workers).toHaveLength(1);
+      expect(workers[0].requests).toHaveLength(1);
+      workers[0].answer({ type: "complete", id: workers[0].requests[0].id, result: {} as never, summary: {} as never, warnings: [] });
+      await expect(second).resolves.toMatchObject({ kind: "complete" });
+    });
+
+    it("a cancel stops a run that waits for the engine", async () => {
+      const { c, engine, workers } = loading();
+      const run = c.run(doc);
+      c.cancel();
+      engine.resolve({} as WebAssembly.Module);
+      await expect(run).rejects.toBeInstanceOf(CancelledError);
+      expect(workers).toHaveLength(0);
+      expect(c.running).toBe(false);
+    });
   });
 });
