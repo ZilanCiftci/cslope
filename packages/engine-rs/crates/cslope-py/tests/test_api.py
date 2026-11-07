@@ -19,16 +19,21 @@ from cslope import examples
 
 # The demo models' factors of safety (Linux x86_64, glibc). Another libm
 # may change the last bits, so they are compared within the tolerance
-# policy's 1e-6 (PORTING.md).
+# policy's 1e-6 (PORTING.md). The two with a material boundary drawn 5 cm
+# past the outline moved with #93 (PR #95): such an end now crosses the
+# outline where the line does, instead of being snapped to the nearest
+# point of the sloping face (clay_crust_with_load 1.303919 -> 1.304217 and
+# 1.303936 -> 1.304235, two_layer_cut_left 1.833078 -> 1.832632 and
+# 1.804630 -> 1.804133).
 EXPECTED = {
     ("simple_slope", "Bishop"): 1.6221345209559157,
     ("simple_slope", "Morgenstern-Price"): 1.6203232747394294,
     ("slope_with_water_table", "Bishop"): 1.3648599587454642,
     ("slope_with_water_table", "Morgenstern-Price"): 1.366246096456041,
-    ("clay_crust_with_load", "Bishop"): 1.303919352307778,
-    ("clay_crust_with_load", "Morgenstern-Price"): 1.303936121251979,
-    ("two_layer_cut_left", "Bishop"): 1.8330780187182485,
-    ("two_layer_cut_left", "Morgenstern-Price"): 1.8046299932421586,
+    ("clay_crust_with_load", "Bishop"): 1.304216981243128,
+    ("clay_crust_with_load", "Morgenstern-Price"): 1.3042351061905917,
+    ("two_layer_cut_left", "Bishop"): 1.832631714530995,
+    ("two_layer_cut_left", "Morgenstern-Price"): 1.8041330427967988,
 }
 
 # The engine's own defaults where the public ones (D-23, analyse without
