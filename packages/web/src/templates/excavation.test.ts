@@ -9,7 +9,7 @@ import { initEngine, publicDefaultOptions, swedishPartialFactors as engineFactor
 import { dumps } from "../engine/document";
 import { APP_OPTIONS } from "./builder";
 import { EXCAVATION_EXAMPLES } from "./excavation-examples";
-import { excavationDocument, excavationNotes, excavationProblems, excavationTemplate, geometry, type ExcavationParams } from "./excavation";
+import { excavationDocument, excavationFieldProblems, excavationNotes, excavationProblems, excavationTemplate, geometry, type ExcavationParams } from "./excavation";
 import { regionCount } from "./regions";
 import { swedishPartialFactors } from "./partial-factors";
 import { runDocument } from "./run-document";
@@ -211,6 +211,27 @@ describe("the geometry rules", () => {
     ]);
     expect(excavationProblems({ ...base, values: { basis: "design", safetyClass: 2, etaCu: 2, etaDrained: 1, variableLoadBase: 1.3 } })).toEqual(["η undrained must be from 0.5 to 1.2."]);
     expect(() => excavationDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
+  });
+
+  it("names the field of each problem, for the form", () => {
+    const params: ExcavationParams = {
+      ...withLayers(
+        base,
+        { name: "Road fill", bottomLevel: 9.97, material: { kind: "undrained", gamma: 16, su: 0 } },
+        { bottomLevel: -10, material: { kind: "drained", gamma: 16, c: 1, phi: 60 } },
+      ),
+      road: { distanceFromCrest: 2, width: 1, height: 1, fill: { gamma: 19, c: 0, phi: 35 }, trafficLoad: null },
+      values: { basis: "design", safetyClass: 4 as never, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 },
+    };
+    expect(excavationFieldProblems(params).map((p) => p.field)).toEqual([
+      "layers.0.bottomLevel",
+      "layers.0.su",
+      "layers.1.phi",
+      "layers.0.name",
+      "road.width",
+      "values.safetyClass",
+    ]);
+    expect(excavationFieldProblems(params).map((p) => p.message)).toEqual(excavationProblems(params));
   });
 
   it("is listed with its parameters", () => {

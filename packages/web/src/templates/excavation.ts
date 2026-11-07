@@ -215,71 +215,90 @@ export function geometry(params: ExcavationParams): ExcavationGeometry {
 
 const within = (v: number, d: ParameterDescription) => Number.isFinite(v) && v >= d.min && v <= d.max;
 
-/** What stops a parameter set from being built; empty when nothing does. */
-export function excavationProblems(params: ExcavationParams): string[] {
-  const out: string[] = [];
+/** A problem of a parameter set, with the field it is about. */
+export interface FieldProblem {
+  /**
+   * The field: a key of the parameters ("excavationDepth"), of a layer
+   * ("layers.0.su"), of the road ("road.width", the fill's "road.gamma")
+   * or of the design values ("values.etaCu"); "layers" for the list.
+   */
+  field: string;
+  /** The sentence, as `excavationProblems` gives it. */
+  message: string;
+}
+
+/** What stops a parameter set from being built, each with its field; empty when nothing does. */
+export function excavationFieldProblems(params: ExcavationParams): FieldProblem[] {
+  const out: FieldProblem[] = [];
   const P = EXCAVATION_PARAMETERS;
-  const check = (v: number, d: ParameterDescription, where = "") => {
-    if (!within(v, d)) out.push(`${where}${d.label} must be from ${d.min} to ${d.max}${d.unit ? ` ${d.unit}` : ""}.`);
+  const add = (field: string, message: string) => out.push({ field, message });
+  const check = (field: string, v: number, d: ParameterDescription, where = "") => {
+    if (!within(v, d)) add(field, `${where}${d.label} must be from ${d.min} to ${d.max}${d.unit ? ` ${d.unit}` : ""}.`);
   };
-  check(params.groundLevel, P.groundLevel);
-  check(params.excavationDepth, P.excavationDepth);
-  check(params.slope, P.slope);
-  if (params.bottomWidth !== null) check(params.bottomWidth, P.bottomWidth);
-  if (params.waterLevel !== null) check(params.waterLevel, P.waterLevel);
-  if (params.tensionCrackDepth !== undefined) check(params.tensionCrackDepth, P.tensionCrackDepth);
-  if (!params.layers.length) out.push("The ground needs at least one layer.");
-  const names = new Set<string>();
+  check("groundLevel", params.groundLevel, P.groundLevel);
+  check("excavationDepth", params.excavationDepth, P.excavationDepth);
+  check("slope", params.slope, P.slope);
+  if (params.bottomWidth !== null) check("bottomWidth", params.bottomWidth, P.bottomWidth);
+  if (params.waterLevel !== null) check("waterLevel", params.waterLevel, P.waterLevel);
+  if (params.tensionCrackDepth !== undefined) check("tensionCrackDepth", params.tensionCrackDepth, P.tensionCrackDepth);
+  if (!params.layers.length) add("layers", "The ground needs at least one layer.");
+  const names = new Map<string, number>();
   const thin = MIN_LAYER_THICKNESS;
   let top = params.groundLevel;
   for (const [i, layer] of params.layers.entries()) {
     const where = `Layer ${i + 1}: `;
+    const f = (key: string) => `layers.${i}.${key}`;
     const name = layerName(layer, i);
-    if (names.has(name)) out.push(`${where}the name "${name}" is used twice.`);
-    names.add(name);
-    check(layer.bottomLevel, P.layer.bottomLevel, where);
+    if (names.has(name)) add(f("name"), `${where}the name "${name}" is used twice.`);
+    else names.set(name, i);
+    check(f("bottomLevel"), layer.bottomLevel, P.layer.bottomLevel, where);
     const isLast = i === params.layers.length - 1;
     if (Number.isFinite(layer.bottomLevel)) {
       // (1e-9 m: a level typed at exactly the least distance is accepted, 30.2 − 29.8 being 0.3999…)
       if (layer.bottomLevel > top - thin + 1e-9) {
-        out.push(`${where}the bottom level ${layer.bottomLevel} must be at least ${thin} m below the ${i === 0 ? "ground" : "layer above"} (${top}).`);
+        add(f("bottomLevel"), `${where}the bottom level ${layer.bottomLevel} must be at least ${thin} m below the ${i === 0 ? "ground" : "layer above"} (${top}).`);
       }
       if (!isLast && Math.abs(layer.bottomLevel - (params.groundLevel - params.excavationDepth)) < thin - 1e-9) {
-        out.push(`${where}the bottom level ${layer.bottomLevel} is within ${thin} m of the excavation bottom; move it.`);
+        add(f("bottomLevel"), `${where}the bottom level ${layer.bottomLevel} is within ${thin} m of the excavation bottom; move it.`);
       }
     }
     top = layer.bottomLevel;
     const m = layer.material;
-    check(m.gamma, P.layer.gamma, where);
-    if (m.kind === "undrained" || m.kind === "undrained-increasing") check(m.su, P.layer.su, where);
-    if (m.kind === "undrained-increasing") check(m.suRate, P.layer.suRate, where);
+    check(f("gamma"), m.gamma, P.layer.gamma, where);
+    if (m.kind === "undrained" || m.kind === "undrained-increasing") check(f("su"), m.su, P.layer.su, where);
+    if (m.kind === "undrained-increasing") check(f("suRate"), m.suRate, P.layer.suRate, where);
     if (m.kind === "drained") {
-      if (m.gammaSat !== undefined) check(m.gammaSat, P.layer.gammaSat, where);
-      check(m.c, P.layer.c, where);
-      check(m.phi, P.layer.phi, where);
+      if (m.gammaSat !== undefined) check(f("gammaSat"), m.gammaSat, P.layer.gammaSat, where);
+      check(f("c"), m.c, P.layer.c, where);
+      check(f("phi"), m.phi, P.layer.phi, where);
     }
   }
-  if (names.has(ROAD_FILL_NAME) && params.road) out.push(`A layer is named "${ROAD_FILL_NAME}", which is the road's material.`);
+  if (names.has(ROAD_FILL_NAME) && params.road) add(`layers.${names.get(ROAD_FILL_NAME)}.name`, `A layer is named "${ROAD_FILL_NAME}", which is the road's material.`);
   if (params.road) {
     const r = params.road;
     const where = "Road: ";
-    check(r.distanceFromCrest, P.road.distanceFromCrest, where);
-    check(r.width, P.road.width, where);
-    check(r.height, P.road.height, where);
-    check(r.fill.gamma, P.road.gamma, where);
-    if (r.fill.gammaSat !== undefined) check(r.fill.gammaSat, P.road.gammaSat, where);
-    check(r.fill.c, P.road.c, where);
-    check(r.fill.phi, P.road.phi, where);
-    if (r.trafficLoad !== null) check(r.trafficLoad, P.road.trafficLoad, where);
+    check("road.distanceFromCrest", r.distanceFromCrest, P.road.distanceFromCrest, where);
+    check("road.width", r.width, P.road.width, where);
+    check("road.height", r.height, P.road.height, where);
+    check("road.gamma", r.fill.gamma, P.road.gamma, where);
+    if (r.fill.gammaSat !== undefined) check("road.gammaSat", r.fill.gammaSat, P.road.gammaSat, where);
+    check("road.c", r.fill.c, P.road.c, where);
+    check("road.phi", r.fill.phi, P.road.phi, where);
+    if (r.trafficLoad !== null) check("road.trafficLoad", r.trafficLoad, P.road.trafficLoad, where);
   }
   if (params.values.basis === "design") {
     const v = params.values;
-    if (![1, 2, 3].includes(v.safetyClass)) out.push("The safety class must be 1, 2 or 3.");
-    check(v.etaCu, P.design.etaCu);
-    check(v.etaDrained, P.design.etaDrained);
-    check(v.variableLoadBase, P.design.variableLoadBase);
+    if (![1, 2, 3].includes(v.safetyClass)) add("values.safetyClass", "The safety class must be 1, 2 or 3.");
+    check("values.etaCu", v.etaCu, P.design.etaCu);
+    check("values.etaDrained", v.etaDrained, P.design.etaDrained);
+    check("values.variableLoadBase", v.variableLoadBase, P.design.variableLoadBase);
   }
   return out;
+}
+
+/** What stops a parameter set from being built; empty when nothing does. */
+export function excavationProblems(params: ExcavationParams): string[] {
+  return excavationFieldProblems(params).map((p) => p.message);
 }
 
 export const ROAD_FILL_NAME = "Road fill";
@@ -331,28 +350,34 @@ export function partialFactorsOf(values: Values): PartialFactors | null {
   return swedishPartialFactors({ safetyClass, etaCu, etaDrained, variableLoadBase });
 }
 
-/** The analysis document of a parameter set `excavationProblems` accepts. */
-export function excavationDocument(params: ExcavationParams): AnalysisDocument {
-  const problems = excavationProblems(params);
-  if (problems.length) throw new Error(`The parameters cannot be built:\n${problems.join("\n")}`);
-  const g = geometry(params);
+/**
+ * The outline of the model: ground → road → crest → slope → bottom → edge,
+ * with a vertex at each layer level on the left edge and on the face (or
+ * the right edge, below the bottom), where the level's boundary ends.
+ */
+export function exteriorOf(params: ExcavationParams, g: ExcavationGeometry = geometry(params)): Point[] {
   const { ground: G, bottom, base, toeX, left, right, road } = g;
-  const n = params.slope;
-  const d = new Definition("ltr");
-
-  // The outline: ground → road → crest → slope → bottom → edge, with a
-  // vertex at each layer level on the left edge and on the face (or the
-  // right edge, below the bottom), where the level's boundary ends.
   const above = g.levels.filter((l) => l > bottom);
   const below = g.levels.filter((l) => l < bottom);
-  const faceX = (level: number) => n * (G - level);
+  const faceX = (level: number) => params.slope * (G - level);
   const exterior: Point[] = [[left, base], ...[...g.levels].reverse().map((l): Point => [left, l]), [left, G]];
   if (road) {
     exterior.push([road.farToe, G], [road.topLeft, road.top], [road.topRight, road.top]);
     if (road.nearToe < 0) exterior.push([road.nearToe, G]);
   }
   exterior.push([0, G], ...above.map((l): Point => [faceX(l), l]), [toeX, bottom], [right, bottom], ...below.map((l): Point => [right, l]), [right, base]);
-  d.exterior = exterior;
+  return exterior;
+}
+
+/** The analysis document of a parameter set `excavationProblems` accepts. */
+export function excavationDocument(params: ExcavationParams): AnalysisDocument {
+  const problems = excavationProblems(params);
+  if (problems.length) throw new Error(`The parameters cannot be built:\n${problems.join("\n")}`);
+  const g = geometry(params);
+  const { ground: G, bottom, base, left, right, road } = g;
+  const d = new Definition("ltr");
+  d.exterior = exteriorOf(params, g);
+  const faceX = (level: number) => params.slope * (G - level);
 
   // The layers: a boundary at each level, between its two vertices, and a region on the ground side.
   const names = params.layers.map((layer, i) => d.addMaterial(layerName(layer, i), strengthOf(layer.material, i === 0 ? G : params.layers[i - 1].bottomLevel)));
@@ -401,6 +426,7 @@ export const excavationTemplate: Template<ExcavationParams> = {
     "An excavation with a slope 1:n in level ground of horizontal layers, with a ground-water level and, behind the crest, a working road with a traffic load.",
   params: EXCAVATION_PARAMETERS,
   problems: excavationProblems,
+  fieldProblems: excavationFieldProblems,
   notes: excavationNotes,
   toDocument: excavationDocument,
 };
