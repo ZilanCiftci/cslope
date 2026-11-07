@@ -1,53 +1,61 @@
-//! `Math.*` with JavaScript semantics.
+//! `Math.*` with JavaScript semantics, the same bits on every platform.
 //!
-//! The transcendental functions are thin wrappers over std (calling std
-//! directly is equally fine). Their last bits can differ from V8's; that is
-//! accepted (PORTING.md, tolerance policy). What matters here are the
-//! JavaScript rules that change logic: `Math.round`, `Math.max`/`min` with
-//! NaN and -0, `**` edge cases.
-#![allow(clippy::disallowed_methods)]
+//! The transcendental functions call the `libm` crate (pure Rust), never
+//! std's `f64` methods: natively those call the platform's C library, which
+//! rounds differently on Linux (glibc), macOS and Windows, and a search
+//! amplifies a last-bit difference into a different factor of safety
+//! (issue #61: Talbingo Dam gave 1.950794 on macOS and Windows, 1.950740 in
+//! the app). In WebAssembly std calls the Rust toolchain's own copy of the
+//! same libm, so routing through the crate gives native results that equal
+//! the WebAssembly engine's bit for bit (`hypot` is the toolchain's newer,
+//! correctly rounded one, js/hypot.rs). clippy.toml bans the std methods.
+//!
+//! Their last bits can still differ from V8's; that is accepted (PORTING.md,
+//! tolerance policy). The other functions here are the JavaScript rules that
+//! change logic: `Math.round`, `Math.max`/`min` with NaN and -0, `**` edge
+//! cases.
 
 pub fn sin(x: f64) -> f64 {
-    x.sin()
+    libm::sin(x)
 }
 pub fn cos(x: f64) -> f64 {
-    x.cos()
+    libm::cos(x)
 }
 pub fn tan(x: f64) -> f64 {
-    x.tan()
+    libm::tan(x)
 }
 pub fn asin(x: f64) -> f64 {
-    x.asin()
+    libm::asin(x)
 }
 pub fn acos(x: f64) -> f64 {
-    x.acos()
+    libm::acos(x)
 }
 pub fn atan(x: f64) -> f64 {
-    x.atan()
+    libm::atan(x)
 }
 pub fn atan2(y: f64, x: f64) -> f64 {
-    y.atan2(x)
+    libm::atan2(y, x)
 }
 pub fn exp(x: f64) -> f64 {
-    x.exp()
+    libm::exp(x)
 }
 pub fn log(x: f64) -> f64 {
-    x.ln()
+    libm::log(x)
 }
 pub fn log10(x: f64) -> f64 {
-    x.log10()
+    libm::log10(x)
 }
 pub fn sinh(x: f64) -> f64 {
-    x.sinh()
+    libm::sinh(x)
 }
 pub fn cosh(x: f64) -> f64 {
-    x.cosh()
+    libm::cosh(x)
 }
 pub fn tanh(x: f64) -> f64 {
-    x.tanh()
+    libm::tanh(x)
 }
 pub fn cbrt(x: f64) -> f64 {
-    x.cbrt()
+    libm::cbrt(x)
 }
 
 /// `x ** y` and `Math.pow(x, y)`. Always use this, never `x * x` or `powi`
@@ -57,7 +65,7 @@ pub fn pow(x: f64, y: f64) -> f64 {
     if y.is_nan() || (x.abs() == 1.0 && y.is_infinite()) {
         return f64::NAN;
     }
-    x.powf(y)
+    libm::pow(x, y)
 }
 
 /// `Math.hypot(a, b, …)`: Infinity if any argument is ±Infinity, else NaN if
@@ -72,7 +80,7 @@ pub fn hypot(values: &[f64]) -> f64 {
     match values {
         [] => 0.0,
         [a] => a.abs(),
-        [a, b] => a.hypot(*b),
+        [a, b] => super::hypot::hypot(*a, *b),
         _ => values.iter().map(|v| v * v).fold(0.0, |s, v| s + v).sqrt(),
     }
 }

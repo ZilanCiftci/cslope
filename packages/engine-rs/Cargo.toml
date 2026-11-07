@@ -38,6 +38,12 @@ schemars = { version = "=1.2.3", default-features = false, features = ["derive",
 # paths of keys the engine ignores and of values it cannot read.
 serde_ignored = "=0.1.14"
 serde_path_to_error = "=0.1.20"
+# The transcendental functions (sin, exp, pow, …) in pure Rust, the same
+# algorithms std uses in WebAssembly: native builds get the same bits as the
+# WebAssembly engine on every platform, not the platform's C library
+# (cslope-engine js/math.rs, issue #61). Exact pin: a new release can change
+# last bits.
+libm = "=0.2.16"
 
 [profile.release]
 opt-level = 3

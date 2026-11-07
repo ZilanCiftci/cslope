@@ -8,6 +8,7 @@ design, as accepted on 2026-11-03 by the integrator with these notes:
 - All ten recommendations in §10.2 are adopted.
 - §9 Phase 6 shadow mode: there is no multi-week beta wait. The gate for switching the app is the parity job, the facade test suites (100 % green, unedited), the desktop suites and all verification checks. A shadow-mode setting that runs both engines and logs differences ships for the beta testers and can stay on until the TypeScript engine is deleted.
 - **Superseded by the user (2026-11-03): no port of V8's fdlibm and no bit identity.** Rust's std transcendental functions are used. Read §0.1, §5 and the bit-identity goals in §5.1, §5.4, §6.4 and §9 with PORTING.md's tolerance policy instead: F within 1e-6 per surface and per search (near-tie branches up to 1e-4 only if explained and allowlisted), verification checks with their tolerances; the golden file after deletion records F to 1e-6. js::math keeps only the JS rules that change logic (round, max/min, `**` edge cases); fixtures are still generated under Node.
+- **Amended 2026-11-07 (issue #61): the same bits on every platform.** js::math calls the pure Rust `libm` crate (exact pin) instead of std's methods, which natively call the platform's C library and rounded differently on Linux, macOS and Windows (Talbingo Dam's search gave another F in the Python wheels). In WebAssembly std calls the toolchain's copy of the same libm, so native, Python and WebAssembly results are bit-identical; `hypot` is the toolchain's correctly rounded CORE-MATH port (js/hypot.rs), which the released crate does not have yet. clippy.toml bans std's transcendental methods. Bit identity with V8 is still not a goal.
 - Phase 0 (a), moving the worker's `analyse` into the engine, waits until the parallel-worker change in the app has merged, because it touches the same worker code.
 
  This document goes with `PORTING.md`. Where the two differ, the "Amendments to PORTING.md" section at the end says which rule changes. Paths are relative to the repository root.
@@ -463,7 +464,7 @@ s.fem(options) -> FemResult                      # .factor_of_safety, .mesh (x, 
   - `progress` callbacks take the GIL briefly, are throttled by count, and may return `False` to cancel.
   - `KeyboardInterrupt` comes through `py.check_signals()` in the same hook and becomes `CancelToken`.
 - **Wheels.**
-  - `abi3-py39`, so one wheel per platform: manylinux x86_64/aarch64, macOS universal2, Windows x64.
+  - `abi3-py310`, so one wheel per platform: manylinux x86_64/aarch64, macOS universal2, Windows x64.
   - A handwritten `__init__.pyi` holds `TypedDict`s for the main shapes.
   - The verification problems are **not** shipped: they cite other programs, and the check-names policy applies.
   - A `cslope.examples` module carries a few clean demo models.
@@ -682,7 +683,7 @@ pub struct Serial;                                         // default; wasm
   - `--omit-default-module-path` means Vite sees no `new URL(..., import.meta.url)` and does not emit a second copy.
   - `jsts` and `highs` leave both package.jsons; the desktop does not use them directly (checked).
 - **Website (Vercel):** the build only typechecks the scripts that import the engine and runs no analysis. `generate-data.ts` is run by developers and then needs only the committed wasm. Nothing changes for Vercel.
-- **Python:** `python.yml` triggers on tags `py-v*` and by hand. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64; one abi3 wheel each for CPython 3.9 and later) and runs the crate's pytest suite against each wheel on Python 3.9 and 3.13, with the crate's and the skill's examples (the demo models against pinned F within 1e-6; the tests that need other parts of the repository skip). Publishing to PyPI is written out but off (`if: false`): no trusted publisher is configured yet (#61). Until then the package is installed from the run's wheel artifacts or built from the source; enabling it is the PyPI project with this workflow as its trusted publisher and removing that line. The ordinary CI (`ci.yml`, job `python`) builds the package in place and runs the same tests when the engine changes.
+- **Python:** `python.yml` triggers on tags `py-v*` and by hand. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64; one abi3 wheel each for CPython 3.10 and later) and runs the crate's pytest suite against each wheel on Python 3.10 and 3.13, with the crate's and the skill's examples (the demo models against pinned F within 1e-6; the tests that need other parts of the repository skip). Publishing to PyPI is written out but off (`if: false`): no trusted publisher is configured yet (#61). Until then the package is installed from the run's wheel artifacts or built from the source; enabling it is the PyPI project with this workflow as its trusted publisher and removing that line. The ordinary CI (`ci.yml`, job `python`) builds the package in place and runs the same tests when the engine changes.
 
 ---
 

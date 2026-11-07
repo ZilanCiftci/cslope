@@ -143,7 +143,10 @@ types, data and docs and calls the engine), and the steps below apply to
 6. **Tolerance policy (decided by the user).** The target for the factor
    of safety is 1e-6; differences up to 1e-4 are not a practical problem
    but must be explained. The goal is a faithful port, not bit identity
-   with V8: std's libm is used, and last-bit differences are accepted.
+   with V8: last-bit differences from V8 are accepted. (Since issue #61
+   the transcendental functions go through js::math and the `libm` crate,
+   so native, Python and WebAssembly give the same bits on every
+   platform.)
    Concretely:
    - geometry, slices and other intermediate values: relative 1e-9 (exact
      where the arithmetic has no transcendental functions, but don't chase
@@ -160,11 +163,9 @@ types, data and docs and calls the engine), and the steps below apply to
    The agreement figures quoted per module below (largest differences per
    surface and per search, the near-ties of `tests/allowlist.toml`) are
    measured natively, with the libm of Rust's std on the test machine
-   (glibc on Linux), against V8's own implementation of the functions:
-   they depend on that libm, not only on the port. On another platform,
-   or in WebAssembly (where std's math is a different libm), the last
-   bits of sin, cos, atan and so on differ otherwise, and so can these
-   figures and which searches meet a near-tie. A result that moves with
+   (glibc on Linux, before issue #61 moved js::math to the `libm` crate),
+   against V8's own implementation of the functions: they depend on that
+   libm, not only on the port, and so can which searches meet a near-tie. A result that moves with
    the last bit of its inputs (an unconverged iteration, a solve on the
    edge of failing) is compared only where it is well-conditioned
    (tests/solvers_branches_diff.rs measures this per result).
@@ -210,7 +211,7 @@ types, data and docs and calls the engine), and the steps below apply to
 | wasm + facade | crates/cslope-wasm, packages/engine (TypeScript API over WebAssembly) | done: every module, api/run-analysis and the parallel evaluator path over the engine; every test file of packages/engine ran unchanged on it (see "The limit equilibrium facade", "FE facade") |
 | cutover | the app, the tests, the website, the report on the Rust engine; the TypeScript engine removed | done 2026-11-04 (see "Cutover") |
 | FE facade | crates/cslope-wasm/src/api/fem.rs, fem_testing.rs; packages/engine/src/facade/fem | done: the 21 fem modules shimmed; the 14 FE test files (70 tests) pass unchanged on the Rust engine, no known differences; the slope crosses as the model facade's handle (`_h`) (see "FE facade" below) |
-| python | crates/cslope-py | done: `cslope` (pyo3 + pythonize, abi3-py39): analyse, fem_summary, reliability, to_canonical, validate_material_model, Slope, CancelToken; results equal the native engine bit for bit and TypeScript within 1e-6 (tests/test_parity.py); any thread count bit for bit; wheels workflow .github/workflows/python.yml; see "Python binding" below |
+| python | crates/cslope-py | done: `cslope` (pyo3 + pythonize, abi3-py310): analyse, fem_summary, reliability, to_canonical, validate_material_model, Slope, CancelToken; results equal the native engine bit for bit and TypeScript within 1e-6 (tests/test_parity.py); any thread count bit for bit; wheels workflow .github/workflows/python.yml; see "Python binding" below |
 
 ## Decisions
 
@@ -1253,7 +1254,7 @@ porters. Each names where it lives.
 ### Python binding (crates/cslope-py)
 
 - **Shape**: ARCHITECTURE.md §4; developer notes in crates/cslope-py/README.md.
-  pyo3 `=0.29.3` (abi3-py39) and pythonize `=0.29.0` (its minor version
+  pyo3 `=0.29.3` (abi3-py310) and pythonize `=0.29.0` (its minor version
   must match pyo3's), maturin `==1.15.0` (pyproject.toml and the wheels
   workflow). The extension is `cslope._native`; `python/cslope/__init__.py`
   wraps it (FE arrays), and its `Slope` subclasses the Rust class to add

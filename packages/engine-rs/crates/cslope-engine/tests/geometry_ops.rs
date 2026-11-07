@@ -4,6 +4,7 @@
 //! functions are only here (moved from water-table.test.ts,
 //! review-round4.test.ts and result-warnings.test.ts too).
 
+use cslope_engine::js;
 use cslope_engine::model::geometry_ops::*;
 
 use cslope_engine::math::polygon::{calculate_polygon_area, is_point_in_polygon};
@@ -25,7 +26,7 @@ fn uniform(r: &mut impl FnMut() -> f64, lo: f64, hi: f64) -> f64 {
 }
 
 fn close(a: f64, b: f64, digits: i32) -> bool {
-    (a - b).abs() < 10f64.powi(-digits) / 2.0
+    (a - b).abs() < js::math::pow(10.0, -digits as f64) / 2.0
 }
 
 fn ring_area(r: &[Pt]) -> f64 {
@@ -394,8 +395,8 @@ fn property_random_polylines_conserve_the_area() {
         let mut ang: Vec<f64> = (0..n).map(|_| r() * 2.0 * std::f64::consts::PI).collect();
         ang.sort_by(|a, b| a.partial_cmp(b).unwrap());
         let rad = uniform(&mut r, 5., 20.);
-        let px: Vec<f64> = ang.iter().map(|a| rad * a.cos()).collect();
-        let py: Vec<f64> = ang.iter().map(|a| rad * a.sin()).collect();
+        let px: Vec<f64> = ang.iter().map(|&a| rad * js::math::cos(a)).collect();
+        let py: Vec<f64> = ang.iter().map(|&a| rad * js::math::sin(a)).collect();
         let k = 2 + (r() * 3.0).floor() as usize;
         let lx: Vec<f64> = (0..k)
             .map(|j| -30. + (60. * j as f64) / (k - 1) as f64)

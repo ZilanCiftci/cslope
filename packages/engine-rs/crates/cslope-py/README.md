@@ -6,7 +6,7 @@ description is `README-PYPI.md`; this file is for developers.
 
 ```
 crates/cslope-py/
-  Cargo.toml            cdylib `_native` (pyo3 abi3-py39, pythonize, rayon)
+  Cargo.toml            cdylib `_native` (pyo3 abi3-py310, pythonize, rayon)
   build.rs              ENGINE_BUILD = version + git commit
   src/lib.rs            module functions: analyse, fem_summary, reliability, to_canonical, validate, summarize, schema, ...
   src/run.rs            pythonize in and out, GIL release, progress, cancellation, threads
@@ -21,7 +21,7 @@ crates/cslope-py/
 
 ## Build and install
 
-Rust 1.97 (`rust-toolchain.toml`) and Python 3.9 or later.
+Rust 1.97 (`rust-toolchain.toml`) and Python 3.10 or later.
 
 ```
 cd packages/engine-rs/crates/cslope-py
@@ -33,7 +33,7 @@ maturin develop --release        # build and install into the venv (editable)
 maturin build --release --out dist && pip install dist/cslope-*.whl
 ```
 
-One wheel (`cp39-abi3`) serves every CPython from 3.9. The wheel holds
+One wheel (`cp310-abi3`) serves every CPython from 3.10. The wheel holds
 only the package: no tests, fixtures or verification problems.
 
 ## Use
@@ -318,7 +318,7 @@ verification problems (PORTING.md, Python binding).
 `.github/workflows/python.yml` builds the wheels on a tag `py-v*` or by
 hand (Linux x86_64 and aarch64 manylinux, macOS universal2, Windows x64)
 and runs the tests, with the crate's and the skill's examples, against
-each on Python 3.9 and 3.13. The wheels are the run's artifacts
+each on Python 3.10 and 3.13. The wheels are the run's artifacts
 (`wheel-<platform>`); until the package is on PyPI, that is how it is
 installed (README-PYPI.md, Install).
 

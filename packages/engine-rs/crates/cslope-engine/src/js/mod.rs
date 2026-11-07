@@ -7,5 +7,6 @@
 //! ARCHITECTURE.md §5 and clippy.toml).
 
 pub mod array;
+mod hypot;
 pub mod math;
 pub mod num;

@@ -8,7 +8,7 @@ name = "cslope"
 description = "Slope stability analysis: limit equilibrium (Bishop, Janbu, Morgenstern-Price) and finite elements, from the cSlope engine"
 readme = "README-PYPI.md"
 license = { text = "MIT" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dynamic = ["version"]
 keywords = ["geotechnical", "slope stability", "limit equilibrium", "finite element", "factor of safety"]
 classifiers = [
