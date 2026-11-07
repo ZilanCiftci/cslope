@@ -239,6 +239,18 @@ describe("App", () => {
     await waitFor(() => expect(window.location.search).toBe(address));
   });
 
+  it("has one live region and one Undo for the message, also while the phone's bar shows", async () => {
+    renderApp();
+    await screen.findByRole("complementary", { name: "Result summary" });
+    fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
+    // The card's line is the phone's toast too (placed by CSS): not a second copy.
+    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+    expect([...document.querySelectorAll("[aria-live]")].filter((e) => e.textContent?.includes("Removed Clay."))).toHaveLength(1);
+    // The bar, back with the new F, does not repeat it.
+    expect(within(await screen.findByRole("complementary", { name: "Result summary" })).queryByText(/Removed Clay/)).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+  });
+
   it("undoes a reset to the template's defaults, with the focus on the first field", async () => {
     const { requests } = renderApp();
     await waitFor(() => expect(requests).toHaveLength(1));

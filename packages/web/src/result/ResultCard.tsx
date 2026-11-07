@@ -10,6 +10,7 @@
 import type { ResultSummary, ValidationIssue } from "@cslope/engine";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { ErrorText } from "@/form/Form";
 import { DOWNLOAD_URL, LIMITATIONS_URL, TEMPLATE_NOTE } from "@/links";
 
@@ -49,6 +50,8 @@ export interface ResultCardProps {
   onCopyLink: () => void;
   /** A short message after a command ("Link copied."), with Undo after a structural change. */
   notice: Notice | null;
+  /** The phone's result bar shows: on a phone the message floats just above it, not at the bottom. */
+  aboveBar?: boolean;
 }
 
 function statusText(state: CardState): string {
@@ -110,7 +113,7 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
   );
 }
 
-export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
+export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice, aboveBar = false }: ResultCardProps) {
   const status = statusText(state);
   const complete = state.kind === "complete" ? state : null;
   return (
@@ -155,7 +158,20 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
           <a href={DOWNLOAD_URL}>Get the cSlope app</a>
         </Button>
       </div>
-      <p className="mt-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
+      {/*
+        The message's one live region: in the card's status line, and on a phone (where the card is
+        below the form, out of view) a toast fixed at the bottom of the screen, above the result bar.
+      */}
+      <div className="mt-2 min-h-4">
+      <p
+        aria-live="polite"
+        className={cn(
+          "text-xs text-muted-foreground",
+          notice &&
+            "max-sm:fixed max-sm:inset-x-3 max-sm:z-40 max-sm:rounded-md max-sm:border max-sm:bg-popover max-sm:px-3 max-sm:py-1.5 max-sm:text-sm max-sm:text-popover-foreground max-sm:shadow-lg",
+          notice && (aboveBar ? "max-sm:bottom-[calc(3.5rem+env(safe-area-inset-bottom))]" : "max-sm:bottom-[calc(0.75rem+env(safe-area-inset-bottom))]"),
+        )}
+      >
         {notice && (
           <span key={notice.id}>
             {notice.text}
@@ -170,6 +186,7 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
           </span>
         )}
       </p>
+      </div>
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         {TEMPLATE_NOTE} See the{" "}
         <a href={LIMITATIONS_URL} className="text-primary underline underline-offset-2">

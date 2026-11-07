@@ -278,6 +278,7 @@ export function App({ client }: { client: AnalysisClient }) {
                   );
               }}
               notice={notice}
+              aboveBar={state.kind === "complete"}
             />
           </div>
         </div>

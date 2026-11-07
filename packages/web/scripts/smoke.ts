@@ -52,6 +52,9 @@ export const PONDED =
   "t=excavation&ground=10&H=5&slope=2&water=7&layers=2&layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25" +
   "&layer2.kind=impenetrable&layer2.t=10&layer2.gamma=24&pond=1";
 
+/** Longer than the page's delay before it runs after a change (RUN_DELAY, 300 ms). */
+const RUN_SETTLE = 500;
+
 /** The value F of the result card, once it shows one ("F 1.234"). */
 const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
 
@@ -276,6 +279,29 @@ async function checkPhone(browser: Browser, base: string, colorScheme: "light" |
   if (!(await bar.isVisible())) problems.push("the result bar does not show on the phone");
   else if (!/^F \d+\.\d{3}/.test((await bar.textContent()) ?? "")) problems.push(`the result bar says "${await bar.textContent()}"`);
   for (const v of await axeViolations(page)) problems.push(`axe ${v.id} (${v.impact}) on the phone: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
+  // On a phone a removed layer's message, with Undo, floats just above the result bar (the card is out of view); Undo brings the layer back.
+  try {
+    await page.getByRole("button", { name: /^Clay/ }).first().scrollIntoViewIfNeeded();
+    const header = page.getByRole("button", { name: "Remove Clay" });
+    if (await header.count()) {
+      await header.click();
+      const undo = page.getByRole("button", { name: "Undo" });
+      await undo.waitFor({ timeout: 5_000 });
+      if ((await undo.count()) !== 1) problems.push(`${await undo.count()} Undo buttons on the phone`);
+      const toast = await page.locator("[aria-live]", { hasText: "Removed Clay." }).boundingBox();
+      const height = page.viewportSize()?.height ?? 0;
+      if (!toast || toast.y < height / 2 || toast.y + toast.height > height) problems.push(`the message is not at the bottom of the phone's screen (at ${toast?.y} of ${height} px)`);
+      for (const v of await axeViolations(page)) problems.push(`axe ${v.id} (${v.impact}) with Undo on the phone: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
+      await undo.click();
+      const focused = await page.evaluate(() => document.activeElement?.textContent ?? "");
+      if (!focused.startsWith("Clay")) problems.push(`after Undo on the phone the focus is on "${focused}"`);
+      // The bar shows again once the new F is there (the card's dimmed previous F would match at once).
+      await page.waitForTimeout(RUN_SETTLE);
+      await bar.waitFor({ state: "visible", timeout: 30_000 });
+    }
+  } catch (e) {
+    problems.push(`Undo on the phone: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+  }
   // The bar's picture of the section opens the drawing across the screen; Escape closes it and the focus goes back to the picture.
   try {
     const thumb = bar.getByRole("button", { name: "Show the section" });
