@@ -319,14 +319,12 @@ verification problems (PORTING.md, Python binding).
 hand (Linux x86_64 and aarch64 manylinux, macOS universal2, Windows x64)
 and runs the tests, with the crate's and the skill's examples, against
 each on Python 3.10 and 3.13. The wheels are the run's artifacts
-(`wheel-<platform>`); until the package is on PyPI, that is how it is
-installed (README-PYPI.md, Install).
+(`wheel-<platform>`).
 
-Publishing to PyPI is written out but off (`if: false` on the `publish`
-job): no trusted publisher is configured yet (issue #61). Enabling it is
-the project on PyPI with this workflow as its trusted publisher
-(environment `pypi`) and removing that one line; no secrets are needed.
-Then a release is the tag `py-v<version>`, the version being the
-workspace's (`packages/engine-rs/Cargo.toml`, now 0.1.0), and the Install
-sections of README-PYPI.md, the skill and the website's Python page change
-to `pip install cslope`.
+On a tag `py-v<version>` the `publish` job uploads the wheels to PyPI
+(`pip install cslope`) through the trusted publisher configured there:
+this workflow, environment `pypi`, which a maintainer approves; no secrets
+are needed. The version is the workspace's
+(`packages/engine-rs/Cargo.toml`); 0.1.0 is published. A release is: bump
+the workspace version, merge, then create the tag (on GitHub, a release
+with a new tag `py-v<version>` on main) and approve the deployment.
