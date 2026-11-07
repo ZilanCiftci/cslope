@@ -11,7 +11,9 @@
 //! - [`canonical`] and [`hash`]: the app's canonical JSON and a result's
 //!   input hash (issue #58);
 //! - [`project`]: a whole project and its JSON entries, with the save
-//!   policy; [`archive`] (feature `native`): the `.cslp` ZIP container.
+//!   policy; `archive`: the `.cslp` ZIP container (feature `write`: the
+//!   writer, in memory, also in WebAssembly; `native`: the reader and the
+//!   atomic save to a file).
 
 pub mod canonical;
 pub mod convert;
@@ -23,7 +25,7 @@ pub mod options;
 pub mod project;
 pub mod regions;
 
-#[cfg(feature = "native")]
+#[cfg(feature = "write")]
 pub mod archive;
 
 pub use convert::{definition_to_model, model_to_definition, ConvertError, DefinitionModelInfo};

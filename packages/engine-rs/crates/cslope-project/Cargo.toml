@@ -7,10 +7,13 @@ description = "cSlope project models: the app's model of a .cslp file and its co
 publish = false
 
 [features]
-# Reading and writing `.cslp` archives (the ZIP container, `archive`):
-# off by default, so that the WebAssembly build (cslope-wasm, which takes
-# this crate with `default-features = false`) carries no ZIP code.
-native = ["dep:zip", "dep:flate2"]
+# Writing a `.cslp` archive in memory (the ZIP container, `archive`): the
+# pure-Rust ZIP writer and deflate, no file I/O. The WebAssembly build
+# (cslope-wasm) takes this one, for the browser's project download (#107).
+write = ["dep:zip", "dep:flate2"]
+# Also reading `.cslp` archives and saving them atomically to a file (the
+# Python binding).
+native = ["write"]
 
 [dependencies]
 cslope-engine = { path = "../cslope-engine" }
@@ -24,7 +27,8 @@ sha2 = "=0.11.1"
 # canonical JSON of section 2; the engine's `js::num::to_string` breaks an
 # exact tie of the shortest digits the other way, e.g. 2^-25).
 ryu-js = "=1.0.3"
-# The ZIP container (feature `native`): the deflate of flate2's pure Rust
-# backend only, no other compression, no encryption.
+# The ZIP container (features `write` and `native`): the deflate of
+# flate2's pure Rust backend (miniz_oxide) only, no other compression, no
+# encryption, no time crate (the time stamp is the manifest's).
 zip = { version = "=9.4.1", default-features = false, features = ["deflate-flate2"], optional = true }
 flate2 = { version = "=1.1.11", default-features = false, features = ["rust_backend"], optional = true }

@@ -1,13 +1,17 @@
 // Builds the WebAssembly engine (ARCHITECTURE.md §8.2):
 //
-//   bun packages/engine-rs/tools/build-wasm.ts            product and testing
+//   bun packages/engine-rs/tools/build-wasm.ts            all three
 //   bun packages/engine-rs/tools/build-wasm.ts product    packages/engine/src/wasm
 //   bun packages/engine-rs/tools/build-wasm.ts testing    packages/engine/src/wasm-testing
+//   bun packages/engine-rs/tools/build-wasm.ts project    packages/engine/src/wasm-project
 //
-// Each build is `cargo build -p cslope-wasm --target wasm32-unknown-unknown
-// --profile wasm-release [--features testing]`, then `wasm-bindgen --target
-// web --omit-default-module-path` into the output directory, plus
-// BUILD-INFO.json (wasm-source-hash.ts).
+// The engine's builds are `cargo build -p cslope-wasm --target
+// wasm32-unknown-unknown --profile wasm-release [--features testing]`; the
+// project writer (cslope-project-wasm, the browser page's .cslp download,
+// loaded on demand: #107) is built with the size-optimized profile
+// wasm-project and without the name section. Each is then run through
+// `wasm-bindgen --target web --omit-default-module-path` into its output
+// directory, plus BUILD-INFO.json (wasm-source-hash.ts).
 //
 // The build is reproducible, and CI's rust job compares its own build with
 // the committed product build byte for byte: machine paths are remapped
@@ -25,7 +29,7 @@ import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "nod
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { brotliCompressSync, constants as zlib } from "node:zlib";
-import { ENGINE_RS, fileSha256, sourceHash, type BuildInfo } from "./wasm-source-hash";
+import { BUILD_CRATE, ENGINE_RS, fileSha256, sourceHash, type BuildInfo } from "./wasm-source-hash";
 
 const REPO = resolve(ENGINE_RS, "../..");
 const ENGINE_SRC = join(REPO, "packages/engine/src");
@@ -34,6 +38,14 @@ type Flavour = BuildInfo["flavour"];
 const OUT_DIR: Record<Flavour, string> = {
   product: join(ENGINE_SRC, "wasm"),
   testing: join(ENGINE_SRC, "wasm-testing"),
+  project: join(ENGINE_SRC, "wasm-project"),
+};
+
+/** The output's base name (`<name>.js`, `<name>_bg.wasm`). */
+export const OUT_NAME: Record<Flavour, string> = {
+  product: "cslope_wasm",
+  testing: "cslope_wasm",
+  project: "cslope_project_wasm",
 };
 
 function run(cmd: string, args: string[], env?: NodeJS.ProcessEnv): string {
@@ -70,11 +82,11 @@ function checkWasmBindgenCli(locked: string): void {
 /**
  * The glue keeps its instance in module variables and `initSync` returns
  * early once it has one, so after a trap (a panic) the instance could not
- * be replaced. `__wbg_reset` forgets it; the facade (src/engine.ts) then
- * instantiates the compiled module again.
+ * be replaced. `__wbg_reset` forgets it; the facade (src/engine.ts,
+ * src/project.ts) then instantiates the module again.
  */
-function addReset(out: string): void {
-  const js = join(out, "cslope_wasm.js");
+function addReset(out: string, name: string): void {
+  const js = join(out, `${name}.js`);
   const src = readFileSync(js, "utf8");
   for (const v of ["let wasmModule, wasmInstance, wasm;", "let __wbg_init_promise;"]) {
     if (!src.includes(v)) throw new Error(`the wasm-bindgen glue changed (no "${v}"): update addReset in build-wasm.ts`);
@@ -87,7 +99,7 @@ function addReset(out: string): void {
       "export function __wbg_reset() {\n" +
       "    wasm = undefined;\n    wasmInstance = undefined;\n    wasmModule = undefined;\n    __wbg_init_promise = undefined;\n}\n",
   );
-  const dts = join(out, "cslope_wasm.d.ts");
+  const dts = join(out, `${name}.d.ts`);
   writeFileSync(dts, readFileSync(dts, "utf8") + "\n/** Forgets the instance (added by build-wasm.ts), so that initSync can instantiate again after a trap. */\nexport function __wbg_reset(): void;\n");
 }
 
@@ -96,17 +108,21 @@ function build(flavour: Flavour, wasmBindgen: string): BuildInfo {
   const remap = [`--remap-path-prefix=${REPO}=/cslope`, `--remap-path-prefix=${cargoHome}=/cargo`];
   const env = { ...process.env, RUSTFLAGS: [process.env.RUSTFLAGS ?? "", ...remap].join(" ").trim() };
   const features = flavour === "testing" ? ["--features", "testing"] : [];
-  console.log(`Building the ${flavour} engine …`);
-  run("cargo", ["build", "-p", "cslope-wasm", "--target", "wasm32-unknown-unknown", "--profile", "wasm-release", ...features], env);
-  const input = join(ENGINE_RS, "target/wasm32-unknown-unknown/wasm-release/cslope_wasm.wasm");
+  const profile = flavour === "project" ? "wasm-project" : "wasm-release";
+  const name = OUT_NAME[flavour];
+  console.log(`Building the ${flavour} ${flavour === "project" ? "writer" : "engine"} …`);
+  run("cargo", ["build", "-p", BUILD_CRATE[flavour], "--target", "wasm32-unknown-unknown", "--profile", profile, ...features], env);
+  const input = join(ENGINE_RS, `target/wasm32-unknown-unknown/${profile}/${name}.wasm`);
 
   const out = OUT_DIR[flavour];
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
-  run("wasm-bindgen", [input, "--target", "web", "--omit-default-module-path", "--remove-producers-section", "--out-dir", out, "--out-name", "cslope_wasm"]);
-  addReset(out);
+  // (the writer without its function names: a third of its size)
+  const names = flavour === "project" ? ["--remove-name-section"] : [];
+  run("wasm-bindgen", [input, "--target", "web", "--omit-default-module-path", "--remove-producers-section", ...names, "--out-dir", out, "--out-name", name]);
+  addReset(out, name);
 
-  const wasm = join(out, "cslope_wasm_bg.wasm");
+  const wasm = join(out, `${name}_bg.wasm`);
   const bytes = readFileSync(wasm);
   const info: BuildInfo = {
     flavour,
@@ -128,8 +144,8 @@ const SIZE_BUDGET = 4 * 1024 * 1024;
 
 function main(): void {
   const arg = process.argv[2] ?? "all";
-  const flavours: Flavour[] = arg === "all" ? ["product", "testing"] : arg === "product" || arg === "testing" ? [arg] : [];
-  if (flavours.length === 0) throw new Error(`usage: build-wasm.ts [all|product|testing], not "${arg}"`);
+  const flavours: Flavour[] = arg === "all" ? ["product", "testing", "project"] : arg === "product" || arg === "testing" || arg === "project" ? [arg] : [];
+  if (flavours.length === 0) throw new Error(`usage: build-wasm.ts [all|product|testing|project], not "${arg}"`);
   const locked = lockedWasmBindgen();
   checkWasmBindgenCli(locked);
   for (const f of flavours) {

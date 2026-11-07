@@ -3,12 +3,13 @@
 // check-wasm-fresh.ts can tell, without Rust, whether the committed build
 // is older than the sources. Hashed: the workspace Cargo.toml, Cargo.lock,
 // rust-toolchain.toml, and per crate the build compiles its Cargo.toml and
-// src/ (not tests/, benches/ or target/). The crates are cslope-wasm and
-// its path dependencies, recursively; the product build leaves out the
-// optional ones (the testing feature's: cslope-project), so a crate the
-// product does not compile (cslope-py, cslope-project) does not mark it
-// stale. Line endings are normalised (a Windows checkout with autocrlf
-// hashes the same), paths are relative with forward slashes.
+// src/ (not tests/, benches/ or target/). The crates are the build's own
+// (cslope-wasm for the engine, cslope-project-wasm for the project writer)
+// and its path dependencies, recursively; the product build leaves out the
+// optional ones, so a crate a build does not compile (cslope-py, for the
+// engine cslope-project) does not mark it stale. Line endings are
+// normalised (a Windows checkout with autocrlf hashes the same), paths are
+// relative with forward slashes.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -47,7 +48,14 @@ export function pathDependencies(crate: string, optional: boolean): string[] {
   return out;
 }
 
-/** The crates a build compiles: cslope-wasm and its path dependencies (recursively), as directories. */
+/** The crate each build compiles to WebAssembly. */
+export const BUILD_CRATE: Record<BuildInfo["flavour"], string> = {
+  product: "cslope-wasm",
+  testing: "cslope-wasm",
+  project: "cslope-project-wasm",
+};
+
+/** The crates a build compiles: its own crate and its path dependencies (recursively), as directories. */
 export function buildCrates(flavour: BuildInfo["flavour"], root = ENGINE_RS): string[] {
   const seen = new Set<string>();
   const visit = (crate: string) => {
@@ -56,7 +64,7 @@ export function buildCrates(flavour: BuildInfo["flavour"], root = ENGINE_RS): st
     seen.add(dir);
     for (const dep of pathDependencies(dir, flavour === "testing")) visit(dep);
   };
-  visit(join(root, "crates", "cslope-wasm"));
+  visit(join(root, "crates", BUILD_CRATE[flavour]));
   return [...seen];
 }
 
@@ -89,8 +97,12 @@ export function fileSha256(path: string): string {
 
 /** What tools/build-wasm.ts records next to each build. */
 export interface BuildInfo {
-  /** "product" (packages/engine/src/wasm) or "testing" (src/wasm-testing). */
-  flavour: "product" | "testing";
+  /**
+   * "product" (the engine, packages/engine/src/wasm), "testing" (the
+   * engine with its test exports, src/wasm-testing) or "project" (the
+   * project writer, src/wasm-project).
+   */
+  flavour: "product" | "testing" | "project";
   /** `rustc -V`. */
   rustc: string;
   /** The wasm-bindgen crate and CLI version. */

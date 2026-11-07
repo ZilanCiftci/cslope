@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnalysisResult, ResultSummary, ValidationIssue } from "@cslope/engine";
-import { App } from "./App";
+import { App, type AppProps } from "./App";
 import { ThemeProvider } from "./components/theme-provider";
 import { AnalysisClient, type WorkerLike } from "./engine/client";
 import type { WorkerRequest, WorkerResponse } from "./engine/messages";
@@ -46,15 +46,37 @@ function fakeWorker(answer: (request: WorkerRequest) => WorkerResponse | null) {
 
 const complete = (r: WorkerRequest): WorkerResponse => ({ type: "complete", id: r.id, result: { criticalSlices: [] } as unknown as AnalysisResult, summary: SUMMARY, warnings: [DOCUMENT_WARNING] });
 
-function renderApp({ loadEngine = () => Promise.resolve({} as WebAssembly.Module), answer = complete }: { loadEngine?: () => Promise<WebAssembly.Module>; answer?: (r: WorkerRequest) => WorkerResponse | null } = {}) {
+type WriteProject = NonNullable<AppProps["writeProject"]>;
+
+/** A project writer that records its calls (the real one: engine/project.test.ts). */
+const fakeWriter = (): WriteProject =>
+  vi.fn<WriteProject>((_doc, result) => Promise.resolve({ bytes: new Uint8Array([0x50, 0x4b, 3, 4]), resultSaved: result !== null }));
+
+function renderApp({
+  loadEngine = () => Promise.resolve({} as WebAssembly.Module),
+  answer = complete,
+  writeProject = fakeWriter(),
+}: { loadEngine?: () => Promise<WebAssembly.Module>; answer?: (r: WorkerRequest) => WorkerResponse | null; writeProject?: WriteProject } = {}) {
   const fake = fakeWorker(answer);
   const client = new AnalysisClient({ loadEngine, createWorker: () => fake.worker });
   render(
     <ThemeProvider>
-      <App client={client} />
+      <App client={client} writeProject={writeProject} />
     </ThemeProvider>,
   );
-  return fake;
+  return { ...fake, writeProject };
+}
+
+/** Records the downloads: each file's name and content. */
+function catchDownloads() {
+  const files: { name: string; blob: Blob }[] = [];
+  let last: Blob | null = null;
+  URL.createObjectURL = vi.fn((b: Blob) => ((last = b), "blob:x"));
+  URL.revokeObjectURL = vi.fn();
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+    files.push({ name: this.download, blob: last! });
+  });
+  return files;
 }
 
 const flush = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
@@ -548,13 +570,68 @@ describe("App", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The engine could not load: no network");
   });
 
-  it("links to the website's download and limitations pages; no .cslp download yet", () => {
+  it("links to the website's download and limitations pages", () => {
     renderApp({ loadEngine: () => new Promise(() => {}) });
     expect(screen.getByRole("link", { name: "Get the cSlope app" })).toHaveAttribute("href", "https://cslope.com/download");
     expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/browser#limitations");
-    // The .cslp download is not shown until it works (#107).
-    expect(screen.queryByRole("button", { name: "Download .cslp" })).toBeNull();
-    expect(screen.queryByText(/\.cslp/)).toBeNull();
+  });
+
+  it("downloads a cSlope project of the section with its result, next to the JSON", async () => {
+    const files = catchDownloads();
+    const { requests, writeProject } = renderApp();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
+    const buttons = within(card()).getAllByRole("button").map((b) => b.textContent);
+    expect(buttons.slice(buttons.indexOf("Download JSON"), buttons.indexOf("Download JSON") + 2)).toEqual(["Download JSON", "Download .cslp"]);
+    const button = screen.getByRole("button", { name: "Download .cslp" });
+    expect(button).toBeEnabled();
+    expect(button).toHaveAttribute("title", "A cSlope project of this section with its result, which the cSlope app opens.");
+    fireEvent.click(button);
+    await waitFor(() => expect(files).toHaveLength(1));
+    // The document that ran, its result, and the template's title as the model's name.
+    expect(writeProject).toHaveBeenCalledWith(requests[0].document, { criticalSlices: [] }, "Excavation in clay with a haul road");
+    expect(files[0].name).toBe("cslope-excavation.cslp");
+    expect(files[0].blob.type).toBe("application/zip");
+    expect(new Uint8Array(await files[0].blob.arrayBuffer())).toEqual(new Uint8Array([0x50, 0x4b, 3, 4]));
+    expect(screen.queryByText(/without a result/)).toBeNull();
+  });
+
+  it("downloads the project without a result while the analysis has not finished, and says so", async () => {
+    const files = catchDownloads();
+    // The run never answers: the document has no result yet.
+    const { requests, writeProject } = renderApp({ answer: () => null });
+    await waitFor(() => expect(requests).toHaveLength(1));
+    fireEvent.click(screen.getByRole("button", { name: "Download .cslp" }));
+    await waitFor(() => expect(files).toHaveLength(1));
+    expect(writeProject).toHaveBeenCalledWith(requests[0].document, null, "Excavation in clay with a haul road");
+    expect(await screen.findByText("Downloaded without a result: F is not computed yet.")).toBeInTheDocument();
+  });
+
+  it("leaves out a result of other input: a changed field before its run", async () => {
+    catchDownloads();
+    let answer = true;
+    const { requests, writeProject } = renderApp({ answer: (r) => (answer ? complete(r) : null) });
+    expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
+    answer = false;
+    type("Excavation depth H (m)", "3");
+    fireEvent.click(screen.getByRole("button", { name: "Download .cslp" }));
+    await waitFor(() => expect(writeProject).toHaveBeenCalledOnce());
+    const [doc, result] = vi.mocked(writeProject).mock.calls[0];
+    expect(result).toBeNull();
+    expect(doc).not.toEqual(requests[0].document);
+  });
+
+  it("cannot download a project of a form that is not filled in, and says why one could not be written", async () => {
+    plain();
+    catchDownloads();
+    const writeProject = vi.fn<WriteProject>(() => Promise.reject(new Error("Water table mode \"x\" is not supported")));
+    renderApp({ loadEngine: () => new Promise(() => {}), writeProject });
+    expect(screen.getByRole("button", { name: "Download .cslp" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Download .cslp" })).toHaveAttribute("title", "Fill in the form to download it.");
+    fill();
+    // (the engine is not needed: the project is written without a result)
+    fireEvent.click(screen.getByRole("button", { name: "Download .cslp" }));
+    expect(await screen.findByText('The project could not be written: Water table mode "x" is not supported')).toBeInTheDocument();
   });
 
   it("switches the theme and remembers it", async () => {

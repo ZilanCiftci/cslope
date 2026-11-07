@@ -2,7 +2,8 @@
 //! sections 2 to 5): `manifest.json`, `project.json`, each model's
 //! `model.json`, `result.json` and `backgrounds.json`, `assets/index.json`.
 //! Every member is typed; none unknown is read or written (section 2.1).
-//! The ZIP container itself is [`crate::archive`] (feature `native`).
+//! The ZIP container itself is [`crate::archive`] (features `write` and
+//! `native`).
 //!
 //! A project is read as the app reads it (`openProjectArchive` in
 //! packages/desktop/src/features/project/cslp.ts with `parseProjectData`
@@ -1210,6 +1211,32 @@ impl Project {
         })
     }
 
+    /// A new project of one model, the active one, with the result of its
+    /// last run (or none), no drawings and no thumbnail. Its manifest is
+    /// made when it is written (`created` is the first save's time).
+    pub fn of_model(model: ModelEntry, result: Option<SavedResult>) -> Project {
+        Project {
+            manifest: Manifest {
+                format: FORMAT.into(),
+                format_version: FORMAT_VERSION,
+                min_reader_version: MIN_READER_VERSION,
+                app_version: String::new(),
+                created: String::new(),
+                modified: String::new(),
+                generator: String::new(),
+            },
+            active_model_id: model.id.clone(),
+            models: vec![ProjectModel {
+                model,
+                result,
+                backgrounds: Vec::new(),
+            }],
+            assets: Vec::new(),
+            thumbnail: None,
+            warnings: Vec::new(),
+        }
+    }
+
     /// The model of this id.
     pub fn model(&self, id: &str) -> Option<&ProjectModel> {
         self.models.iter().find(|m| m.model.id == id)
@@ -1504,8 +1531,13 @@ impl Project {
     }
 }
 
-/// The current time as ISO 8601 with milliseconds (`Date.toISOString`).
+/// The current time as ISO 8601 with milliseconds (`Date.toISOString`);
+/// in WebAssembly, which has no clock here, 1970 (the caller gives the
+/// time there: the archive writer's `modified`).
 pub fn now_iso() -> String {
+    if cfg!(target_arch = "wasm32") {
+        return iso_of(0, 0);
+    }
     let d = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default();
