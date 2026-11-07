@@ -6,11 +6,11 @@ import { ThemeProvider } from "./components/theme-provider";
 import { AnalysisClient, type WorkerLike } from "./engine/client";
 import type { WorkerRequest, WorkerResponse } from "./engine/messages";
 import { dumps } from "./engine/document";
-import { draftOf, toQuery } from "./form/draft";
+import { draftOf, emptyLayer, toQuery } from "./form/draft";
 import { embankmentDocument } from "./templates/embankment";
 import { EMBANKMENT_EXAMPLES } from "./templates/embankment-examples";
 import { excavationDocument } from "./templates/excavation";
-import { EXCAVATION_EXAMPLES } from "./templates/excavation-examples";
+import { EXCAVATION_DEFAULTS, EXCAVATION_EXAMPLES } from "./templates/excavation-examples";
 
 const SUMMARY = {
   fos: 1.234,
@@ -61,7 +61,11 @@ const flush = () => act(() => new Promise<void>((r) => setTimeout(r, 0)));
 const field = (name: string, index = 0) => screen.getAllByLabelText(name)[index] as HTMLInputElement;
 const type = (name: string, value: string, index = 0) => fireEvent.change(field(name, index), { target: { value } });
 
-/** Fills in the two empty fields of the first visit: the form is ready. */
+/** The address of a plain excavation, one clay layer without strengths (the embankment's first visit has the same layer). */
+const plain = () =>
+  window.history.replaceState(null, "", "/?" + toQuery({ template: "excavation", fields: { groundLevel: "0", excavationDepth: "3", slope: "1.5" }, on: [], layers: [{ ...emptyLayer("15"), name: "Clay" }], ponded: false }));
+
+/** Fills in the two empty fields of the plain excavation (or the embankment's clay): the form is ready. */
 const fill = (su = "20") => {
   type("γ (kN/m³)", "16");
   type("Su (kPa)", su);
@@ -77,7 +81,21 @@ beforeEach(() => {
 });
 
 describe("App", () => {
-  it("shows the template, and asks for the empty strengths without running", async () => {
+  it("opens the excavation's defaults complete and computes F at once, the haul road on", async () => {
+    const { requests } = renderApp();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
+    expect(screen.getByRole("button", { name: /^Dry crust/ })).toHaveTextContent("Undrained · 1 m (0 to −1 m) · Su 30 kPa");
+    expect(screen.getByRole("button", { name: /^Sand and gravel/ })).toHaveTextContent("Mohr-Coulomb · 5 m (−4 to −9 m) · c′ 0 kPa, φ′ 35°");
+    // No field is empty: it runs by itself, with the defaults' document.
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_DEFAULTS));
+    expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Download JSON" })).toBeEnabled();
+  });
+
+  it("asks for the empty strengths of a plain section without running", async () => {
+    plain();
     const { requests } = renderApp();
     expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
     await flush();
@@ -90,6 +108,7 @@ describe("App", () => {
   });
 
   it("runs when the form is filled in and shows F with its label, without the engine's warnings", async () => {
+    plain();
     const { requests } = renderApp();
     type("γ (kN/m³)", "16");
     type("Su (kPa)", "20");
@@ -113,6 +132,7 @@ describe("App", () => {
   });
 
   it("marks a value out of bounds at its field and does not run", async () => {
+    plain();
     const { requests } = renderApp();
     type("γ (kN/m³)", "16");
     type("Su (kPa)", "-5");
@@ -125,6 +145,7 @@ describe("App", () => {
   });
 
   it("puts the engine's issues at their fields", async () => {
+    plain();
     const issue: ValidationIssue = { path: "/definition/materials/0/model", code: "invalid-material-model", message: 'Material "Clay": Unit weight (γ) must be a positive number.', severity: "error" };
     renderApp({ answer: (r) => ({ type: "invalid", id: r.id, issues: [issue] }) });
     type("γ (kN/m³)", "16");
@@ -148,6 +169,7 @@ describe("App", () => {
   });
 
   it("adds a layer open with the focus on its name, and after a remove puts the focus on the header of the layer before", () => {
+    plain();
     renderApp();
     const header = (name: RegExp) => screen.getByRole("button", { name });
     // A first visit opens the first layer: its strengths are empty.
@@ -210,6 +232,7 @@ describe("App", () => {
   });
 
   it("chooses a layer's color from the swatches with the keyboard, into the drawing, the address and the document", async () => {
+    plain();
     const { requests } = renderApp();
     fill();
     await waitFor(() => expect(requests).toHaveLength(1));
@@ -293,6 +316,7 @@ describe("App", () => {
   });
 
   it("cancels a run", async () => {
+    plain();
     renderApp({ answer: () => null });
     fill();
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Analyzing"));
@@ -302,6 +326,7 @@ describe("App", () => {
   });
 
   it("runs once when Run is pressed before the form runs by itself", async () => {
+    plain();
     const { requests } = renderApp();
     await flush();
     fill();
@@ -312,6 +337,7 @@ describe("App", () => {
   });
 
   it("clears the result when a value changes, and shows the last one as previous while the next runs", async () => {
+    plain();
     let answer = true;
     renderApp({ answer: (r) => (answer ? complete(r) : null) });
     fill();
@@ -324,6 +350,7 @@ describe("App", () => {
   });
 
   it("downloads the analysis document, without waiting for the engine", async () => {
+    plain();
     let blob: Blob | null = null;
     URL.createObjectURL = vi.fn((b: Blob) => ((blob = b), "blob:x"));
     URL.revokeObjectURL = vi.fn();
@@ -368,6 +395,7 @@ describe("App", () => {
   });
 
   it("lists the two templates, the excavation active, and switches to the embankment and back", async () => {
+    plain();
     const { requests } = renderApp();
     const picker = screen.getByRole("group", { name: "Template" });
     const excavation = within(picker).getByRole("button", { name: "Excavation in clay with a haul road" });

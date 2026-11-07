@@ -4,8 +4,8 @@
  * and a flat bottom; the ground water is a level; a haul road (a fill
  * with an optional traffic load, decision B3) may stand behind the crest.
  * F is a factor of safety on characteristic values (design values with
- * partial factors are for the app and Python). No strength has a default
- * (B5).
+ * partial factors are for the app and Python). The parameters have no
+ * defaults here; the form opens with EXCAVATION_DEFAULTS.
  *
  * Geometry (x to the right, y up, m; the slope slides to the right):
  *

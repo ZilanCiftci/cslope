@@ -4,7 +4,7 @@
  * fill of height h with a crest of width B and both sides 1:n; the ground
  * water is a level; a load may stand on the crest. F is a factor of safety
  * on characteristic values (design values with partial factors are for the
- * app and Python). No strength has a default (B5).
+ * app and Python). No strength has a default: the form starts them empty.
  *
  * Geometry (x to the right, y up, m; the slope slides to the right):
  *

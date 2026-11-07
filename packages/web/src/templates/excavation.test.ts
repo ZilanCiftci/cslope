@@ -308,8 +308,9 @@ describe("the engine's defaults, computed here", () => {
 
 describe("the twelve named sets", () => {
   const names = Object.keys(EXCAVATION_EXAMPLES);
-  it("are twelve, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(12);
+  it("are thirteen (the first visit's defaults and twelve more), with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(13);
+    expect(names).toContain("defaults");
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 

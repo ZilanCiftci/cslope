@@ -4,7 +4,9 @@
  * Chromium, in the light and the dark theme. It fails on a console error
  * (a script, a font or the WebAssembly the policy blocks), an uncaught
  * exception, a failed request or an accessibility violation (axe-core, on
- * the empty form and on a result). It opens a filled-in section from its
+ * the empty form and on a result). The first visit computes F of the
+ * excavation's defaults at once (the pinned F); the embankment's first
+ * visit asks for its empty strengths. It opens a filled-in section from its
  * link, waits for F with its label, changes a parameter and waits for the
  * new F; on the embankment it opens a layer and its color picker, moves the
  * layer down and waits for the new F. Then it runs T-ACADS Simple through the worker (window.cslopeWeb,
@@ -21,6 +23,10 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { chromium, devices, type Browser, type Page } from "playwright";
 import { startPreview } from "./preview";
+import EXPECTED from "../src/templates/fixtures/expected.json";
+
+/** The result card's text of a pinned F of the excavation's examples ("F 0.784"). */
+const pinned = (name: keyof typeof EXPECTED) => `F ${EXPECTED[name].fos.toFixed(3)}`;
 
 const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
 
@@ -39,7 +45,7 @@ export const EMBANKMENT =
   "&layer1.name=Crust&layer1.kind=mohr-coulomb&layer1.t=1.5&layer1.gamma=18&layer1.c=3&layer1.phi=30" +
   "&layer2.name=Clay&layer2.kind=undrained&layer2.t=18.5&layer2.gamma=16&layer2.su=14";
 
-/** A one-sided excavation with ponded water 2 m above its bottom (the example clay-5m-ponded): F 2.273. */
+/** A one-sided excavation with ponded water 2 m above its bottom (the example clay-5m-ponded). */
 export const PONDED =
   "t=excavation&ground=10&H=5&slope=2&water=7&layers=2&layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25" +
   "&layer2.kind=impenetrable&layer2.t=10&layer2.gamma=24&pond=1";
@@ -105,9 +111,21 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
   page.on("response", onResponse);
   page.on("requestfailed", onFailed);
   try {
-    // The empty form: no strengths, so it asks for them and does not run.
-    const res = await page.goto(base + "/", { waitUntil: "networkidle" });
+    // The first visit: the excavation's defaults, complete, so that F comes at once.
+    const res = await page.goto(base + "/", { waitUntil: "load" });
     if (res?.status() !== 200) problems.push(`status ${res?.status()}, expected 200`);
+    try {
+      await fValue(page).waitFor({ timeout: 30_000 });
+      const f = await fValue(page).textContent();
+      if (f !== pinned("defaults")) problems.push(`the first visit gave ${f}, expected ${pinned("defaults")}`);
+      console.log(`  first visit: ${f}`);
+      await axe("on the first visit");
+    } catch (e) {
+      problems.push(`the first visit: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+    }
+
+    // The embankment's first visit: no strengths, so it asks for them and does not run.
+    await page.goto(base + "/?t=embankment", { waitUntil: "networkidle" });
     const status = page.getByRole("status").first();
     if (!/fill in \d+ empty fields/.test((await status.textContent()) ?? "")) problems.push(`the empty form says "${await status.textContent()}"`);
     await axe("on the empty form");
@@ -191,7 +209,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!(await page.getByRole("checkbox", { name: "Free water above ground (ponding)" }).isChecked())) problems.push("the ponded link does not check Free water above ground");
       await fValue(page).waitFor({ timeout: 30_000 });
       const f = await fValue(page).textContent();
-      if (f !== "F 2.273") problems.push(`the ponded excavation gave ${f}, expected F 2.273`);
+      if (f !== pinned("clay-5m-ponded")) problems.push(`the ponded excavation gave ${f}, expected ${pinned("clay-5m-ponded")}`);
       console.log(`  ponded excavation: ${f}`);
       await axe("with ponded water");
     } catch (e) {

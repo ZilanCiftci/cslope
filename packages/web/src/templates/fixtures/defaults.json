@@ -1,0 +1,131 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-19.25, -9],
+      [-19.25, -4],
+      [-19.25, -1],
+      [-19.25, 0],
+      [-5.75, 0],
+      [-5, 0.3],
+      [-1, 0.3],
+      [-0.25, 0],
+      [0, 0],
+      [1.5, -1],
+      [4.5, -3],
+      [18, -3],
+      [18, -4],
+      [18, -9]
+    ],
+    "materials": [
+      {
+        "name": "Dry crust",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 17,
+          "unitWeightSat": 17,
+          "undrainedShearStrength": 30
+        }
+      },
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 17,
+          "unitWeightSat": 17,
+          "undrainedShearStrength": 9.5
+        }
+      },
+      {
+        "name": "Sand and gravel",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 22,
+          "unitWeightSat": 22,
+          "cohesion": 0,
+          "frictionAngle": 35
+        }
+      },
+      {
+        "name": "Road fill",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 18,
+          "unitWeightSat": 18,
+          "cohesion": 0,
+          "frictionAngle": 39
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-19.25, -1],
+          [1.5, -1]
+        ]
+      },
+      {
+        "coordinates": [
+          [-19.25, -4],
+          [18, -4]
+        ]
+      },
+      {
+        "coordinates": [
+          [-5.75, 0],
+          [-0.25, 0]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-18.25, -0.5],
+        "materialName": "Dry crust"
+      },
+      {
+        "point": [-18.25, -2.5],
+        "materialName": "Clay"
+      },
+      {
+        "point": [-18.25, -6.5],
+        "materialName": "Sand and gravel"
+      },
+      {
+        "point": [-3, 0.15],
+        "materialName": "Road fill"
+      }
+    ],
+    "udls": [
+      {
+        "magnitude": 15,
+        "x1": -5,
+        "x2": -1
+      }
+    ],
+    "analysisLimits": {
+      "entryLeftX": -19.25,
+      "entryRightX": 0,
+      "exitLeftX": 0,
+      "exitRightX": 18
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false,
+    "tensionCrackAuto": true,
+    "tensionCrackAngle": 65
+  }
+}

@@ -1,4 +1,8 @@
 {
+  "defaults": {
+    "fos": 0.7844814147693087,
+    "fosLabel": "factor of safety"
+  },
   "clay-3m": {
     "fos": 2.2916321601213783,
     "fosLabel": "factor of safety"

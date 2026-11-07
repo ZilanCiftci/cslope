@@ -3,8 +3,8 @@
  * ground surface, a drained fill (the excavation's road, the embankment),
  * the model's extent, and the checks of these, each problem with its
  * field. The values are characteristic: F is a factor of safety (design
- * values with partial factors are for the app and Python). No strength
- * has a default (B5).
+ * values with partial factors are for the app and Python). No parameter
+ * has a default here (the form's first visit is in specs.ts).
  */
 import type { AnalysisOptions } from "@cslope/engine";
 import type { Definition, Point, Strength } from "./builder";
