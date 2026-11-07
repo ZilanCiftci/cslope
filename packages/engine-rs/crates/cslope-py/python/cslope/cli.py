@@ -303,7 +303,7 @@ def _analyse_project(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
         except ValueError as e:
             raise _Invalid([{"path": "", "message": "{}: {}".format(args.document, e)}]) from None
         for model_id in report["droppedResults"]:
-            err.write("Model {!r}: its saved result was for other input; dropped.\n".format(p.model(model_id).name))
+            err.write("Model {!r}: its saved result was for other input; dropped.\n".format(p._by_id(model_id).name))
         out_stream = err if args.json else out
         out_stream.write("Saved {}.\n".format(args.document))
     return status

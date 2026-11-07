@@ -1,5 +1,10 @@
 """cSlope: slope stability analysis (limit equilibrium and finite elements).
 
+Two ways in. As objects, for people: ``Project`` and ``Model`` build, open,
+run and save ``.cslp`` projects the app opens (``cslope.Model``). As JSON,
+for agents and scripts: the functions below take and return the engine's
+JSON shapes.
+
 The engine of the cSlope app, compiled from Rust. Models and options are the
 app's JSON shapes as Python dicts (camelCase keys); results come back as
 dicts the same way. See the README for an overview and ``cslope.examples``
@@ -43,6 +48,9 @@ from ._native import (
 )
 
 __all__ = [
+    "Model",
+    "Project",
+    "Result",
     "ENGINE_BUILD",
     "SCHEMA_NAMES",
     "SCHEMA_VERSION",
@@ -240,3 +248,9 @@ class Slope(_native.Slope):
         _convert(r, _FEM_RESULT_ARRAYS, arrays)
         _convert(r["mesh"], _FEM_MESH_ARRAYS, arrays)
         return r
+
+
+# The objects (after the functions above, which they use).
+from .model import Model  # noqa: E402
+from .project import Project  # noqa: E402
+from .result import Result  # noqa: E402

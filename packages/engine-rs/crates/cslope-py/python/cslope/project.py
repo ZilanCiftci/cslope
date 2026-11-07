@@ -12,19 +12,23 @@ in the repository)::
     assets/<id>.<ext>              the attachments themselves
     thumbnail.png                  a small picture of the active model's result (optional)
 
-``open(path)`` reads one with the engine's reader (the crate cslope-project):
-each model's dict is the model as the app holds it after opening the file
-(missing members filled, out-of-range values clamped, as the app does), in
-the app's JSON shape (camelCase keys). ``Project.save(path)`` writes what
-the app would write, so the app opens it as it was saved.
+``Project.open(path)`` (or ``open(path)``) reads one with the engine's
+reader (the crate cslope-project); ``Project()`` is a new one. Its models
+are ``cslope.Model`` objects (cslope/model.py): build, change and run them
+with the app's names; ``model.data`` is the model's dict as the app holds it
+after opening the file (missing members filled, out-of-range values
+clamped, as the app does), in the app's JSON shape (camelCase keys).
+``Project.save(path)`` writes what the app would write, so the app opens it
+as it was saved.
 
-    >>> from cslope import project
-    >>> p = project.open("slope.cslp")  # doctest: +SKIP
-    >>> m = p.model_named("Section A")  # doctest: +SKIP
-    >>> m.data["materials"][0]["model"]["cohesion"] = 12  # doctest: +SKIP
+    >>> import cslope
+    >>> p = cslope.Project.open("slope.cslp")  # doctest: +SKIP
+    >>> m = p.model("Section A")  # doctest: +SKIP
+    >>> m.material("Clay").c = 12  # doctest: +SKIP
     >>> m.result_is_current  # doctest: +SKIP
     False
-    >>> p.save("slope.cslp")  # doctest: +SKIP
+    >>> m.analyse()  # doctest: +SKIP
+    >>> p.save()  # doctest: +SKIP
 
 The reader is strict, unlike the app's: a file the app saved with this
 schema version opens; a file of an earlier version (a JSON project, the
@@ -39,7 +43,7 @@ with a warning; the model opens without it.
 Results: a result belongs to the input it was computed for (its
 ``inputHash``). A model whose input changed since its result keeps no
 result when the project is saved, and the project then drops its
-thumbnail, unless the model was run again (``Model.set_result``;
+thumbnail, unless the model was run again (``Model.analyse``;
 ``cslope analyse site.cslp --write`` does it for you).
 """
 
@@ -53,6 +57,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from . import _native
+from .model import Model
 
 __all__ = [
     "FORMAT",
@@ -111,50 +116,6 @@ class Asset:
 
 
 @dataclass
-class Model:
-    """One model: its ``model.json`` as a dict, its saved result and its drawings."""
-
-    id: str
-    #: ``models/<id>/model.json`` as the app holds it after opening the file.
-    data: Dict[str, Any]
-    #: ``models/<id>/result.json``: ``runState``, ``result``, ``errorMessage``,
-    #: ``inputHash`` and ``engine``; None without a saved outcome.
-    result: Optional[Dict[str, Any]] = None
-    #: ``models/<id>/backgrounds.json`` (the drawings placed, validated as the app reads them).
-    backgrounds: List[Dict[str, Any]] = field(default_factory=list)
-
-    @property
-    def name(self) -> str:
-        return str(self.data.get("name", ""))
-
-    @property
-    def min_fos(self) -> Optional[float]:
-        """The factor of safety of the saved result, or None."""
-        r = self.result.get("result") if self.result else None
-        return float(r["minFOS"]) if isinstance(r, dict) and "minFOS" in r else None
-
-    @property
-    def input_hash(self) -> str:
-        """The hash of the model's analysis input as it is now (docs/file-format.md section 5)."""
-        return _native.input_hash_of(dict(self.data, id=self.id))
-
-    @property
-    def result_is_current(self) -> bool:
-        """Whether there is a saved result and it was computed for the model's input as it is now.
-        A result that is not is dropped when the project is saved."""
-        return bool(self.result) and self.result.get("inputHash") == self.input_hash
-
-    def set_result(self, result: Dict[str, Any]) -> None:
-        """Keep the result of a run of the model as it is now (an ``AnalysisResult`` in
-        the model's coordinates, as ``cslope.analyse`` gives it), with its input hash."""
-        self.result = _native.saved_result(dict(self.data, id=self.id), result=result)
-
-    def set_error(self, message: str) -> None:
-        """Keep a failed run of the model as it is now."""
-        self.result = _native.saved_result(dict(self.data, id=self.id), error=message)
-
-
-@dataclass
 class Placement:
     """A drawing placed under a model (an entry of ``backgrounds.json``).
 
@@ -190,39 +151,115 @@ class Placement:
         return (a * u + c * v + e, b * u + d * v + f)
 
 
-@dataclass
 class Project:
-    """A project file opened (``open``)."""
+    """A project: its models, attachments and thumbnail.
 
-    #: ``manifest.json``.
-    manifest: Dict[str, Any]
-    active_model_id: str
-    models: List[Model]
-    assets: List[Asset]
-    #: ``thumbnail.png``'s bytes, or None.
-    thumbnail_png: Optional[bytes] = field(default=None, repr=False)
-    #: The project schema version (``project.json`` ``version``).
-    version: int = SCHEMA_VERSION
-    units: str = "SI"
-    #: The layout read; only "cslp" (this one) is read.
-    layout: str = "cslp"
+    ``Project()`` is a new, empty project; ``Project.open(path)`` (or
+    ``cslope.project.open``) opens a ``.cslp`` file. ``save(path)`` writes
+    what the app would write.
 
-    def model(self, model_id: str) -> Model:
+    >>> p = Project()                                      # doctest: +SKIP
+    >>> m = p.add_model("Section A")
+    >>> ...                                                # build m (see cslope.Model)
+    >>> p.save("site.cslp")
+    """
+
+    def __init__(self) -> None:
+        #: ``manifest.json`` (written again on save).
+        self.manifest: Dict[str, Any] = {
+            "format": FORMAT,
+            "formatVersion": FORMAT_VERSION,
+            "minReaderVersion": 1,
+            "appVersion": "",
+            "created": "",
+            "modified": "",
+            "generator": "",
+        }
+        #: The models, in the app's order (``add_model``, ``remove_model``).
+        self.models: List[Model] = []
+        self.assets: List[Asset] = []
+        #: ``thumbnail.png``'s bytes, or None.
+        self.thumbnail_png: Optional[bytes] = None
+        self.active_model_id = ""
+        #: The project schema version (``project.json`` ``version``).
+        self.version: int = SCHEMA_VERSION
+        self.units = "SI"
+        #: The layout read; only "cslp" (this one) is read.
+        self.layout = "cslp"
+        #: The file it was opened from or last saved to, or None.
+        self.path: Optional[str] = None
+
+    def __repr__(self) -> str:
+        return "Project({})".format(", ".join(repr(m.name) for m in self.models))
+
+    @classmethod
+    def open(cls, path: Union[str, "os.PathLike[str]"]) -> "Project":  # noqa: A003
+        """Open a ``.cslp`` file (``cslope.project.open``)."""
+        return _open(path)
+
+    # ── models ──
+
+    def model(self, name: str) -> Model:
+        """The model of this name (an error when there are none or several)."""
+        found = [m for m in self.models if m.name == name]
+        if len(found) != 1:
+            names = ", ".join(repr(m.name) for m in self.models)
+            raise KeyError("{} models are named {!r} (the models: {})".format(len(found), name, names))
+        return found[0]
+
+    def model_named(self, name: str) -> Model:
+        """``model(name)`` (kept for earlier code)."""
+        return self.model(name)
+
+    def _by_id(self, model_id: str) -> Model:
         for m in self.models:
             if m.id == model_id:
                 return m
         raise KeyError(model_id)
 
-    def model_named(self, name: str) -> Model:
-        """The model of this name (an error when there are none or several)."""
-        found = [m for m in self.models if m.name == name]
-        if len(found) != 1:
-            raise KeyError("{} models are named {!r}".format(len(found), name))
-        return found[0]
+    def add_model(self, model: Union[str, Model], orientation: str = "ltr") -> Model:
+        """Add a new, empty model of this name (or the ``Model`` given) and
+        return it; the first model added becomes the active one."""
+        m = Model(model, orientation) if isinstance(model, str) else model
+        if not isinstance(m, Model):
+            raise TypeError("add_model takes a name or a Model, not {!r}".format(model))
+        if any(x is m for x in self.models):
+            raise ValueError("{!r} is in the project already".format(m))
+        if any(x.name == m.name for x in self.models):
+            raise ValueError("A model named {!r} exists already".format(m.name))
+        used = {x.id for x in self.models}
+        if not m.id or m.id in used:
+            n = len(self.models) + 1
+            while "model-{}".format(n) in used:
+                n += 1
+            m.data["id"] = "model-{}".format(n)
+            if m._saved is not None:
+                m._saved = None  # a result belongs to the model it was computed for
+        self.models.append(m)
+        if not self.active_model_id:
+            self.active_model_id = m.id
+        return m
+
+    def remove_model(self, model: Union[str, Model]) -> None:
+        """Remove a model (by name or the ``Model``)."""
+        m = self.model(model) if isinstance(model, str) else model
+        self.models = [x for x in self.models if x is not m]
+        if self.active_model_id == m.id:
+            self.active_model_id = self.models[0].id if self.models else ""
 
     @property
     def active_model(self) -> Model:
-        return self.model(self.active_model_id)
+        """The model the app shows when it opens the project."""
+        return self._by_id(self.active_model_id)
+
+    @active_model.setter
+    def active_model(self, model: Union[str, Model]) -> None:
+        m = self.model(model) if isinstance(model, str) else model
+        if not any(x is m for x in self.models):
+            raise ValueError("{!r} is not a model of this project".format(m))
+        self.active_model_id = m.id
+
+    # ── attachments ──
 
     def asset(self, asset_id: str) -> Asset:
         for a in self.assets:
@@ -239,8 +276,9 @@ class Project:
         return self.thumbnail_png
 
     def placements(self, model: Union[Model, str]) -> List[Placement]:
-        """The drawings placed under a model, in drawing order (as the app reads
-        them: an entry of the first form is converted to the affine transform)."""
+        """The drawings placed under a model (by name or the ``Model``), in
+        drawing order (as the app reads them: an entry of the first form is
+        converted to the affine transform)."""
         m = self.model(model) if isinstance(model, str) else model
         locks = m.data.get("locks") or {}
         locked = set(locks.get("backgrounds") or [])
@@ -267,18 +305,29 @@ class Project:
             )
         return sorted(out, key=lambda p: p.order)
 
-    def save(self, path: Union[str, "os.PathLike[str]"]) -> Dict[str, Any]:
-        """Write the project to ``path`` (atomically: a temporary file renamed
-        over it), as the app writes it, after the save policy: a model whose
+    # ── saving ──
+
+    def save(self, path: Union[str, "os.PathLike[str]", None] = None) -> Dict[str, Any]:
+        """Write the project to ``path`` (default: the file it was opened
+        from or last saved to), atomically (a temporary file renamed over
+        it), as the app writes it, after the save policy: a model whose
         input changed since its result keeps no result, and then the
         thumbnail goes too. Returns ``{"droppedResults": [model ids],
         "droppedThumbnail": bool}``; the project in memory follows."""
         from . import __version__
 
+        if path is None:
+            if self.path is None:
+                raise ValueError("Give the path: the project was not opened from a file")
+            path = self.path
+        if not self.models:
+            raise ValueError("A project needs at least one model")
+        for m in self.models:
+            m._need_ready("saving the project")
         doc = {
             "manifest": self.manifest,
             "activeModelId": self.active_model_id,
-            "models": [{"id": m.id, "model": m.data, "result": m.result, "backgrounds": m.backgrounds} for m in self.models],
+            "models": [{"id": m.id, "model": m.data, "result": m._saved, "backgrounds": m.backgrounds} for m in self.models],
             "assets": [{"id": a.id, "mime": a.mime, "originalName": a.original_name, "addedAt": a.added_at} for a in self.assets],
         }
         bad = _lone_surrogate(doc, "")
@@ -293,8 +342,9 @@ class Project:
             "cslope {} (Python)".format(__version__),
         )
         self.manifest = report["manifest"]
+        self.path = os.fspath(path)
         for model_id in report["droppedResults"]:
-            self.model(model_id).result = None
+            self._by_id(model_id)._saved = None
         if report["droppedThumbnail"]:
             self.thumbnail_png = None
         return {"droppedResults": list(report["droppedResults"]), "droppedThumbnail": report["droppedThumbnail"]}
@@ -339,20 +389,23 @@ def open(path: Union[str, "os.PathLike[str]"]) -> Project:  # noqa: A001 - the m
     Raises ``ValueError`` with a message for a file it does not read (an
     earlier or newer version, an unknown member, a damaged archive) and
     ``OSError`` when the file cannot be read."""
+    return _open(path, stacklevel=3)
+
+
+def _open(path: Union[str, "os.PathLike[str]"], stacklevel: int = 4) -> Project:
     doc, data, thumbnail = _native.project_read(os.fspath(path))
     # a result.json this reader cannot read (damaged, or with a member a
     # newer cSlope added) is left out; the model opens without it
     for message in doc.get("warnings") or []:
-        warnings.warn(message, stacklevel=2)
-    models = [Model(m["id"], m["model"], m.get("result"), list(m.get("backgrounds") or [])) for m in doc["models"]]
-    assets = [Asset(a["id"], a["mime"], a["originalName"], a["addedAt"], builtins.bytes(data[a["id"]])) for a in doc["assets"]]
-    return Project(
-        manifest=doc["manifest"],
-        active_model_id=doc["activeModelId"],
-        models=models,
-        assets=assets,
-        thumbnail_png=builtins.bytes(thumbnail) if thumbnail is not None else None,
-    )
+        warnings.warn(message, stacklevel=stacklevel)
+    p = Project()
+    p.manifest = doc["manifest"]
+    p.models = [Model._of(m["model"], m.get("result"), list(m.get("backgrounds") or [])) for m in doc["models"]]
+    p.assets = [Asset(a["id"], a["mime"], a["originalName"], a["addedAt"], builtins.bytes(data[a["id"]])) for a in doc["assets"]]
+    p.thumbnail_png = builtins.bytes(thumbnail) if thumbnail is not None else None
+    p.active_model_id = doc["activeModelId"]
+    p.path = os.fspath(path)
+    return p
 
 
 def read(path: Union[str, "os.PathLike[str]"]) -> Project:

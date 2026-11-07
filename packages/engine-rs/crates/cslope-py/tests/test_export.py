@@ -244,7 +244,7 @@ def test_export_runs_to_the_f_the_app_saved():
     p = project.open(APP_RESULTS)
     compared = 0
     for m in p.models:
-        assert m.result and m.result["runState"] == "done", m.name
+        assert m.result and m.result.saved["runState"] == "done", m.name
         doc = cli.export_document(m.data)
         assert [i for i in cslope.validate(doc) if i.get("severity", "error") == "error"] == [], m.name
         f = cslope.analyse(doc, threads=4)["minFOS"]

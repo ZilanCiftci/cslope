@@ -62,8 +62,8 @@ def test_opens_the_apps_fixtures():
     with project.open(FIXTURES / "cslp-v1.cslp") as p:
         assert p.layout == "cslp" and p.manifest["formatVersion"] == 1 and (p.version, p.units) == (3, "SI")
         assert [m.id for m in p.models] == ["model-1", "model-2"] and p.active_model.name == "Second model"
-        assert p.models[0].min_fos == 1.25 and len(p.models[0].result["inputHash"]) == 64
-        assert p.models[1].result["errorMessage"] == "No admissible surface"
+        assert p.models[0].min_fos == 1.25 and len(p.models[0].result.saved["inputHash"]) == 64
+        assert p.models[1].result is None and p.models[1].error == "No admissible surface"
         (asset,) = p.assets
         assert asset.original_name == "section.png" and p.models[0].backgrounds[0]["assetId"] == asset.id
         assert p.read_asset(asset.id)[:8] == b"\x89PNG\r\n\x1a\n" and asset.path.endswith(".png")
@@ -133,12 +133,12 @@ def test_saves_the_same_json_entries(tmp_path):
 @needs_fixtures
 def test_a_model_changed_keeps_no_result_and_the_thumbnail_goes(tmp_path):
     p = project.open(FIXTURES / "cslp-v1.cslp")
-    m = p.model("model-1")
+    m = p.models[0]
     assert m.result_is_current
     m.data["materials"][0]["model"]["unitWeight"] += 1
     assert not m.result_is_current
     # a change that is not part of the input keeps it
-    p.model("model-2").data["name"] = "Renamed"
+    p.models[1].data["name"] = "Renamed"
     report = p.save(tmp_path / "x.cslp")
     # (the thumbnail shows the active model, model-2, whose result stays)
     assert report == {"droppedResults": ["model-1"], "droppedThumbnail": False}
@@ -157,7 +157,7 @@ def test_a_result_a_newer_cslope_extended_is_left_out_with_a_warning(tmp_path):
     newer = rewritten(src, tmp_path / "n.cslp", "models/model-1/result.json", lambda v: v["result"].update(newField=1))
     with pytest.warns(UserWarning, match="model-1 was left out.*newField"):
         p = project.open(newer)
-    assert p.model("model-1").result is None and p.model("model-2").result is not None
+    assert p.models[0].result is None and p.models[1].error == "No admissible surface"
 
 
 @needs_fixtures
@@ -173,19 +173,19 @@ def test_an_unknown_member_added_in_python_is_refused_on_save(tmp_path):
 def test_analyse_write_keeps_current_results(tmp_path):
     target = shutil.copy(APP_RESULTS, tmp_path / "site.cslp")
     p = project.open(target)
-    sparse = p.model("model-sparse")
+    sparse = p.model("Fields missing")
     before = sparse.min_fos
     # the strength raised: the saved result is out of date until the model runs again
     sparse.data["materials"][0]["model"]["cohesion"] += 5
     p.save(target)
-    assert project.open(target).model("model-sparse").result is None
+    assert project.open(target).model("Fields missing").result is None
     code, out, err = run("analyse", target, "--model", "Fields missing", "--write", "--threads", 2)
     assert code == 0, err
     assert out.startswith("Fields missing:\nF ") and "Saved " in out
-    again = project.open(target).model("model-sparse")
+    again = project.open(target).model("Fields missing")
     assert again.result_is_current and again.min_fos > before
-    assert again.result["engine"] == {"version": cslope.__version__, "sourceHash": ""}
-    assert again.result["runState"] == "done" and again.result["errorMessage"] is None
+    assert again.result.saved["engine"] == {"version": cslope.__version__, "sourceHash": ""}
+    assert again.result.saved["runState"] == "done" and again.result.saved["errorMessage"] is None
 
 
 @needs_app_results
