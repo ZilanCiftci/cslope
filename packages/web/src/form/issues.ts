@@ -11,7 +11,7 @@ import type { ValidationIssue } from "@cslope/engine";
 export interface IssueTargets {
   /** The owner of each material's fields ("layers.0", "road", "fill"). */
   materials: string[];
-  /** The field of each region assignment ("layers.0.bottomLevel", "road.height"). */
+  /** The field of each region assignment ("layers.0.thickness", "road.height"). */
   regions: string[];
   /** The field of the distributed loads, or null for none. */
   udl: string | null;

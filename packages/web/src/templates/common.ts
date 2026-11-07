@@ -6,6 +6,7 @@
  */
 import type { PartialFactors, SafetyClass } from "@cslope/engine";
 import type { Definition, Point, Strength } from "./builder";
+import { appMaterialColor, defaultLayerColor } from "./colors";
 import { swedishPartialFactors } from "./partial-factors";
 import type { ParameterDescription } from "./types";
 
@@ -39,6 +40,8 @@ export interface Layer {
   /** The elevation of the layer's bottom (m). The last layer's bottom is the model's base, treated as firm ground (a note says when it is shallower than recommended). */
   bottomLevel: number;
   material: LayerMaterial;
+  /** The color in the drawing and the app ("#a0522d", one of LAYER_COLORS); default: defaultLayerColor of its position. */
+  color?: string;
 }
 
 /** A drained fill above the ground: the excavation's haul road, the embankment. */
@@ -244,13 +247,20 @@ function strengthOf(material: LayerMaterial, top: number): Strength {
   }
 }
 
+/** A layer's color in the document: only when the app would not give its material (the layers' come first) the same one. */
+export function documentColor(layer: Layer, index: number): string | undefined {
+  const color = layer.color ?? defaultLayerColor(index);
+  return color === appMaterialColor(index) ? undefined : color;
+}
+
 /**
  * The layers' materials, in order (Su growing from each layer's top), and
  * one region assignment per layer at x, between its top and its bottom
- * (the last one's at its own bottom, the model's base). Returns the materials' names.
+ * (the last one's at its own bottom, the model's base), each with its
+ * color when the app would show another. Returns the materials' names.
  */
 export function addLayers(d: Definition, layers: Layer[], ground: number, x: number): string[] {
-  const names = layers.map((layer, i) => d.addMaterial(layerName(layer, i), strengthOf(layer.material, i === 0 ? ground : layers[i - 1].bottomLevel)));
+  const names = layers.map((layer, i) => d.addMaterial(layerName(layer, i), strengthOf(layer.material, i === 0 ? ground : layers[i - 1].bottomLevel), documentColor(layer, i)));
   let top = ground;
   for (const [i, layer] of layers.entries()) {
     d.assign(names[i], [x, (top + layer.bottomLevel) / 2] as Point);

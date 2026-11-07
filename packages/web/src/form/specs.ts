@@ -61,6 +61,8 @@ export interface FormSpec<P> {
   /** The parameters to draw, with the optional fields the drawing shows left out when `ok` says they are wrong. */
   drawable(params: P, ok: (field: string) => boolean): P;
   shapes(params: P): SectionShapes;
+  /** A level no layer but the last may end within 0.05 m of, and the last must end below (the excavation's bottom); none when not set. */
+  avoidLevel?(params: P): { level: number; text: string };
   /** The lowest ground (m): ponded water matters only with the water above it. */
   lowestGround(params: P): number;
   /** What ponded water does in this template, for the checkbox's hint. */
@@ -84,7 +86,7 @@ const layersText = (layers: Layer[], water: number | null) => `${layers.length =
 
 const layerTargets = (layers: Layer[]) => ({
   materials: layers.map((_, i) => `layers.${i}`),
-  regions: layers.map((_, i) => `layers.${i}.bottomLevel`),
+  regions: layers.map((_, i) => `layers.${i}.thickness`),
 });
 
 const fillKeys = (group: string) => ["gamma", "c", "phi"].map((k) => `${group}.${k}`);
@@ -144,13 +146,14 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
     }
     return { fields, on: p.road ? ["road"] : [] };
   },
-  geometry: /^(groundLevel|excavationDepth|slope|bottomWidth|layers|layers\.\d+\.bottomLevel|road\.(distanceFromCrest|width|height))$/,
+  geometry: /^(groundLevel|excavationDepth|slope|bottomWidth|layers|layers\.\d+\.thickness|road\.(distanceFromCrest|width|height))$/,
   drawable: (p, ok) => ({
     ...p,
     waterLevel: ok("waterLevel") ? p.waterLevel : null,
     road: p.road && { ...p.road, trafficLoad: ok("road.trafficLoad") ? p.road.trafficLoad : null },
   }),
   shapes: excavationShapes,
+  avoidLevel: (p) => ({ level: p.groundLevel - p.excavationDepth, text: "the excavation bottom" }),
   lowestGround: (p) => p.groundLevel - p.excavationDepth,
   pondedHint: "Water above the ground stands in the excavation as ponded water. Off: the level follows the ground surface and seeps out of the slope.",
   describe: (p) => `the excavation${p.bottomWidth !== null ? `, a trench ${p.bottomWidth} m wide at the bottom` : ""}: ${layersText(p.layers, p.waterLevel)}${p.road ? ", a haul road" : ""}`,
@@ -197,7 +200,7 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
     },
     on: [],
   }),
-  geometry: /^(groundLevel|embankmentHeight|crestWidth|slope|layers|layers\.\d+\.bottomLevel)$/,
+  geometry: /^(groundLevel|embankmentHeight|crestWidth|slope|layers|layers\.\d+\.thickness)$/,
   drawable: (p, ok) => ({ ...p, waterLevel: ok("waterLevel") ? p.waterLevel : null, crestLoad: ok("crestLoad") ? p.crestLoad : null }),
   shapes: embankmentShapes,
   lowestGround: (p) => p.groundLevel,

@@ -22,7 +22,7 @@ describe("the engine's issues at the fields", () => {
     expect(issueField("/definition/materials/0/model/undrainedShearStrength", targets)).toBe("layers.0.su");
     expect(issueField("/definition/materials/0/model/unitWeight", targets)).toBe("layers.0.gamma");
     expect(issueField("/definition/materials/1/model/frictionAngle", targets)).toBe("road.phi");
-    expect(issueField("/definition/regionAssignments/0/point", targets)).toBe("layers.0.bottomLevel");
+    expect(issueField("/definition/regionAssignments/0/point", targets)).toBe("layers.0.thickness");
     expect(issueField("/definition/udls/0/magnitude", targets)).toBe("road.trafficLoad");
     expect(issueField("/definition/waterTable/value", targets)).toBe("waterLevel");
     expect(issueField("/options/partialFactors/cu", targets)).toBe("values.etaCu");

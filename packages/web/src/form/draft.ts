@@ -12,6 +12,8 @@
  */
 import { MATERIAL_MODEL_LABELS, type SafetyClass } from "@cslope/engine";
 import { LAYER_PARAMETERS, type Layer, type LayerMaterial, type Values } from "../templates/common";
+import { defaultLayerColor, LAYER_COLORS, layerColorOf } from "../templates/colors";
+import { bottomLevels, newThickness, thicknesses, thicknessProblems } from "./layers";
 import { groupsOf, specOf, type GroupSpec, type TemplateId } from "./specs";
 
 export type { TemplateId } from "./specs";
@@ -29,7 +31,10 @@ export interface LayerDraft {
   key: string;
   name: string;
   kind: LayerModel;
-  bottomLevel: string;
+  /** The thickness (m): the layers stack down from the ground level. */
+  thickness: string;
+  /** The color in the drawing, one of LAYER_COLORS ("#d4a373"); it stays with the layer when the layers are reordered. */
+  color: string;
   gamma: string;
   su: string;
   suRate: string;
@@ -72,7 +77,7 @@ const KIND_ALIASES: Record<string, LayerModel> = {
 };
 
 /** The fields of a layer of each model, in the form's order. */
-export const LAYER_FIELDS: Record<LayerModel, (keyof typeof LAYER_PARAMETERS)[]> = {
+export const LAYER_FIELDS: Record<LayerModel, Exclude<keyof typeof LAYER_PARAMETERS, "bottomLevel">[]> = {
   undrained: ["gamma", "su", "suRate"],
   "mohr-coulomb": ["gamma", "c", "phi"],
   impenetrable: ["gamma"],
@@ -93,12 +98,40 @@ export function strengthSummary(layer: LayerDraft): string {
 
 const VALUE_KEYS = ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const;
 
-/** A new layer's bottom: 5 m below the last one's, within the bounds; empty when that one has none. */
-export function nextBottomLevel(layers: LayerDraft[]): string {
-  const last = parseNumber(layers[layers.length - 1]?.bottomLevel ?? "");
-  if (last === null || !Number.isFinite(last)) return "";
-  const { min, max } = LAYER_PARAMETERS.bottomLevel;
-  return String(Math.min(max, Math.max(min, Math.round((last - 5) * 10) / 10)));
+/** The bottom level of each layer of a draft (NaN where a thickness, or the ground, is not a number). */
+export function draftLevels(draft: Draft): number[] {
+  return bottomLevels(parseNumber(draft.fields.groundLevel ?? "") ?? NaN, draft.layers.map((l) => parseNumber(l.thickness) ?? NaN));
+}
+
+/** A layer added at the bottom is 5 m thick, one inserted 1 m, less when the lowest level (−100 m) is closer. */
+export const ADDED_THICKNESS = 5;
+export const INSERTED_THICKNESS = 1;
+
+/** The color of a layer new at `index`: its position's, or the first swatch no other layer has. */
+export function nextColor(layers: LayerDraft[], index: number): string {
+  const used = new Set(layers.map((l) => l.color));
+  const own = defaultLayerColor(index);
+  if (!used.has(own)) return own;
+  return LAYER_COLORS.find((c) => !used.has(c.color))?.color ?? own;
+}
+
+/** The layers with a new one at `index` (at the bottom when it is the count), its thickness and color chosen; the layers below move down by it. */
+export function withNewLayer(draft: Draft, index: number): { layers: LayerDraft[]; layer: LayerDraft } {
+  const base = draftLevels(draft).at(-1) ?? NaN;
+  const atEnd = index >= draft.layers.length;
+  const layer = emptyLayer(newThickness(base, atEnd ? ADDED_THICKNESS : INSERTED_THICKNESS), nextColor(draft.layers, index));
+  const layers = [...draft.layers];
+  layers.splice(index, 0, layer);
+  return { layers, layer };
+}
+
+/** The layers with the one at `from` moved to `to` (the thicknesses move with their layers, so the levels follow). */
+export function moveLayer(layers: LayerDraft[], from: number, to: number): LayerDraft[] {
+  if (to < 0 || to >= layers.length || from === to) return layers;
+  const out = [...layers];
+  const [layer] = out.splice(from, 1);
+  out.splice(to, 0, layer);
+  return out;
 }
 
 /** Fields that may be left empty, by their last key, with what empty means (the placeholder). */
@@ -116,8 +149,8 @@ export const emptyText = (field: string): string | undefined => OPTIONAL_FIELDS[
 
 let layerKeys = 0;
 
-export function emptyLayer(bottomLevel = ""): LayerDraft {
-  return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", bottomLevel, gamma: "", su: "", suRate: "", c: "", phi: "" };
+export function emptyLayer(thickness = "", color: string = defaultLayerColor(0)): LayerDraft {
+  return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", thickness, color, gamma: "", su: "", suRate: "", c: "", phi: "" };
 }
 
 /** The form on a first visit of a template. */
@@ -127,7 +160,7 @@ export function initialDraft(template: TemplateId = "excavation"): Draft {
     template: spec.template.id as TemplateId,
     fields: { ...spec.initial },
     on: [],
-    layers: [{ ...emptyLayer("-15"), name: "Clay" }],
+    layers: [{ ...emptyLayer("15"), name: "Clay" }],
     ponded: false,
     basis: "characteristic",
     safetyClass: "",
@@ -175,7 +208,7 @@ export function draftFields(draft: Draft): [string, string][] {
   const group = (g: GroupSpec) => g.keys.forEach((k) => out.push([k, draft.fields[k] ?? ""]));
   spec.before.filter(shownGroup(draft)).forEach(group);
   draft.layers.forEach((layer, i) => {
-    out.push([`layers.${i}.bottomLevel`, layer.bottomLevel]);
+    out.push([`layers.${i}.thickness`, layer.thickness]);
     for (const k of LAYER_FIELDS[layer.kind]) out.push([`layers.${i}.${k}`, layer[k]]);
   });
   spec.after.filter(shownGroup(draft)).forEach(group);
@@ -185,7 +218,7 @@ export function draftFields(draft: Draft): [string, string][] {
 
 const required = (text: string) => parseNumber(text) ?? NaN;
 
-function layerOf(l: LayerDraft): Layer {
+function layerOf(l: LayerDraft, index: number, bottomLevel: number): Layer {
   const gamma = required(l.gamma);
   let material: LayerMaterial;
   switch (l.kind) {
@@ -203,7 +236,7 @@ function layerOf(l: LayerDraft): Layer {
       material = { kind: "impenetrable", gamma };
       break;
   }
-  return { ...(l.name.trim() ? { name: l.name.trim() } : {}), bottomLevel: required(l.bottomLevel), material };
+  return { ...(l.name.trim() ? { name: l.name.trim() } : {}), bottomLevel, material, ...(l.color !== defaultLayerColor(index) ? { color: l.color } : {}) };
 }
 
 function valuesOf(draft: Draft): Values {
@@ -220,11 +253,12 @@ function valuesOf(draft: Draft): Values {
 
 export function formState(draft: Draft): FormState {
   const spec = specOf(draft.template);
+  const levels = draftLevels(draft);
   const params = spec.params({
     num: (k) => required(draft.fields[k] ?? ""),
     opt: (k) => parseNumber(draft.fields[k] ?? ""),
     on: new Set(draft.on),
-    layers: draft.layers.map(layerOf),
+    layers: draft.layers.map((l, i) => layerOf(l, i, levels[i])),
     values: valuesOf(draft),
     ponded: draft.ponded,
   });
@@ -235,9 +269,21 @@ export function formState(draft: Draft): FormState {
     if (v === null && emptyText(field) === undefined) missing.push(field);
     else if (v !== null && Number.isNaN(v)) errors.set(field, "Enter a number, such as 1.5.");
   }
+  // The thicknesses, checked by the template's rules on the levels, worded for a thickness. The ground's own problem comes first.
+  const groundOk = !missing.includes("groundLevel") && !errors.has("groundLevel") && !spec.template.fieldProblems(params).some((p) => p.field === "groundLevel");
+  const ground = groundOk ? params.groundLevel : NaN;
+  const avoid = spec.avoidLevel?.(params);
+  for (const p of thicknessProblems(ground, draft.layers.map((l) => parseNumber(l.thickness)), avoid ?? null)) {
+    const field = `layers.${p.index}.thickness`;
+    if (!errors.has(field)) errors.set(field, p.message);
+  }
   for (const p of spec.template.fieldProblems(params)) {
-    if (missing.includes(p.field) || errors.has(p.field)) continue;
-    errors.set(p.field, p.message);
+    // A level's problem is at the layer's thickness (it has its own sentence there); none while the ground is wrong.
+    const level = /^layers\.(\d+)\.bottomLevel$/.exec(p.field);
+    const field = level ? `layers.${level[1]}.thickness` : p.field;
+    if (level && !groundOk) continue;
+    if (missing.includes(field) || errors.has(field)) continue;
+    errors.set(field, p.message);
   }
   return { params, errors, missing, ready: !missing.length && !errors.size };
 }
@@ -264,8 +310,9 @@ export function toQuery(draft: Draft): string {
     const p = `layer${i + 1}.`;
     put(p + "name", l.name);
     q.set(p + "kind", l.kind);
-    put(p + "bottomLevel", l.bottomLevel);
+    put(p + "t", l.thickness);
     for (const k of LAYER_FIELDS[l.kind]) put(p + k, l[k]);
+    if (l.color !== defaultLayerColor(i)) q.set(p + "color", l.color.slice(1));
   });
   if (draft.ponded && draft.fields.waterLevel?.trim()) q.set("pond", "1");
   for (const g of groups.filter((g) => g.toggle && draft.on.includes(g.id))) {
@@ -299,10 +346,18 @@ export function fromQuery(search: string): Draft {
     for (const k of g.keys) draft.fields[k] = get(spec.short[k] ?? k);
   }
   const count = Math.max(1, Math.min(12, Math.floor(Number(q.get("layers"))) || 1));
+  // Older links give each layer's bottom level ("layer1.bottomLevel=-15"): the thickness is the distance from the ground or the layer above.
+  let top = parseNumber(draft.fields.groundLevel ?? "") ?? NaN;
   draft.layers = Array.from({ length: count }, (_, i) => {
     const p = `layer${i + 1}.`;
     const kind = KIND_ALIASES[q.get(p + "kind") ?? ""] ?? "undrained";
-    const layer: LayerDraft = { ...emptyLayer(get(p + "bottomLevel")), name: get(p + "name"), kind };
+    let thickness = get(p + "t");
+    if (!q.has(p + "t") && q.has(p + "bottomLevel")) {
+      const level = parseNumber(get(p + "bottomLevel")) ?? NaN;
+      thickness = Number.isFinite(top) && Number.isFinite(level) ? String(thicknesses(top, [level])[0]) : "";
+      top = level;
+    } else top -= parseNumber(thickness) ?? NaN;
+    const layer: LayerDraft = { ...emptyLayer(thickness, layerColorOf(q.get(p + "color")) ?? defaultLayerColor(i)), name: get(p + "name"), kind };
     for (const k of LAYER_FIELDS[kind]) layer[k] = get(p + k);
     return layer;
   });
@@ -323,18 +378,19 @@ function modelOf(m: LayerMaterial): LayerModel {
 }
 
 /** The draft of a template's parameter set (the form filled in with it). */
-export function draftOf(template: TemplateId, params: { layers: Layer[]; values: Values; ponded?: boolean }): Draft {
+export function draftOf(template: TemplateId, params: { groundLevel: number; layers: Layer[]; values: Values; ponded?: boolean }): Draft {
   const t = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
   const v = params.values;
   const { fields, on } = specOf(template).toFields(params);
+  const ts = thicknesses(params.groundLevel, params.layers.map((l) => l.bottomLevel));
   return {
     template,
     fields,
     on,
-    layers: params.layers.map((l) => {
+    layers: params.layers.map((l, i) => {
       const m = l.material;
       return {
-        ...emptyLayer(t(l.bottomLevel)),
+        ...emptyLayer(t(ts[i]), l.color ?? defaultLayerColor(i)),
         name: l.name ?? "",
         kind: modelOf(m),
         gamma: t(m.gamma),
