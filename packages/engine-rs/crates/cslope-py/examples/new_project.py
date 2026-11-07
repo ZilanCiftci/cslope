@@ -26,7 +26,7 @@ m.assign(clay, at=(25, 3))
 # Water, a load on the crest and where slip surfaces enter and exit.
 m.add_piezometric_line([(0, 12), (15, 11), (35, 5), (50, 5)])
 m.add_distributed_load(x=(3, 10), q=20)  # kPa, vertical
-m.search_limits(entry=(5, 14), exit=(30, 48))
+m.search_limits(entry=(1, 14), exit=(30, 48))
 
 r = m.analyze()
 print(f"F {r.fos:.3f} ({r.fos_label}, {r.method})")
