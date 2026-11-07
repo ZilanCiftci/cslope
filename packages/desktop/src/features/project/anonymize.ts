@@ -17,6 +17,8 @@
  * factor of safety of a rigid shift is the same; the results are removed
  * (they are in the old coordinates) and the views fitted again.
  */
+import { isResultOutOfDate } from "../../store/out-of-date";
+import { restampCopy } from "../../store/result-input";
 import type { MaterialModel, SlopeDefinition } from "@cslope/engine";
 import type { ProjectFile } from "../../store/persistence";
 import type {
@@ -718,6 +720,20 @@ export function anonymizeProject(
     for (const b of model.backgrounds ?? []) layerNames += b.hiddenLayers?.length ?? 0;
     return model;
   });
+
+  // The results' input hashes (kept in memory with the results, which the
+  // copy cloned): a result out of date is not carried into the copy, the
+  // others are stamped with the copy's input (its new names), so the copy
+  // opens with them current.
+  for (const [index, model] of models.entries()) {
+    const original = file.models[index];
+    if (model.runState === "done" && isResultOutOfDate(original.result)) {
+      models[index] = withoutResult(model);
+      summary.resultsRemoved++;
+    } else {
+      restampCopy(original, models[index]);
+    }
+  }
 
   // The drawing files the copy refers to, without their names and dates.
   const referenced = new Set(models.flatMap((m) => (m.backgrounds ?? []).map((b) => b.assetId)));

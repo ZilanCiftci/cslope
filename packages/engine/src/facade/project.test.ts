@@ -45,7 +45,7 @@ describe("app model conversion (testing build)", () => {
     }
   });
 
-  it("names the field of a model it cannot read", () => {
-    expect(() => testCall("project::modelToDefinition", [{ id: "m", materials: [{ id: "a" }] }])).toThrow(/materials\[0\]/);
+  it("refuses a model the app cannot open, with the app's message", () => {
+    expect(() => testCall("project::modelToDefinition", [{ id: "m", materials: [{ id: "a" }] }])).toThrow("Model m must include coordinates.");
   });
 });

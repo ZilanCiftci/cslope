@@ -85,6 +85,7 @@ for phi in range(20, 41, 5):
 | `to_canonical(definition)` | The definition turned to slide towards +x |
 | `model_to_definition(model, *, normalize=True)` | The engine's definition of a model of a project file (`cslope.project`), as the app makes it after opening the file |
 | `normalize_model(model)` | A model of a project file as the app reads it on open (the fields the analysis takes, and complete options) |
+| `project.open(path)`, `Project.save(path)` | A `.cslp` project file opened, its models as dicts, changed and saved as the app saves it; a result whose model changed since is dropped on save |
 | `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
 | `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
 | `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |
@@ -127,16 +128,19 @@ The mesh and field arrays of `fem_summary` and `Slope.fem` are
 
 ```
 cslope analyse slope.json [--json] [--threads N]
+cslope analyse site.cslp [--model NAME | --all] [--write] [--json] [--threads N]
 cslope validate slope.json
 cslope export site.cslp [--model NAME | --all] [-o PATH]
 cslope schema [name]
 cslope info
 ```
 
-`cslope export` writes a model of a project file saved by the cSlope app as
-an analysis document, as the app runs it (the active model by default). A
-project saved by an earlier version of the app is refused: open it in the
-app and save it.
+`cslope analyse site.cslp` analyses models of a project file as the app
+runs them (the active model by default); with `--write` it saves the results
+to the project, each with the hash of its model's input, so the app shows
+them as current. `cslope export` writes a model of a project file saved by
+the cSlope app as an analysis document, as the app runs it. A project saved
+by an earlier version of the app is refused: open it in the app and save it.
 
 ## Examples
 

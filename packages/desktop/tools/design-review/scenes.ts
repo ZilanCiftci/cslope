@@ -368,6 +368,29 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "models-out-of-date",
+    title: "Models panel: a result out of date (the model was changed in the file after the run) beside a current one",
+    area: "sidebar",
+    data: "example",
+    open: async (ctx) => {
+      // The first two models run; the second's material then changed
+      // without a run (as a hand edit of the file does), the project saved
+      // and opened again: the first result is current, the second out of
+      // date.
+      await ctx.result();
+      await ctx.store(`(s) => s.switchModel(s.models[1].id)`);
+      await ctx.result();
+      await ctx.store(`async (s, store) => {
+        const materials = s.materials.map((m, i) => (i === 0 ? { ...m, model: { ...m.model, unitWeight: m.model.unitWeight + 1 } } : m));
+        store.setState({ materials });
+        const bytes = await window.__CSLOPE_PROJECT_FILE__.save();
+        await window.__CSLOPE_PROJECT_FILE__.open(bytes);
+        store.getState().setMode("edit");
+      }`);
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
     id: "models-multi-selected",
     title: "Models panel with three models selected (Ctrl+click)",
     area: "sidebar",

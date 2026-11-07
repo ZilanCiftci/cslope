@@ -81,6 +81,11 @@ jobs:
         run: |
           bun packages/desktop/scripts/project-corpus.ts
           git diff --exit-code -- packages/engine-rs/golden/project-corpus.json
+      # The .cslp format and project schema versions are the same in the app
+      # and in the Rust reader and writer (cslope-project, the Python
+      # package's); a change to one without the other fails here.
+      - name: Project format versions match
+        run: bun packages/engine-rs/tools/check-format-versions.ts
       - name: Typecheck
         run: bun run typecheck
       - name: Lint

@@ -1,6 +1,7 @@
 """The ``cslope`` command: analyze, validate and describe analysis documents.
 
     cslope analyse slope.json [--json] [--threads N]
+    cslope analyse site.cslp [--model NAME | --all] [--write] [--json] [--threads N]
     cslope validate slope.json
     cslope export site.cslp [--model NAME | --all] [-o PATH]
     cslope schema [name]
@@ -123,9 +124,21 @@ def format_summary(summary: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _is_archive(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(4) == b"PK\x03\x04"
+    except OSError:
+        return False
+
+
 def _cmd_analyse(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
+    if _is_archive(args.document):
+        return _analyse_project(args, out, err)
+    if args.write or args.all or args.model is not None:
+        raise _Invalid([{"path": "", "message": "--model, --all and --write are for a project file (.cslp)."}])
     doc = _read(args.document)
     errors = _errors(cslope.validate(doc))
     if errors:
@@ -155,11 +168,6 @@ def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
         return EXIT_INVALID
     out.write("Valid{}.\n".format(" (with warnings)" if issues else ""))
     return EXIT_OK
-
-
-#: The project schema version ``cslope export`` reads (the app's
-#: PROJECT_FILE_VERSION): an older project is migrated by the app on open.
-PROJECT_SCHEMA_VERSION = 3
 
 
 def _free_water(definition: Dict[str, Any]) -> Dict[str, Any]:
@@ -204,6 +212,9 @@ def export_document(model: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _open_project(path: str) -> Any:
+    """The project file at ``path`` (``cslope.project.open``), or an _Invalid
+    with the reader's message (an earlier version: open it in the app and
+    save it; a newer one: update)."""
     from . import project
 
     try:
@@ -217,26 +228,85 @@ def _open_project(path: str) -> Any:
             [{"path": "", "message": "{} is an analysis document, not a project file; run it with `cslope analyse`.".format(path)}]
         )
     try:
-        p = project.read(path)
+        return project.open(path)
     except OSError as e:
         raise _Invalid([{"path": "", "message": "Cannot read {}: {}".format(path, e.strerror or e)}]) from None
     except ValueError as e:
         raise _Invalid([{"path": "", "message": "{}: {}".format(path, e)}]) from None
-    again = "open it in the cSlope app and save it, then export the saved file"
-    if p.layout != "cslp":
-        p.close()
-        raise _Invalid([{"path": "", "message": "{} is a project file of an earlier cSlope version; {}.".format(path, again)}])
-    if p.version < PROJECT_SCHEMA_VERSION:
-        p.close()
-        raise _Invalid(
-            [{"path": "", "message": "{} was saved by an earlier cSlope (project schema version {}); {}.".format(path, p.version, again)}]
-        )
-    if p.version > PROJECT_SCHEMA_VERSION:
-        p.close()
-        raise _Invalid(
-            [{"path": "", "message": "{} was saved by a newer cSlope (project schema version {}); update cslope to export it.".format(path, p.version)}]
-        )
-    return p
+
+
+def _models_of(p: Any, args: argparse.Namespace) -> List[Any]:
+    """The models ``--model`` / ``--all`` name (default: the active one)."""
+    if args.all:
+        return list(p.models)
+    if args.model is not None:
+        models = [m for m in p.models if m.name == args.model] or [m for m in p.models if m.id == args.model]
+        if not models:
+            names = ", ".join(repr(m.name) for m in p.models)
+            raise _Invalid([{"path": "", "message": "No model named {!r} in {} (its models: {}).".format(args.model, args.document, names)}])
+        if len(models) > 1:
+            raise _Invalid(
+                [{"path": "", "message": "{} models are named {!r}; give the id instead ({}).".format(len(models), args.model, ", ".join(m.id for m in models))}]
+            )
+        return models
+    return [p.active_model]
+
+
+def _analyse_project(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
+    """``cslope analyse site.cslp``: each model as the app runs it (the
+    analysis document of ``cslope export``), its summary printed; with
+    ``--write`` the results saved to the project (result.json in model
+    coordinates with the input hash), under the save policy."""
+    import cslope
+
+    p = _open_project(args.document)
+    status = EXIT_OK
+    listed = []
+    for m in _models_of(p, args):
+        try:
+            doc = export_document(m.data)
+        except ValueError as e:
+            raise _Invalid([{"path": "", "message": "Model {!r}: {}".format(m.name, e)}]) from None
+        errors = _errors(cslope.validate(doc))
+        if errors:
+            raise _Invalid([dict(i, message="Model {!r}: {}".format(m.name, i.get("message"))) for i in errors])
+        fem = (doc["options"].get("fem") or {}).get("enabled") is True
+        try:
+            result = cslope.analyse(doc, threads=args.threads)
+        except cslope.EngineError as e:
+            err.write("Model {!r}: the analysis failed: {}\n".format(m.name, e))
+            status = EXIT_ANALYSIS
+            if args.write and not fem:
+                m.set_error(str(e))
+            continue
+        summary = cslope.summarize(result, doc)
+        if args.json:
+            listed.append({"id": m.id, "name": m.name, "summary": summary, "result": result})
+        else:
+            if len(p.models) > 1 or args.all:
+                out.write("{}:\n".format(m.name))
+            out.write(format_summary(summary))
+        if args.write:
+            if fem:
+                # the app runs the finite element analysis with it; this does not
+                err.write("Model {!r}: not written: its finite element analysis runs in the app only.\n".format(m.name))
+            else:
+                m.set_result(result)
+    if args.json:
+        json.dump(_finite(listed if args.all else (listed[0] if listed else None)), out, ensure_ascii=False, allow_nan=False)
+        out.write("\n")
+    if args.write:
+        try:
+            report = p.save(args.document)
+        except OSError as e:
+            raise _Invalid([{"path": "", "message": "Cannot write {}: {}".format(args.document, e)}]) from None
+        except ValueError as e:
+            raise _Invalid([{"path": "", "message": "{}: {}".format(args.document, e)}]) from None
+        for model_id in report["droppedResults"]:
+            err.write("Model {!r}: its saved result was for other input; dropped.\n".format(p.model(model_id).name))
+        out_stream = err if args.json else out
+        out_stream.write("Saved {}.\n".format(args.document))
+    return status
 
 
 _SAFE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
@@ -256,19 +326,8 @@ def _cmd_export(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     from .build import dumps
 
     with _open_project(args.project) as p:
-        if args.all:
-            models = list(p.models)
-        elif args.model is not None:
-            models = [m for m in p.models if m.name == args.model] or [m for m in p.models if m.id == args.model]
-            if not models:
-                names = ", ".join(repr(m.name) for m in p.models)
-                raise _Invalid([{"path": "", "message": "No model named {!r} in {} (its models: {}).".format(args.model, args.project, names)}])
-            if len(models) > 1:
-                raise _Invalid(
-                    [{"path": "", "message": "{} models are named {!r}; give the id instead ({}).".format(len(models), args.model, ", ".join(m.id for m in models))}]
-                )
-        else:
-            models = [p.active_model]
+        args.document = args.project
+        models = _models_of(p, args)
         docs = []
         for m in models:
             try:
@@ -334,8 +393,19 @@ def _parser() -> argparse.ArgumentParser:
     )
     sub = p.add_subparsers(dest="command", metavar="command")
     sub.required = True
-    a = sub.add_parser("analyse", aliases=["analyze"], help="analyze a document and print the summary")
-    a.add_argument("document", help="an analysis document (JSON)")
+    a = sub.add_parser(
+        "analyse",
+        aliases=["analyze"],
+        help="analyze a document or the models of a project file and print the summary",
+        description="Analyze an analysis document, or models of a project file (.cslp) as the app runs them "
+        "(without --model or --all, the active model). With --write the results are saved to the project, each "
+        "with the hash of its model's input; a model whose input changed since its saved result keeps none.",
+    )
+    a.add_argument("document", help="an analysis document (JSON) or a project file (.cslp)")
+    pw = a.add_mutually_exclusive_group()
+    pw.add_argument("--model", metavar="NAME", help="a project: the model of this name (or id)")
+    pw.add_argument("--all", action="store_true", help="a project: every model")
+    a.add_argument("--write", action="store_true", help="a project: save the results to it")
     a.add_argument("--json", action="store_true", help="print the summary and the full result as JSON")
     a.add_argument("--threads", type=int, default=None, metavar="N", help="threads (default: every core)")
     a.set_defaults(run=_cmd_analyse)

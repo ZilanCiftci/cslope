@@ -1,8 +1,10 @@
-//! The conversion against the app's own (golden/project-corpus.json, made
-//! with packages/desktop/scripts/project-corpus.ts by the app's code): every
-//! model and definition field for field. A change to the app's conversion
-//! without its counterpart here, or the reverse, fails this test; make both
-//! and regenerate the corpus.
+//! The conversion and the reading of a model against the app's own
+//! (golden/project-corpus.json, made with
+//! packages/desktop/scripts/project-corpus.ts by the app's code): every
+//! model and definition field for field, every saved model as the app
+//! opens and writes it back, and its input hash. A change to the app's
+//! conversion or load without its counterpart here, or the reverse, fails
+//! this test; make both and regenerate the corpus.
 //!
 //! The verification entries are digests (src/digest.rs). To see where one
 //! differs, write the corpus in full and point this test at it:
@@ -15,13 +17,16 @@ use cslope_project::convert::engine_boundary_order;
 use cslope_project::digest::digest;
 use cslope_project::model::{MaterialBoundaryRow, MATERIAL_COLORS, PIEZO_COLORS};
 use cslope_project::{
-    app_default_options, definition_to_model, model_to_definition, normalize_for_run,
-    DefinitionModelInfo, ModelEntry,
+    app_default_options, definition_to_model, input_hash, model_to_definition, normalize_for_run,
+    read_model, DefinitionModelInfo, ModelEntry, ReadOptions,
 };
-use serde_json::{Map, Value};
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::OnceLock;
+
+/// The date the corpus gives a title block the raw model lacked.
+const NO_DATE: &str = "1970-01-01";
 
 fn golden_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../golden")
@@ -118,6 +123,54 @@ fn info(v: &Value) -> DefinitionModelInfo {
     }
 }
 
+/// A model from a definition as the corpus holds it: without the project
+/// block (today's date) and the sheet, which the app makes up.
+fn comparable_model(model: &ModelEntry) -> Value {
+    let mut v = model.to_json();
+    let o = v.as_object_mut().unwrap();
+    o.remove("projectInfo");
+    o.remove("resultViewSettings");
+    v
+}
+
+/// A raw model of the corpus read as the app reads it (the title block it
+/// lacks dated as the corpus dates it).
+fn read_raw(raw: &Value, strict: bool) -> Result<ModelEntry, String> {
+    read_model(
+        raw,
+        &ReadOptions {
+            strict,
+            today: NO_DATE,
+        },
+    )
+    .map_err(|e| e.0)
+}
+
+/// The corpus's raw models with the app's reading of them: the examples
+/// and synthetic models, and the saved (sparse, older, hand-made) ones.
+fn raw_models() -> Vec<(String, &'static Value, &'static Value, &'static str)> {
+    let c = corpus();
+    let mut out = Vec::new();
+    for m in c["models"].as_array().unwrap() {
+        out.push((
+            m["name"].as_str().unwrap().to_owned(),
+            &m["model"],
+            &m["parsed"],
+            m["inputHash"].as_str().unwrap(),
+        ));
+    }
+    for s in c["saved"].as_array().unwrap() {
+        out.push((
+            s["name"].as_str().unwrap().to_owned(),
+            &s["raw"],
+            &s["parsed"],
+            s["inputHash"].as_str().unwrap(),
+        ));
+    }
+    assert!(out.len() >= 15);
+    out
+}
+
 #[test]
 fn constants_are_the_apps() {
     let c = corpus();
@@ -145,7 +198,7 @@ fn boundaries_sort_as_the_app_sorts_its_ids() {
         .map(|id| MaterialBoundaryRow {
             id: id.clone(),
             coordinates: vec![[0.0, 0.0], [1.0, 1.0]],
-            extra: Map::new(),
+            coordinate_expressions: None,
         })
         .collect();
     rows.rotate_left(3);
@@ -162,20 +215,105 @@ fn models_give_the_apps_definition() {
     assert!(models.len() >= 10);
     for m in models {
         let name = m["name"].as_str().unwrap();
-        let model =
-            ModelEntry::from_json(m["model"].clone()).unwrap_or_else(|e| panic!("{name}: {e}"));
-        // Read and written again, the model loses nothing.
-        assert_same(
-            &format!("{name}: the model read and written"),
-            &model.to_json(),
-            &m["model"],
-        );
+        let model = normalize_for_run(&m["model"]).unwrap_or_else(|e| panic!("{name}: {e}"));
         assert_same(
             &format!("{name}: the definition"),
             &to_json(&model_to_definition(&model)),
             &m["definition"],
         );
     }
+}
+
+#[test]
+fn saved_models_are_read_as_the_app_opens_and_writes_them() {
+    // The app's load (parseProjectData) fills, clamps and drops members of
+    // a saved model and writes the result back to model.json; the Rust
+    // reader gives the same model, member for member, and its input hash.
+    for (name, raw, parsed, hash) in raw_models() {
+        let model = read_raw(raw, false).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_same(
+            &format!("{name}: the model as read"),
+            &model.to_json(),
+            parsed,
+        );
+        assert_eq!(input_hash(&model).unwrap(), hash, "{name}: the input hash");
+        assert_same(
+            &format!("{name}: the definition"),
+            &to_json(&model_to_definition(&model)),
+            &to_json(&model_to_definition(
+                &ModelEntry::from_json(parsed.clone()).unwrap(),
+            )),
+        );
+    }
+}
+
+#[test]
+fn what_the_app_wrote_reads_strictly_and_unchanged() {
+    // The strict reader (the .cslp reader) takes every model the app writes
+    // and gives it back as it is: the app's normalization is idempotent on
+    // its own output, and the typed model loses no known member.
+    for (name, _, parsed, hash) in raw_models() {
+        let model = read_raw(parsed, true).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_same(&format!("{name}: read strictly"), &model.to_json(), parsed);
+        let typed = ModelEntry::from_json(parsed.clone()).unwrap_or_else(|e| panic!("{name}: {e}"));
+        assert_same(&format!("{name}: typed"), &typed.to_json(), parsed);
+        assert_eq!(input_hash(&typed).unwrap(), hash, "{name}");
+    }
+}
+
+#[test]
+fn unknown_members_are_refused_with_their_path() {
+    let (_, _, parsed, _) = raw_models().into_iter().nth(6).unwrap();
+    let with = |edit: &dyn Fn(&mut Value)| {
+        let mut v = parsed.clone();
+        edit(&mut v);
+        v
+    };
+    for (edit, path) in [
+        (
+            &(|v: &mut Value| v["extra"] = json!(1)) as &dyn Fn(&mut Value),
+            "unknown member extra",
+        ),
+        (
+            &|v: &mut Value| v["materials"][0]["foo"] = json!(1),
+            "unknown member materials[0].foo",
+        ),
+        (
+            &|v: &mut Value| v["materials"][1]["model"]["bar"] = json!(1),
+            "unknown member materials[1].model.bar",
+        ),
+        (
+            &|v: &mut Value| v["options"]["spencer"] = json!(true),
+            "unknown member options.spencer",
+        ),
+        (
+            &|v: &mut Value| v["resultViewSettings"]["annotations"][0]["glow"] = json!(true),
+            "unknown member resultViewSettings.annotations[0].glow",
+        ),
+        (
+            &|v: &mut Value| v["piezometricLine"]["lines"][0]["dash"] = json!("x"),
+            "unknown member piezometricLine.lines[0].dash",
+        ),
+        (
+            &|v: &mut Value| v["runState"] = json!("done"),
+            "unknown member runState (the outcome of a run belongs to result.json",
+        ),
+    ] {
+        let err = read_raw(&with(edit), true).expect_err(path);
+        assert!(err.contains(path), "{err}");
+        // the app's own way of reading drops it
+        read_raw(&with(edit), false).unwrap_or_else(|e| panic!("{path}: {e}"));
+    }
+    // several at once: the first with a count
+    let err = read_raw(
+        &with(&|v| {
+            v["a"] = json!(1);
+            v["udls"][0]["b"] = json!(2);
+        }),
+        true,
+    )
+    .unwrap_err();
+    assert_eq!(err, "unknown member a (and 1 more)");
 }
 
 #[test]
@@ -197,7 +335,7 @@ fn verification_problems_open_as_in_the_app() {
         );
         let model = definition_to_model(&definition(input), &info(&e["info"]))
             .unwrap_or_else(|err| panic!("{id}: {err}"));
-        let model_json = model.to_json();
+        let model_json = comparable_model(&model);
         let def_json = to_json(&model_to_definition(&model));
         if let Some(expected) = e.get("model") {
             assert_same(&format!("{id}: the model"), &model_json, expected);
@@ -219,6 +357,11 @@ fn verification_problems_open_as_in_the_app() {
                 "{id}: the definition {full}"
             );
         }
+        assert_eq!(
+            input_hash(&model).unwrap(),
+            e["inputHash"].as_str().unwrap(),
+            "{id}: the input hash"
+        );
     }
 }
 
@@ -228,7 +371,11 @@ fn definitions_give_the_apps_model() {
         let name = d["name"].as_str().unwrap();
         let model = definition_to_model(&definition(&d["definition"]), &info(&d["info"]))
             .unwrap_or_else(|e| panic!("{name}: {e}"));
-        assert_same(&format!("{name}: the model"), &model.to_json(), &d["model"]);
+        assert_same(
+            &format!("{name}: the model"),
+            &comparable_model(&model),
+            &d["model"],
+        );
         assert_same(
             &format!("{name}: its definition"),
             &to_json(&model_to_definition(&model)),
@@ -254,7 +401,7 @@ fn saved_models_run_as_the_app_opens_them() {
         );
         assert_same(
             &format!("{name}: the options"),
-            &Value::Object(model.options.clone().unwrap()),
+            &Value::Object(model.options.to_map()),
             &s["options"],
         );
     }
@@ -417,14 +564,14 @@ fn comparable(def: &SlopeDefinition) -> Value {
 fn a_model_keeps_its_engineering_fields_through_the_definition() {
     for m in corpus()["models"].as_array().unwrap() {
         let name = m["name"].as_str().unwrap();
-        let model = ModelEntry::from_json(m["model"].clone()).unwrap();
+        let model = normalize_for_run(&m["model"]).unwrap();
         let def = model_to_definition(&model);
         let back = definition_to_model(
             &def,
             &DefinitionModelInfo {
                 id: model.id.clone(),
                 name: model.name.clone(),
-                options: model.options.clone(),
+                options: Some(model.options.to_map()),
             },
         )
         .unwrap_or_else(|e| panic!("{name}: {e}"));
@@ -441,7 +588,7 @@ fn a_model_keeps_its_engineering_fields_through_the_definition() {
                 &DefinitionModelInfo {
                     id: model.id.clone(),
                     name: model.name.clone(),
-                    options: model.options.clone(),
+                    options: Some(model.options.to_map()),
                 },
             )
             .unwrap(),

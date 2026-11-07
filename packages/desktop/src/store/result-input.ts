@@ -1,0 +1,77 @@
+/**
+ * The analysis input each result was computed for, kept with the result in
+ * memory (by the result object, and for a failed run by the model's id and
+ * its message; never saved itself): the model's input as
+ * canonical JSON when a run completes, or the `inputHash` of the
+ * result.json it was read from. The project writer saves this hash with
+ * the result (docs/file-format.md section 4.4), never one computed from the
+ * model at save time, so a result that was out of date when opened stays
+ * out of date when saved again.
+ */
+import { analysisInputJson, sha256Hex } from "../features/project/input-hash";
+import type { AnalysisResult, ModelEntry } from "./types";
+
+const inputs = new WeakMap<object, { json?: string; hash?: string }>();
+
+/** A run of `model` (as it was run) gave `result`. */
+export function rememberResultInput(result: AnalysisResult, model: ModelEntry): void {
+  inputs.set(result, { json: analysisInputJson(model) });
+}
+
+/** `result` was read from a result.json with this `inputHash`. */
+export function rememberResultHash(result: AnalysisResult, hash: string): void {
+  inputs.set(result, { hash });
+}
+
+/** The hash of the input `result` was computed for, or undefined when it is not known. */
+export async function resultInputHash(result: AnalysisResult | null | undefined): Promise<string | undefined> {
+  const known = result ? inputs.get(result) : undefined;
+  if (!known) return undefined;
+  if (known.hash === undefined && known.json !== undefined) known.hash = await sha256Hex(new TextEncoder().encode(known.json));
+  return known.hash;
+}
+
+const errorInputs = new Map<string, { message: string; json?: string; hash?: string }>();
+
+/**
+ * Forget what is known of failed runs: of the models with these ids (a
+ * project being read), or, without ids, of every model (a new project).
+ * The ones of models not in `keep` go too (a project loaded).
+ */
+export function forgetErrorInputs(ids?: string[], keep?: string[]): void {
+  if (keep) {
+    const kept = new Set(keep);
+    for (const id of [...errorInputs.keys()]) if (!kept.has(id)) errorInputs.delete(id);
+  }
+  if (ids) for (const id of ids) errorInputs.delete(id);
+  else if (!keep) errorInputs.clear();
+}
+
+/** A run of `model` (as it was run) failed with `message`. */
+export function rememberErrorInput(modelId: string, message: string, model: ModelEntry): void {
+  errorInputs.set(modelId, { message, json: analysisInputJson(model) });
+}
+
+/** The model's failed run was read from a result.json with this `inputHash`. */
+export function rememberErrorHash(modelId: string, message: string, hash: string): void {
+  errorInputs.set(modelId, { message, hash });
+}
+
+/** The hash of the input the model's failed run (with this message) was for, or undefined when it is not known. */
+export async function errorInputHash(modelId: string, message: string | null | undefined): Promise<string | undefined> {
+  const known = errorInputs.get(modelId);
+  if (!known || known.message !== message) return undefined;
+  if (known.hash === undefined && known.json !== undefined) known.hash = await sha256Hex(new TextEncoder().encode(known.json));
+  return known.hash;
+}
+
+/**
+ * A changed copy of a model (anonymized: other names, other id) whose run
+ * outcome still belongs to it: the copy's outcome is stamped with the copy's
+ * input when the original's input was known.
+ */
+export function restampCopy(from: ModelEntry, to: ModelEntry): void {
+  if (from.result && to.result && inputs.has(from.result)) rememberResultInput(to.result, to);
+  const error = errorInputs.get(from.id);
+  if (error && from.errorMessage === error.message && to.errorMessage) rememberErrorInput(to.id, to.errorMessage, to);
+}

@@ -15,6 +15,8 @@ interface Props {
   isRunning?: boolean;
   /** The model's last analysis failed. */
   hasError?: boolean;
+  /** Its result was computed for other input (a project file edited after the run). */
+  outOfDate?: boolean;
   editName: string;
   onChangeName: (value: string) => void;
   onCommitRename: () => void;
@@ -46,6 +48,7 @@ export function ModelRow({
   hasResult,
   isRunning = false,
   hasError = false,
+  outOfDate = false,
   editName,
   onChangeName,
   onCommitRename,
@@ -63,11 +66,17 @@ export function ModelRow({
   drawingsOpen,
   onToggleDrawings,
 }: Props) {
-  const state = isRunning
+  const state: { label: string; title?: string; fill: string | null } = isRunning
     ? { label: "Analyzing", fill: null }
     : hasError
       ? { label: "Analysis failed", fill: "var(--color-vsc-error)" }
-      : hasResult
+      : hasResult && outOfDate
+        ? {
+            label: "Result out of date",
+            title: "The model was changed after this result was computed. Run the analysis again to update it.",
+            fill: "var(--color-vsc-warning)",
+          }
+        : hasResult
         ? { label: "Analyzed", fill: "var(--color-vsc-success)" }
         : { label: "Not analyzed", fill: null };
 
@@ -140,8 +149,9 @@ export function ModelRow({
           <FoldChevron open={drawingsOpen} />
         </button>
       )}
-      {/* The run state as a dot before the box: green analyzed, red
-          failed, hollow grey not run; a running model has a grey spinner
+      {/* The run state as a dot before the box: green analyzed, amber a
+          result out of date (computed for other input), red failed,
+          hollow grey not run; a running model has a grey spinner
           (the accent is for selection, not status). Selection is shown by
           the row background only. */}
       {isRunning ? (
@@ -159,7 +169,7 @@ export function ModelRow({
         <span
           role="img"
           aria-label={state.label}
-          title={state.label}
+          title={state.title ?? state.label}
           className="w-[7px] h-[7px] rounded-full shrink-0 box-border"
           style={{
             background: state.fill ?? "transparent",

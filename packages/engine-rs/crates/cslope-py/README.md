@@ -73,7 +73,7 @@ phi'             Bishop  Morgenstern-Price
 | `Slope(definition)` | `build_slope` of the canonical definition: `update_analysis_options`, `analysis_options`, `analyse(...)` (`analyse_slope`, every slice kept), `min_fos`, `search` (every trial surface, canonical coordinates), `result()` (the `AnalysisResult`), `fem(options, ...)` (`analyze_fem`), `orientation`, `definition` |
 | `CancelToken()` | `.cancel()` from another thread stops the analyses it was passed to |
 | `__version__`, `ENGINE_BUILD` | crate version; version + git commit |
-| `project.read(path)` | a `.cslp` (or earlier `.json`) project file: its models as dicts (below) |
+| `project.open(path)`, `Project.save(path)` | a `.cslp` project file: its models as dicts, changed and saved as the app saves them (below); `project.read` is a deprecated alias of `open` |
 
 Notes:
 
@@ -132,52 +132,83 @@ Notes:
 
 ## Project files
 
-`cslope.project` reads the app's `.cslp` project files (and the `.json`
-projects of earlier versions) with the standard library only, so it works
-without the compiled engine too:
+`cslope.project` opens, changes and saves the app's `.cslp` project files
+with the engine's reader and writer (the crate `cslope-project`, feature
+`native`; issue #58):
 
 ```python
+import cslope
 from cslope import project
+from cslope.cli import export_document
 
-p = project.read("slope.cslp")
+p = project.open("slope.cslp")
 for m in p.models:
-    print(m.id, m.name, m.min_fos)          # None without a saved result
-model = p.active_model.data                 # the model's dict, as model.json holds it
-definition = cslope.model_to_definition(model)   # the engine's definition, as the app makes it
-result = cslope.analyse(definition, model["options"])
+    print(m.id, m.name, m.min_fos, m.result_is_current)   # None without a saved result
+m = p.model_named("Section A")
+m.data["materials"][0]["model"]["undrainedShearStrength"] = 35
+doc = export_document(m.data)     # the analysis document, as the app runs the model
+m.set_result(cslope.analyse(doc))            # the result, with the hash of the model's input
+p.save("slope.cslp")                          # what the app would write
 ```
 
-The model's dict is the app's shape, not the engine's: `model_to_definition`
-converts it as the app does before a run (the port of the app's
-`buildModelSpaceSlopeDTO` in the crate `cslope-project`, held to the app's
-by a golden corpus), in the model's own orientation. It first reads the
-model as the app does when it opens the project (`normalize_model`: missing
-fields filled, out-of-range options clamped, unusable rows dropped, the
-options complete; a model saved before `compositeSurfaces` existed keeps
-circles only, as in the app); `normalize=False` converts the dict as it is. From the command line,
-`cslope export site.cslp [--model NAME | --all] [-o PATH]` writes a model as
-an analysis document (`{"format": "cslope-analysis", ...}`) with its
-complete options, which `cslope validate` and `cslope analyse` take; the
-water is written with `freeWater`, and a region the app leaves to the first
-material gets that assignment explicitly (the app runs such a model; a
-hand-written document without it fails validation). It reads
-projects of the current schema version only: a file saved by an earlier
-cSlope is refused (open it in the app and save it; the app migrates it).
-The `inputHash` of a saved result is over the definition in canonical
-orientation (`to_canonical`), not over the exported one.
+`open(path)` gives a `Project`: `manifest`, `version` (the project schema
+version, 3), `active_model_id`, `units`, `models` (each a `Model` with `id`,
+`data`, `result`, `backgrounds`, `min_fos`, `input_hash`,
+`result_is_current`, `set_result(result)`, `set_error(message)`), `assets`
+(the attachments; `read_asset(id)`, checked against its SHA-256 when the
+file was opened), `placements(model)` (the drawings placed under a model:
+each a `Placement` with its attachment, page, crop, calibration and affine
+`transform`; `to_model(u, v)` maps a point of the drawing to the model),
+`thumbnail()` and `save(path)`. A model's dict is the model as the app holds
+it after opening the file (missing members filled, values out of range
+clamped, as the app's `parseProjectData` does), in the app's shape with
+camelCase keys.
 
-`read(path)` gives a `Project`: `manifest`, `version` (the project schema
-version), `active_model_id`, `units`, `models` (each a `Model` with `id`,
-`data`, `result`, `backgrounds`), `assets` (the attachments; `read_asset(id)`
-unpacks one and checks its SHA-256), `placements(model)` (the drawings placed
-under a model, validated: each a `Placement` with its attachment, page,
-crop, calibration and affine `transform`; `to_model(u, v)` maps a point of
-the drawing to the model) and `thumbnail()`. The dicts are the
-files' JSON as it is, with camelCase keys: nothing is validated or migrated
-(the app drops unknown fields and brings older schema versions up to date;
-the engine ignores unknown keys). A file that needs a newer reader raises
-`ValueError` naming the cSlope that saved it. The format is specified in
-`docs/file-format.md` at the repository root.
+The reader is strict where the app is lenient: it reads files the app saved
+with this layout and schema version (`project.FORMAT_VERSION`,
+`project.SCHEMA_VERSION`); a file of an earlier version (a `.json` project,
+the first `.cslp` layout, an older schema) is refused with a message to open
+it in the app and save it (the app migrates it), a newer one with a message
+to update, and a member or entry the format does not define is a
+`ValueError` naming its path. The writer never writes one either: a member
+added to a model's dict in Python is refused when the project is saved. The
+file is written atomically (a temporary file renamed over it).
+
+Results: each saved result carries the hash of the input it was computed
+for (`inputHash`, docs/file-format.md section 5; `Model.input_hash` is the
+app's `analysisInputHash`). When a project is saved, a model whose input
+changed since its result keeps no `result.json`, and the project then drops
+its `thumbnail.png`, unless the model was run again (`set_result`, which
+stamps the current hash and `engine: {version, sourceHash: ""}`). The app
+shows a result whose hash is not the model's as out of date.
+
+`model_to_definition` converts a model's dict as the app does before a run
+(the port of the app's `buildModelSpaceSlopeDTO`, held to the app's by a
+golden corpus), in the model's own orientation. It first reads the model as
+the app does when it opens the project (`normalize_model`); `normalize=False`
+converts the dict as it is, which must then have the shape the app writes.
+
+From the command line:
+
+- `cslope analyse site.cslp [--model NAME | --all] [--write]` analyses
+  models of a project as the app runs them (the active model by default) and
+  prints their summaries; with `--write` it saves the results to the project
+  (in model coordinates, with the input hash), under the save policy above.
+  A model with the finite element analysis switched on is analysed but not
+  written (the app runs that part).
+- `cslope export site.cslp [--model NAME | --all] [-o PATH]` writes a model
+  as an analysis document (`{"format": "cslope-analysis", ...}`) with its
+  complete options, which `cslope validate` and `cslope analyse` take; the
+  water is written with `freeWater`, and a region the app leaves to the
+  first material gets that assignment explicitly. The `inputHash` of a saved
+  result is over the definition in canonical orientation (`to_canonical`),
+  not over the exported one.
+
+The format is specified in `docs/file-format.md` at the repository root.
+When the app's `PROJECT_FILE_VERSION` or `.cslp` format version changes,
+the crate's constants follow in the same change (CI checks they are
+equal), and a Python release follows the app's release the same day: a
+released `cslope` refuses files of a newer schema version.
 
 ## Tests
 
@@ -187,8 +218,9 @@ maturin develop --release
 pytest tests
 ```
 
-`test_project.py` runs without the compiled engine (it loads the module from
-its file when the package cannot be imported).
+`test_project.py` opens and saves the app's project fixtures
+(packages/desktop/src/features/project/fixtures) and `tests/data/app-results.cslp`
+(made by the app's writer, `packages/desktop/scripts/make-export-fixture.ts`).
 
 `test_api.py` needs only the installed package: the demo models against
 pinned factors of safety (within 1e-6), thread counts giving identical

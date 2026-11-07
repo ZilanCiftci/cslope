@@ -1,9 +1,9 @@
-import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { MODEL_NAME_PREFIX } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
 import { verificationModels } from "../verification-models";
 import { loadLocalLovoModels } from "../local-models";
 import {
+  APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_COORDINATE_EXPRESSIONS,
   DEFAULT_COORDS,
@@ -14,6 +14,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
+import { forgetErrorInputs } from "../result-input";
 import { cloneData, nextId } from "../helpers";
 import { cloneAnnotation } from "../../features/annotations/reference";
 import type { ModelEntry, ModelLocks, ModelsSlice } from "../types";
@@ -50,13 +51,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     customSearchPlanes: [],
     customPlanesOnly: false,
     blockSearchObjects: [],
-    options: {
-      ...DEFAULT_ANALYSIS_OPTIONS,
-      method: "Morgenstern-Price",
-      slices: 30,
-      iterations: 1000,
-      refinedIterations: 500,
-    },
+    options: { ...APP_DEFAULT_ANALYSIS_OPTIONS },
     analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
     runState: "idle",
     progress: 0,
@@ -86,13 +81,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   // Set (to undefined too), or the previous model's would stay.
   waternet: model.waternet,
   earlierStage: model.earlierStage,
-  options: model.options ?? {
-    ...DEFAULT_ANALYSIS_OPTIONS,
-    method: "Morgenstern-Price",
-    slices: 30,
-    iterations: 1000,
-    refinedIterations: 500,
-  },
+  options: model.options ?? { ...APP_DEFAULT_ANALYSIS_OPTIONS },
   analysisLimits: model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS },
   editViewOffset: model.editViewOffset ?? model.viewOffset ?? [0, 0],
   editViewScale: model.editViewScale ?? model.viewScale ?? 0,
@@ -510,6 +499,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadProject: ({ models, activeModelId, created }) => {
     abortAllAnalyses();
+    forgetErrorInputs(undefined, (models ?? []).map((m) => m.id));
     if (!models || models.length === 0) return;
     const targetId =
       activeModelId && models.some((m) => m.id === activeModelId)
@@ -537,6 +527,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   newProject: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     const id = nextId("model");
     const entry = createStarterModel(id);
 
@@ -553,6 +544,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadBenchmarks: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     // Every verification problem (the bundled examples repeat some of them).
     const models = verificationModels();
     if (models.length === 0) return;
@@ -571,6 +563,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadExamples: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     const models = BENCHMARK_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
@@ -590,6 +583,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     const models = (await loadLocalLovoModels()).map(cloneModelEntry);
     if (models.length === 0) return;
     abortAllAnalyses();
+    forgetErrorInputs();
     const first = models[0];
     set({
       models,
