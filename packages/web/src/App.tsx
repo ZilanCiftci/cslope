@@ -3,7 +3,7 @@ import type { ResultSummary, SliceData } from "@cslope/engine";
 import { Header } from "@/components/Header";
 import { CancelledError, type AnalysisClient, type RunOutcome } from "@/engine/client";
 import { dumps, type AnalysisDocument } from "@/engine/document";
-import { formState, fromQuery, toQuery, type FormState } from "@/form/draft";
+import { draftFields, formState, fromQuery, toQuery, type FormState } from "@/form/draft";
 import { Form } from "@/form/Form";
 import { issuesByField } from "@/form/issues";
 import { ResultCard, type CardState } from "@/result/ResultCard";
@@ -79,10 +79,20 @@ export function App({ client }: { client: AnalysisClient }) {
     };
   }, [client]);
 
-  // The address holds the parameters, so that the link opens this section.
+  // The address holds the parameters, so that the link opens this section;
+  // written a moment after the last change (Safari refuses more than 100
+  // changes of the address in a short time, and must not stop the page).
   useEffect(() => {
-    const query = toQuery(draft);
-    if (window.location.search.slice(1) !== query) window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+    const timer = setTimeout(() => {
+      const query = toQuery(draft);
+      if (window.location.search.slice(1) === query) return;
+      try {
+        window.history.replaceState(null, "", `${window.location.pathname}?${query}`);
+      } catch {
+        // The address stays as it was; Copy link then gives the older one, which is what the browser shows.
+      }
+    }, RUN_DELAY);
+    return () => clearTimeout(timer);
   }, [draft]);
 
   const form = useMemo(() => formState(draft), [draft]);
@@ -95,8 +105,11 @@ export function App({ client }: { client: AnalysisClient }) {
   const [lastShape, setLastShape] = useState(shape);
   if (shape && shape !== lastShape) setLastShape(shape);
 
+  // The document last asked for: a change back to it, or the timer after Run, does not run it again.
+  const lastKey = useRef<string | null>(null);
   const start = useCallback(
     (document: AnalysisDocument, docKey: string) => {
+      lastKey.current = docKey;
       const id = ++runs.current;
       setRun({ kind: "running", key: docKey, surfaces: 0 });
       client
@@ -122,10 +135,11 @@ export function App({ client }: { client: AnalysisClient }) {
   useEffect(() => {
     if (!doc || !key) {
       runs.current++;
+      lastKey.current = null;
       client.cancel();
       return;
     }
-    const timer = setTimeout(() => start(doc, key), RUN_DELAY);
+    const timer = setTimeout(() => lastKey.current !== key && start(doc, key), RUN_DELAY);
     return () => clearTimeout(timer);
   }, [client, doc, key, start]);
 
@@ -137,7 +151,11 @@ export function App({ client }: { client: AnalysisClient }) {
 
   const current = run && run.key === key ? run : null;
   const outcome = current?.kind === "done" ? current.outcome : null;
-  const engineIssues = useMemo(() => (outcome?.kind === "invalid" ? issuesByField(outcome.issues, form.params) : null), [outcome, form.params]);
+  const engineIssues = useMemo(() => {
+    if (outcome?.kind !== "invalid") return null;
+    const shown = new Set([...draftFields(draft).map(([f]) => f), ...draft.layers.map((_, i) => `layers.${i}.name`)]);
+    return issuesByField(outcome.issues, form.params, shown);
+  }, [outcome, form.params, draft]);
   const errors = useMemo(() => {
     if (!engineIssues?.fields.size) return form.errors;
     const merged = new Map(engineIssues.fields);
@@ -152,7 +170,7 @@ export function App({ client }: { client: AnalysisClient }) {
   else if (current?.kind === "running") state = { kind: "running", surfaces: current.surfaces };
   else if (current?.kind === "cancelled") state = { kind: "cancelled" };
   else if (current?.kind === "failed") state = { kind: "failed", message: current.message };
-  else if (engineIssues) state = { kind: "invalid", general: engineIssues.general.filter((i) => i.severity === "error") };
+  else if (engineIssues) state = { kind: "invalid", general: engineIssues.general, warnings: engineIssues.warnings };
   else if (outcome?.kind === "complete") state = { kind: "complete", summary: outcome.summary, warnings: outcome.warnings };
   else state = engine.kind === "loading" ? { kind: "loading" } : { kind: "waiting" };
 
@@ -185,6 +203,7 @@ export function App({ client }: { client: AnalysisClient }) {
               state={state}
               previous={previous}
               canRun={!!doc && engine.kind !== "failed"}
+              canDownload={!!doc}
               onRun={() => doc && key && start(doc, key)}
               onCancel={() => client.cancel()}
               onDownload={() => doc && download("cslope-excavation.json", dumps(doc))}

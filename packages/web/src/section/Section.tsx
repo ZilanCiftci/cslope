@@ -2,14 +2,14 @@
  * The section drawing: the template's section in SVG, drawn by hand (not
  * the app's canvas): the layers in earth tones by kind, the road's fill,
  * the water level, the traffic load, and after a run the critical surface
- * (red, the thickest line) with its slices (the thinnest). Axes in metres.
+ * (red, the thickest line) with its slices (the thinnest). Axes in meters.
  * It is drawn at the width it has, so that its text stays readable on a
  * phone.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import type { SliceData } from "@cslope/engine";
 import type { ExcavationParams, LayerKind } from "@/templates/excavation";
-import { sectionShapes, sliceSides, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
+import { lineAt, sectionShapes, sliceSides, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
 
 const FILL: Record<LayerKind, string> = {
   undrained: "fill-earth/30",
@@ -92,17 +92,13 @@ export function Section({ params, slices, label }: SectionProps) {
             </text>
           );
         })}
-        {s.water.map(([x1, x2], i) => (
-          <line key={i} x1={X(x1)} x2={X(x2)} y1={Y(params.waterLevel!)} y2={Y(params.waterLevel!)} className="stroke-foreground" strokeWidth={1} strokeDasharray="5 3" />
-        ))}
-        {s.water.length > 0 && (
-          <path
-            d={`M${X(Math.max(view.x0, s.water[0][0])) + 60},${Y(params.waterLevel!) - 8}h10l-5,7z`}
-            className="fill-none stroke-foreground"
-            strokeWidth={1}
-            aria-hidden="true"
-          />
-        )}
+        {s.water.length > 0 && <path d={path(s.water, false)} className="fill-none stroke-foreground" strokeWidth={1} strokeDasharray="5 3" />}
+        {s.water.length > 0 &&
+          (() => {
+            const x = Math.max(view.x0, s.g.left) + 60 / scale;
+            const y = lineAt(s.water, x) ?? params.waterLevel!;
+            return <path d={`M${X(x)},${Y(y) - 8}h10l-5,7z`} className="fill-none stroke-foreground" strokeWidth={1} aria-hidden="true" />;
+          })()}
         {s.load && (
           <g className="stroke-foreground fill-foreground" strokeWidth={1}>
             <line x1={X(s.load.x1)} x2={X(s.load.x2)} y1={Y(s.load.y) - 18} y2={Y(s.load.y) - 18} />

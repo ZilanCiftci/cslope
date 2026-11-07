@@ -125,6 +125,12 @@
     -webkit-text-size-adjust: 100%;
     scroll-padding-top: 5rem;
   }
+  /* Below two columns a bar at the bottom shows the result (App.tsx): a focused field scrolls clear of it. */
+  @media (width < 64rem) {
+    html {
+      scroll-padding-bottom: 3.5rem;
+    }
+  }
   body {
     @apply bg-background text-foreground font-sans antialiased;
     margin: 0;

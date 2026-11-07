@@ -4,12 +4,12 @@
  * unit in the label, its description as the tooltip and its problem under
  * it. Groups: Geometry, Layers, Water, Working road, Safety.
  */
-import { useId, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
 import { EXCAVATION_PARAMETERS as P } from "@/templates/excavation";
-import { emptyLayer, LAYER_FIELDS, LAYER_KINDS, newRoad, OPTIONAL_FIELDS, type Draft, type LayerDraft, type RoadDraft } from "./draft";
+import { emptyLayer, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, newRoad, OPTIONAL_FIELDS, type Draft, type LayerDraft, type RoadDraft } from "./draft";
 
 export interface FormProps {
   draft: Draft;
@@ -31,7 +31,7 @@ export function ErrorText({ id, children }: { id?: string; children: ReactNode }
   );
 }
 
-function Field({ label, title, error, children, id }: { label: string; title?: string; error?: string; children: ReactNode; id: string }) {
+function Field({ label, title, error, hint, children, id }: { label: string; title?: string; error?: string; hint?: string; children: ReactNode; id: string }) {
   return (
     // Three rows of the form's grid (label, input, problem), so that the
     // inputs of a row line up when one label wraps to two lines.
@@ -40,7 +40,20 @@ function Field({ label, title, error, children, id }: { label: string; title?: s
         {label}
       </label>
       {children}
-      <div>{error && <ErrorText id={`${id}-error`}>{error}</ErrorText>}</div>
+      <div>
+        {error && <ErrorText id={`${id}-error`}>{error}</ErrorText>}
+        {hint && !error && (
+          <p id={`${id}-hint`} className="mt-1 text-[11px] leading-snug text-muted-foreground">
+            {hint}
+          </p>
+        )}
+        {/* The whole description, for screen readers (the label's tooltip shows it with a mouse). */}
+        {title && (
+          <span id={`${id}-desc`} className="sr-only">
+            {title}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -55,12 +68,34 @@ interface NumberFieldProps {
   empty?: string;
 }
 
+/**
+ * Short hints shown under the fields whose meaning is not plain from the
+ * label (the whole description is the label's tooltip and is read by
+ * screen readers).
+ */
+const HINTS: Record<string, string> = {
+  slope: "Horizontal per 1 vertical.",
+  waterLevel: "An elevation; empty for a dry slope.",
+  bottomLevel: "An elevation, not a depth.",
+  suRate: "Per meter below the layer's top.",
+  distanceFromCrest: "To the near edge of the road's top.",
+  etaCu: "γcu = 1.5 / η.",
+  etaDrained: "γc′ = γφ′ = 1.3 / η.",
+  variableLoadBase: "γQ = this factor × γd.",
+};
+
+/** The ids an input is described by: its problem or hint, and its description. */
+const describedBy = (id: string, error: unknown, hint: unknown, title: unknown) =>
+  [error ? `${id}-error` : hint ? `${id}-hint` : null, title ? `${id}-desc` : null].filter(Boolean).join(" ") || undefined;
+
 function NumberField({ field, desc, value, onChange, errors, empty }: NumberFieldProps) {
   const id = useId();
   const error = errors.get(field);
-  const optional = OPTIONAL_FIELDS.has(field.slice(field.lastIndexOf(".") + 1));
+  const key = field.slice(field.lastIndexOf(".") + 1);
+  const optional = OPTIONAL_FIELDS.has(key);
+  const hint = HINTS[key];
   return (
-    <Field id={id} label={desc.label} title={desc.description} error={error}>
+    <Field id={id} label={desc.label} title={desc.description} error={error} hint={hint}>
       <input
         id={id}
         name={field}
@@ -72,7 +107,7 @@ function NumberField({ field, desc, value, onChange, errors, empty }: NumberFiel
         value={value}
         placeholder={optional ? empty : "Required"}
         aria-invalid={error ? true : undefined}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={describedBy(id, error, hint, desc.description)}
         onChange={(e) => onChange(e.target.value)}
       />
     </Field>
@@ -112,8 +147,11 @@ function Choices<T extends string>({ label, options, value, onChange }: { label:
 
 const grid = "grid grid-cols-2 gap-x-3";
 
+/** The id of a layer's name field, which gets the focus when the layer is added or the one after it removed. */
+const nameIdOf = (layer: LayerDraft) => `${layer.key}-name`;
+
 function LayerFields({ layer, index, count, onChange, onRemove, errors }: { layer: LayerDraft; index: number; count: number; onChange: (l: LayerDraft) => void; onRemove: () => void; errors: Map<string, string> }) {
-  const nameId = useId();
+  const nameId = nameIdOf(layer);
   const kindId = useId();
   const f = (k: string) => `layers.${index}.${k}`;
   const last = index === count - 1;
@@ -129,7 +167,7 @@ function LayerFields({ layer, index, count, onChange, onRemove, errors }: { laye
         )}
       </div>
       <div className={grid}>
-        <Field id={nameId} label="Name" title="The name in the drawing and the results; Layer n when left out." error={nameError}>
+        <Field id={nameId} label="Name" error={nameError}>
           <input
             id={nameId}
             type="text"
@@ -143,7 +181,7 @@ function LayerFields({ layer, index, count, onChange, onRemove, errors }: { laye
           />
         </Field>
         <Field id={kindId} label="Kind" title="Su constant and Su increasing (with depth) are undrained; drained has c′ and φ′; rock is impenetrable. The kind sets the fields.">
-          <select id={kindId} className={inputClass} value={layer.kind} onChange={(e) => onChange({ ...layer, kind: e.target.value as LayerDraft["kind"] })}>
+          <select id={kindId} aria-describedby={`${kindId}-desc`} className={inputClass} value={layer.kind} onChange={(e) => onChange({ ...layer, kind: e.target.value as LayerDraft["kind"] })}>
             {LAYER_KINDS.map((k) => (
               <option key={k.kind} value={k.kind}>
                 {k.label}
@@ -172,9 +210,25 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
     <NumberField field={key} desc={P[key]} value={draft[key]} onChange={(v) => set(key, v)} errors={errors} empty={empty} />
   );
   const setLayer = (i: number, layer: LayerDraft) => set("layers", draft.layers.map((l, j) => (j === i ? layer : l)));
+  // After adding or removing a layer, the focus goes to a layer's name (not lost on the page).
+  const focus = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focus.current) return;
+    document.getElementById(focus.current)?.focus();
+    focus.current = null;
+  });
+  const setFocus = (id: string) => {
+    focus.current = id;
+  };
   const addLayer = () => {
-    const last = Number(draft.layers[draft.layers.length - 1]?.bottomLevel.replace(",", "."));
-    set("layers", [...draft.layers, emptyLayer(Number.isFinite(last) ? String(Math.round((last - 5) * 10) / 10) : "")]);
+    const layer = emptyLayer(nextBottomLevel(draft.layers));
+    set("layers", [...draft.layers, layer]);
+    setFocus(nameIdOf(layer));
+  };
+  const removeLayer = (i: number) => {
+    const layers = draft.layers.filter((_, j) => j !== i);
+    set("layers", layers);
+    setFocus(nameIdOf(layers[Math.max(0, i - 1)]));
   };
   const road = draft.road;
   const setRoad = (key: keyof RoadDraft, value: string) => road && set("road", { ...road, [key]: value });
@@ -198,12 +252,12 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
         <ol className="space-y-2">
           {draft.layers.map((layer, i) => (
             <LayerFields
-              key={i}
+              key={layer.key}
               layer={layer}
               index={i}
               count={draft.layers.length}
               onChange={(l) => setLayer(i, l)}
-              onRemove={() => set("layers", draft.layers.filter((_, j) => j !== i))}
+              onRemove={() => removeLayer(i)}
               errors={errors}
             />
           ))}
@@ -238,18 +292,18 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
 
       <Group title="Safety">
         <Choices
-          label="F as"
+          label="Values"
           value={draft.basis}
           onChange={(b) => set("basis", b)}
           options={[
-            { value: "characteristic", label: "Factor of safety" },
-            { value: "design", label: "Over-design factor" },
+            { value: "characteristic", label: "Characteristic values" },
+            { value: "design", label: "Design values" },
           ]}
         />
         <p className="mt-2 text-xs text-muted-foreground">
           {draft.basis === "design"
-            ? "F on design values, with the Swedish partial factors of the safety class and η."
-            : "F on characteristic values, without partial factors."}
+            ? "F is an over-design factor: on design values, with the Swedish partial factors of the safety class and η."
+            : "F is a factor of safety: on characteristic values, without partial factors."}
         </p>
         {draft.basis === "design" && (
           <div className="mt-3 space-y-2">

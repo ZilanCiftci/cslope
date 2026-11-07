@@ -47,7 +47,7 @@ export type ParameterDescriptionLike = Pick<ParameterDescription, "min" | "max" 
 export type LayerMaterial =
   | { kind: "undrained"; gamma: number; su: number }
   | {
-      /** Su is `su` at the top of the layer and grows by `suRate` per metre below it (by elevation: the profile the clay had before the excavation). */
+      /** Su is `su` at the top of the layer and grows by `suRate` per meter below it (by elevation: the profile the clay had before the excavation). */
       kind: "undrained-increasing";
       gamma: number;
       su: number;
@@ -137,7 +137,7 @@ export const EXCAVATION_PARAMETERS = {
     gamma: p("gamma", "Unit weight γ (kN/m³)", "kN/m³", 10, 25, 0.1, "Above the water, and below it for clay and rock."),
     gammaSat: p("gammaSat", "Saturated unit weight γsat (kN/m³)", "kN/m³", 10, 25, 0.1, "Below the water, for a drained layer; γ when left out."),
     su: p("su", "Su (kPa)", "kPa", 1, 500, 0.5, "The undrained shear strength; for a growing profile, its value at the top of the layer."),
-    suRate: p("suRate", "Su increase (kPa/m)", "kPa/m", 0, 10, 0.1, "The growth of Su per metre below the top of the layer (by elevation)."),
+    suRate: p("suRate", "Su increase (kPa/m)", "kPa/m", 0, 10, 0.1, "The growth of Su per meter below the top of the layer (by elevation)."),
     c: p("c", "c′ (kPa)", "kPa", 0, 100, 0.5, "The effective cohesion."),
     phi: p("phi", "φ′ (°)", "°", 5, 45, 0.5, "The effective friction angle."),
   },

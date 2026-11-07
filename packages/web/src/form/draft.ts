@@ -19,6 +19,8 @@ import {
 import type { SafetyClass } from "@cslope/engine";
 
 export interface LayerDraft {
+  /** A key that stays with the layer while others are added or removed (not a parameter). */
+  key: string;
   name: string;
   kind: LayerKind;
   bottomLevel: string;
@@ -75,11 +77,21 @@ export const LAYER_FIELDS: Record<LayerKind, (keyof typeof EXCAVATION_PARAMETERS
   impenetrable: ["gamma"],
 };
 
+/** A new layer's bottom: 5 m below the last one's, within the bounds; empty when that one has none. */
+export function nextBottomLevel(layers: LayerDraft[]): string {
+  const last = parseNumber(layers[layers.length - 1]?.bottomLevel ?? "");
+  if (last === null || !Number.isFinite(last)) return "";
+  const { min, max } = EXCAVATION_PARAMETERS.layer.bottomLevel;
+  return String(Math.min(max, Math.max(min, Math.round((last - 5) * 10) / 10)));
+}
+
 /** Fields that may be left empty (and what empty means is in their description). */
 export const OPTIONAL_FIELDS = new Set(["bottomWidth", "tensionCrackDepth", "waterLevel", "gammaSat", "trafficLoad"]);
 
+let layerKeys = 0;
+
 export function emptyLayer(bottomLevel = ""): LayerDraft {
-  return { name: "", kind: "undrained", bottomLevel, gamma: "", gammaSat: "", su: "", suRate: "", c: "", phi: "" };
+  return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", bottomLevel, gamma: "", gammaSat: "", su: "", suRate: "", c: "", phi: "" };
 }
 
 /** A road as it appears when switched on: its size, without the fill's strength. */
@@ -264,6 +276,9 @@ export function fromQuery(search: string): Draft {
   if (q.get("values") === "design") {
     draft.basis = "design";
     for (const k of ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const) draft[k] = get(k);
+    // "2.0" is class 2, which the form's buttons show as "2".
+    const c = parseNumber(draft.safetyClass);
+    if (c !== null && Number.isFinite(c)) draft.safetyClass = String(c);
   }
   return draft;
 }

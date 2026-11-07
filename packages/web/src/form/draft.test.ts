@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
 import { excavationDocument } from "../templates/excavation";
-import { draftOf, formState, fromQuery, initialDraft, parseNumber, toQuery, type Draft } from "./draft";
+import { draftOf, emptyLayer, formState, fromQuery, initialDraft, nextBottomLevel, parseNumber, toQuery, type Draft } from "./draft";
 
 const filled = (): Draft => draftOf(EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
 
@@ -68,6 +68,12 @@ describe("the form's state", () => {
     }
   });
 
+  it("puts a new layer 5 m below the last, within the bounds", () => {
+    expect(nextBottomLevel([emptyLayer("-15")])).toBe("-20");
+    expect(nextBottomLevel([emptyLayer("-97,5")])).toBe("-100");
+    expect(nextBottomLevel([emptyLayer("abc")])).toBe("");
+  });
+
   it("writes a readable address with only the filled fields", () => {
     const q = toQuery(filled());
     expect(q).toBe(
@@ -75,7 +81,8 @@ describe("the form's state", () => {
         "&road=on&road.distanceFromCrest=3&road.width=4&road.height=0.8&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
         "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3",
     );
-    expect(fromQuery("")).toEqual(initialDraft());
+    expect(toQuery(fromQuery(""))).toEqual(toQuery(initialDraft()));
+    expect(fromQuery("?layers=1&values=design&safetyClass=2.0").safetyClass).toBe("2");
     expect(fromQuery("?layers=99&layer1.kind=nonsense").layers).toHaveLength(12);
     expect(fromQuery("?layers=1&layer1.kind=nonsense").layers[0].kind).toBe("undrained");
   });

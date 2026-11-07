@@ -22,7 +22,7 @@ export type CardState =
   | { kind: "cancelled" }
   | { kind: "failed"; message: string }
   /** The engine refused the model: the issues it could not put at a field. */
-  | { kind: "invalid"; general: ValidationIssue[] }
+  | { kind: "invalid"; general: ValidationIssue[]; warnings: ValidationIssue[] }
   | { kind: "complete"; summary: ResultSummary; warnings: ValidationIssue[] };
 
 export interface ResultCardProps {
@@ -30,6 +30,8 @@ export interface ResultCardProps {
   /** The last result, shown dimmed while the next one runs. */
   previous: ResultSummary | null;
   canRun: boolean;
+  /** The document can be built (the engine is not needed for it). */
+  canDownload: boolean;
   onRun: () => void;
   onCancel: () => void;
   onDownload: () => void;
@@ -54,7 +56,7 @@ function statusText(state: CardState): string {
     case "waiting":
       return "Engine ready";
     case "running":
-      return state.surfaces ? `Analyzing · ${state.surfaces} surfaces` : "Analyzing";
+      return "Analyzing";
     case "cancelled":
       return "The analysis was cancelled. Run it again with Run.";
     case "failed":
@@ -80,6 +82,7 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
   const cs = summary.criticalSurface;
   return (
     <div className={dim ? "opacity-50" : undefined}>
+      {dim && <p className="mb-1 text-xs font-medium">Previous result</p>}
       <p className="text-4xl font-semibold tracking-tight tabular">
         F {summary.fosText}
       </p>
@@ -100,10 +103,14 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
   );
 }
 
-export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
+export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
   const status = statusText(state);
   const complete = state.kind === "complete" ? state : null;
-  const warnings = complete ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)] : [];
+  const warnings = complete
+    ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)]
+    : state.kind === "invalid"
+      ? state.warnings.map((w) => w.message)
+      : [];
   return (
     <section id="result" aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
       <h2 id="result-heading" className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -111,8 +118,10 @@ export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownloa
       </h2>
       {complete && <Value summary={complete.summary} />}
       {!complete && previous && state.kind === "running" && <Value summary={previous} dim />}
-      <p role="status" className="mt-2 min-h-5 text-sm text-muted-foreground">
-        {status}
+      <p className="mt-2 min-h-5 text-sm text-muted-foreground">
+        {/* Only the status is announced, not each count of surfaces. */}
+        <span role="status">{status}</span>
+        {state.kind === "running" && state.surfaces > 0 && <span className="tabular"> · {state.surfaces} surfaces</span>}
       </p>
       {state.kind === "invalid" && state.general.length > 0 && (
         <ul className="mt-1 space-y-1">
@@ -124,7 +133,7 @@ export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownloa
         </ul>
       )}
       {warnings.length > 0 && (
-        <div className="mt-3 rounded-md border border-signal/40 bg-signal/10 p-3 text-sm">
+        <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
           <p className="font-medium">{warnings.length === 1 ? "Warning from the engine" : "Warnings from the engine"}</p>
           <ul className="mt-1 list-disc space-y-1 pl-5">
             {warnings.map((w) => (
@@ -144,7 +153,7 @@ export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownloa
             Run
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canRun} title={canRun ? "The analysis document, which cslope analyse runs." : "Fill in the form to download it."}>
+        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyse runs." : "Fill in the form to download it."}>
           Download JSON
         </Button>
         <Button size="sm" variant="outline" disabled title="Not available yet: the engine in the browser cannot write cSlope projects.">

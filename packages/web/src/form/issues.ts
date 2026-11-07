@@ -30,7 +30,8 @@ const FACTOR_KEYS: Record<string, string> = {
  * a whole ("/materials/0/model"), from the quantity its message names.
  */
 function materialKey(message: string): string | undefined {
-  const m = message.toLowerCase();
+  // Not the material's name: a layer named "Rate" is not about the rate.
+  const m = message.replace(/^Material "(?:[^"\\]|\\.)*":\s*/, "").toLowerCase();
   if (m.includes("saturated unit weight")) return "gammaSat";
   if (m.includes("unit weight")) return "gamma";
   if (m.includes("friction angle")) return "phi";
@@ -72,14 +73,28 @@ export function issueField(path: string, params: Pick<ExcavationParams, "layers"
   }
 }
 
-/** The issues by field, and those of the model as a whole. */
-export function issuesByField(issues: ValidationIssue[], params: Pick<ExcavationParams, "layers" | "road">): { fields: Map<string, string>; general: ValidationIssue[] } {
+/**
+ * The errors by field, the errors of the model as a whole (and those of a
+ * field the form does not show), and the warnings, which are not about a
+ * field the user must correct. `shown`: the fields the form shows.
+ */
+export function issuesByField(
+  issues: ValidationIssue[],
+  params: Pick<ExcavationParams, "layers" | "road">,
+  shown: ReadonlySet<string>,
+): { fields: Map<string, string>; general: ValidationIssue[]; warnings: ValidationIssue[] } {
   const fields = new Map<string, string>();
   const general: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
   for (const issue of issues) {
+    if (issue.severity !== "error") {
+      warnings.push(issue);
+      continue;
+    }
     const field = issueField(issue.path, params, issue.message);
-    if (field && !fields.has(field)) fields.set(field, issue.message);
-    else if (!field) general.push(issue);
+    if (field && shown.has(field)) {
+      if (!fields.has(field)) fields.set(field, issue.message);
+    } else general.push(issue);
   }
-  return { fields, general };
+  return { fields, general, warnings };
 }

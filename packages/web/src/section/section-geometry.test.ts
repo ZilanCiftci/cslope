@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import type { SliceData } from "@cslope/engine";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
-import { clipBand, groundAt, horizontalSpans, sectionShapes, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
+import { clipBand, groundAt, lineAt, sectionShapes, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
 
 const square: Point[] = [
   [0, 0],
@@ -19,8 +19,6 @@ describe("the section's shapes", () => {
       [0, 5],
       [0, 2],
     ]);
-    expect(horizontalSpans(square, 4)).toEqual([[0, 10]]);
-    expect(horizontalSpans(square, 12)).toEqual([]);
     expect(groundAt(square, 3)).toBe(10);
   });
 
@@ -31,15 +29,29 @@ describe("the section's shapes", () => {
     expect(Math.min(...s.layers[0].map((q) => q[1]))).toBe(s.g.base);
     expect(Math.max(...s.layers[0].map((q) => q[1]))).toBe(0);
     expect(s.road).toHaveLength(4);
-    // The water at −1 runs from the left edge to the face (at x = 2) and from the face's other side… none: the pit is below it.
-    expect(s.water).toHaveLength(1);
-    expect(s.water[0][0]).toBe(s.g.left);
-    expect(s.water[0][1]).toBeCloseTo(2);
+    // The water at −1 runs level to the face (at x = 2), then along the face and the excavation's bottom.
+    expect(s.water[0]).toEqual([s.g.left, -1]);
+    expect(lineAt(s.water, -10)).toBe(-1);
+    expect(lineAt(s.water, 2)).toBeCloseTo(-1);
+    expect(lineAt(s.water, 4)).toBeCloseTo(-2);
+    expect(lineAt(s.water, 20)).toBe(-4);
     expect(s.load).toEqual({ x1: -7, x2: -3, y: 0.8 });
     const view = viewOf(s.g, p.excavationDepth, null);
     expect(view.x0).toBeGreaterThan(s.g.left);
     expect(view.x1).toBeLessThan(s.g.right);
     expect(view.y1).toBe(0.8);
+  });
+
+  it("draws water above the ground along the ground, and in the road's fill up to its level", () => {
+    const p = EXCAVATION_EXAMPLES["clay-road-design-sk2"];
+    const high = sectionShapes({ ...p, waterLevel: 2 });
+    expect(lineAt(high.water, -20)).toBe(0);
+    expect(lineAt(high.water, -5)).toBe(0.8);
+    expect(lineAt(high.water, 20)).toBe(-4);
+    const inRoad = sectionShapes({ ...p, waterLevel: 0.3 });
+    expect(lineAt(inRoad.water, -20)).toBe(0);
+    expect(lineAt(inRoad.water, -5)).toBe(0.3);
+    expect(sectionShapes({ ...p, waterLevel: -30 }).water).toEqual([]);
   });
 
   it("draws the critical surface along the slices' bases", () => {

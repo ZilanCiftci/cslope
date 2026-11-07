@@ -4,11 +4,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
 import { excavationDocument } from "../templates/excavation";
+import { draftFields, draftOf } from "./draft";
 import { issueField, issuesByField } from "./issues";
 
 beforeAll(() => initEngine());
 
 const params = EXCAVATION_EXAMPLES["clay-road-design-sk2"];
+/** The fields the form shows for these parameters. */
+const shown = new Set(draftFields(draftOf(params)).map(([f]) => f));
 
 describe("the engine's issues at the fields", () => {
   it("maps the materials to the layers and the road's fill, the loads, the water and the factors", () => {
@@ -30,8 +33,19 @@ describe("the engine's issues at the fields", () => {
     (doc.definition.materials[1].model as { frictionAngle: number }).frictionAngle = 95;
     const issues = validateDefinition(doc).filter((i) => i.severity === "error");
     expect(issues.length).toBeGreaterThan(0);
-    const { fields, general } = issuesByField(issues, params);
+    const { fields, general } = issuesByField(issues, params, shown);
     expect([...fields.keys()].sort()).toEqual(["layers.0.gamma", "road.phi"]);
     expect(general).toEqual([]);
+  });
+
+  it("keeps warnings off the fields, reads past the material's name, and lists issues of fields not shown", () => {
+    const issue = (message: string, severity: "error" | "warning" = "error") => ({ path: "/definition/materials/0/model", code: "invalid-material-model", message, severity });
+    const named = issue('Material "Rate": Unit weight (γ) must be a positive number.');
+    const warning = issue('Material "Layer 1": Unit weight (γ) is low.', "warning");
+    const hidden = issue('Material "Layer 1": Saturated unit weight (γsat) must be a positive number.');
+    const r = issuesByField([named, warning, hidden], params, shown);
+    expect(Object.fromEntries(r.fields)).toEqual({ "layers.0.gamma": named.message });
+    expect(r.warnings).toEqual([warning]);
+    expect(r.general).toEqual([hidden]);
   });
 });

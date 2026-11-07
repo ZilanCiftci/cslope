@@ -1,7 +1,7 @@
 /**
  * What the section drawing draws, in model coordinates (m): the layers as
  * polygons (the outline clipped to each layer's band), the road's fill,
- * the water line where it is in the ground, the critical surface and the
+ * the water line (cut at the ground), the critical surface and the
  * slices from the result, and the ticks of the axes. Pure TypeScript.
  */
 import type { SliceData } from "@cslope/engine";
@@ -33,18 +33,37 @@ export function clipBand(poly: Point[], lo: number, hi: number): Point[] {
   );
 }
 
-/** Where the horizontal line y = `level` is inside the polygon: [x1, x2] pairs, left to right. */
-export function horizontalSpans(poly: Point[], level: number): [number, number][] {
-  const xs: number[] = [];
-  for (let i = 0; i < poly.length; i++) {
-    const [x1, y1] = poly[i];
-    const [x2, y2] = poly[(i + 1) % poly.length];
-    if (y1 > level !== y2 > level) xs.push(x1 + ((level - y1) * (x2 - x1)) / (y2 - y1));
-  }
-  xs.sort((a, b) => a - b);
-  const out: [number, number][] = [];
-  for (let i = 0; i + 1 < xs.length; i += 2) out.push([xs[i], xs[i + 1]]);
+/**
+ * The water line: the level, cut at the ground where the ground is lower
+ * (the template's water has no free water), from the model's left edge to
+ * its right; empty below the model's base.
+ */
+export function waterLine(exterior: Point[], level: number): Point[] {
+  const ys = exterior.map((p) => p[1]);
+  if (level <= Math.min(...ys)) return [];
+  const xs = [...new Set(exterior.map((p) => p[0]))].sort((a, b) => a - b);
+  const out: Point[] = [];
+  xs.forEach((x, i) => {
+    const y = groundAt(exterior, x) ?? level;
+    if (i > 0) {
+      // Where the ground crosses the level between two vertices.
+      const x0 = xs[i - 1];
+      const y0 = groundAt(exterior, x0) ?? level;
+      if ((y0 - level) * (y - level) < 0) out.push([x0 + ((level - y0) * (x - x0)) / (y - y0), level]);
+    }
+    out.push([x, Math.min(level, y)]);
+  });
   return out;
+}
+
+/** The height of a polyline (left to right) at x. */
+export function lineAt(line: Point[], x: number): number | null {
+  for (let i = 1; i < line.length; i++) {
+    const [x1, y1] = line[i - 1];
+    const [x2, y2] = line[i];
+    if (x >= x1 && x <= x2) return x2 === x1 ? y1 : y1 + ((x - x1) * (y2 - y1)) / (x2 - x1);
+  }
+  return null;
 }
 
 export interface SectionShapes {
@@ -53,8 +72,8 @@ export interface SectionShapes {
   /** One polygon per layer, from the top down. */
   layers: Point[][];
   road: Point[] | null;
-  /** The water line's pieces in the ground. */
-  water: [number, number][];
+  /** The water line, cut at the ground. */
+  water: Point[];
   /** The traffic load's span, when there is one. */
   load: { x1: number; x2: number; y: number } | null;
 }
@@ -77,7 +96,7 @@ export function sectionShapes(params: ExcavationParams): SectionShapes {
     [r.topRight, r.top],
     [r.nearToe, g.ground],
   ];
-  const water = params.waterLevel === null ? [] : horizontalSpans(exterior, params.waterLevel);
+  const water = params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel);
   const q = params.road?.trafficLoad;
   const load = r && q ? { x1: r.topLeft, x2: r.topRight, y: r.top } : null;
   return { g, exterior, layers, road, water, load };
