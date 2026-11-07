@@ -19,9 +19,11 @@ export interface SurfaceSlide {
   x2: number;
   y2: number;
   material: string;
-  /** Friction angle (design value) and the face's inclination, degrees. */
+  /** Friction angle (the design value when partial factors apply) and the face's inclination, degrees. */
   frictionAngle: number;
   inclination: number;
+  /** Whether partial factors apply, so the friction angle is a design value (the message says "design φ′"). */
+  design?: boolean;
 }
 
 /**
