@@ -1,3 +1,4 @@
+import { rememberResultInput } from "../result-input";
 import type {
   AnalysisOptions,
   AnalysisResult,
@@ -683,6 +684,8 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
 
     handle.promise
       .then((result) => {
+        // (the input it was computed for: the project saves its hash)
+        rememberResultInput(result, modelSnapshot);
         finish({ runState: "done", result, errorMessage: null });
       })
       .catch((err) => {
@@ -913,6 +916,7 @@ export const createAnalysisSlice: SliceCreator<AnalysisSlice> = (set, get) => ({
       running.add(freshModel.id);
       try {
         const result = await handle.promise;
+        rememberResultInput(result, freshModel);
         running.delete(freshModel.id);
         if (!isCurrentBatch()) return;
         finishModel(freshModel.id, "done");

@@ -8,7 +8,7 @@ import { ProjectInfoDialog } from "./ProjectInfoDialog";
 import { useAppStore, type ProjectInfo } from "../../store/app-store";
 import { serializeProject } from "../../store/persistence";
 import { APP_DEFAULT_ANALYSIS_OPTIONS } from "../../store/defaults";
-import { readProject, writeProjectArchive } from "../project/cslp";
+import { buildProjectArchive, readProject, writeProjectArchive } from "../project/cslp";
 import { readZip, writeZip } from "../../utils/zip";
 
 const store = () => useAppStore.getState();
@@ -442,6 +442,24 @@ describe("Explorer — results out of date", () => {
     // the result is still there, also once the model is the active one
     act(() => store().switchModel(store().models[1].id));
     expect(store().result?.minFOS).toBe(1.3);
+    expect(dot("Beta")).toHaveAccessibleName("Result out of date");
+  });
+
+  it("keeps a result out of date when the project is saved in the app and opened again", async () => {
+    act(() => store().saveCurrentModel());
+    const bytes = await savedAndEdited((model) => {
+      const materials = model.materials as { model: Record<string, unknown> }[];
+      materials[0].model = { kind: "undrained", unitWeight: 18, undrainedShearStrength: 45 };
+    });
+    act(() => store().loadProject({ models: [] }));
+    const read = await readProject(bytes);
+    act(() => store().loadProject(read.file));
+    act(() => store().saveCurrentModel());
+    // saved by the app: the result keeps the hash of the input it was computed for
+    const again = await readProject(await buildProjectArchive(store()));
+    act(() => store().loadProject(again.file));
+    render(<Explorer />);
+    expect(dot("Alpha")).toHaveAccessibleName("Analyzed");
     expect(dot("Beta")).toHaveAccessibleName("Result out of date");
   });
 

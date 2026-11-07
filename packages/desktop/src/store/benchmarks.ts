@@ -11,7 +11,7 @@ import {
   mirrorX,
   toCanonicalSlopeDefinition,
 } from "@cslope/engine";
-import { DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
+import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
 import type { Annotation } from "./types";
 import { cloneAnnotation } from "../features/annotations/reference";
 import { modelViewLock } from "../features/view/viewLock";
@@ -170,7 +170,10 @@ const TACADS_SIMPLE: ModelEntry = {
   lineLoads: [],
   customSearchPlanes: [],
   customPlanesOnly: false,
+  // The app's complete options (as a project file opened gives them),
+  // so the model saved and opened again is the model that was run.
   options: {
+    ...APP_DEFAULT_ANALYSIS_OPTIONS,
     slices: 30,
     iterations: 1000,
     refinedIterations: 500,
@@ -299,7 +302,10 @@ const TACADS_NONHOMOGENEOUS: ModelEntry = {
   lineLoads: [],
   customSearchPlanes: [],
   customPlanesOnly: false,
+  // The app's complete options (as a project file opened gives them),
+  // so the model saved and opened again is the model that was run.
   options: {
+    ...APP_DEFAULT_ANALYSIS_OPTIONS,
     slices: 30,
     iterations: 1000,
     refinedIterations: 500,
@@ -393,7 +399,10 @@ const ARAI_TAGYO: ModelEntry = {
   lineLoads: [],
   customSearchPlanes: [],
   customPlanesOnly: false,
+  // The app's complete options (as a project file opened gives them),
+  // so the model saved and opened again is the model that was run.
   options: {
+    ...APP_DEFAULT_ANALYSIS_OPTIONS,
     slices: 30,
     iterations: 1000,
     refinedIterations: 500,
@@ -503,7 +512,10 @@ const ARAI_TAGYO_LAYERED: ModelEntry = {
   lineLoads: [],
   customSearchPlanes: [],
   customPlanesOnly: false,
+  // The app's complete options (as a project file opened gives them),
+  // so the model saved and opened again is the model that was run.
   options: {
+    ...APP_DEFAULT_ANALYSIS_OPTIONS,
     slices: 30,
     iterations: 1000,
     refinedIterations: 500,
@@ -670,7 +682,10 @@ const TALBINGO_DAM_RTL: ModelEntry = {
   lineLoads: [],
   customSearchPlanes: [],
   customPlanesOnly: false,
+  // The app's complete options (as a project file opened gives them),
+  // so the model saved and opened again is the model that was run.
   options: {
+    ...APP_DEFAULT_ANALYSIS_OPTIONS,
     slices: 30,
     iterations: 1000,
     refinedIterations: 500,

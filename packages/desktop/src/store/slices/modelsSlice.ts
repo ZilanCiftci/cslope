@@ -1,9 +1,9 @@
-import { DEFAULT_ANALYSIS_OPTIONS } from "@cslope/engine";
 import { MODEL_NAME_PREFIX } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
 import { verificationModels } from "../verification-models";
 import { loadLocalLovoModels } from "../local-models";
 import {
+  APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
   DEFAULT_COORDINATE_EXPRESSIONS,
   DEFAULT_COORDS,
@@ -50,13 +50,7 @@ function createDefaultModel(id: string, name: string): ModelEntry {
     customSearchPlanes: [],
     customPlanesOnly: false,
     blockSearchObjects: [],
-    options: {
-      ...DEFAULT_ANALYSIS_OPTIONS,
-      method: "Morgenstern-Price",
-      slices: 30,
-      iterations: 1000,
-      refinedIterations: 500,
-    },
+    options: { ...APP_DEFAULT_ANALYSIS_OPTIONS },
     analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
     runState: "idle",
     progress: 0,
@@ -86,13 +80,7 @@ export const mapModelToState = (model: ModelEntry) => ({
   // Set (to undefined too), or the previous model's would stay.
   waternet: model.waternet,
   earlierStage: model.earlierStage,
-  options: model.options ?? {
-    ...DEFAULT_ANALYSIS_OPTIONS,
-    method: "Morgenstern-Price",
-    slices: 30,
-    iterations: 1000,
-    refinedIterations: 500,
-  },
+  options: model.options ?? { ...APP_DEFAULT_ANALYSIS_OPTIONS },
   analysisLimits: model.analysisLimits ?? { ...DEFAULT_ANALYSIS_LIMITS },
   editViewOffset: model.editViewOffset ?? model.viewOffset ?? [0, 0],
   editViewScale: model.editViewScale ?? model.viewScale ?? 0,
