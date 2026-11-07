@@ -14,7 +14,7 @@ const renderPage = () =>
 describe("Home page", () => {
   it("opens cSlope in the browser at a filled-in section, in a new tab, from the button and the screenshot", () => {
     renderPage();
-    const section = screen.getByRole("heading", { name: "Try it in your browser" }).closest("section")!;
+    const section = screen.getByRole("heading", { name: "Two templates to try without installing" }).closest("section")!;
     const button = within(section).getByRole("link", { name: /^Open cSlope in the browser/ });
     const image = within(section).getByRole("link", { name: /^cSlope in the browser:/ });
     for (const link of [button, image]) {

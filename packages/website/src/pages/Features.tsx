@@ -37,7 +37,7 @@ const AREAS: Area[] = [
   {
     id: "search",
     title: "Slip surface search",
-    lead: "Find the critical surface the way you would by hand, only faster and more thoroughly.",
+    lead: "A search for the critical surface between the limits you set, or the surfaces you draw yourself.",
     points: [
       "Circular search between entry and exit ranges, refined around the best surfaces.",
       "Custom circles and polylines, analyzed alone or together with the search.",
@@ -80,7 +80,7 @@ const AREAS: Area[] = [
   {
     id: "reinforcement",
     title: "Loads, reinforcement and support",
-    lead: "The structural elements of a real design, with their capacities along the slip surface.",
+    lead: "Reinforcement, piles and loads, with their capacities along the slip surface.",
     points: [
       "Distributed and line loads.",
       "Anchors, grouted tiebacks, soil nails and geosynthetics, active or passive, with tensile and pullout capacity.",
@@ -94,12 +94,12 @@ const AREAS: Area[] = [
   {
     id: "results",
     title: "Results and reporting",
-    lead: "From the analysis to a drawing you can put in a report, in the same application.",
+    lead: "Result plots and print sheets for the report, made in the same program.",
     points: [
       "Critical surface only, all surfaces, or surfaces below a factor of safety.",
       "Text, material tables, plots and a color bar on a print sheet; reusable templates.",
       "Plots of slice data and of Fm and Ff against λ.",
-      "Export to PDF and PNG; slice data to Excel and CSV; projects saved as plain JSON.",
+      "Export to PDF and PNG; slice data to Excel and CSV; projects saved as .cslp files (JSON in a ZIP archive).",
     ],
     media: MEDIA.annotations,
     caption: "A result sheet with a material table and annotations",
@@ -129,8 +129,8 @@ export function Features() {
     <>
       <PageHeader
         eyebrow="Features"
-        title="A complete slope stability tool"
-        lead="cSlope covers the analyses a geotechnical engineer runs on a slope or an embankment, from a first check to the design report."
+        title="What cSlope analyzes"
+        lead="Limit equilibrium analysis of slopes and embankments, from a first check to the design report."
       >
         <nav aria-label="Feature areas" className="mt-8 flex flex-wrap gap-2">
           {AREAS.map((a) => (
@@ -182,7 +182,7 @@ export function Features() {
 
       <Section>
         <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-lg font-medium">Every one of these is covered by the verification problems.</p>
+          <p className="text-lg font-medium">The verification page lists every problem cSlope is checked against.</p>
           <Button asChild variant="outline">
             <Link to="/verification">
               See the verification
