@@ -682,7 +682,7 @@ pub struct Serial;                                         // default; wasm
   - `--omit-default-module-path` means Vite sees no `new URL(..., import.meta.url)` and does not emit a second copy.
   - `jsts` and `highs` leave both package.jsons; the desktop does not use them directly (checked).
 - **Website (Vercel):** the build only typechecks the scripts that import the engine and runs no analysis. `generate-data.ts` is run by developers and then needs only the committed wasm. Nothing changes for Vercel.
-- **Python:** a new `python.yml` triggers on tags `py-v*`. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64), runs a pytest smoke test per wheel (V001 Bishop must be 1.4041800301648426 bit for bit), and publishes to PyPI with trusted publishing.
+- **Python:** `python.yml` triggers on tags `py-v*` and by hand. It uses `PyO3/maturin-action` (manylinux x86_64/aarch64, macOS universal2, windows x64; one abi3 wheel each for CPython 3.9 and later) and runs the crate's pytest suite against each wheel on Python 3.9 and 3.13, with the crate's and the skill's examples (the demo models against pinned F within 1e-6; the tests that need other parts of the repository skip). Publishing to PyPI is written out but off (`if: false`): no trusted publisher is configured yet (#61). Until then the package is installed from the run's wheel artifacts or built from the source; enabling it is the PyPI project with this workflow as its trusted publisher and removing that line. The ordinary CI (`ci.yml`, job `python`) builds the package in place and runs the same tests when the engine changes.
 
 ---
 

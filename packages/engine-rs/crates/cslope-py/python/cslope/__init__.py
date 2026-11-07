@@ -60,6 +60,7 @@ __all__ = [
     "Slope",
     "__version__",
     "analyse",
+    "analyze",
     "default_options",
     "fem_summary",
     "model_to_definition",
@@ -155,7 +156,7 @@ def schema(name: str = "analysis-document") -> dict:
     return _native.schema(name)
 
 
-def analyse(
+def analyze(
     definition: Any,
     options: Optional[Any] = None,
     *,
@@ -193,6 +194,9 @@ def analyse(
         threads=threads,
         cancel=cancel,
     )
+
+
+analyse = analyze  # the same function, in British spelling
 
 
 def fem_summary(

@@ -4,7 +4,8 @@ name: Python wheels
 # ARCHITECTURE.md §8.5): built on a tag py-v* (e.g. py-v0.1.0) or by hand,
 # never on ordinary pushes, so the other workflows are not affected. One
 # abi3 wheel per platform serves CPython 3.9 and later; each is installed
-# and smoke-tested (tests/test_api.py) on the oldest and a recent Python.
+# and smoke-tested (the crate's tests, with its examples and the skill's) on
+# the oldest and a recent Python.
 on:
   push:
     tags: ["py-v*"]
@@ -74,11 +75,15 @@ jobs:
           - { name: macos-universal2, os: macos-latest }
           - { name: windows-x64, os: windows-latest }
     steps:
-      # Only the tests are needed from the repository; the package comes from the wheel.
+      # Only the tests and the examples they run (the website shows them) are
+      # needed from the repository; the package comes from the wheel.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          sparse-checkout: ${{ env.CRATE }}/tests
+          sparse-checkout: |
+            ${{ env.CRATE }}/tests
+            ${{ env.CRATE }}/examples
+            skills/cslope
       - name: Setup Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:

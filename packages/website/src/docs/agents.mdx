@@ -1,0 +1,42 @@
+---
+title: For agents
+description: What the cslope skill for AI agents does, how to install it, and what it will and will not do when it checks a slope with the cSlope engine.
+section: Reference
+order: 2.4
+---
+
+import partialFactors from "../../../../skills/cslope/examples/swedish_partial_factors.py?raw";
+
+The repository has a **skill** for AI agents: [skills/cslope](https://github.com/ZilanCiftci/cslope/tree/main/skills/cslope), a `SKILL.md` with five examples. An agent that reads skills uses it when someone asks for the factor of safety of a slope, an embankment, a cut or an excavation, or for a check with Swedish partial factors. It then describes the slope with the [Python package](/docs/python), validates it, runs a limit equilibrium analysis with the cSlope engine and reports the result.
+
+## Install
+
+1. Install the Python package as described under [Python › Install](/docs/python#install). The package is not on PyPI yet; the skill says how to run it from a wheel (`uv run --with ./cslope-*.whl cslope info`).
+2. Copy the folder `skills/cslope` into your agent's skills folder, for example `~/.claude/skills/cslope` for your own account or `.claude/skills/cslope` in a project.
+3. Check that the agent finds it: ask for the factor of safety of a slope and give its geometry and soils.
+
+## What it does
+
+The agent follows a fixed path, from the person's input to a reviewable file and the engine's own summary:
+
+1. It asks for the inputs: the geometry, every soil's parameters, the water, the loads and, for a check with partial factors, the safety class and the conversion factors η.
+2. It writes an **analysis document** (JSON) with the builder `cslope.build.Definition`. The builder checks each value as it is given, and the document is what you read to see what was analyzed.
+3. It runs `cslope validate` and then `cslope analyze` on the document (`--json` for the summary and the full result).
+4. It reports the **summary** the engine writes, unchanged.
+
+<CodeFile path="skills/cslope/examples/swedish_partial_factors.py" code={partialFactors} />
+
+The summary says what F is: a *factor of safety* on characteristic values, or an *over-design factor* on design values when partial factors are applied, which must be at least 1.0. It also gives the method, the critical surface with its entry and exit, every warning and the engine build. The document's format and the schemas are on the [Python](/docs/python#analysis-documents-json) page.
+
+## What it will and will not do
+
+The skill tells the agent:
+
+- **Never assume a safety class or η.** They come from the project; the agent asks for them, and every argument of `swedish_partial_factors` is required.
+- **Never invent soil parameters.** A missing value stops the agent, which says which value is missing. The soil values in the skill's examples are illustrative.
+- **Forward the summary unchanged.** F is not rounded differently or relabeled ("safe", "FoS"), and no warning is left out: a warning can mean that F is not reliable.
+- **Do not work around a check.** When the builder or `cslope validate` refuses the input, the agent fixes the input.
+- **Stay within limit equilibrium.** Circular, composite and block surfaces with Morgenstern-Price, Bishop or Janbu. Finite elements and reliability are not covered by the skill yet; the agent says so and does not approximate them.
+- **Do not verify the engine itself.** Its verification against published problems is the [Verification](/verification) page.
+
+The required F for a factor of safety comes from the governing document, not from cSlope or the agent.
