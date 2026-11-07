@@ -16,13 +16,19 @@
  * long cache, and that a phone shows the page, with a result, without
  * scrolling sideways, and that the bar's picture of the section opens the
  * drawing across the screen and closes with Escape; on the first visit, that
- * a removed layer comes back with Undo. The website's scripts/smoke.ts, for one page.
+ * a removed layer comes back with Undo. It downloads the ponded
+ * excavation as a .cslp project and opens it with the app's reader in Node
+ * (packages/desktop/scripts/check-project.ts): the model, the page's F,
+ * current. The website's scripts/smoke.ts, for one page.
  *
  * Usage: bun run build && bun scripts/smoke.ts   (bun run smoke)
  * CHROMIUM_PATH points Playwright at an installed Chromium instead of its own.
  */
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { chromium, devices, type Browser, type Page } from "playwright";
 import { startPreview } from "./preview";
 import EXPECTED from "../src/templates/fixtures/expected.json";
@@ -326,6 +332,49 @@ async function checkPhone(browser: Browser, base: string, colorScheme: "light" |
   return problems;
 }
 
+/**
+ * "Download .cslp" of the ponded excavation, once F shows: the file is
+ * named after the template, the project writer's WebAssembly loads under
+ * the policy (only now), and the app's reader opens the file in Node
+ * (packages/desktop/scripts/check-project.ts) with the model and the
+ * page's F, its input unchanged.
+ */
+async function checkProjectDownload(browser: Browser, base: string): Promise<string[]> {
+  const problems: string[] = [];
+  const context = await browser.newContext({ acceptDownloads: true });
+  const page = await context.newPage();
+  const wasm: string[] = [];
+  page.on("console", (m) => m.type() === "error" && problems.push(`console error: ${m.text()}`));
+  page.on("pageerror", (e) => problems.push(`uncaught: ${e.message}`));
+  page.on("response", (r) => new URL(r.url()).pathname.endsWith(".wasm") && wasm.push(new URL(r.url()).pathname));
+  const dir = mkdtempSync(join(tmpdir(), "cslope-smoke-"));
+  try {
+    await page.goto(`${base}/?${PONDED}`, { waitUntil: "load" });
+    await fValue(page).waitFor({ timeout: 30_000 });
+    const engineOnly = wasm.length;
+    const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.getByRole("button", { name: "Download .cslp" }).click()]);
+    if (download.suggestedFilename() !== "cslope-excavation.cslp") problems.push(`the project is named ${download.suggestedFilename()}`);
+    if (wasm.length !== engineOnly + 1) problems.push(`the page loaded ${wasm.length - engineOnly} WebAssembly files for the project, expected the writer's one`);
+    if (engineOnly !== 1) problems.push(`the page loaded ${engineOnly} WebAssembly files before the download, expected the engine's only`);
+    const file = join(dir, download.suggestedFilename());
+    await download.saveAs(file);
+    const desktop = join(import.meta.dirname, "../../desktop");
+    const opened = spawnSync("bun", ["scripts/check-project.ts", file], { cwd: desktop, encoding: "utf8" });
+    const out = `${opened.stdout}${opened.stderr}`.trim();
+    if (opened.status !== 0) problems.push(`the app's reader could not open it: ${out}`);
+    const want = `F = ${EXPECTED["clay-5m-ponded"].fos.toFixed(3)}`;
+    if (!out.includes(want) || !out.includes("input unchanged")) problems.push(`the app's reader says:\n${out}\n(expected "${want}" and "input unchanged")`);
+    if (!/model model-1 \(active\): "Excavation in clay with a haul road", \d+ ground points, 2 material\(s\)/.test(out)) problems.push(`the model is not the section: ${out}`);
+    console.log(`  ${out.split("\n").filter((l) => /result:|model /.test(l)).map((l) => l.trim()).join("; ")}`);
+  } catch (e) {
+    problems.push(`the download: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    await context.close();
+  }
+  return problems;
+}
+
 /** A path that is not the page gets a 404, with the policy. */
 async function checkNotFound(page: Page, base: string): Promise<string[]> {
   const res = await page.goto(base + "/no-such-page");
@@ -354,6 +403,7 @@ async function main() {
     report("analysis", await checkAnalysis(await context.newPage(), server.url));
     report("/no-such-page", await checkNotFound(await context.newPage(), server.url));
     await context.close();
+    report("project download", await checkProjectDownload(browser, server.url));
     for (const colorScheme of ["light", "dark"] as const) {
       report(`phone (${colorScheme})`, await checkPhone(browser, server.url, colorScheme, FILLED));
       report(`phone, embankment (${colorScheme})`, await checkPhone(browser, server.url, colorScheme, EMBANKMENT));

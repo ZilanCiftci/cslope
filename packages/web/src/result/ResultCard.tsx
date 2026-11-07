@@ -1,8 +1,8 @@
 /**
  * The result card: F, a factor of safety on characteristic values, with
  * the engine's own label, the method, the critical surface's entry and exit,
- * the surfaces searched; then the commands (run, cancel, the link, the
- * downloads) and a note that this is a template calculation, not a design.
+ * the surfaces searched; then the commands (run, cancel, the downloads of
+ * the analysis document and of a cSlope project, the link) and a note that this is a template calculation, not a design.
  * The engine's warnings are not shown: the page's users cannot act on them
  * (the geometry and the options are the template's), and the templates
  * avoid what they are about (TEMPLATE_OPTIONS); the app shows them.
@@ -47,6 +47,9 @@ export interface ResultCardProps {
   onRun: () => void;
   onCancel: () => void;
   onDownload: () => void;
+  /** The project can be written: the document can be built, and no project is being written. */
+  canDownloadProject: boolean;
+  onDownloadProject: () => void;
   onCopyLink: () => void;
   /** A short message after a command ("Link copied."), with Undo after a structural change. */
   notice: Notice | null;
@@ -113,7 +116,7 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
   );
 }
 
-export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice, aboveBar = false }: ResultCardProps) {
+export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, canDownloadProject, onDownloadProject, onCopyLink, notice, aboveBar = false }: ResultCardProps) {
   const status = statusText(state);
   const complete = state.kind === "complete" ? state : null;
   return (
@@ -150,6 +153,15 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
         )}
         <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyze runs." : "Fill in the form to download it."}>
           Download JSON
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onDownloadProject}
+          disabled={!canDownloadProject}
+          title={canDownload ? "A cSlope project of this section with its result, which the cSlope app opens." : "Fill in the form to download it."}
+        >
+          Download .cslp
         </Button>
         <Button size="sm" variant="outline" onClick={onCopyLink} title="Copy the address of this section: the parameters are in it, nothing is stored.">
           Copy link

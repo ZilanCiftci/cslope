@@ -1,6 +1,6 @@
 ---
 title: cSlope in the browser
-description: The templates at app.cslope.com, what they model and what they do not, how to read F, and what to do with the JSON download.
+description: The templates at app.cslope.com, what they model and what they do not, how to read F, and what to do with the downloads.
 section: Getting started
 order: 1.5
 ---
@@ -56,7 +56,7 @@ The page does not show the engine's warnings; the app does. The excavation uses 
 
 While a new analysis runs, the last result stays in view, dimmed and marked *Previous result*. A field marked in red says what is wrong with it; the status line says how many fields are still empty. On a phone, a bar at the bottom keeps F in view, with a small picture of the section; tap it to see the drawing across the screen, and close it with the × (or Escape).
 
-## The JSON download and the link
+## The downloads and the link
 
 **Copy link** copies the page's address, which holds the template and every field you filled in.
 
@@ -68,4 +68,6 @@ cslope analyze cslope-embankment.json
 
 The Python package is not yet published on PyPI; until it is, build it from its source in the [repository](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine-rs/crates/cslope-py).
 
-The cSlope app cannot open the JSON file: it opens project files (`.cslp`). Its **Open** dialog also offers `.json`, for projects saved by older versions; the analysis document is not one, and opening it there ends with the message *Unable to open project: File must include at least one model.* To go on in the app, for example to add reinforcement or another analysis, build the section there from the same values. The page does not write `.cslp` projects yet; **Get the cSlope app** leads to the [download page](/download).
+**Download .cslp** saves the section as a cSlope project (`cslope-excavation.cslp` or `cslope-embankment.cslp`), which the cSlope app opens to go on with it, for example to add reinforcement or another analysis. The project has one model, named after the template, with the layers in their colors, the options of the template and the result shown on the page: the app opens it with that result, current, and its own run of the model gives the same F. A horizontal ground-water level becomes a piezometric line across the model at that level, which gives the same pore pressures. While the analysis has not finished (or after a change, before the new F shows), the project is saved without a result and the page says so; the app computes F when you run the model there. The page loads the part of the engine that writes projects (about 0.4 MB) only when you download one. **Get the cSlope app** leads to the [download page](/download).
+
+The cSlope app cannot open the JSON file: it opens project files (`.cslp`). Its **Open** dialog also offers `.json`, for projects saved by older versions; the analysis document is not one, and opening it there ends with the message *Unable to open project: File must include at least one model.* Use **Download .cslp** to go on in the app.
