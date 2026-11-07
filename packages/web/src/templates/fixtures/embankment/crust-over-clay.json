@@ -1,0 +1,111 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-50.5, -20],
+      [-50.5, -1.5],
+      [-50.5, 0],
+      [-16, 0],
+      [-10, 3],
+      [0, 3],
+      [6, 0],
+      [40.5, 0],
+      [40.5, -1.5],
+      [40.5, -20]
+    ],
+    "materials": [
+      {
+        "name": "Crust",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 18,
+          "unitWeightSat": 19,
+          "cohesion": 3,
+          "frictionAngle": 30
+        }
+      },
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 16,
+          "unitWeightSat": 16,
+          "undrainedShearStrength": 14
+        }
+      },
+      {
+        "name": "Embankment",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 20,
+          "unitWeightSat": 20,
+          "cohesion": 0,
+          "frictionAngle": 38
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-50.5, -1.5],
+          [40.5, -1.5]
+        ]
+      },
+      {
+        "coordinates": [
+          [-16, 0],
+          [6, 0]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-49.5, -0.75],
+        "materialName": "Crust"
+      },
+      {
+        "point": [-49.5, -10.75],
+        "materialName": "Clay"
+      },
+      {
+        "point": [-5, 1.5],
+        "materialName": "Embankment"
+      }
+    ],
+    "waterTable": {
+      "mode": "height",
+      "value": -1,
+      "freeWater": false
+    },
+    "udls": [
+      {
+        "magnitude": 10,
+        "x1": -10,
+        "x2": 0
+      }
+    ],
+    "analysisLimits": {
+      "entryLeftX": -16,
+      "entryRightX": 0,
+      "exitLeftX": 6,
+      "exitRightX": 40.5
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false
+  }
+}

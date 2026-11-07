@@ -3,12 +3,12 @@ import type { ResultSummary, SliceData } from "@cslope/engine";
 import { Header } from "@/components/Header";
 import { CancelledError, type AnalysisClient, type RunOutcome } from "@/engine/client";
 import { dumps, type AnalysisDocument } from "@/engine/document";
-import { draftFields, formState, fromQuery, toQuery, type FormState } from "@/form/draft";
-import { Form } from "@/form/Form";
+import { draftFields, formState, fromQuery, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
+import { Choices, Form } from "@/form/Form";
 import { issuesByField } from "@/form/issues";
+import { SPECS, specOf, type AnySpec } from "@/form/specs";
 import { ResultCard, type CardState } from "@/result/ResultCard";
 import { Section } from "@/section/Section";
-import { excavationDocument, excavationNotes, excavationTemplate, type ExcavationParams } from "@/templates/excavation";
 
 /** The engine's state, shown while it loads. */
 type EngineState = { kind: "loading" } | { kind: "ready" } | { kind: "failed"; message: string };
@@ -23,27 +23,19 @@ type Run =
 /** How long the form waits after a change before it runs (ms). */
 const RUN_DELAY = 300;
 
-/** The fields the drawing needs; the others (strengths, safety) do not change it. */
-const GEOMETRY_FIELD = /^(groundLevel|excavationDepth|slope|bottomWidth|layers|layers\.\d+\.bottomLevel|road\.(distanceFromCrest|width|height))$/;
-
 /** The parameters to draw, or null when a field of the geometry is empty or wrong. */
-function drawable(form: FormState): ExcavationParams | null {
-  const bad = (f: string) => GEOMETRY_FIELD.test(f);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function drawable(spec: AnySpec, form: FormState): any {
+  const bad = (f: string) => spec.geometry.test(f);
   if (form.missing.some(bad) || [...form.errors.keys()].some(bad)) return null;
-  const p = form.params;
-  const ok = (f: string) => !form.errors.has(f) && !form.missing.includes(f);
-  return {
-    ...p,
-    waterLevel: ok("waterLevel") ? p.waterLevel : null,
-    road: p.road && { ...p.road, trafficLoad: ok("road.trafficLoad") ? p.road.trafficLoad : null },
-  };
+  return spec.drawable(form.params, (f: string) => !form.errors.has(f) && !form.missing.includes(f));
 }
 
 /** The document of a form that is ready, or the sentence of why the template could not build it. */
-function buildDocument(form: FormState): { doc: AnalysisDocument | null; error: string | null } {
+function buildDocument(spec: AnySpec, form: FormState): { doc: AnalysisDocument | null; error: string | null } {
   if (!form.ready) return { doc: null, error: null };
   try {
-    return { doc: excavationDocument(form.params), error: null };
+    return { doc: spec.template.toDocument(form.params), error: null };
   } catch (err) {
     return { doc: null, error: err instanceof Error ? err.message : String(err) };
   }
@@ -63,6 +55,15 @@ function download(name: string, text: string) {
 export function App({ client }: { client: AnalysisClient }) {
   const [engine, setEngine] = useState<EngineState>({ kind: "loading" });
   const [draft, setDraft] = useState(() => fromQuery(window.location.search));
+  const spec = specOf(draft.template);
+  // Each template's last draft, so that switching back finds it as it was.
+  const drafts = useRef<Partial<Record<TemplateId, Draft>>>({});
+  const switchTo = (id: TemplateId) => {
+    if (id === draft.template) return;
+    drafts.current[draft.template] = draft;
+    setDraft(drafts.current[id] ?? initialDraft(id));
+    setPrevious(null);
+  };
   const [run, setRun] = useState<Run | null>(null);
   const [previous, setPrevious] = useState<ResultSummary | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -96,14 +97,14 @@ export function App({ client }: { client: AnalysisClient }) {
   }, [draft]);
 
   const form = useMemo(() => formState(draft), [draft]);
-  const { doc, error: buildError } = useMemo(() => buildDocument(form), [form]);
+  const { doc, error: buildError } = useMemo(() => buildDocument(spec, form), [spec, form]);
   const key = useMemo(() => (doc ? JSON.stringify(doc) : null), [doc]);
-  const notes = useMemo(() => (form.ready ? excavationNotes(form.params) : []), [form]);
+  const notes = useMemo(() => (form.ready ? spec.template.notes(form.params) : []), [spec, form]);
 
   // The drawing keeps the last section it could draw while a geometry field is being typed.
-  const shape = useMemo(() => drawable(form), [form]);
-  const [lastShape, setLastShape] = useState(shape);
-  if (shape && shape !== lastShape) setLastShape(shape);
+  const shape = useMemo(() => drawable(spec, form), [spec, form]);
+  const [lastShape, setLastShape] = useState(() => ({ template: draft.template, params: shape }));
+  if (shape && shape !== lastShape.params) setLastShape({ template: draft.template, params: shape });
 
   // The document last asked for: a change back to it, or the timer after Run, does not run it again.
   const lastKey = useRef<string | null>(null);
@@ -154,8 +155,8 @@ export function App({ client }: { client: AnalysisClient }) {
   const engineIssues = useMemo(() => {
     if (outcome?.kind !== "invalid") return null;
     const shown = new Set([...draftFields(draft).map(([f]) => f), ...draft.layers.map((_, i) => `layers.${i}.name`)]);
-    return issuesByField(outcome.issues, form.params, shown);
-  }, [outcome, form.params, draft]);
+    return issuesByField(outcome.issues, spec.targets(form.params), shown);
+  }, [outcome, form.params, draft, spec]);
   const errors = useMemo(() => {
     if (!engineIssues?.fields.size) return form.errors;
     const merged = new Map(engineIssues.fields);
@@ -175,25 +176,29 @@ export function App({ client }: { client: AnalysisClient }) {
   else state = engine.kind === "loading" ? { kind: "loading" } : { kind: "waiting" };
 
   const slices: SliceData[] | null = outcome?.kind === "complete" ? outcome.result.criticalSlices : null;
-  const drawn = lastShape;
+  const drawn = lastShape.template === draft.template ? lastShape.params : null;
   const sectionLabel = drawn
-    ? `Section of the excavation: ${drawn.layers.length === 1 ? "1 layer" : `${drawn.layers.length} layers`}${drawn.waterLevel !== null ? `, ground water at ${drawn.waterLevel} m` : ""}${drawn.road ? ", a working road" : ""}${slices && outcome?.kind === "complete" ? `, and the critical surface of F ${outcome.summary.fosText}` : ""}.`
+    ? `Section of ${spec.describe(drawn)}${slices && outcome?.kind === "complete" ? `, and the critical surface of F ${outcome.summary.fosText}` : ""}.`
     : "";
 
   return (
     <>
       <Header />
       <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 lg:pb-6">
-        <h1 className="text-xl font-semibold tracking-tight">{excavationTemplate.title}</h1>
+        <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <span className="text-xs text-muted-foreground">Template</span>
+          <Choices wrap label="Template" value={draft.template} onChange={switchTo} options={SPECS.map((s) => ({ value: s.template.id as TemplateId, label: s.template.title }))} />
+        </div>
+        <h1 className="text-xl font-semibold tracking-tight">{spec.template.title}</h1>
         <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-          {excavationTemplate.description} F is computed on your own computer by the cSlope engine.
+          {spec.template.description} F is computed on your own computer by the cSlope engine.
         </p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-          <Form draft={draft} onChange={setDraft} errors={errors} notes={notes} />
+          <Form key={draft.template} spec={spec} draft={draft} onChange={setDraft} errors={errors} notes={notes} />
           <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <figure className="rounded-lg border bg-card p-3">
               {drawn ? (
-                <Section params={drawn} slices={slices} label={sectionLabel} />
+                <Section shapes={spec.shapes(drawn)} layers={drawn.layers} slices={slices} label={sectionLabel} />
               ) : (
                 <p className="p-6 text-sm text-muted-foreground">The section is drawn when the geometry is filled in.</p>
               )}
@@ -206,7 +211,7 @@ export function App({ client }: { client: AnalysisClient }) {
               canDownload={!!doc}
               onRun={() => doc && key && start(doc, key)}
               onCancel={() => client.cancel()}
-              onDownload={() => doc && download("cslope-excavation.json", dumps(doc))}
+              onDownload={() => doc && download(spec.fileName, dumps(doc))}
               onCopyLink={() => {
                 const copied = navigator.clipboard?.writeText(window.location.href);
                 if (!copied) setNotice("Copy the address from the address bar.");

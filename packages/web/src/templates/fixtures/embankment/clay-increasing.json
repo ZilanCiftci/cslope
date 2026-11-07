@@ -1,0 +1,84 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-54, -10],
+      [-54, 10],
+      [-18, 10],
+      [-8, 14],
+      [0, 14],
+      [10, 10],
+      [46, 10],
+      [46, -10]
+    ],
+    "materials": [
+      {
+        "name": "Clay",
+        "model": {
+          "kind": "s-f-datum",
+          "unitWeight": 16,
+          "unitWeightSat": 16,
+          "suRef": 10,
+          "yRef": 10,
+          "rate": 1.5
+        }
+      },
+      {
+        "name": "Embankment",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 19,
+          "unitWeightSat": 19,
+          "cohesion": 0,
+          "frictionAngle": 35
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-18, 10],
+          [10, 10]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-53, 0],
+        "materialName": "Clay"
+      },
+      {
+        "point": [-4, 12],
+        "materialName": "Embankment"
+      }
+    ],
+    "waterTable": {
+      "mode": "height",
+      "value": 9.5,
+      "freeWater": false
+    },
+    "analysisLimits": {
+      "entryLeftX": -18,
+      "entryRightX": 0,
+      "exitLeftX": 10,
+      "exitRightX": 46
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false
+  }
+}

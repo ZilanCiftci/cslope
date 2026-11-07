@@ -1,17 +1,21 @@
 /**
- * The excavation template's form, rendered from its parameter
- * descriptions (EXCAVATION_PARAMETERS): one field per parameter, with its
- * unit in the label, its description as the tooltip and its problem under
- * it. Groups: Geometry, Layers, Water, Working road, Safety.
+ * A template's form, rendered from its spec (specs.ts) and its parameter
+ * descriptions: one field per parameter, with its unit in the label, its
+ * description as the tooltip and its problem under it. The template's
+ * groups (Geometry, Water, Working road, Embankment) around the Layers,
+ * then Safety.
  */
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
-import { EXCAVATION_PARAMETERS as P } from "@/templates/excavation";
-import { emptyLayer, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, newRoad, OPTIONAL_FIELDS, type Draft, type LayerDraft, type RoadDraft } from "./draft";
+import { DESIGN_PARAMETERS, LAYER_PARAMETERS } from "@/templates/common";
+import { emptyLayer, emptyText, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, withGroup, type Draft, type LayerDraft } from "./draft";
+import { descOf, type AnySpec, type GroupSpec } from "./specs";
 
 export interface FormProps {
+  /** The template's spec: its groups and fields. */
+  spec: AnySpec;
   draft: Draft;
   onChange: (draft: Draft) => void;
   /** The problem of each field, by key ("layers.0.su"). */
@@ -64,8 +68,6 @@ interface NumberFieldProps {
   value: string;
   onChange: (value: string) => void;
   errors: Map<string, string>;
-  /** The placeholder of an optional field: what empty means. */
-  empty?: string;
 }
 
 /**
@@ -88,11 +90,11 @@ const HINTS: Record<string, string> = {
 const describedBy = (id: string, error: unknown, hint: unknown, title: unknown) =>
   [error ? `${id}-error` : hint ? `${id}-hint` : null, title ? `${id}-desc` : null].filter(Boolean).join(" ") || undefined;
 
-function NumberField({ field, desc, value, onChange, errors, empty }: NumberFieldProps) {
+function NumberField({ field, desc, value, onChange, errors }: NumberFieldProps) {
   const id = useId();
   const error = errors.get(field);
   const key = field.slice(field.lastIndexOf(".") + 1);
-  const optional = OPTIONAL_FIELDS.has(key);
+  const empty = emptyText(field);
   const hint = HINTS[key];
   return (
     <Field id={id} label={desc.label} title={desc.description} error={error} hint={hint}>
@@ -105,7 +107,7 @@ function NumberField({ field, desc, value, onChange, errors, empty }: NumberFiel
         spellCheck={false}
         className={inputClass}
         value={value}
-        placeholder={optional ? empty : "Required"}
+        placeholder={empty ?? "Required"}
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy(id, error, hint, desc.description)}
         onChange={(e) => onChange(e.target.value)}
@@ -126,8 +128,8 @@ function Group({ title, children, className }: { title: string; children: ReactN
   );
 }
 
-/** A row of exclusive choices: toggle buttons with aria-pressed. */
-function Choices<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string }[]; value: T | ""; onChange: (v: T) => void }) {
+/** A row of exclusive choices: toggle buttons with aria-pressed. With `wrap`, a long label wraps within its button (on a phone). */
+export function Choices<T extends string>({ label, options, value, onChange, wrap }: { label: string; options: { value: T; label: string }[]; value: T | ""; onChange: (v: T) => void; wrap?: boolean }) {
   return (
     <div role="group" aria-label={label} className="inline-flex rounded-md border border-input p-0.5">
       {options.map((o) => (
@@ -136,7 +138,10 @@ function Choices<T extends string>({ label, options, value, onChange }: { label:
           type="button"
           aria-pressed={value === o.value}
           onClick={() => onChange(o.value)}
-          className="h-7 rounded-sm px-3 text-sm text-muted-foreground hover:text-foreground aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+          className={cn(
+            "rounded-sm px-3 text-sm text-muted-foreground hover:text-foreground aria-pressed:bg-primary aria-pressed:text-primary-foreground",
+            wrap ? "min-h-7 py-1 leading-snug" : "h-7",
+          )}
         >
           {o.label}
         </button>
@@ -150,7 +155,18 @@ const grid = "grid grid-cols-2 gap-x-3";
 /** The id of a layer's name field, which gets the focus when the layer is added or the one after it removed. */
 const nameIdOf = (layer: LayerDraft) => `${layer.key}-name`;
 
-function LayerFields({ layer, index, count, onChange, onRemove, errors }: { layer: LayerDraft; index: number; count: number; onChange: (l: LayerDraft) => void; onRemove: () => void; errors: Map<string, string> }) {
+interface LayerFieldsProps {
+  layer: LayerDraft;
+  index: number;
+  count: number;
+  /** The template's description of a layer's bottom level. */
+  bottomLevel: ParameterDescription;
+  onChange: (l: LayerDraft) => void;
+  onRemove: () => void;
+  errors: Map<string, string>;
+}
+
+function LayerFields({ layer, index, count, bottomLevel, onChange, onRemove, errors }: LayerFieldsProps) {
   const nameId = nameIdOf(layer);
   const kindId = useId();
   const f = (k: string) => `layers.${index}.${k}`;
@@ -191,24 +207,47 @@ function LayerFields({ layer, index, count, onChange, onRemove, errors }: { laye
         </Field>
         <NumberField
           field={f("bottomLevel")}
-          desc={last ? { ...P.layer.bottomLevel, description: `${P.layer.bottomLevel.description} The last layer goes on down to the model's base when that is deeper.` } : P.layer.bottomLevel}
+          desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The last layer goes on down to the model's base when that is deeper.` } : bottomLevel}
           value={layer.bottomLevel}
           onChange={(v) => onChange({ ...layer, bottomLevel: v })}
           errors={errors}
         />
         {LAYER_FIELDS[layer.kind].map((k) => (
-          <NumberField key={k} field={f(k)} desc={P.layer[k]} value={layer[k]} onChange={(v) => onChange({ ...layer, [k]: v })} errors={errors} empty="As γ" />
+          <NumberField key={k} field={f(k)} desc={LAYER_PARAMETERS[k]} value={layer[k]} onChange={(v) => onChange({ ...layer, [k]: v })} errors={errors} />
         ))}
       </div>
     </li>
   );
 }
 
-export function Form({ draft, onChange, errors, notes }: FormProps) {
-  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
-  const num = (key: "groundLevel" | "excavationDepth" | "slope" | "bottomWidth" | "tensionCrackDepth" | "waterLevel", empty?: string) => (
-    <NumberField field={key} desc={P[key]} value={draft[key]} onChange={(v) => set(key, v)} errors={errors} empty={empty} />
+/** One of the template's groups; an optional one behind a checkbox. */
+function TemplateGroup({ spec, group, draft, onChange, errors }: { spec: AnySpec; group: GroupSpec; draft: Draft; onChange: (d: Draft) => void; errors: Map<string, string> }) {
+  const toggleId = useId();
+  const on = !group.toggle || draft.on.includes(group.id);
+  const fields = (
+    <div className={cn(grid, group.toggle && "mt-3")}>
+      {group.keys.map((k) => (
+        <NumberField key={k} field={k} desc={descOf(spec, k)} value={draft.fields[k] ?? ""} onChange={(v) => onChange({ ...draft, fields: { ...draft.fields, [k]: v } })} errors={errors} />
+      ))}
+    </div>
   );
+  return (
+    <Group title={group.title} className={group.id === spec.before[0]?.id ? "border-t-0 pt-0" : undefined}>
+      {group.toggle && (
+        <div className="flex items-center gap-2">
+          <input id={toggleId} type="checkbox" className="h-4 w-4 accent-primary" checked={on} onChange={(e) => onChange(withGroup(draft, group.id, e.target.checked))} />
+          <label htmlFor={toggleId} className="text-sm" title={group.toggle.title}>
+            {group.toggle.label}
+          </label>
+        </div>
+      )}
+      {on && fields}
+    </Group>
+  );
+}
+
+export function Form({ spec, draft, onChange, errors, notes }: FormProps) {
+  const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
   const setLayer = (i: number, layer: LayerDraft) => set("layers", draft.layers.map((l, j) => (j === i ? layer : l)));
   // After adding or removing a layer, the focus goes to a layer's name (not lost on the page).
   const focus = useRef<string | null>(null);
@@ -230,22 +269,13 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
     set("layers", layers);
     setFocus(nameIdOf(layers[Math.max(0, i - 1)]));
   };
-  const road = draft.road;
-  const setRoad = (key: keyof RoadDraft, value: string) => road && set("road", { ...road, [key]: value });
-  const roadId = useId();
   const layersError = errors.get("layers");
+  const bottomLevel = (spec.template.params.layer as Record<string, ParameterDescription>).bottomLevel;
+  const groups = (list: GroupSpec[]) => list.map((g) => <TemplateGroup key={g.id} spec={spec} group={g} draft={draft} onChange={onChange} errors={errors} />);
 
   return (
     <form aria-label="Parameters" className="space-y-4" onSubmit={(e) => e.preventDefault()} noValidate>
-      <Group title="Geometry" className="border-t-0 pt-0">
-        <div className={grid}>
-          {num("groundLevel")}
-          {num("excavationDepth")}
-          {num("slope")}
-          {num("bottomWidth", "As needed")}
-          {num("tensionCrackDepth", "None")}
-        </div>
-      </Group>
+      {groups(spec.before)}
 
       <Group title="Layers">
         <p className="mb-2 text-xs text-muted-foreground">From the top down; the first starts at the ground.</p>
@@ -256,6 +286,7 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
               layer={layer}
               index={i}
               count={draft.layers.length}
+              bottomLevel={bottomLevel}
               onChange={(l) => setLayer(i, l)}
               onRemove={() => removeLayer(i)}
               errors={errors}
@@ -270,25 +301,7 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
         )}
       </Group>
 
-      <Group title="Water">
-        <div className={grid}>{num("waterLevel", "Dry")}</div>
-      </Group>
-
-      <Group title="Working road">
-        <div className="flex items-center gap-2">
-          <input id={roadId} type="checkbox" className="h-4 w-4 accent-primary" checked={road !== null} onChange={(e) => set("road", e.target.checked ? newRoad() : null)} />
-          <label htmlFor={roadId} className="text-sm" title="A fill on the ground behind the crest, with its own material and an optional traffic load.">
-            Working road behind the crest
-          </label>
-        </div>
-        {road && (
-          <div className={cn(grid, "mt-3")}>
-            {(["distanceFromCrest", "width", "height", "gamma", "gammaSat", "c", "phi", "trafficLoad"] as const).map((k) => (
-              <NumberField key={k} field={`road.${k}`} desc={P.road[k]} value={road[k]} onChange={(v) => setRoad(k, v)} errors={errors} empty={k === "trafficLoad" ? "None" : "As γ"} />
-            ))}
-          </div>
-        )}
-      </Group>
+      {groups(spec.after)}
 
       <Group title="Safety">
         <Choices
@@ -325,7 +338,7 @@ export function Form({ draft, onChange, errors, notes }: FormProps) {
             </div>
             <div className={grid}>
               {(["etaCu", "etaDrained", "variableLoadBase"] as const).map((k) => (
-                <NumberField key={k} field={`values.${k}`} desc={P.design[k]} value={draft[k]} onChange={(v) => set(k, v)} errors={errors} />
+                <NumberField key={k} field={`values.${k}`} desc={DESIGN_PARAMETERS[k]} value={draft[k]} onChange={(v) => set(k, v)} errors={errors} />
               ))}
             </div>
           </div>
