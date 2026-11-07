@@ -1176,7 +1176,7 @@ export function ResultSidebar() {
                     className="text-[11px]"
                     style={{ color: "var(--color-vsc-text-muted)" }}
                   >
-                    {selectedAnnotations.length} object(s) selected — only
+                    {selectedAnnotations.length} object(s) selected; only
                     position and anchor are shared.
                   </p>
                 </div>

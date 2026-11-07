@@ -227,7 +227,7 @@ describe("single run", () => {
     expect(store().runState).toBe("error");
     expect(store().progress).toBe(0);
     expect(store().errorMessage).toMatch(
-      /^Cannot run: 1 expression\(s\) cannot be evaluated — Exterior boundary point 1 x "missing"/,
+      /^Cannot run: 1 expression\(s\) cannot be evaluated\. Exterior boundary point 1 x "missing"/,
     );
     // No simulated progress keeps running.
     vi.advanceTimersByTime(1000);

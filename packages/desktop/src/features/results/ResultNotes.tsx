@@ -34,7 +34,7 @@ function resultNotes(result: AnalysisResult): ResultNote[] {
   if (closest) notes.push({ key: "closest-pair", text: closest, warning: true });
   const splits = result.splitFailureCount ?? 0;
   if (splits > 0) {
-    notes.push({ key: "splits", text: `${splits} material boundary split(s) failed — check the interior boundaries`, warning: true });
+    notes.push({ key: "splits", text: `${splits} material boundary split(s) failed; check the interior boundaries`, warning: true });
   }
   result.warnings?.forEach((w, i) => notes.push({ key: `${w.code}-${i}`, text: w.message, warning: true }));
   return notes;

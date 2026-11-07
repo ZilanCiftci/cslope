@@ -265,7 +265,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
     }
 
     window.alert(
-      "Results plotting dialog is available in the desktop app window mode.",
+      "The results plot is available in the desktop app.",
     );
   };
 

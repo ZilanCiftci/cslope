@@ -437,7 +437,7 @@ export function ReinforcementDialogApp() {
                     className="w-full"
                     onChange={(e) => update(selected.id, { pullout: e.target.value as ReinforcementRow["pullout"] })}
                   >
-                    <option value="none">None — ends fully anchored</option>
+                    <option value="none">None (ends fully anchored)</option>
                     <option value="bond">Bond strength along the element</option>
                     <option value="interface">Interface friction (overburden)</option>
                     <option value="development">Development length from each end</option>

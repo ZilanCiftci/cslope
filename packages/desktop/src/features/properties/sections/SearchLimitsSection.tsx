@@ -35,7 +35,7 @@ export function SearchLimitsSection({
       </label>
       {limits.enabled && (
         <div className="space-y-2 mt-1.5">
-          <WindowSubheading>Entry range (crest side — {crestSide})</WindowSubheading>
+          <WindowSubheading>Entry range (crest side, {crestSide})</WindowSubheading>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
               <Label>Min x (m)</Label>
@@ -56,7 +56,7 @@ export function SearchLimitsSection({
               />
             </label>
           </div>
-          <WindowSubheading>Exit range (toe side — {toeSide})</WindowSubheading>
+          <WindowSubheading>Exit range (toe side, {toeSide})</WindowSubheading>
           <div className="grid grid-cols-2 gap-2 text-[12px]">
             <label className="flex flex-col gap-0.5">
               <Label>Min x (m)</Label>

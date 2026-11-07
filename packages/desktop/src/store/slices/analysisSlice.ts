@@ -139,7 +139,7 @@ function workerInputs(model: ModelEntry): { slope: SlopeDefinition; options: Ana
   const problems = findExpressionErrors(model);
   if (problems.length > 0) {
     throw new Error(
-      `Cannot run: ${problems.length} expression(s) cannot be evaluated — ${problems.join("; ")}`,
+      `Cannot run: ${problems.length} expression(s) cannot be evaluated. ${problems.join("; ")}`,
     );
   }
   const slope = buildSlopeDTOFromModel(model);
