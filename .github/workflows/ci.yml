@@ -23,8 +23,9 @@ env:
   CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
 
 # Time limits: each job stops a few times its usual run time (check about
-# 1 min, desktop 6, engine 2, rust 11 with its cache), and Install after
-# 5 min, so a hung step fails within minutes instead of GitHub's 6 hours.
+# 1 min, desktop 6, engine 2, rust 11 and python 5 with their cache), and
+# Install after 5 min, so a hung step fails within minutes instead of
+# GitHub's 6 hours.
 jobs:
   # Which parts changed: the engine jobs are skipped when the engine did not.
   changes:
@@ -32,6 +33,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       engine: ${{ steps.filter.outputs.engine }}
+      python: ${{ steps.filter.outputs.python }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -45,6 +47,15 @@ jobs:
               - 'packages/engine/**'
               - 'rust-toolchain.toml'
               - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            # The Python package is in packages/engine-rs (crates/cslope-py);
+            # its tests also run the skill's examples, the app's project
+            # fixtures and the web templates' fixture documents.
+            python:
+              - 'packages/engine-rs/**'
+              - 'skills/**'
+              - 'packages/desktop/src/features/project/fixtures/**'
+              - 'packages/web/src/templates/fixtures/**'
               - '.github/workflows/ci.yml'
 
   check:
@@ -259,3 +270,50 @@ jobs:
       # The size budget of the product build (ARCHITECTURE.md §3.5)
       - name: Size budget
         run: test "$(stat -c %s packages/engine/src/wasm/cslope_wasm_bg.wasm)" -le 4194304
+
+  # The Python package (packages/engine-rs/crates/cslope-py): built in place
+  # with maturin and its tests run (the API, the builder, the command, export,
+  # the skill's examples and the web templates' fixtures against their pinned
+  # F). The wheels workflow (python.yml) builds and tests the wheels only on
+  # a py-v* tag. Not a required check yet (#86).
+  python:
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CRATE: packages/engine-rs/crates/cslope-py
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      # The toolchain of rust-toolchain.toml
+      - name: Setup Rust
+        working-directory: packages/engine-rs
+        run: rustup toolchain install
+      # Its own cache key: the release build of the binding is not the rust
+      # job's (other features and crates).
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: packages/engine-rs
+          key: python
+      # maturin as pinned in pyproject.toml and the wheels workflow; numpy
+      # for the tests of the arrays as numpy arrays.
+      - name: Install
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install maturin==1.15.0 pytest numpy
+        timeout-minutes: 5
+      - name: Build
+        working-directory: ${{ env.CRATE }}
+        env:
+          VIRTUAL_ENV: ${{ github.workspace }}/.venv
+        run: ../../../../.venv/bin/maturin develop --release
+      - name: Test
+        working-directory: ${{ env.CRATE }}
+        run: ../../../../.venv/bin/python -m pytest -q -p no:cacheprovider
