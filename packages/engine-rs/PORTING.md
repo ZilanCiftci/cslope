@@ -143,7 +143,10 @@ types, data and docs and calls the engine), and the steps below apply to
 6. **Tolerance policy (decided by the user).** The target for the factor
    of safety is 1e-6; differences up to 1e-4 are not a practical problem
    but must be explained. The goal is a faithful port, not bit identity
-   with V8: std's libm is used, and last-bit differences are accepted.
+   with V8: last-bit differences from V8 are accepted. (Since issue #61
+   the transcendental functions go through js::math and the `libm` crate,
+   so native, Python and WebAssembly give the same bits on every
+   platform.)
    Concretely:
    - geometry, slices and other intermediate values: relative 1e-9 (exact
      where the arithmetic has no transcendental functions, but don't chase
@@ -160,11 +163,9 @@ types, data and docs and calls the engine), and the steps below apply to
    The agreement figures quoted per module below (largest differences per
    surface and per search, the near-ties of `tests/allowlist.toml`) are
    measured natively, with the libm of Rust's std on the test machine
-   (glibc on Linux), against V8's own implementation of the functions:
-   they depend on that libm, not only on the port. On another platform,
-   or in WebAssembly (where std's math is a different libm), the last
-   bits of sin, cos, atan and so on differ otherwise, and so can these
-   figures and which searches meet a near-tie. A result that moves with
+   (glibc on Linux, before issue #61 moved js::math to the `libm` crate),
+   against V8's own implementation of the functions: they depend on that
+   libm, not only on the port, and so can which searches meet a near-tie. A result that moves with
    the last bit of its inputs (an unconverged iteration, a solve on the
    edge of failing) is compared only where it is well-conditioned
    (tests/solvers_branches_diff.rs measures this per result).

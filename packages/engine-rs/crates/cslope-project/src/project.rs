@@ -28,7 +28,7 @@ use serde_json::{json, Value};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::OnceLock;
 
-use cslope_engine::js::math::{max as jmax, min as jmin};
+use cslope_engine::js::math::{self as jmath, max as jmax, min as jmin};
 
 /// The manifest's `format`.
 pub const FORMAT: &str = "cslope-project";
@@ -580,7 +580,7 @@ fn is_usable(m: &Affine) -> bool {
     if !all.iter().all(|v| v.is_finite()) {
         return false;
     }
-    let scale = jmax(m.a.hypot(m.b), m.c.hypot(m.d));
+    let scale = jmax(jmath::hypot(&[m.a, m.b]), jmath::hypot(&[m.c, m.d]));
     scale > 0.0 && (m.a * m.d - m.b * m.c).abs() > 1e-9 * scale * scale
 }
 
@@ -613,7 +613,7 @@ fn legacy_transform(
         }
     };
     let r = rotation_deg * std::f64::consts::PI / 180.0;
-    let (sin, cos) = (r.sin(), r.cos());
+    let (sin, cos) = (jmath::sin(r), jmath::cos(r));
     let rotate = Affine {
         a: cos,
         b: sin,
