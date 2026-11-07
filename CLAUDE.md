@@ -45,6 +45,14 @@ cd packages/website && bun scripts/media-sizes.ts
 
 Check that the factors of safety in the images match the table. The examples are listed in packages/website/src/content/home-examples.ts.
 
+The home page also shows a screenshot of the browser version (packages/web), in light and dark. After a change to packages/web that shows on the page (the form, the drawing, the result card or the example link), recapture it:
+
+```
+(cd packages/web && bun run build) && cd packages/website && bun scripts/capture-web.ts && bun scripts/media-sizes.ts
+```
+
+Check that F in the screenshot matches the example link (SITE.appExample in packages/website/src/site.ts).
+
 ## CI
 
 CI runs the engine jobs (Rust format, lints and tests including the verification checks against packages/engine-rs/golden/verification.json; the TypeScript API tests over the WebAssembly engine, quick set) only when packages/engine-rs or packages/engine changed; the app and website checks run on every push (desktop on Linux on working branches, on Windows on main and pull requests). A weekly workflow (verification-full.yml) runs everything. Before pushing an engine change to main, run the Rust tests locally (`cd packages/engine-rs && cargo test --release`) and rebuild the committed engine if its sources changed (`bun packages/engine-rs/tools/build-wasm.ts`).

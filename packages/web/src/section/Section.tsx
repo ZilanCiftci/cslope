@@ -2,20 +2,27 @@
  * The section drawing: the template's section in SVG, drawn by hand (not
  * the app's canvas): the layers in their colors (see LAYER_FILL_OPACITY in colors.ts), the fill (the
  * road, the embankment), the water level, the load, and after a run the critical surface
- * (red, the thickest line) with its slices (the thinnest). Axes in meters.
+ * (red, the thickest line) with its slices (the thinnest), and the model's
+ * firm base (the last layer's bottom) as a thick dashed line. Axes in meters.
  * It is drawn at the width it has, so that its text stays readable on a
- * phone.
+ * phone; as a thumbnail (the phone's result bar), the same drawing scaled
+ * down, without the axes and the text.
  */
 import { useEffect, useId, useRef, useState } from "react";
 import type { SliceData } from "@cslope/engine";
 import type { Layer } from "@/templates/common";
 import { defaultLayerColor } from "@/templates/colors";
-import { lineAt, sliceSides, surfaceLine, ticks, viewOf, type Point, type SectionShapes } from "./section-geometry";
+import { fitView, lineAt, sliceSides, surfaceLine, ticks, viewOf, type Point, type SectionShapes } from "./section-geometry";
 
 /** A layer's fill: its color at LAYER_FILL_OPACITY (colors.ts) in each theme; colors.test.ts checks that these are its values. */
 const LAYER_FILL = "[fill-opacity:0.6] dark:[fill-opacity:0.4]";
 
 const MARGIN = { left: 40, right: 10, top: 34, bottom: 24 };
+/** A thumbnail's margins (no axes, no text), and the width it is drawn at before it is scaled down. */
+const THUMB_MARGIN = { left: 4, right: 4, top: 4, bottom: 6 };
+const THUMB_WIDTH = 320;
+/** The drawing is at most this many times as high as it is wide (a deep model shows more ground across instead). */
+const MAX_ASPECT = 0.45;
 
 function useWidth<T extends HTMLElement>(fallback: number) {
   const ref = useRef<T>(null);
@@ -43,22 +50,59 @@ export interface SectionProps {
   label: string;
   /** Only the outline, greyed: the layers cannot be built (the last section's layers would be stale). */
   outlineOnly?: boolean;
+  /** A small picture of the drawing (hidden from screen readers: the control around it names it). */
+  thumbnail?: boolean;
 }
 
-export function Section({ shapes: s, layers, slices, label, outlineOnly = false }: SectionProps) {
-  const [ref, width] = useWidth<HTMLDivElement>(720);
+export function Section({ shapes: s, layers, slices, label, outlineOnly = false, thumbnail = false }: SectionProps) {
+  const [ref, measured] = useWidth<HTMLDivElement>(720);
+  const width = thumbnail ? THUMB_WIDTH : measured;
+  const M = thumbnail ? THUMB_MARGIN : MARGIN;
   const surface = !outlineOnly && slices?.length ? surfaceLine(slices) : null;
-  const view = viewOf(s, surface);
+  const { view, scale } = fitView(viewOf(s, surface), s.extent, width - M.left - M.right, MAX_ASPECT * width - M.top - M.bottom);
   const top = view.y1;
-  const scale = (width - MARGIN.left - MARGIN.right) / (view.x1 - view.x0);
-  const height = Math.round((top - view.y0) * scale + MARGIN.top + MARGIN.bottom);
-  const X = (x: number) => MARGIN.left + (x - view.x0) * scale;
-  const Y = (y: number) => MARGIN.top + (top - y) * scale;
+  const height = Math.round((top - view.y0) * scale + M.top + M.bottom);
+  const X = (x: number) => M.left + (x - view.x0) * scale;
+  const Y = (y: number) => M.top + (top - y) * scale;
   const clip = useId();
   const path = (pts: Point[], close = true) => pts.map(([x, y], i) => `${i ? "L" : "M"}${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join("") + (close ? "Z" : "");
   const xTicks = ticks(view.x0, view.x1, Math.max(3, Math.floor(width / 90)));
   const yTicks = ticks(view.y0, top, Math.max(3, Math.floor(height / 50)));
   const labelX = view.x0 + 8 / scale;
+
+  // The firm base, along the bottom of the part shown; its label at the right, over the last layer.
+  const base = Y(view.y0);
+  const firmBase = (
+    <g aria-hidden="true">
+      <line x1={X(view.x0)} x2={X(view.x1)} y1={base} y2={base} className="stroke-foreground" strokeWidth={thumbnail ? 4 : 2.5} strokeDasharray={thumbnail ? "10 6" : "8 5"} />
+      {!thumbnail && (
+        <text x={X(view.x1) - 4} y={base - 6} textAnchor="end" className="fill-foreground stroke-card text-[11px] [paint-order:stroke]" strokeWidth={3} strokeLinejoin="round">
+          Firm base
+        </text>
+      )}
+    </g>
+  );
+
+  if (thumbnail)
+    return (
+      <svg viewBox={`0 0 ${width} ${height}`} aria-hidden="true" focusable="false" className="block h-full w-full" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <clipPath id={clip}>
+            <rect x={X(view.x0)} y={0} width={X(view.x1) - X(view.x0)} height={base} />
+          </clipPath>
+        </defs>
+        <g clipPath={`url(#${clip})`}>
+          {s.layers.map((poly, i) => (
+            <path key={i} d={path(poly)} fill={layers[i].color ?? defaultLayerColor(i)} className={LAYER_FILL} />
+          ))}
+          {s.fill && <path d={path(s.fill)} className="fill-muted-foreground/20" />}
+          <path d={path(s.exterior)} className="fill-none stroke-foreground" strokeWidth={2.5} strokeLinejoin="round" />
+          {s.water.length > 0 && <path d={path(s.water, false)} className="fill-none stroke-blue-800 dark:stroke-blue-400" strokeWidth={3} strokeDasharray="10 6" />}
+          {surface && <path d={path(surface, false)} className="fill-none stroke-signal" strokeWidth={6} strokeLinejoin="round" />}
+        </g>
+        {firmBase}
+      </svg>
+    );
 
   return (
     <div ref={ref} className="w-full">
@@ -119,12 +163,13 @@ export function Section({ shapes: s, layers, slices, label, outlineOnly = false 
         </>
         )}
         </g>
+        {firmBase}
         {/* Axes: elevations at the left, distances from the crest below. */}
         <g className="fill-muted-foreground text-[10px] tabular">
           {yTicks.map((y) => (
             <g key={y}>
-              <line x1={MARGIN.left - 4} x2={MARGIN.left} y1={Y(y)} y2={Y(y)} className="stroke-muted-foreground" />
-              <text x={MARGIN.left - 6} y={Y(y)} textAnchor="end" dominantBaseline="middle">
+              <line x1={M.left - 4} x2={M.left} y1={Y(y)} y2={Y(y)} className="stroke-muted-foreground" />
+              <text x={M.left - 6} y={Y(y)} textAnchor="end" dominantBaseline="middle">
                 {fmt(y)}
               </text>
             </g>
@@ -137,7 +182,7 @@ export function Section({ shapes: s, layers, slices, label, outlineOnly = false 
               </text>
             </g>
           ))}
-          <text x={MARGIN.left - 6} y={10} textAnchor="end">
+          <text x={M.left - 6} y={10} textAnchor="end">
             m
           </text>
         </g>

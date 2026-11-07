@@ -54,6 +54,9 @@ export interface Draft {
   ponded: boolean;
 }
 
+/** The id of a layer's header button in the form, which gets the focus when the layer after it is removed, or when the layer comes back by Undo. */
+export const headerIdOf = (layer: LayerDraft) => `${layer.key}-header`;
+
 /** The material models of a layer, as the form offers them, with the app's names. */
 export const LAYER_KINDS: { kind: LayerModel; label: string }[] = (["undrained", "mohr-coulomb", "impenetrable"] as const).map((kind) => ({
   kind,
