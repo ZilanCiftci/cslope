@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import math
 import os
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union, cast
 
 __all__ = ["Result"]
 
@@ -90,7 +90,7 @@ class Result:
         if self._summary is None:
             import cslope
 
-            self._summary = cslope.summarize(self.data, self._options)
+            self._summary = cast(Dict[str, Any], cslope.summarize(cast(Any, self.data), cast(Any, self._options)))
         return self._summary
 
     @property

@@ -384,13 +384,17 @@ fn definition_to_model<'py>(
     to_py(py, &model.to_json())
 }
 
-/// The index of the region of ``definition`` that holds ``point`` (the
-/// outline cut by the boundaries, as the validation splits it), or None.
+/// For each of ``points``, the index of the region of ``definition`` that
+/// holds it (the outline cut by the boundaries, as the validation splits
+/// it, split once), or None.
 #[pyfunction]
-fn region_index(definition: &Bound<'_, PyAny>, point: [f64; 2]) -> PyResult<Option<usize>> {
-    Ok(cslope_project::region_index(
+fn region_indices(
+    definition: &Bound<'_, PyAny>,
+    points: Vec<[f64; 2]>,
+) -> PyResult<Vec<Option<usize>>> {
+    Ok(cslope_project::region_indices(
         &self::definition(definition)?,
-        point,
+        &points,
     ))
 }
 
@@ -423,7 +427,7 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(normalize_model, m)?)?;
     m.add_function(wrap_pyfunction!(assign_unassigned_regions, m)?)?;
     m.add_function(wrap_pyfunction!(definition_to_model, m)?)?;
-    m.add_function(wrap_pyfunction!(region_index, m)?)?;
+    m.add_function(wrap_pyfunction!(region_indices, m)?)?;
     m.add_function(wrap_pyfunction!(project::project_read, m)?)?;
     m.add_function(wrap_pyfunction!(project::project_write, m)?)?;
     m.add_function(wrap_pyfunction!(project::input_hash_of, m)?)?;

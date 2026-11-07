@@ -9,16 +9,17 @@ reinforcement), kN/m³ and degrees; points are ``(x, y)`` with x to the
 right and y up, in the model's own direction (``orientation`` "ltr": the
 slope slides to the right, "rtl": to the left).
 
-    >>> import cslope
-    >>> m = cslope.Model("Section A")                                # doctest: +SKIP
-    >>> m.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
-    >>> clay = m.add_material("Clay", c=5, phi=30, gamma=19, gamma_sat=20)
-    >>> m.search_limits(entry=(5, 15), exit=(35, 45))
-    >>> r = m.analyse()
-    >>> r.fos, r.fos_label
-    >>> clay.c = 8                     # the result is now out of date
-    >>> m.result_is_current
-    False
+::
+
+    import cslope
+    m = cslope.Model("Section A")
+    m.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
+    clay = m.add_material("Clay", c=5, phi=30, gamma=19, gamma_sat=20)
+    m.search_limits(entry=(5, 15), exit=(35, 45))
+    r = m.analyse()
+    print(r.fos, r.fos_label)
+    clay.c = 8                         # the result is now out of date
+    print(m.result_is_current)         # False
 
 Each call checks what it can at once (a number is a number, a point lies
 in the model, a material is known), and after each change the model is read
@@ -35,10 +36,11 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import warnings
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple, Union, cast
 
-from . import _native
+from . import _native  # type: ignore[attr-defined]
 from .build import (
     _ALL_OPTION_FIELDS,
     _OPTION_KEYS,
@@ -79,6 +81,26 @@ PathLike = Union[str, "os.PathLike[str]"]
 # The app's colours for new materials and piezometric lines (store/defaults.ts).
 _MATERIAL_COLORS = ("#d4a373", "#a8c686", "#b5838d", "#6d6875", "#e5989b", "#ffb4a2")
 _PIEZO_COLORS = ("#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#ec4899")
+_COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+# What the app keeps of an option it clamps or drops (normalize.rs), for the message.
+_OPTION_RANGES = {
+    "slices": "10 to 500",
+    "iterations": "500 to 100000",
+    "refinedIterations": "0 to 100000",
+    "tolerance": "0.001 to 0.1",
+    "maxIterations": "at least 1",
+    "seismicHorizontal": "more than 0 and at most 1 (0: none)",
+    "seismicVertical": "-1 to 1 (0: none)",
+    "tensionCrackAngle": "more than 0 and less than 90 (None: none)",
+    "tensionCrackWater": "0 to 1",
+}
+
+
+def _color(v: Any) -> str:
+    if not isinstance(v, str) or not _COLOR.match(v):
+        raise ValueError("A colour is #rrggbb, not {!r}".format(v))
+    return v
 
 # A model the app's reader takes, to fill a new model or row with the app's defaults.
 _STUB_COORDINATES = [[0.0, 0.0], [10.0, 0.0], [0.0, 10.0]]
@@ -134,6 +156,7 @@ class _Item:
         return ((self._row().get("expressions") or {}).get(key)) or None
 
     def _set(self, key: str, value: Any, what: str) -> None:
+        self._row()
         expr = self._expression(key)
         if expr:
             raise _expression_error("{}'s {}".format(self._what.capitalize(), what), expr)
@@ -145,7 +168,9 @@ class _Item:
             else:
                 row[key] = value
 
-        self._model._change(apply, lambda: self._row().get(key) == value, "{} {}".format(self._what, what), value)
+        self._model._change(
+            apply, lambda: self._row().get(key) == value, "{} {}".format(self._what, what), value, lambda: self._row().get(key)
+        )
 
     def remove(self) -> None:
         """Remove it from the model."""
@@ -159,11 +184,17 @@ class _Item:
         return hash((id(self._model), self._id))
 
 
-def _field(key: str, what: str, check: Optional[Callable[[Any], Any]] = None, doc: str = "") -> Any:
+def _field(
+    key: str, what: str, check: Optional[Callable[[Any], Any]] = None, doc: str = "", optional: bool = False
+) -> Any:
+    """A property over ``row[key]``; None removes an ``optional`` field."""
+
     def get(self: _Item) -> Any:
         return copy.deepcopy(self._row().get(key))
 
     def set_(self: _Item, value: Any) -> None:
+        if value is None and not optional:
+            raise ValueError("{} cannot be None".format(what))
         self._set(key, check(value) if check is not None and value is not None else value, what)
 
     return property(get, set_, doc=doc)
@@ -188,6 +219,7 @@ def _ends_property(which: int, doc: str) -> Any:
         return _ends(self)[which]
 
     def set_(self: _Item, p: Any) -> None:
+        self._row()
         x, y = _point(p, "start" if which == 0 else "end")
         n = "1" if which == 0 else "2"
 
@@ -237,9 +269,9 @@ class Material(_Item):
             raise ValueError("A material named {!r} exists already".format(value))
         self._set("name", value, "name")
 
-    color = _field("color", "color", doc="The colour (#rrggbb).")
+    color = _field("color", "color", _color, doc="The colour (#rrggbb).")
     depth_range = _field("depthRange", "depth range", lambda v: list(_range(v, "depth_range")),
-                         doc="(top, bottom) depth range (m) where the material applies, or None.")
+                         doc="(top, bottom) depth range (m) where the material applies, or None.", optional=True)
 
     @property
     def kind(self) -> str:
@@ -285,16 +317,57 @@ class Material(_Item):
         _check_material_model(model, self.name)
         self._set("model", model, attr)
 
-    gamma = property(lambda self: self._get("gamma"), lambda self, v: self._put("gamma", v), doc="Unit weight γ (kN/m³).")
-    gamma_sat = property(lambda self: self._get("gamma_sat"), lambda self, v: self._put("gamma_sat", v),
-                         doc="Saturated unit weight γsat (kN/m³), below the water; None: γ.")
-    c = property(lambda self: self._get("c"), lambda self, v: self._put("c", v), doc="Cohesion c′ (kPa).")
-    phi = property(lambda self: self._get("phi"), lambda self, v: self._put("phi", v), doc="Friction angle φ′ (°).")
-    su = property(lambda self: self._get("su"), lambda self, v: self._put("su", v), doc="Undrained shear strength su (kPa).")
+    @property
+    def gamma(self) -> Optional[float]:
+        """Unit weight γ (kN/m³)."""
+        return self._get("gamma")
+
+    @gamma.setter
+    def gamma(self, value: Optional[float]) -> None:
+        self._put("gamma", value)
+
+    @property
+    def gamma_sat(self) -> Optional[float]:
+        """Saturated unit weight γsat (kN/m³), below the water; None: γ."""
+        return self._get("gamma_sat")
+
+    @gamma_sat.setter
+    def gamma_sat(self, value: Optional[float]) -> None:
+        self._put("gamma_sat", value)
+
+    @property
+    def c(self) -> Optional[float]:
+        """Cohesion c′ (kPa)."""
+        return self._get("c")
+
+    @c.setter
+    def c(self, value: Optional[float]) -> None:
+        self._put("c", value)
+
+    @property
+    def phi(self) -> Optional[float]:
+        """Friction angle φ′ (°)."""
+        return self._get("phi")
+
+    @phi.setter
+    def phi(self, value: Optional[float]) -> None:
+        self._put("phi", value)
+
+    @property
+    def su(self) -> Optional[float]:
+        """Undrained shear strength su (kPa)."""
+        return self._get("su")
+
+    @su.setter
+    def su(self, value: Optional[float]) -> None:
+        self._put("su", value)
 
     def remove(self) -> None:
-        """Remove the material, with its region assignments and its piezometric line assignment."""
+        """Remove the material, with its region assignments and its piezometric line assignment.
+        A model keeps at least one material, as in the app."""
         self._row()
+        if len(self._model.data["materials"]) == 1:
+            raise ValueError("Material {!r} is the model's only material; a model keeps at least one".format(self.name))
         mid = self._id
 
         def apply(d: Dict[str, Any]) -> None:
@@ -365,6 +438,7 @@ class PiezometricLine(_Points):
         raise LookupError("This piezometric line was removed from the model")
 
     def _set(self, key: str, value: Any, what: str) -> None:
+        self._row()
         expr = self._expression(key)
         if expr:
             raise _expression_error("The piezometric line's {}".format(what), expr)
@@ -373,14 +447,16 @@ class PiezometricLine(_Points):
             row = next(r for r in data["piezometricLine"]["lines"] if r.get("id") == self._id)
             row[key] = value
 
-        self._model._change(apply, lambda: self._row().get(key) == value, "piezometric line " + what, value)
+        self._model._change(
+            apply, lambda: self._row().get(key) == value, "piezometric line " + what, value, lambda: self._row().get(key)
+        )
 
     @_Points.points.setter  # type: ignore[attr-defined]
     def points(self, points: Any) -> None:
         self._set("coordinates", self._model._water_points(points), "points")
 
     name = _field("name", "name", doc="The line's name.")
-    color = _field("color", "color", doc="The colour (#rrggbb).")
+    color = _field("color", "color", _color, doc="The colour (#rrggbb).")
 
     @property
     def materials(self) -> List[str]:
@@ -390,6 +466,7 @@ class PiezometricLine(_Points):
 
     @materials.setter
     def materials(self, materials: Sequence[Union[str, Material]]) -> None:
+        self._row()
         ids = [self._model._material_id(m) for m in materials]
 
         def apply(d: Dict[str, Any]) -> None:
@@ -438,6 +515,7 @@ class DistributedLoad(_Item):
 
     @x.setter
     def x(self, x: Any) -> None:
+        self._row()
         x1, x2 = self._model._load_range(x)
         for key, v in (("x1", x1), ("x2", x2)):
             if self._expression(key):
@@ -481,7 +559,18 @@ class LineLoad(_Item):
     def __repr__(self) -> str:
         return "LineLoad(x={!r}, p={!r})".format(self.x, self.p)
 
-    x = _field("x", "x", lambda v: _number(v, "x"), doc="Where the load acts (m).")
+    @property
+    def x(self) -> float:
+        """Where the load acts (m)."""
+        return float(self._row()["x"])
+
+    @x.setter
+    def x(self, value: float) -> None:
+        self._row()
+        x = _number(value, "x")
+        self._model._within_x(x, "Line load")
+        self._set("x", x, "x")
+
     p = _field("magnitude", "p", lambda v: _positive(v, "p"), doc="The load (kN/m).")
 
     @property
@@ -492,7 +581,7 @@ class LineLoad(_Item):
     def angle(self, value: float) -> None:
         self._set("angle", _angle(value) or None, "angle")
 
-    y = _field("y", "y", lambda v: _number(v, "y"), doc="The load point's elevation (m), or None: on the ground.")
+    y = _field("y", "y", lambda v: _number(v, "y"), doc="The load point's elevation (m), or None: on the ground.", optional=True)
 
 
 def _angle(v: Any) -> float:
@@ -536,9 +625,18 @@ _PILE_FIELDS = {
 }
 
 
-def _row_fields(cls: type, fields: Dict[str, str]) -> None:
-    for attr, key in fields.items():
-        setattr(cls, attr, _field(key, attr.replace("_", " ")))
+def _nn(what: str) -> Callable[[Any], float]:
+    return lambda v: _non_negative(v, what)
+
+
+def _pos(what: str) -> Callable[[Any], float]:
+    return lambda v: _positive(v, what)
+
+
+def _text(v: Any) -> str:
+    if not isinstance(v, str):
+        raise TypeError("A label is text, not {!r}".format(v))
+    return v
 
 
 class Reinforcement(_Item):
@@ -561,6 +659,21 @@ class Reinforcement(_Item):
     kind = _field("type", "kind", _choice("anchor", "tieback", "nail", "geosynthetic"))
     start = _ends_property(0, "The head (x, y), at the face (m).")
     end = _ends_property(1, "The far end (x, y) (m).")
+    label = _field("label", "label", _text, optional=True)
+    tensile_capacity = _field("tensileCapacity", "tensile capacity", _nn("tensile_capacity"))
+    spacing = _field("spacing", "spacing", _pos("spacing"))
+    pullout = _field("pullout", "pullout", _choice("none", "bond", "interface", "development"))
+    bond_strength = _field("bondStrength", "bond strength", _nn("bond_strength"))
+    bonded_length = _field("bondedLength", "bonded length", _nn("bonded_length"))
+    prestress = _field("prestress", "prestress", _nn("prestress"), optional=True)
+    adhesion = _field("adhesion", "adhesion", _nn("adhesion"))
+    interface_friction = _field("interfaceFriction", "interface friction", _nn("interface_friction"))
+    development_length1 = _field("developmentLength1", "development length 1", _nn("development_length1"), optional=True)
+    development_length2 = _field("developmentLength2", "development length 2", _nn("development_length2"), optional=True)
+    end1_capacity = _field("end1Capacity", "end 1 capacity", _nn("end1_capacity"))
+    end2_capacity = _field("end2Capacity", "end 2 capacity", _nn("end2_capacity"))
+    direction = _field("direction", "direction", _choice("axial", "tangent", "bisector"))
+    application = _field("application", "application", _choice("active", "passive"))
 
 
 class Pile(_Item):
@@ -582,10 +695,23 @@ class Pile(_Item):
     kind = _field("type", "kind", _choice("pile", "sheet-pile"))
     start = _ends_property(0, "The top (x, y) (m).")
     end = _ends_property(1, "The toe (x, y) (m).")
+    label = _field("label", "label", _text, optional=True)
+    mode = _field("mode", "mode", _choice("force", "ito-matsui"))
+    force = _field("force", "force", _nn("force"))
+    diameter = _field("diameter", "diameter", _pos("diameter"))
+    spacing = _field("spacing", "spacing", _pos("spacing"))
+    shear_capacity = _field("shearCapacity", "shear capacity", _nn("shear_capacity"))
+    moment_capacity = _field("momentCapacity", "moment capacity", _nn("moment_capacity"))
+    bending_stiffness = _field("bendingStiffness", "bending stiffness", _nn("bending_stiffness"), optional=True)
+    angle = _field("angle", "angle", lambda v: _number(v, "angle"))
+    direction = _field("direction", "direction", _choice("tangent", "perpendicular", "angle"), optional=True)
+    application = _field("application", "application", _choice("active", "passive"))
+    location = _field("location", "location", _choice("centroid", "slip-surface"), optional=True)
 
 
-_row_fields(Reinforcement, _REINFORCEMENT_FIELDS)
-_row_fields(Pile, _PILE_FIELDS)
+# every field of the app's rows has its property
+assert all(hasattr(Reinforcement, a) for a in _REINFORCEMENT_FIELDS)
+assert all(hasattr(Pile, a) for a in _PILE_FIELDS)
 
 
 class CustomSurface(_Item):
@@ -655,16 +781,21 @@ class Model:
         data["materials"] = []
         self.data: Dict[str, Any] = data
         self._saved: Optional[Dict[str, Any]] = None
+        # the options the saved result was computed with
+        self._saved_options: Optional[Dict[str, Any]] = None
         self.backgrounds: List[Dict[str, Any]] = []
         self._result: Optional[Result] = None
+        self._project: Optional[Any] = None
 
     @classmethod
     def _of(cls, data: Dict[str, Any], saved: Optional[Dict[str, Any]], backgrounds: List[Dict[str, Any]]) -> "Model":
         m = cls.__new__(cls)
         m.data = data
         m._saved = saved
+        m._saved_options = copy.deepcopy(data.get("options")) if saved else None
         m.backgrounds = backgrounds
         m._result = None
+        m._project = None
         return m
 
     def __repr__(self) -> str:
@@ -687,20 +818,40 @@ class Model:
         kept: Optional[Callable[[], bool]] = None,
         what: str = "",
         value: Any = None,
+        held: Optional[Callable[[], Any]] = None,
     ) -> None:
-        """Apply a change to the model's dict, then read it as the app does
-        (when it can be read: an exterior and a material); ``kept`` says
-        whether the app kept the value, else the change is undone."""
-        before = copy.deepcopy(self.data)
+        """Apply a change to a copy of the model's dict, read it as the app
+        does when it opens the project (a model without an exterior or a
+        material is read with a stand-in one), and keep it; ``kept`` says
+        whether the app kept the value, else the change is undone and
+        ``held()`` (what the app would hold) is in the message."""
+        before = dict(self.data)  # the change is made to a copy: the old members stay as they are
         work = copy.deepcopy(self.data)
         apply(work)
-        new = _native.normalize_model(work) if len(work.get("coordinates") or []) >= 3 and work.get("materials") else work
+        no_exterior = len(work.get("coordinates") or []) < 3
+        no_material = not work.get("materials")
+        if no_exterior:
+            work["coordinates"] = _STUB_COORDINATES
+        if no_material:
+            work["materials"] = [_STUB_MATERIAL]
+        new = _native.normalize_model(work)
+        if no_exterior:
+            new["coordinates"] = []
+        if no_material:
+            new["materials"] = []
         self.data.clear()
         self.data.update(new)
-        if kept is not None and self._ready() and not kept():
+        if kept is not None and not kept():
+            got = held() if held is not None else None
             self.data.clear()
             self.data.update(before)
-            raise ValueError("{} = {!r} is not a value the app keeps".format(what, value))
+            option = _ALL_OPTION_FIELDS.get(what[len("options."):]) if what.startswith("options.") else None
+            allowed = _OPTION_RANGES.get(option[0]) if option else None
+            raise ValueError(
+                "{} = {!r} is not a value the app keeps ({}it would hold {!r})".format(
+                    what, value, "the app takes {}; ".format(allowed) if allowed else "", got
+                )
+            )
 
     # ── identity ──
 
@@ -715,6 +866,8 @@ class Model:
     @name.setter
     def name(self, value: str) -> None:
         name = _check_name(value)
+        if self._project is not None and any(m is not self and m.name == name for m in self._project.models):
+            raise ValueError("A model named {!r} exists already".format(name))
         self._change(lambda d: d.__setitem__("name", name))
 
     @property
@@ -839,7 +992,7 @@ class Model:
         row: Dict[str, Any] = {
             "id": self._new_id("mat", materials),
             "name": name,
-            "color": color if color is not None else _MATERIAL_COLORS[len(materials) % len(_MATERIAL_COLORS)],
+            "color": _color(color) if color is not None else _MATERIAL_COLORS[len(materials) % len(_MATERIAL_COLORS)],
             "model": model,
         }
         if depth_range is not None:
@@ -883,16 +1036,16 @@ class Model:
         p = _point(at, "at")
         if self._on_or_outside(p):
             raise ValueError("The point ({}, {}) is not inside the exterior".format(p[0], p[1]))
-        definition = _native.model_to_definition(self.data) if self._ready() else None
-
-        def region(q: Any) -> Optional[int]:
-            return None if definition is None else _native.region_index(definition, [q[0], q[1]])
-
-        target = region(p)
+        earlier = self.data["regionMaterials"]
+        regions: List[Optional[int]] = [None] * (len(earlier) + 1)
+        if self._ready():
+            definition = _native.model_to_definition(self.data)
+            regions = _native.region_indices(definition, [[p[0], p[1]]] + [a["point"] for a in earlier])
+        target = regions[0]
+        others = [a for a, r in zip(earlier, regions[1:]) if target is None or r != target]
 
         def apply(d: Dict[str, Any]) -> None:
-            kept = [a for a in d["regionMaterials"] if target is None or region(a["point"]) != target]
-            d["regionMaterials"] = kept + [{"point": [p[0], p[1]], "materialId": mid}]
+            d["regionMaterials"] = copy.deepcopy(others) + [{"point": [p[0], p[1]], "materialId": mid}]
 
         self._change(apply)
 
@@ -1149,7 +1302,13 @@ class Model:
                 else:
                     d["options"][key] = value
 
-            self._change(apply, lambda: _same_option(self.data["options"], key, value), "options." + _OPTION_KEYS[key], value)
+            self._change(
+                apply,
+                lambda: _same_option(self.data["options"], key, value),
+                "options." + _OPTION_KEYS[key],
+                value,
+                lambda: self.data["options"].get(key),
+            )
 
         return Options._over(lambda: self.data["options"], changed)
 
@@ -1174,7 +1333,7 @@ class Model:
         import cslope
 
         doc = self.definition
-        issues = cslope.validate(doc)
+        issues: List[Dict[str, Any]] = cast(Any, cslope.validate(doc))
         errors = [i for i in issues if i.get("severity", "error") == "error"]
         if errors:
             raise InvalidDefinition(errors)
@@ -1190,7 +1349,7 @@ class Model:
         if not isinstance(doc, dict):
             with open(doc, encoding="utf-8") as f:  # noqa: A001
                 doc = json.load(f)
-        definition, options = split_document(doc)
+        definition, options = split_document(cast(Dict[str, Any], doc))
         data = _native.definition_to_model(definition, id="model-1", name=_check_name(name), options=options)
         return cls._of(_native.normalize_model(data), None, [])
 
@@ -1211,11 +1370,18 @@ class Model:
         fails (the model keeps no result then)."""
         import cslope
 
-        doc = self.definition
-        errors = [i for i in cslope.validate(doc) if i.get("severity", "error") == "error"]
+        from .cli import export_document
+
+        self._need_ready("running it")
+        # the model as it is now: a change made during the run (from progress,
+        # another thread) makes the result out of date, not current
+        snapshot = copy.deepcopy(self.data)
+        doc = export_document(snapshot)
+        issues: List[Dict[str, Any]] = cast(Any, cslope.validate(cast(Any, doc)))
+        errors = [i for i in issues if i.get("severity", "error") == "error"]
         if errors:
             raise InvalidDefinition(errors)
-        data = cslope.analyse(doc, threads=threads, progress=progress, cancel=cancel)
+        data: Dict[str, Any] = cast(Any, cslope.analyse(cast(Any, doc), threads=threads, progress=cast(Any, progress), cancel=cancel))
         if (doc["options"].get("fem") or {}).get("enabled") is True:
             warnings.warn(
                 "Model {!r}: its finite element analysis runs in the app only; the limit equilibrium "
@@ -1223,10 +1389,9 @@ class Model:
                 stacklevel=2,
             )
             return Result(data, doc["options"], model_name=self.name, current=lambda: False)
-        self.set_result(data)
+        self._keep(snapshot, _native.saved_result(snapshot, result=data))
         result = self.result
         assert result is not None
-        result._options = doc["options"]
         return result
 
     @property
@@ -1240,7 +1405,7 @@ class Model:
         if self._result is None or self._result.saved is not saved:
             self._result = Result(
                 saved["result"],
-                self.data.get("options"),
+                self._saved_options,
                 model_name=self.name,
                 saved=saved,
                 current=lambda: self._saved is saved and self.result_is_current,
@@ -1275,12 +1440,16 @@ class Model:
         """Keep the result of a run of the model as it is now (an ``AnalysisResult`` in
         the model's coordinates, as ``cslope.analyse`` gives it), with its input hash."""
         self._need_ready("keeping a result")
-        self._saved = _native.saved_result(self.data, result=result)
+        self._keep(self.data, _native.saved_result(self.data, result=result))
 
     def set_error(self, message: str) -> None:
         """Keep a failed run of the model as it is now."""
         self._need_ready("keeping a result")
-        self._saved = _native.saved_result(self.data, error=message)
+        self._keep(self.data, _native.saved_result(self.data, error=message))
+
+    def _keep(self, data: Dict[str, Any], saved: Dict[str, Any]) -> None:
+        self._saved = saved
+        self._saved_options = copy.deepcopy(data.get("options"))
 
     # ── ids ──
 

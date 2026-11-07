@@ -19,6 +19,7 @@ import pytest
 import cslope
 from cslope import Model, Project, Result
 from cslope.build import _ALL_OPTION_FIELDS, _OPTION_FIELDS, Definition, InvalidDefinition, Options
+from cslope.model import _PILE_FIELDS, _REINFORCEMENT_FIELDS
 
 HERE = Path(__file__).resolve().parent
 APP_RESULTS = HERE / "data" / "app-results.cslp"
@@ -282,6 +283,122 @@ def test_options_are_the_builders():
     assert o.to_dict()["maxIterations"] == 20 and "janbuCorrection" not in o.to_dict()
 
 
+# ── the review's cases ─────────────────────────────────────────────────
+
+
+def test_a_change_during_the_run_leaves_the_result_out_of_date():
+    m = quick(slope())
+    changed = []
+
+    def progress(event):
+        if not changed:
+            changed.append(1)
+            m.material("Sand").c = 50
+
+    m.analyse(threads=2, progress=progress)
+    assert changed and not m.result_is_current and not m.result.is_current
+
+
+def test_a_saved_result_keeps_the_options_it_ran_with(tmp_path):
+    m = quick(slope())
+    m.analyse(threads=2)
+    m.options.partial_factors = cslope.swedish_partial_factors(
+        safety_class=3, eta_cu=1.0, eta_drained=1.0, variable_load_base=1.3
+    )
+    assert m.result.fos_label == "factor of safety" and m.result.to_csv().split("\r\n")[2].startswith("Min F,")
+    p = Project()
+    p.add_model(m)
+    m.analyse(threads=2)
+    p.save(tmp_path / "x.cslp")
+    m.options.partial_factors = None
+    assert Project.open(tmp_path / "x.cslp").models[0].result.fos_label == "over-design factor"
+
+
+def test_options_are_checked_before_the_model_is_complete():
+    m = Model("A")
+    with pytest.raises(ValueError, match="the app takes more than 0 and at most 1"):
+        m.options.seismic_horizontal = -0.1
+    with pytest.raises(ValueError, match="the app takes 10 to 500; it would hold 500"):
+        m.options.slices = 100000
+    m.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
+    assert m.options.slices == 30 and m.materials == []
+
+
+def test_a_model_keeps_one_material():
+    m = slope()
+    with pytest.raises(ValueError, match="only material"):
+        m.material("Sand").remove()
+
+
+def test_models_in_projects():
+    a, b = quick(slope("A")), quick(slope("B"))
+    a.analyse(threads=2)
+    b.analyse(threads=2)
+    p = Project()
+    p.add_model(a)
+    p.add_model(b)  # renumbered: its result stays (the hash does not include the id)
+    assert b.id != a.id and b.result is not None and b.result_is_current
+    with pytest.raises(ValueError, match="exists already"):
+        b.name = "A"
+    with pytest.raises(ValueError, match="another project"):
+        Project().add_model(a)
+    p.remove_model(a)
+    Project().add_model(a)
+
+
+def test_a_removed_item_cannot_be_changed():
+    m = slope()
+    r = m.add_reinforcement((20, 12), (12, 9), kind="nail")
+    pile = m.add_pile((30, 7.5), (30, 0))
+    line = m.add_piezometric_line([(0, 12), (50, 5)])
+    second = m.add_piezometric_line([(0, 10), (50, 4)])
+    r.remove()
+    pile.remove()
+    second.remove()
+    for change in (
+        lambda: setattr(r, "start", (21, 12)),
+        lambda: setattr(pile, "end", (30, 1)),
+        lambda: setattr(second, "materials", ["Sand"]),
+        lambda: setattr(r, "spacing", 2),
+    ):
+        with pytest.raises(LookupError, match="removed"):
+            change()
+    assert m.data["piezometricLine"]["materialAssignment"] == {} and line.materials == []
+
+
+def test_setters_check_as_the_add_methods_do():
+    m = slope()
+    with pytest.raises(ValueError, match="#rrggbb"):
+        m.material("Sand").color = "red"
+    with pytest.raises(ValueError, match="#rrggbb"):
+        m.add_material("X", c=1, phi=20, gamma=18, color="notacolor")
+    load = m.add_line_load(x=20, p=10)
+    with pytest.raises(ValueError, match="outside the model"):
+        load.x = 500
+    with pytest.raises(ValueError, match="cannot be None"):
+        load.p = None
+    udl = m.add_distributed_load(x=(3, 10), q=20)
+    with pytest.raises(ValueError, match="cannot be None"):
+        udl.q = None
+    assert (load.x, m.data["udls"][0]["magnitude"]) == (20, 20)
+
+
+def test_assigning_many_regions_is_quick():
+    import time
+
+    m = Model("Layers")
+    m.exterior = [(0, -50), (0, 50), (1000, 50), (1000, -50)]
+    for i in range(40):
+        m.add_material("M{}".format(i), c=5 + i, phi=25, gamma=19)
+    for i in range(39):
+        m.add_interior_boundary([(-1, 45 - 2.4 * i), (1001, 45 - 2.4 * i)])
+    t = time.perf_counter()
+    for i in range(40):
+        m.assign("M{}".format(i), at=(500, 46 - 2.4 * i))
+    assert time.perf_counter() - t < 5
+    assert len(m.assignments) == 40
+
+
 # ── JSON, the agents' path ──────────────────────────────────────────────
 
 
@@ -389,26 +506,26 @@ def every_field() -> Model:
     return m
 
 
-def _keys(value, out):
+def _keys(value):
+    """The keys of a dict, or of the dicts of a list (their own keys only:
+    a nested key never stands in for a missing one)."""
     if isinstance(value, dict):
-        out |= set(value)
-    elif isinstance(value, list):
-        for v in value:
-            _keys(v, out)
-    return out
+        return set(value)
+    return set().union(*(set(v) for v in value or [] if isinstance(v, dict)))
 
 
 def test_the_api_covers_every_field_of_the_definition():
-    doc = every_field().definition
+    m = every_field()
+    doc = m.definition
     definition = doc["definition"]
     schema = cslope.schema("slope-definition")
     defs = schema["$defs"]
 
     def missing(shape, props, written):
         allowed = NOT_WRITTEN.get(shape, {})
-        return sorted(set(props) - written - set(allowed))
+        return sorted(set(props) - set(written) - set(allowed))
 
-    gaps = {"definition": missing("definition", schema["properties"], set(definition))}
+    gaps = {"definition": missing("definition", schema["properties"], definition)}
     for shape, key in (
         ("SlopeMaterialDefinition", "materials"),
         ("MaterialBoundary", "materialBoundaries"),
@@ -424,13 +541,17 @@ def test_the_api_covers_every_field_of_the_definition():
         ("AnalysisLimits", "analysisLimits"),
         ("WaterTableDefinition", "waterTable"),
     ):
-        gaps[shape] = missing(shape, defs[shape].get("properties", {}), _keys(definition.get(key), set()))
-    gaps["UdlExcessPorePressure"] = missing(
-        "UdlExcessPorePressure",
-        defs["UdlExcessPorePressure"]["properties"],
-        _keys([u.get("excessPorePressure") for u in definition["udls"]], set()),
-    )
-    gaps["options"] = missing("options", cslope.schema("analysis-options")["properties"], set(doc["options"]))
+        gaps[shape] = missing(shape, defs[shape].get("properties", {}), _keys(definition.get(key)))
+    excess = [e for u in definition["udls"] for e in u.get("excessPorePressure") or []]
+    gaps["UdlExcessPorePressure"] = missing("UdlExcessPorePressure", defs["UdlExcessPorePressure"]["properties"], _keys(excess))
+    # every option of the engine has an attribute of Options (the model's
+    # options dict holds every option whatever the API does, so it proves nothing)
+    option_keys = {key for key, _ in _ALL_OPTION_FIELDS.values()}
+    gaps["options"] = missing("options", cslope.schema("analysis-options")["properties"], option_keys)
+    # every field of the app's reinforcement and pile rows has a property
+    ends = {"id", "type", "x1", "y1", "x2", "y2"}
+    gaps["reinforcement rows"] = sorted(_keys(m.data["reinforcements"]) - ends - set(_REINFORCEMENT_FIELDS.values()))
+    gaps["pile rows"] = sorted(_keys(m.data["piles"]) - ends - set(_PILE_FIELDS.values()))
     assert {k: v for k, v in gaps.items() if v} == {}
     # the main line carries freeWater (D-24), never the inverted followBoundary
     assert definition["waterTable"]["freeWater"] is False and "followBoundary" not in definition["waterTable"]

@@ -21,14 +21,15 @@ clamped, as the app does), in the app's JSON shape (camelCase keys).
 ``Project.save(path)`` writes what the app would write, so the app opens it
 as it was saved.
 
-    >>> import cslope
-    >>> p = cslope.Project.open("slope.cslp")  # doctest: +SKIP
-    >>> m = p.model("Section A")  # doctest: +SKIP
-    >>> m.material("Clay").c = 12  # doctest: +SKIP
-    >>> m.result_is_current  # doctest: +SKIP
-    False
-    >>> m.analyse()  # doctest: +SKIP
-    >>> p.save()  # doctest: +SKIP
+::
+
+    import cslope
+    p = cslope.Project.open("slope.cslp")
+    m = p.model("Section A")
+    m.material("Clay").c = 12
+    print(m.result_is_current)    # False
+    m.analyse()
+    p.save()
 
 The reader is strict, unlike the app's: a file the app saved with this
 schema version opens; a file of an earlier version (a JSON project, the
@@ -56,7 +57,7 @@ import warnings
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from . import _native
+from . import _native  # type: ignore[attr-defined]
 from .model import Model
 
 __all__ = [
@@ -158,10 +159,12 @@ class Project:
     ``cslope.project.open``) opens a ``.cslp`` file. ``save(path)`` writes
     what the app would write.
 
-    >>> p = Project()                                      # doctest: +SKIP
-    >>> m = p.add_model("Section A")
-    >>> ...                                                # build m (see cslope.Model)
-    >>> p.save("site.cslp")
+    ::
+
+        p = Project()
+        m = p.add_model("Section A")
+        ...                                                # build m (see cslope.Model)
+        p.save("site.cslp")
     """
 
     def __init__(self) -> None:
@@ -225,6 +228,8 @@ class Project:
             raise TypeError("add_model takes a name or a Model, not {!r}".format(model))
         if any(x is m for x in self.models):
             raise ValueError("{!r} is in the project already".format(m))
+        if m._project is not None:
+            raise ValueError("{!r} is a model of another project; remove it there first".format(m))
         if any(x.name == m.name for x in self.models):
             raise ValueError("A model named {!r} exists already".format(m.name))
         used = {x.id for x in self.models}
@@ -232,10 +237,9 @@ class Project:
             n = len(self.models) + 1
             while "model-{}".format(n) in used:
                 n += 1
-            m.data["id"] = "model-{}".format(n)
-            if m._saved is not None:
-                m._saved = None  # a result belongs to the model it was computed for
+            m.data["id"] = "model-{}".format(n)  # the input hash does not include the id: a result stays
         self.models.append(m)
+        m._project = self
         if not self.active_model_id:
             self.active_model_id = m.id
         return m
@@ -244,6 +248,7 @@ class Project:
         """Remove a model (by name or the ``Model``)."""
         m = self.model(model) if isinstance(model, str) else model
         self.models = [x for x in self.models if x is not m]
+        m._project = None
         if self.active_model_id == m.id:
             self.active_model_id = self.models[0].id if self.models else ""
 
@@ -401,6 +406,8 @@ def _open(path: Union[str, "os.PathLike[str]"], stacklevel: int = 4) -> Project:
     p = Project()
     p.manifest = doc["manifest"]
     p.models = [Model._of(m["model"], m.get("result"), list(m.get("backgrounds") or [])) for m in doc["models"]]
+    for m in p.models:
+        m._project = p
     p.assets = [Asset(a["id"], a["mime"], a["originalName"], a["addedAt"], builtins.bytes(data[a["id"]])) for a in doc["assets"]]
     p.thumbnail_png = builtins.bytes(thumbnail) if thumbnail is not None else None
     p.active_model_id = doc["activeModelId"]

@@ -214,10 +214,11 @@ The lists `materials`, `interior_boundaries`, `piezometric_lines`,
 `distributed_loads`, `line_loads`, `reinforcements`, `piles`,
 `custom_surfaces` and `block_search_objects` hold items whose properties
 change the model in place (`m.material("Clay").c = 12`); `item.remove()`
-removes one. After each change the model is read as the app reads it when
-it opens the project, so the model holds what the app will show: a value
+removes one (a model keeps at least one material, as in the app). After
+each change, also before the model has an exterior or a material, the
+model is read as the app reads it when it opens the project, so the model holds what the app will show: a value
 the app would not keep (a negative seismic coefficient, say) is refused
-with a `ValueError`, and a field the app's Parameters drive by an
+with a `ValueError` that says what the app takes, and a field the app's Parameters drive by an
 expression is not overwritten. `tests/test_objects.py` builds each of the
 app's examples with these names and gets the app's F within 1e-6, and
 checks that the names reach every field of the engine's definition (a field

@@ -25,7 +25,7 @@ import math
 import numbers
 import os
 import re
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union, cast
 
 import cslope as _cslope
 
@@ -176,7 +176,7 @@ def swedish_partial_factors(
     class 1, 2 or 3. With partial factors F is an over-design factor on
     design values, not a factor of safety. (``cslope.swedish_partial_factors``.)
     """
-    return _cslope.swedish_partial_factors(
+    return cast(Any, _cslope).swedish_partial_factors(
         safety_class=safety_class,
         eta_cu=eta_cu,
         eta_drained=eta_drained,
@@ -263,6 +263,37 @@ class Options:
     """
 
     __slots__ = ("_own", "_source", "_changed")
+
+    if TYPE_CHECKING:  # the attributes, for type checkers (read through __getattr__)
+        method: str
+        slices: int
+        iterations: int
+        refined_iterations: int
+        composite_surfaces: bool
+        search_method: str
+        interslice_function: str
+        tolerance: float
+        min_slip_depth: float
+        tension_crack_depth: float
+        seismic_horizontal: float
+        seismic_vertical: float
+        both_directions: bool
+        partial_factors: Optional[Dict[str, Any]]
+        max_iterations: int
+        min_failure_dist: float
+        min_slip_area: float
+        janbu_correction: bool
+        interslice_data_points: List[Tuple[float, float]]
+        pore_pressure_head: str
+        tension_crack_water: float
+        tension_crack_auto: Optional[bool]
+        tension_crack_angle: Optional[float]
+        non_circular_optimization: bool
+        composite_base: Optional[bool]
+        block_active_angle: Optional[Tuple[float, float]]
+        block_passive_angle: Optional[Tuple[float, float]]
+        fem: Optional[Dict[str, Any]]
+        sgi3d: Optional[Dict[str, Any]]
 
     def __init__(self, **values: Any):
         defaults = {key: copy.deepcopy(d) for key, d in _OPTION_FIELDS.values() if d is not None}
@@ -638,14 +669,14 @@ class Definition:
     def validate(self) -> List[Dict[str, Any]]:
         """The engine's issues with this document (``cslope.validate``):
         ``{"path", "code", "message", "severity"}`` dicts."""
-        return _cslope.validate(self.to_dict())
+        return cast(Any, _cslope).validate(self.to_dict())
 
     def save(self, path: PathLike) -> List[Dict[str, Any]]:
         """Validate the document and write it to ``path`` (UTF-8 JSON).
         Raises ``InvalidDefinition`` on errors (nothing is written); returns
         the warnings."""
         doc = self.to_dict()
-        issues = _cslope.validate(doc)
+        issues: List[Dict[str, Any]] = cast(Any, _cslope).validate(doc)
         errors = [i for i in issues if i.get("severity", "error") == "error"]
         if errors:
             raise InvalidDefinition(errors)

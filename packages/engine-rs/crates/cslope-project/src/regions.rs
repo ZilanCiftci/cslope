@@ -74,10 +74,18 @@ fn region_of(p: Pt, regions: &[Vec<Pt>]) -> Option<usize> {
 
 /// The index of the region of `def` (the outline cut by its boundaries, as
 /// the validation splits it) that holds `p`, or None when no region does or
-/// the boundaries cannot be split. For assigning a material to a region
-/// (the Python `Model.assign` replaces the region's earlier assignment).
+/// the boundaries cannot be split.
 pub fn region_index(def: &SlopeDefinition, p: Pt) -> Option<usize> {
-    region_of(p, &regions(def)?)
+    region_indices(def, &[p])[0]
+}
+
+/// [`region_index`] of each point, with the regions split once (the
+/// Python `Model.assign` replaces a region's earlier assignment).
+pub fn region_indices(def: &SlopeDefinition, points: &[Pt]) -> Vec<Option<usize>> {
+    match regions(def) {
+        Some(r) => points.iter().map(|p| region_of(*p, &r)).collect(),
+        None => vec![None; points.len()],
+    }
 }
 
 /// A point strictly inside region `r`: on a horizontal line between two
@@ -208,5 +216,9 @@ mod tests {
         let below = region_index(&def, [5.0, 2.0]);
         assert!(above.is_some() && below.is_some() && above != below);
         assert_eq!(region_index(&def, [15.0, 9.0]), above);
+        assert_eq!(
+            region_indices(&def, &[[5.0, 8.0], [5.0, 2.0], [99.0, 0.0]]),
+            vec![above, below, None]
+        );
     }
 }
