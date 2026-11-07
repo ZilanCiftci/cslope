@@ -217,7 +217,7 @@ export const SPECS: AnySpec[] = [excavationSpec, embankmentSpec];
 
 export type TemplateId = "excavation" | "embankment";
 
-/** The spec of a template id; the excavation's for an unknown one (and an old link without `t`). */
+/** The spec of a template id; the excavation's for an unknown or missing one. */
 export function specOf(id: string | null | undefined): AnySpec {
   return SPECS.find((s) => s.template.id === id) ?? SPECS[0];
 }

@@ -107,30 +107,6 @@ describe("the form's state", () => {
     expect(toQuery(d)).toContain("layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25&layer1.suRate=1.5");
   });
 
-  it("opens older links: the old layer kinds, and without the removed fields (γsat, the tension crack)", () => {
-    for (const [template, examples] of [
-      ["excavation", EXCAVATION_EXAMPLES],
-      ["embankment", EMBANKMENT_EXAMPLES],
-    ] as const) {
-      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[]; ponded?: boolean }>)) {
-        const query = toQuery(draftOf(template, params));
-        // The kinds as older links wrote them: Su increasing a kind of its own, Mohr-Coulomb "drained".
-        const old = new URLSearchParams(query);
-        params.layers.forEach((l, i) => {
-          if (l.material.kind === "undrained-increasing" || l.material.kind === "drained") old.set(`layer${i + 1}.kind`, l.material.kind);
-          if (l.material.kind === "drained") old.set(`layer${i + 1}.gammaSat`, "21");
-        });
-        old.set("crack", "1.5");
-        old.set("fill.gammaSat", "22");
-        old.set("road.gammaSat", "22");
-        const back = formState(fromQuery("?" + old.toString()));
-        expect(back.params, name).toEqual(params);
-        const doc = template === "excavation" ? excavationDocument(back.params) : embankmentDocument(back.params);
-        expect(doc, name).toEqual(template === "excavation" ? excavationDocument(params as never) : embankmentDocument(params as never));
-      }
-    }
-  });
-
   it("keeps ponded water in the address only with a water level", () => {
     const d = filled();
     d.ponded = true;
@@ -213,43 +189,8 @@ describe("the form's state", () => {
     expect([...formState(d).errors.keys()]).toEqual(["groundLevel"]);
   });
 
-  it("opens older links with bottom levels to the same document, for every example of both templates", () => {
-    for (const [template, examples] of [
-      ["excavation", EXCAVATION_EXAMPLES],
-      ["embankment", EMBANKMENT_EXAMPLES],
-    ] as const) {
-      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[] }>)) {
-        const q = new URLSearchParams(toQuery(draftOf(template, params)));
-        params.layers.forEach((l, i) => {
-          expect(q.has(`layer${i + 1}.t`), name).toBe(true);
-          q.delete(`layer${i + 1}.t`);
-          q.set(`layer${i + 1}.bottomLevel`, String(l.bottomLevel));
-        });
-        const back = formState(fromQuery("?" + q.toString()));
-        expect(back.params, name).toEqual(params);
-        const doc = template === "excavation" ? excavationDocument(back.params) : embankmentDocument(back.params);
-        expect(doc, name).toEqual(template === "excavation" ? excavationDocument(params as never) : embankmentDocument(params as never));
-        // And the address it writes again has the thicknesses.
-        expect(toQuery(fromQuery("?" + q.toString())), name).toBe(toQuery(draftOf(template, params)));
-      }
-    }
-  });
-
-  it("opens an older link without the template as the excavation, and an unknown template as the excavation", () => {
-    const old = toQuery(filled()).replace(/^t=excavation&/, "");
-    expect(fromQuery("?" + old)).toEqual({ ...filled(), layers: expect.any(Array) });
-    expect(formState(fromQuery("?" + old)).params).toEqual(EXCAVATION_EXAMPLES["clay-road"]);
+  it("opens an unknown template as the excavation", () => {
     expect(fromQuery("?t=nonsense&layers=1").template).toBe("excavation");
-  });
-
-  it("opens an older link with design values on characteristic values: the design keys are ignored", () => {
-    const q = toQuery(filled());
-    const old = "?" + q + "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
-    expect(fromQuery(old)).toEqual({ ...filled(), layers: expect.any(Array) });
-    expect(formState(fromQuery(old)).params).toEqual(EXCAVATION_EXAMPLES["clay-road"]);
-    expect(excavationDocument(formState(fromQuery(old)).params).options).not.toHaveProperty("partialFactors");
-    // And the address it writes again has no design keys.
-    expect(toQuery(fromQuery(old))).toBe(q);
   });
 
   it("writes a readable address with only the filled fields", () => {

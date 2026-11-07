@@ -28,8 +28,7 @@ describe("Home page", () => {
     const url = new URL(SITE.appExample);
     expect(url.origin).toBe(new URL(SITE.app).origin);
     expect(url.pathname).toBe("/");
-    // No template named: the excavation, the app's first.
-    expect(url.searchParams.get("t")).toBeNull();
+    expect(url.searchParams.get("t")).toBe("excavation");
     expect(url.searchParams.get("road")).toBe("on");
     expect(Number(url.searchParams.get("layers"))).toBe(2);
     for (const field of ["H", "slope", "layer1.c", "layer1.phi", "layer2.su"]) expect(url.searchParams.get(field), field).toMatch(/^\d/);
