@@ -95,3 +95,10 @@ def test_skill_example_as_a_script(path, tmp_path, monkeypatch, capsys):
     assert out.startswith("F "), out
     written = json.loads(copy.with_suffix(".json").read_text(encoding="utf-8"))
     assert written == json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+
+
+def test_analyze_and_analyse_are_the_same():
+    """``analyze`` is the name the docs use; ``analyse`` stays as an alias."""
+    assert cslope.analyze is cslope.analyse
+    assert {"analyze", "analyse"} <= set(cslope.__all__)
+    assert cslope.Model.analyze is cslope.Model.analyse

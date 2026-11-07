@@ -61,7 +61,7 @@ phi'             Bishop  Morgenstern-Price
 
 | | |
 |---|---|
-| `analyse(definition, options=None, *, both_directions=False, progress=None, threads=None, cancel=None)` | `run_analysis`: the `AnalysisResult` the app shows, in model coordinates |
+| `analyze(definition, options=None, *, both_directions=False, progress=None, threads=None, cancel=None)` (alias `analyse`) | `run_analysis`: the `AnalysisResult` the app shows, in model coordinates |
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | `run_fem_summary` (`_with_bounds` with `bounds=True`): `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | `analyse_reliability`, the surface mapped to model coordinates |
 | `to_canonical(definition)` | `to_canonical_slope_definition` |

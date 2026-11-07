@@ -19,7 +19,7 @@ m.material("Clay").su = 45  # the saved result is now out of date
 m.options.method = "Bishop"  # the app's Options, snake_case
 print("after the change, current:", m.result_is_current)
 
-r = m.analyse(threads=4)  # as the app runs it; kept on the model
+r = m.analyze(threads=4)  # as the app runs it; kept on the model
 print(f"F {r.fos:.3f} ({r.method}), current: {m.result_is_current}")
 p.save()  # back to the same file
 

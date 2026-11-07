@@ -49,7 +49,7 @@ Each call checks its input at once: a value the app would not keep, a boundary t
 
 <CodeFile path="packages/engine-rs/crates/cslope-py/examples/change_and_rerun.py" code={changeAndRerun} />
 
-A saved result carries a hash of the input it was computed for. When a model changes, its result is out of date (`m.result_is_current` is `False`), as the app marks it. `Project.save` writes what the app writes, with one rule: a model changed since its result and not run again is saved without the result, so that the file never shows an F for a model it was not computed for. For a model with the finite element analysis switched on, `analyse` gives the limit equilibrium result with a warning but does not keep it on the model: the finite element part runs in the app only.
+A saved result carries a hash of the input it was computed for. When a model changes, its result is out of date (`m.result_is_current` is `False`), as the app marks it. `Project.save` writes what the app writes, with one rule: a model changed since its result and not run again is saved without the result, so that the file never shows an F for a model it was not computed for. For a model with the finite element analysis switched on, `analyze` gives the limit equilibrium result with a warning but does not keep it on the model: the finite element part runs in the app only.
 
 ## Read the results
 
@@ -76,6 +76,6 @@ An **analysis document** is one model and its options as JSON: `{"format": "cslo
 
 <CodeFile path="skills/cslope/examples/single_slope.py" code={singleSlope} />
 
-`cslope.analyse(doc)` and `cslope.summarize(result, doc)` run a document from Python and give the result and its summary as dicts. The JSON schemas of the document, the options, the result and the summary are in [packages/engine/schema](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine/schema), and `cslope schema <name>` prints them; their names are listed by `cslope info`. A key the schema does not define is an error, not ignored.
+`cslope.analyze(doc)` and `cslope.summarize(result, doc)` run a document from Python and give the result and its summary as dicts. The JSON schemas of the document, the options, the result and the summary are in [packages/engine/schema](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine/schema), and `cslope schema <name>` prints them; their names are listed by `cslope info`. A key the schema does not define is an error, not ignored.
 
 The full list of names, the functions of the engine (finite elements, reliability, the `Slope` class) and the notes on threads, progress and cancelling are in the package's [README](https://github.com/ZilanCiftci/cslope/blob/main/packages/engine-rs/crates/cslope-py/README-PYPI.md). The format of a project file is in [Project files](/docs/file-format).

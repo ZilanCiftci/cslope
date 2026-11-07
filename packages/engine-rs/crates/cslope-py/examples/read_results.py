@@ -11,7 +11,7 @@ import cslope
 p = cslope.Project.open(sys.argv[1] if len(sys.argv) > 1 else "site.cslp")
 r = p.active_model.result
 if r is None:
-    sys.exit("The active model has no result: run it in the app or with m.analyse().")
+    sys.exit("The active model has no result: run it in the app or with m.analyze().")
 
 print(r.fos, r.fos_label, r.method)  # F, "factor of safety", "Bishop"
 print(r.critical_surface["text"])  # the critical surface, as the app describes it

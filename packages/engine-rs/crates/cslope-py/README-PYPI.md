@@ -53,7 +53,7 @@ p = cslope.Project.open("site.cslp")
 m = p.model("Section A")
 print(m.result.fos, m.result_is_current)        # the saved result, no run needed
 m.material("Clay").su = 35
-r = m.analyse()                                 # as the app runs it
+r = m.analyze()                                 # as the app runs it
 print(r.fos, r.fos_label, r.critical_surface["text"])
 r.to_csv("slices.csv")                          # the app's slice table
 p.save()
@@ -69,7 +69,7 @@ m.assign(clay, at=(25, 3))
 m.add_piezometric_line([(0, 12), (15, 11), (35, 5), (50, 5)])
 m.add_distributed_load(x=(3, 10), q=20)
 m.search_limits(entry=(2, 14), exit=(20, 45))
-print(m.analyse().fos)
+print(m.analyze().fos)
 p.save("site-b.cslp")
 ```
 
@@ -134,7 +134,7 @@ slope = {
     ],
 }
 
-result = cslope.analyse(slope, {"method": "Morgenstern-Price"})
+result = cslope.analyze(slope, {"method": "Morgenstern-Price"})
 print(result["minFOS"])                      # factor of safety
 print(result["criticalSurface"]["cx"],       # the critical circle
       result["criticalSurface"]["radius"])
@@ -153,11 +153,11 @@ print(summary["fos"], summary["fosLabel"])   # "factor of safety" or, with
 print(summary["method"])                     # partial factors, "over-design factor"
 ```
 
-Without options, `analyse` uses the app's defaults for a new model
+Without options, `analyze` uses the app's defaults for a new model
 (Morgenstern-Price, 30 slices, 1000 + 500 trial surfaces, composite
 surfaces; `cslope.default_options()`). **Changed:** earlier versions used the
 engine's own defaults (Bishop, 25 slices, circles only), which `Slope` still
-uses. `analyse` also takes an analysis document, the model and its options
+uses. `analyze` also takes an analysis document, the model and its options
 in one dict: `{"format": "cslope-analysis", "formatVersion": 1,
 "definition": {...}, "options": {...}}`.
 
@@ -167,7 +167,7 @@ A parameter study:
 from cslope.examples import simple_slope
 
 for phi in range(20, 41, 5):
-    r = cslope.analyse(simple_slope(friction_angle=phi), {"method": "Bishop"})
+    r = cslope.analyze(simple_slope(friction_angle=phi), {"method": "Bishop"})
     print(f"phi = {phi:2d}  F = {r['minFOS']:.3f}")
 ```
 
@@ -175,7 +175,7 @@ for phi in range(20, 41, 5):
 
 | | |
 |---|---|
-| `analyse(definition, options=None, *, both_directions=False, progress=None, threads=None, cancel=None)` | Limit equilibrium analysis: `AnalysisResult` |
+| `analyze(definition, options=None, *, both_directions=False, progress=None, threads=None, cancel=None)` | Limit equilibrium analysis: `AnalysisResult` (`analyse` is the same function) |
 | `fem_summary(definition, settings, *, bounds=False, progress=None, cancel=None, arrays="array")` | Finite element analysis as the app runs it: `FemResultSummary` |
 | `reliability(definition, options, variables, reliability, *, progress=None, threads=None, cancel=None)` | Taylor series or Monte Carlo: `ReliabilityResult` |
 | `to_canonical(definition)` | The definition turned to slide towards +x |
@@ -185,7 +185,7 @@ for phi in range(20, 41, 5):
 | `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
 | `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
 | `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |
-| `default_options()` | The defaults of `analyse` (the app's) |
+| `default_options()` | The defaults of `analyze` (the app's) |
 | `schema(name="analysis-document")`, `SCHEMA_NAMES`, `SCHEMA_VERSION` | The JSON schemas of the input and the results |
 | `validate_material_model(model)` | The errors of a material model (empty: valid) |
 | `Slope(definition)` | A slope analysed in place: `update_analysis_options`, `analyse`, `search` (every trial surface), `result()`, `fem(options)` |
