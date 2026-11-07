@@ -104,13 +104,13 @@ jobs:
         working-directory: dist
         run: python -m pytest -q -p no:cacheprovider "$GITHUB_WORKSPACE/$CRATE/tests"
 
-  # Publishing to PyPI is disabled: no trusted publisher is configured for
-  # this repository yet. To enable it: add the project on PyPI with this
-  # workflow as a trusted publisher (environment "pypi"), then remove the
-  # `if: false` below. No secrets are needed (OIDC, id-token: write).
+  # Publish to PyPI on a py-v* tag, through the trusted publisher on PyPI
+  # (this workflow, environment "pypi", which needs a maintainer's
+  # approval). No secrets are needed (OIDC, id-token: write). A run by hand
+  # only builds and tests the wheels.
   publish:
     name: Publish to PyPI
-    if: false
+    if: startsWith(github.ref, 'refs/tags/py-v')
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 15
