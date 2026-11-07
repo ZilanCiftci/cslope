@@ -17,7 +17,7 @@ use cslope_engine::model::result_warnings::{
 };
 use cslope_engine::model::slope::{AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::model::solvers::{analyse_slope, solved_effective_normals};
-use cslope_engine::model::surface_slide::frictional_surface_slide;
+use cslope_engine::model::surface_slide::{frictional_surface_slide, surface_slide_message};
 use cslope_engine::types::{
     default_analysis_options, AnalysisWarning, AnalysisWarningCode, Slice, SlopeDefinition,
 };
@@ -556,6 +556,37 @@ fn is_a_warning_of_the_limit_equilibrium_analysis_when_below_the_critical_surfac
     let mut t = slide_slope(10.0, 30.0, circle);
     analyse_slope(&mut t, &mut RunCtx::default()).unwrap();
     assert!(find(&t, AnalysisWarningCode::FrictionalSurfaceSlide).is_none());
+}
+
+#[test]
+fn names_the_friction_angle_on_characteristic_values_without_design() {
+    let s = slide(&slide_slope(0.0, 30.0, json!({}))).unwrap();
+    assert!(!s.design);
+    let m = surface_slide_message(&s, 1.3);
+    assert!(
+        m.contains("in Fill (c′ = 0, φ′ = 30.0°) is inclined at 26.6°"),
+        "{m}"
+    );
+    assert!(!m.contains("design"), "{m}");
+}
+
+#[test]
+fn names_the_design_friction_angle_when_partial_factors_apply() {
+    let mut slope = slide_slope(0.0, 30.0, json!({}));
+    let o: AnalysisOptionsPatch = serde_json::from_value(
+        json!({ "partialFactors": { "cu": 1.5, "cohesion": 1.25, "tanPhi": 1.25, "variableLoad": 1 } }),
+    )
+    .unwrap();
+    slope.update_analysis_options(&o).unwrap();
+    let s = slide(&slope).unwrap();
+    assert!(s.design);
+    // tan φ′d = tan 30° / 1.25
+    let m = surface_slide_message(&s, 1.3);
+    assert!(
+        m.contains("in Fill (c′ = 0, design φ′ = 24.8°) is inclined at 26.6°"),
+        "{m}"
+    );
+    assert!(m.contains("F = tan φ′/tan β = 0.924"), "{m}");
 }
 
 // ── shallow-surface-warning.test.ts ───────────────────────────────
