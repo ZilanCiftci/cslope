@@ -14,8 +14,13 @@ export interface ParameterDescription {
   label: string;
   /** The unit, or null for a pure number. */
   unit: string | null;
+  /** The least value (`minExclusive`: values above it); `max` the largest (Infinity: none; `maxExclusive`: values below it). */
   min: number;
   max: number;
+  minExclusive?: boolean;
+  maxExclusive?: boolean;
+  /** The range the property tests draw from, within the bounds (not a bound); the bounds when not set. */
+  typical?: [number, number];
   /** The step of the field, which is also the precision shown. */
   step: number;
   /** What it is, in one or two sentences (a tooltip). */

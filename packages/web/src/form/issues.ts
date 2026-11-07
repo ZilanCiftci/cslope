@@ -19,7 +19,7 @@ export interface IssueTargets {
 
 const MATERIAL_KEYS: Record<string, string> = {
   unitWeight: "gamma",
-  unitWeightSat: "gammaSat",
+  unitWeightSat: "gamma",
   undrainedShearStrength: "su",
   suRef: "su",
   rate: "suRate",
@@ -42,7 +42,8 @@ const FACTOR_KEYS: Record<string, string> = {
 function materialKey(message: string): string | undefined {
   // Not the material's name: a layer named "Rate" is not about the rate.
   const m = message.replace(/^Material "(?:[^"\\]|\\.)*":\s*/, "").toLowerCase();
-  if (m.includes("saturated unit weight")) return "gammaSat";
+  // "Both c and φ are zero": at c′, the first of the two.
+  if (m.includes("both c and φ")) return "c";
   if (m.includes("unit weight")) return "gamma";
   if (m.includes("friction angle")) return "phi";
   if (m.includes("cohesion")) return "c";
@@ -57,7 +58,6 @@ export function issueField(path: string, targets: IssueTargets, message = ""): s
   const [root, list, index, model, key] = parts;
   if (root === "options") {
     if (list === "partialFactors") return FACTOR_KEYS[index ?? ""] ?? "values.safetyClass";
-    if (list === "tensionCrackDepth") return "tensionCrackDepth";
     return null;
   }
   if (root !== "definition") return null;

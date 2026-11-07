@@ -20,7 +20,7 @@
     "fosLabel": "factor of safety"
   },
   "crust-over-clay": {
-    "fos": 1.2702615383104914,
+    "fos": 1.2696484270663673,
     "fosLabel": "factor of safety"
   },
   "clay-over-rock": {
@@ -36,7 +36,11 @@
     "fosLabel": "factor of safety"
   },
   "three-layers-design-sk3": {
-    "fos": 0.7027461308140932,
+    "fos": 0.7017334280942565,
     "fosLabel": "over-design factor"
+  },
+  "clay-3m-ponded": {
+    "fos": 1.6507927799434192,
+    "fosLabel": "factor of safety"
   }
 }

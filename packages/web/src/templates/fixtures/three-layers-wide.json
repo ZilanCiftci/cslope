@@ -25,7 +25,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 18,
-          "unitWeightSat": 19,
+          "unitWeightSat": 18,
           "cohesion": 3,
           "frictionAngle": 30
         }
@@ -46,7 +46,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 19,
-          "unitWeightSat": 20,
+          "unitWeightSat": 19,
           "cohesion": 1,
           "frictionAngle": 33
         }
@@ -56,7 +56,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 20,
-          "unitWeightSat": 21,
+          "unitWeightSat": 20,
           "cohesion": 0,
           "frictionAngle": 40
         }
@@ -129,7 +129,7 @@
     "intersliceFunction": "half-sine",
     "tolerance": 0.001,
     "minSlipDepth": 0,
-    "tensionCrackDepth": 1,
+    "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
     "bothDirections": false,

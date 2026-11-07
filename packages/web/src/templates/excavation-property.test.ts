@@ -28,7 +28,7 @@ function randomParams(rnd: () => number): ExcavationParams {
           distanceFromCrest: rnd() < 0.2 ? 0 : value(rnd, P.road.distanceFromCrest, 0, 12),
           width: value(rnd, P.road.width),
           height: value(rnd, P.road.height),
-          fill: { gamma: value(rnd, P.road.gamma), gammaSat: rnd() < 0.5 ? value(rnd, P.road.gammaSat) : undefined, c: value(rnd, P.road.c), phi: value(rnd, P.road.phi) },
+          fill: { gamma: value(rnd, P.road.gamma), c: value(rnd, P.road.c), phi: value(rnd, P.road.phi) },
           trafficLoad: rnd() < 0.7 ? value(rnd, P.road.trafficLoad) : null,
         }
       : null;
@@ -64,8 +64,7 @@ function randomParams(rnd: () => number): ExcavationParams {
   // The water anywhere from well below the base to above the ground (and the road).
   const waterLevel = rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * excavationDepth, groundLevel + 3) : null;
   const values = randomValues(rnd);
-  const tensionCrackDepth = rnd() < 0.3 ? value(rnd, P.tensionCrackDepth, 0, 3) : undefined;
-  return { ...shape, layers, waterLevel, values, tensionCrackDepth };
+  return { ...shape, layers, waterLevel, values, ...(waterLevel !== null && rnd() < 0.3 ? { ponded: true } : {}) };
 }
 
 describe("random parameter sets within the bounds", () => {
@@ -73,7 +72,7 @@ describe("random parameter sets within the bounds", () => {
     await initEngine();
     const seed = 20261106;
     const rnd = random(seed);
-    const seen = { road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
+    const seen = { trench: 0, road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -84,8 +83,11 @@ describe("random parameter sets within the bounds", () => {
         issues.filter((x) => x.severity === "error").map((x) => `${x.path}: ${x.message}`),
         `${where}\n${JSON.stringify(doc)}`,
       ).toEqual([]);
-      // Every layer and the road is a region of its own.
-      expect(regionCount(doc.definition), where).toBe(params.layers.length + (params.road ? 1 : 0));
+      // Every layer and the road is a region of its own; in a trench, a layer above the bottom is one on each side.
+      const bottom = params.groundLevel - params.excavationDepth;
+      const split = params.bottomWidth === null ? 0 : params.layers.filter((l) => l.bottomLevel > bottom).length;
+      expect(regionCount(doc.definition), where).toBe(params.layers.length + split + (params.road ? 1 : 0));
+      if (params.bottomWidth !== null) seen.trench++;
       if (issues.length) seen.warnings++;
       if (params.road) seen.road++;
       if (params.road && params.road.distanceFromCrest === 0) seen.roadAtCrest++;

@@ -1,5 +1,5 @@
 /**
- * Ten named parameter sets of the excavation template, with F pinned by
+ * Thirteen named parameter sets of the excavation template, with F pinned by
  * the tests (excavation.test.ts) and saved as analysis documents under
  * fixtures/ (scripts/write-fixtures.ts), so that Python's tests can run
  * the same files. The soil values are illustrative, never defaults (B5).
@@ -114,26 +114,65 @@ export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {
     groundLevel: 20,
     excavationDepth: 6,
     slope: 1,
-    bottomWidth: 10,
+    bottomWidth: null,
     layers: [{ bottomLevel: 0, material: { kind: "undrained", gamma: 17, su: 35 } }],
     waterLevel: 19,
     road: { distanceFromCrest: 1.5, width: 5, height: 1, fill: { gamma: 21, c: 2, phi: 36 }, trafficLoad: 30 },
     values: characteristic,
   },
-  /** Three layers (saturated unit weights below the water), a wide bottom, the water above the bottom, the road 10 m back, a 1 m tension crack. */
+  /** Three layers, the water above the bottom, the road 10 m back. */
   "three-layers-wide": {
     groundLevel: 5,
     excavationDepth: 6,
     slope: 2.5,
-    bottomWidth: 30,
+    bottomWidth: null,
     layers: [
-      { name: "Crust", bottomLevel: 3, material: { kind: "drained", gamma: 18, gammaSat: 19, c: 3, phi: 30 } },
+      { name: "Crust", bottomLevel: 3, material: { kind: "drained", gamma: 18, c: 3, phi: 30 } },
       { name: "Clay", bottomLevel: -3, material: { kind: "undrained-increasing", gamma: 16, su: 14, suRate: 1.2 } },
-      { name: "Silt", bottomLevel: -15, material: { kind: "drained", gamma: 19, gammaSat: 20, c: 1, phi: 33 } },
+      { name: "Silt", bottomLevel: -15, material: { kind: "drained", gamma: 19, c: 1, phi: 33 } },
     ],
     waterLevel: 1,
-    road: { distanceFromCrest: 10, width: 6, height: 1.2, fill: { gamma: 20, gammaSat: 21, c: 0, phi: 40 }, trafficLoad: 15 },
+    road: { distanceFromCrest: 10, width: 6, height: 1.2, fill: { gamma: 20, c: 0, phi: 40 }, trafficLoad: 15 },
     values: { basis: "design", safetyClass: 3, etaCu: 0.9, etaDrained: 1, variableLoadBase: 1.4 },
-    tensionCrackDepth: 1,
+  },
+  /** A trench 1 m wide at the bottom, 3 m deep with sides 1:1, in clay, the water 1 m down. */
+  "trench-1m": {
+    groundLevel: 0,
+    excavationDepth: 3,
+    slope: 1,
+    bottomWidth: 1,
+    layers: [{ name: "Clay", bottomLevel: -12, material: { kind: "undrained", gamma: 17, su: 20 } }],
+    waterLevel: -1,
+    road: null,
+    values: characteristic,
+  },
+  /** A trench 2 m wide at the bottom, 4 m deep at 1:1.5, a crust over clay with Su growing with depth, the road 2 m behind the crest. */
+  "trench-2m-road": {
+    groundLevel: 0,
+    excavationDepth: 4,
+    slope: 1.5,
+    bottomWidth: 2,
+    layers: [
+      { name: "Crust", bottomLevel: -1.5, material: { kind: "drained", gamma: 18, c: 2, phi: 32 } },
+      { name: "Clay", bottomLevel: -15, material: { kind: "undrained-increasing", gamma: 16, su: 18, suRate: 1.2 } },
+    ],
+    waterLevel: -1.5,
+    road: { distanceFromCrest: 2, width: 4, height: 0.5, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: 20 },
+    values: characteristic,
+  },
+  /** clay-5m-water with the water 2 m above the excavation bottom, ponded in the excavation. */
+  "clay-5m-ponded": {
+    groundLevel: 10,
+    excavationDepth: 5,
+    slope: 2,
+    bottomWidth: null,
+    layers: [
+      { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 25 } },
+      { bottomLevel: -20, material: { kind: "impenetrable", gamma: 24 } },
+    ],
+    waterLevel: 7,
+    ponded: true,
+    road: null,
+    values: characteristic,
   },
 };

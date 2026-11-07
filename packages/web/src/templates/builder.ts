@@ -99,7 +99,7 @@ export function materialModel(strength: Strength): MaterialModel {
   if ("impenetrable" in strength) return { kind: "impenetrable", unitWeight: gamma };
   const unitWeightSat = positive(strength.gammaSat ?? gamma, "gammaSat");
   if ("su" in strength) {
-    const su = positive(strength.su, "su");
+    const su = nonNegative(strength.su, "su");
     if (strength.suRate === undefined) return { kind: "undrained", unitWeight: gamma, unitWeightSat, undrainedShearStrength: su };
     return {
       kind: "s-f-datum",
@@ -215,9 +215,10 @@ export class Definition {
   }
 
   /** A level ground-water table at the elevation `level` (m), cut at the ground (no free water). */
-  setWaterLevel(level: number): void {
+  /** A horizontal water level; `freeWater`: water above the ground stands on it (ponded), else the level is cut at the ground. */
+  setWaterLevel(level: number, freeWater = false): void {
     if (this.water) throw new Error("The model has a piezometric line already");
-    this.water = { mode: "height", value: finite(level, "level"), freeWater: false };
+    this.water = { mode: "height", value: finite(level, "level"), freeWater };
   }
 
   /** A distributed load `q` (kPa) on the ground from x1 to x2 (m), vertical. */

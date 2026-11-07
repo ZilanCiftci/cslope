@@ -90,6 +90,7 @@ export function Section({ shapes: s, layers, slices, label }: SectionProps) {
             </text>
           );
         })}
+        {s.pond && <path d={path(s.pond)} className="fill-primary/20" />}
         {s.water.length > 0 && <path d={path(s.water, false)} className="fill-none stroke-foreground" strokeWidth={1} strokeDasharray="5 3" />}
         {s.water.length > 0 &&
           (() => {

@@ -10,7 +10,7 @@ import { swedishPartialFactors } from "./partial-factors";
 import type { ParameterDescription } from "./types";
 
 /** A parameter's bounds (the tests draw values within them). */
-export type ParameterDescriptionLike = Pick<ParameterDescription, "min" | "max" | "step">;
+export type ParameterDescriptionLike = Pick<ParameterDescription, "min" | "max" | "step" | "typical">;
 
 /** A layer's material: the kind names the fields. */
 export type LayerMaterial =
@@ -24,9 +24,8 @@ export type LayerMaterial =
     }
   | {
       kind: "drained";
+      /** The unit weight, above and below the water (kN/m³). */
       gamma: number;
-      /** The unit weight below the water (kN/m³); not set: `gamma`. */
-      gammaSat?: number;
       c: number;
       phi: number;
     }
@@ -42,11 +41,10 @@ export interface Layer {
   material: LayerMaterial;
 }
 
-/** A drained fill above the ground: the excavation's working road, the embankment. */
+/** A drained fill above the ground: the excavation's haul road, the embankment. */
 export interface Fill {
+  /** The unit weight, above and below the water (kN/m³). */
   gamma: number;
-  /** The unit weight below the water (kN/m³); not set: `gamma`. */
-  gammaSat?: number;
   c: number;
   phi: number;
 }
@@ -65,11 +63,15 @@ export interface FieldProblem {
    * ("values.etaCu"); "layers" for the list.
    */
   field: string;
-  /** The sentence the form shows. */
+  /** The sentence the form shows under the field. */
   message: string;
+  /** The sentence where the field is not at hand (a list of problems): "Layer 1: φ′ (°) must be …"; `message` when not set. */
+  general?: string;
 }
 
-export const p = (name: string, label: string, unit: string | null, min: number, max: number, step: number, description: string): ParameterDescription => ({
+type BoundOptions = Pick<ParameterDescription, "minExclusive" | "maxExclusive" | "typical">;
+
+export const p = (name: string, label: string, unit: string | null, min: number, max: number, step: number, description: string, options: BoundOptions = {}): ParameterDescription => ({
   name,
   label,
   unit,
@@ -77,36 +79,47 @@ export const p = (name: string, label: string, unit: string | null, min: number,
   max,
   step,
   description,
+  ...options,
 });
+
+/** A value with its unit: "500 kN/m³", "90°". */
+const withUnit = (v: number, unit: string | null) => (unit ? `${v}${unit === "°" ? "" : " "}${unit}` : String(v));
+
+/** A parameter's bounds in words: "from 0.5 to 20 m", "more than 0 and at most 500 kN/m³", "at least 0 kPa". */
+export function boundsText(d: ParameterDescription): string {
+  if (!d.minExclusive && !d.maxExclusive && Number.isFinite(d.max)) return `from ${d.min} to ${withUnit(d.max, d.unit)}`;
+  const low = `${d.minExclusive ? "more than" : "at least"} ${withUnit(d.min, d.unit)}`;
+  if (!Number.isFinite(d.max)) return low;
+  return `${low} and ${d.maxExclusive ? "less than" : "at most"} ${withUnit(d.max, d.unit)}`;
+}
 
 export const GROUND_LEVEL = p("groundLevel", "Ground level (m)", "m", -100, 1000, 0.1, "The elevation of the ground surface; the levels of the layers and the water are elevations too.");
 export const SLOPE = p("slope", "Slope 1:n", null, 0.5, 5, 0.1, "n horizontal per 1 vertical: 1:2 is flatter than 1:1.");
-export const TENSION_CRACK_DEPTH = p("tensionCrackDepth", "Tension crack depth (m)", "m", 0, 10, 0.1, "A dry tension crack at the top of each slip surface; 0 for none, as in the app.");
 export const WATER_LEVEL = p("waterLevel", "Ground-water level (m)", "m", -100, 1000, 0.1, "The elevation of the ground water, cut at the ground; leave out for a dry slope.");
 
 /** A layer's fields. */
 export const LAYER_PARAMETERS = {
   bottomLevel: p("bottomLevel", "Bottom level (m)", "m", -100, 1000, 0.1, "The elevation of the layer's bottom. A layer is at least 0.05 m thick."),
-  gamma: p("gamma", "Unit weight γ (kN/m³)", "kN/m³", 10, 25, 0.1, "Above the water, and below it for clay and rock."),
-  gammaSat: p("gammaSat", "Saturated unit weight γsat (kN/m³)", "kN/m³", 10, 25, 0.1, "Below the water, for a drained layer; γ when left out."),
-  su: p("su", "Su (kPa)", "kPa", 1, 500, 0.5, "The undrained shear strength; for a growing profile, its value at the top of the layer."),
-  suRate: p("suRate", "Su increase (kPa/m)", "kPa/m", 0, 10, 0.1, "The growth of Su per meter below the top of the layer (by elevation)."),
-  c: p("c", "c′ (kPa)", "kPa", 0, 100, 0.5, "The effective cohesion."),
-  phi: p("phi", "φ′ (°)", "°", 5, 45, 0.5, "The effective friction angle."),
+  // The bounds of the strengths and unit weights are the engine's (the app's Materials window takes the same).
+  gamma: p("gamma", "γ (kN/m³)", "kN/m³", 0, 500, 0.1, "The unit weight, above and below the water.", { minExclusive: true, typical: [10, 25] }),
+  su: p("su", "Su (kPa)", "kPa", 0, Infinity, 0.5, "The undrained shear strength; when it increases with depth, its value at the top of the layer.", { typical: [1, 500] }),
+  suRate: p("suRate", "Su increase rate (kPa/m)", "kPa/m", 0, Infinity, 0.1, "The increase of Su per meter below the top of the layer (by elevation). Empty: Su constant.", { typical: [0, 10] }),
+  c: p("c", "c′ (kPa)", "kPa", 0, Infinity, 0.5, "The effective cohesion. c′ and φ′ cannot both be 0.", { typical: [0, 100] }),
+  phi: p("phi", "φ′ (°)", "°", 0, 90, 0.5, "The effective friction angle. c′ and φ′ cannot both be 0.", { maxExclusive: true, typical: [5, 45] }),
 };
 
-/** A fill's fields (drained). */
+/** A fill's fields: a Mohr-Coulomb material (drained), as the app names it. */
 export const FILL_PARAMETERS = {
-  gamma: p("gamma", "Fill unit weight γ (kN/m³)", "kN/m³", 15, 24, 0.1, "Above the water."),
-  gammaSat: p("gammaSat", "Fill saturated unit weight γsat (kN/m³)", "kN/m³", 15, 24, 0.1, "Below the water; γ when left out."),
-  c: p("c", "Fill c′ (kPa)", "kPa", 0, 20, 0.5, "The effective cohesion of the fill."),
-  phi: p("phi", "Fill φ′ (°)", "°", 25, 45, 0.5, "The effective friction angle of the fill."),
+  gamma: p("gamma", "Fill γ (kN/m³)", "kN/m³", 0, 500, 0.1, "The fill's unit weight, above and below the water. The fill is a Mohr-Coulomb material (drained).", { minExclusive: true, typical: [15, 24] }),
+  c: p("c", "Fill c′ (kPa)", "kPa", 0, Infinity, 0.5, "The effective cohesion of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { typical: [0, 20] }),
+  phi: p("phi", "Fill φ′ (°)", "°", 0, 90, 0.5, "The effective friction angle of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { maxExclusive: true, typical: [25, 45] }),
 };
 
 /** The design values' fields. */
 export const DESIGN_PARAMETERS = {
-  etaCu: p("etaCu", "η undrained", null, 0.5, 1.2, 0.05, "The conversion factor on Su: γcu = 1.5 / η."),
-  etaDrained: p("etaDrained", "η drained", null, 0.5, 1.2, 0.05, "The conversion factor on c′ and tan φ′: γc′ = γφ′ = 1.3 / η."),
+  // η as the app's options take it (0.1 or more); γQ / γd from 1 to 1.5 (the app offers 1.3, 1.4 and 1.5).
+  etaCu: p("etaCu", "η undrained", null, 0.1, Infinity, 0.05, "The conversion factor on Su: γcu = 1.5 / η.", { typical: [0.5, 1.2] }),
+  etaDrained: p("etaDrained", "η drained", null, 0.1, Infinity, 0.05, "The conversion factor on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.", { typical: [0.5, 1.2] }),
   variableLoadBase: p("variableLoadBase", "γQ / γd", null, 1, 1.5, 0.1, "γQ = this factor × γd: variable loads Q_d = γQ γd Q_k, γd = 0.83, 0.91, 1.0 in safety class 1, 2, 3. The governing document decides γQ."),
 };
 
@@ -126,19 +139,21 @@ export function layerName(layer: Layer, index: number): string {
   return layer.name?.trim() || `Layer ${index + 1}`;
 }
 
-const within = (v: number, d: ParameterDescription) => Number.isFinite(v) && v >= d.min && v <= d.max;
+const within = (v: number, d: ParameterDescription) =>
+  Number.isFinite(v) && (d.minExclusive ? v > d.min : v >= d.min) && (d.maxExclusive ? v < d.max : v <= d.max);
 
 /** Collects the problems of a parameter set. */
 export class Problems {
   readonly list: FieldProblem[] = [];
 
-  add(field: string, message: string): void {
-    this.list.push({ field, message });
+  add(field: string, message: string, general?: string): void {
+    this.list.push({ field, message, ...(general ? { general } : {}) });
   }
 
   /** A value out of its bounds, with `where` before the label ("Layer 1: "). */
   check(field: string, v: number, d: ParameterDescription, where = ""): void {
-    if (!within(v, d)) this.add(field, `${where}${d.label} must be from ${d.min} to ${d.max}${d.unit ? ` ${d.unit}` : ""}.`);
+    // At the field the label is beside it: "Must be at least 0°…"; elsewhere with the layer and the label, without its unit.
+    if (!within(v, d)) this.add(field, `Must be ${boundsText(d)}.`, `${where}${d.label.replace(/ \([^)]*\)$/, "")} must be ${boundsText(d)}.`);
   }
 
   /**
@@ -178,7 +193,6 @@ export class Problems {
       if (m.kind === "undrained" || m.kind === "undrained-increasing") this.check(f("su"), m.su, P.su, where);
       if (m.kind === "undrained-increasing") this.check(f("suRate"), m.suRate, P.suRate, where);
       if (m.kind === "drained") {
-        if (m.gammaSat !== undefined) this.check(f("gammaSat"), m.gammaSat, P.gammaSat, where);
         this.check(f("c"), m.c, P.c, where);
         this.check(f("phi"), m.phi, P.phi, where);
       }
@@ -190,7 +204,6 @@ export class Problems {
   /** A fill's values, its fields under `group` ("road.gamma", "fill.c"). */
   fill(fill: Fill, group: string, where: string, P: typeof FILL_PARAMETERS = FILL_PARAMETERS): void {
     this.check(`${group}.gamma`, fill.gamma, P.gamma, where);
-    if (fill.gammaSat !== undefined) this.check(`${group}.gammaSat`, fill.gammaSat, P.gammaSat, where);
     this.check(`${group}.c`, fill.c, P.c, where);
     this.check(`${group}.phi`, fill.phi, P.phi, where);
   }
@@ -225,7 +238,7 @@ function strengthOf(material: LayerMaterial, top: number): Strength {
     case "undrained-increasing":
       return { su: material.su, suRate: material.suRate, suLevel: top, gamma: material.gamma };
     case "drained":
-      return { c: material.c, phi: material.phi, gamma: material.gamma, gammaSat: material.gammaSat };
+      return { c: material.c, phi: material.phi, gamma: material.gamma };
     case "impenetrable":
       return { impenetrable: true, gamma: material.gamma };
   }

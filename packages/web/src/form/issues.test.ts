@@ -26,7 +26,7 @@ describe("the engine's issues at the fields", () => {
     expect(issueField("/definition/udls/0/magnitude", targets)).toBe("road.trafficLoad");
     expect(issueField("/definition/waterTable/value", targets)).toBe("waterLevel");
     expect(issueField("/options/partialFactors/cu", targets)).toBe("values.etaCu");
-    expect(issueField("/options/tensionCrackDepth", targets)).toBe("tensionCrackDepth");
+    expect(issueField("/options/tensionCrackDepth", targets)).toBeNull();
     expect(issueField("/definition/coordinates/3", targets)).toBeNull();
     expect(issueField("/definition/materials/5/model/cohesion", targets)).toBeNull();
   });
@@ -61,7 +61,7 @@ describe("the engine's issues at the fields", () => {
     const issue = (message: string, severity: "error" | "warning" = "error") => ({ path: "/definition/materials/0/model", code: "invalid-material-model", message, severity });
     const named = issue('Material "Rate": Unit weight (γ) must be a positive number.');
     const warning = issue('Material "Layer 1": Unit weight (γ) is low.', "warning");
-    const hidden = issue('Material "Layer 1": Saturated unit weight (γsat) must be a positive number.');
+    const hidden = issue('Material "Layer 1": The c-factor must be ≥ 0.');
     const r = issuesByField([named, warning, hidden], targets, shown);
     expect(Object.fromEntries(r.fields)).toEqual({ "layers.0.gamma": named.message });
     expect(r.warnings).toEqual([warning]);
