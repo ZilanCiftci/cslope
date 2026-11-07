@@ -222,7 +222,7 @@ function LayerFields({ layer, index, count, bottomLevel, onChange, onRemove, err
         </Field>
         <NumberField
           field={f("bottomLevel")}
-          desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The last layer goes on down to the model's base when that is deeper.` } : bottomLevel}
+          desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The model ends at the last layer's bottom, treated as firm ground.` } : bottomLevel}
           value={layer.bottomLevel}
           onChange={(v) => onChange({ ...layer, bottomLevel: v })}
           errors={errors}

@@ -51,9 +51,11 @@ describe("the geometry rules", () => {
     ]);
     expect(def.orientation).toBe("ltr");
     expect(def.waterTable).toBeUndefined();
-    // A shallow layer: the base 3h below the ground, or half the foot's width (6 + 2 × 2.5 × 1 = 11 m) when that is deeper.
-    expect(embankmentGeometry({ ...base, embankmentHeight: 1, layers: [clay(15, -0.5)] })).toMatchObject({ base: -5.5, left: -8.5 - 9.75, right: 2.5 + 9.75 });
+    // A shallow layer: the base at its bottom, the sides at least 3h.
+    expect(embankmentGeometry({ ...base, embankmentHeight: 1, layers: [clay(15, -0.5)] })).toMatchObject({ base: -0.5, left: -8.5 - 3, right: 2.5 + 3 });
+    // The recommended depth: 3h, or half the foot's width when that is more.
     expect(modelDepth({ embankmentHeight: 4, crestWidth: 2, slope: 1 })).toBe(12);
+    expect(modelDepth({ embankmentHeight: 1, crestWidth: 6, slope: 2.5 })).toBe(5.5);
   });
 
   it("lets surfaces enter on the embankment (the crest and the far side) and exit from the crest's edge on: the face, the toe, the ground", () => {
@@ -96,11 +98,14 @@ describe("the geometry rules", () => {
     expect(regionCount(def)).toBe(4);
   });
 
-  it("says when the last layer goes on below its bottom level", () => {
+  it("ends at the last layer's bottom as firm ground, and says so when that is shallower than recommended", () => {
     expect(embankmentNotes(base)).toEqual([]);
+    // 3 m high, B 6 m, 1:2.5: half the foot's width is 10.5 m.
+    expect(embankmentNotes({ ...base, layers: [clay(15, -10.5)] })).toEqual([]);
     expect(embankmentNotes({ ...base, layers: [clay(15, -2)] })).toEqual([
-      "Clay goes on below its bottom level -2 m, down to -10.5 m, 3h, or half the embankment's width at its foot, below the ground: the model needs that depth.",
+      "The model ends at the last layer's bottom (-2 m), treated as firm ground. If the soil continues deeper, enter its real bottom: a deeper base can give a lower F.",
     ]);
+    expect(embankmentDocument({ ...base, layers: [clay(15, -2)] }).definition.coordinates[0]).toEqual([embankmentGeometry({ ...base, layers: [clay(15, -2)] }).left, -2]);
     expect(embankmentTemplate.notes({ ...base, slope: 0 })).toEqual([]);
   });
 
@@ -234,7 +239,7 @@ function deepened(params: EmbankmentParams): AnalysisDocument {
   return doc;
 }
 
-/** Wide embankments on a uniform clay whose layer ends 0.5 m down: the model's own depth decides (the review's cases). */
+/** Wide embankments on a uniform clay that ends at the recommended depth (the review's cases). */
 const WIDE: Record<string, EmbankmentParams> = Object.fromEntries(
   (
     [
@@ -242,11 +247,14 @@ const WIDE: Record<string, EmbankmentParams> = Object.fromEntries(
       [3, 30, 12],
       [2, 60, 10],
     ] as const
-  ).map(([h, B, su]) => [`h ${h} m, B ${B} m, Su ${su} kPa`, { ...base, embankmentHeight: h, crestWidth: B, slope: 2, crestLoad: 20, layers: [clay(su, -0.5)] }]),
+  ).map(([h, B, su]) => [`h ${h} m, B ${B} m, Su ${su} kPa`, { ...base, embankmentHeight: h, crestWidth: B, slope: 2, crestLoad: 20, layers: [clay(su, -modelDepth({ embankmentHeight: h, crestWidth: B, slope: 2 }))] }]),
 );
 
 describe("the model's depth", () => {
-  for (const [name, params] of [...Object.entries(EMBANKMENT_EXAMPLES), ...Object.entries(WIDE)]) {
+  // Only where the last layer reaches the recommended depth: a shallower firm base is the user's (a note says so).
+  const deepEnough = Object.entries(EMBANKMENT_EXAMPLES).filter(([, p]) => !embankmentNotes(p).some((n) => n.startsWith("The model ends")));
+  it("covers every example", () => expect(deepEnough).toHaveLength(Object.keys(EMBANKMENT_EXAMPLES).length));
+  for (const [name, params] of [...deepEnough, ...Object.entries(WIDE)]) {
     it(`${name}: twice as deep, F does not change beyond 1e-3`, async () => {
       const own = (await runDocument(embankmentDocument(params))).summary.fos!;
       const deep = (await runDocument(deepened(params))).summary.fos!;

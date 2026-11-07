@@ -1,14 +1,14 @@
 // @vitest-environment node
 /**
  * Random parameter sets within the bounds (thin layers, a road at the
- * crest, an excavation deeper than every layer, water above the ground):
+ * crest, a base shallower than recommended, water above the ground):
  * every set `excavationProblems` accepts gives a document the engine
  * validates without an error. A failure prints the seed and the set.
  */
 import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { regionCount } from "./regions";
-import { EXCAVATION_PARAMETERS as P, MIN_LAYER_THICKNESS, excavationDocument, excavationProblems, type ExcavationParams, type Layer } from "./excavation";
+import { EXCAVATION_PARAMETERS as P, MIN_LAYER_THICKNESS, RECOMMENDED_DEPTH, excavationDocument, excavationNotes, excavationProblems, type ExcavationParams, type Layer } from "./excavation";
 import { material, random, randomValues, value } from "./random-params";
 
 /**
@@ -32,8 +32,10 @@ function randomParams(rnd: () => number): ExcavationParams {
           trafficLoad: rnd() < 0.7 ? value(rnd, P.road.trafficLoad) : null,
         }
       : null;
-  // The deepest layer: above the bottom now and then (an excavation deeper than every layer).
-  const deepest = Math.max(P.layer.bottomLevel.min, Number((groundLevel - Math.max(0.5, rnd() * 5 * excavationDepth)).toFixed(1)));
+  // The last layer's bottom (the model's base): mostly at or below the recommended 3H, now and then
+  // shallower (a note), but always below the excavation bottom.
+  const depth = rnd() < 0.85 ? RECOMMENDED_DEPTH * excavationDepth * (1 + rnd()) : excavationDepth + 0.1 + rnd() * (RECOMMENDED_DEPTH - 1) * excavationDepth;
+  const deepest = Math.max(P.layer.bottomLevel.min, Math.floor((groundLevel - depth) * 10) / 10);
   const shape: ExcavationParams = {
     groundLevel,
     excavationDepth,
@@ -71,7 +73,7 @@ describe("random parameter sets within the bounds", () => {
     await initEngine();
     const seed = 20261106;
     const rnd = random(seed);
-    const seen = { road: 0, roadAtCrest: 0, deeperThanLayers: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
+    const seen = { road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -87,7 +89,10 @@ describe("random parameter sets within the bounds", () => {
       if (issues.length) seen.warnings++;
       if (params.road) seen.road++;
       if (params.road && params.road.distanceFromCrest === 0) seen.roadAtCrest++;
-      if (params.layers.every((l) => l.bottomLevel > params.groundLevel - params.excavationDepth)) seen.deeperThanLayers++;
+      const shallow = params.layers[params.layers.length - 1].bottomLevel > params.groundLevel - RECOMMENDED_DEPTH * params.excavationDepth + 1e-9;
+      expect(excavationNotes(params).some((n) => n.startsWith("The model ends")), where).toBe(shallow);
+      if (shallow) seen.shallowBase++;
+      else seen.deepBase++;
       if (params.waterLevel !== null && params.waterLevel > params.groundLevel) seen.waterAboveGround++;
       if (params.layers.some((l, k) => (k === 0 ? params.groundLevel : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
       if (params.values.basis === "design") seen.design++;

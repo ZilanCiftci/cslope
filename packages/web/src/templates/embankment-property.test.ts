@@ -1,7 +1,7 @@
 // @vitest-environment node
 /**
- * Random parameter sets within the bounds (thin layers, a layer shallower
- * than the model's base, water above the ground and in the embankment, a
+ * Random parameter sets within the bounds (thin layers, a base shallower
+ * than recommended, water above the ground and in the embankment, a
  * load on the crest): every set `embankmentProblems` accepts gives a
  * document the engine validates without an error, with every layer and the
  * embankment a region of its own. A failure prints the seed and the set.
@@ -9,15 +9,19 @@
 import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { MIN_LAYER_THICKNESS } from "./common";
-import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentProblems, modelDepth, type EmbankmentParams } from "./embankment";
+import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentNotes, embankmentProblems, modelDepth, type EmbankmentParams } from "./embankment";
 import { material, random, randomValues, value } from "./random-params";
 import { regionCount } from "./regions";
 
 function randomParams(rnd: () => number): EmbankmentParams {
   const groundLevel = value(rnd, P.groundLevel, -20, 100);
   const embankmentHeight = value(rnd, P.embankmentHeight);
-  // The deepest layer: now and then above the model's base (2h below the ground).
-  const deepest = Math.max(P.layer.bottomLevel.min, Number((groundLevel - Math.max(0.5, rnd() * 5 * embankmentHeight)).toFixed(1)));
+  const crestWidth = value(rnd, P.crestWidth);
+  const slope = value(rnd, P.slope);
+  // The last layer's bottom (the model's base): mostly at or below the recommended depth, now and then shallower (a note).
+  const recommended = modelDepth({ embankmentHeight, crestWidth, slope });
+  const depth = rnd() < 0.85 ? recommended * (1 + rnd()) : 0.2 + rnd() * (recommended - 0.2);
+  const deepest = Math.max(P.layer.bottomLevel.min, Math.floor((groundLevel - depth) * 10) / 10);
   const levels: number[] = [];
   let top = groundLevel;
   const wanted = Math.floor(rnd() * 5);
@@ -33,8 +37,8 @@ function randomParams(rnd: () => number): EmbankmentParams {
   return {
     groundLevel,
     embankmentHeight,
-    crestWidth: value(rnd, P.crestWidth),
-    slope: value(rnd, P.slope),
+    crestWidth,
+    slope,
     fill: { gamma: value(rnd, P.fill.gamma), gammaSat: rnd() < 0.5 ? value(rnd, P.fill.gammaSat) : undefined, c: value(rnd, P.fill.c), phi: value(rnd, P.fill.phi) },
     crestLoad: rnd() < 0.6 ? value(rnd, P.crestLoad) : null,
     layers: [...levels, deepest].map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
@@ -50,7 +54,7 @@ describe("random embankments within the bounds", () => {
     await initEngine();
     const seed = 20261107;
     const rnd = random(seed);
-    const seen = { load: 0, shallowLayers: 0, waterInEmbankment: 0, thin: 0, design: 0, layered: 0 };
+    const seen = { load: 0, shallowLayers: 0, deepLayers: 0, waterInEmbankment: 0, thin: 0, design: 0, layered: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -64,7 +68,10 @@ describe("random embankments within the bounds", () => {
       expect(regionCount(doc.definition), where).toBe(params.layers.length + 1);
       const G = params.groundLevel;
       if (params.crestLoad) seen.load++;
-      if (params.layers[params.layers.length - 1].bottomLevel > G - modelDepth(params)) seen.shallowLayers++;
+      const shallow = params.layers[params.layers.length - 1].bottomLevel > G - modelDepth(params) + 1e-9;
+      expect(embankmentNotes(params).some((n) => n.startsWith("The model ends")), where).toBe(shallow);
+      if (shallow) seen.shallowLayers++;
+      else seen.deepLayers++;
       if (params.waterLevel !== null && params.waterLevel > G) seen.waterInEmbankment++;
       if (params.layers.some((l, k) => (k === 0 ? G : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
       if (params.values.basis === "design") seen.design++;

@@ -14,10 +14,10 @@
  *   ground ── (−B − nh, G)                    toe (nh, G) ── ground ── edge
  *
  * - The model reaches EXTENT_FACTOR × its depth (crest to base), and at
- *   least 3h, beyond each toe; its base is MODEL_DEPTH below the ground
- *   (3h, and half the embankment's width at its foot), or the
- *   deepest layer's bottom when that is deeper. A test widens every
- *   example 2× and finds F unchanged.
+ *   least 3h, beyond each toe. Its base is the last layer's bottom, as
+ *   typed, treated as firm ground; a note says when it is less than
+ *   `modelDepth` below the ground. A test widens every example 2× and
+ *   finds F unchanged.
  * - Each layer level is a vertex of the outline at both edges, and its
  *   interior boundary runs between them; one region assignment per layer.
  * - The embankment is its own region above the ground, its line on the
@@ -42,7 +42,8 @@ import {
   fmt,
   GROUND_LEVEL,
   LAYER_PARAMETERS,
-  lastLayerNote,
+  MIN_LAYER_THICKNESS,
+  shallowBaseNote,
   p,
   partialFactorsOf,
   Problems,
@@ -111,11 +112,12 @@ export interface EmbankmentGeometry {
 }
 
 /**
- * How deep the model reaches below the ground when the layers do not go
- * deeper: 3h, and half the embankment's width at its foot (B + 2nh), since
- * a wide embankment on uniform clay fails deep, and a base closer than that
- * acts as a firm bottom and raises F. A test deepens every example 2× and
- * finds F unchanged.
+ * How deep below the ground the last layer's bottom should reach: 3h, and
+ * half the embankment's width at its foot (B + 2nh), since a wide
+ * embankment on uniform clay fails deep, and a firm base closer than that
+ * cuts the surface off and can raise F. A note says when the layers end
+ * higher; a test deepens the examples that reach it 2× and finds F
+ * unchanged.
  */
 export function modelDepth(params: Pick<EmbankmentParams, "embankmentHeight" | "crestWidth" | "slope">): number {
   const h = params.embankmentHeight;
@@ -127,7 +129,7 @@ export function embankmentGeometry(params: EmbankmentParams): EmbankmentGeometry
   const h = params.embankmentHeight;
   const nh = params.slope * h;
   const last = params.layers[params.layers.length - 1];
-  const base = Math.min(G - modelDepth(params), last ? last.bottomLevel : Infinity);
+  const base = last ? last.bottomLevel : G - MIN_LAYER_THICKNESS;
   const reach = Math.max(3 * h, EXTENT_FACTOR * (G + h - base));
   const crestLeft = -params.crestWidth;
   const farToe = crestLeft - nh;
@@ -172,11 +174,11 @@ export function embankmentProblems(params: EmbankmentParams): string[] {
 /** The note on a ground-water level above the ground. */
 export const WATER_ABOVE_GROUND = "The water above the ground seeps out of the embankment's faces; no free water stands beside it.";
 
-/** What the model does that the parameters do not say: the last layer going on below its bottom level, the water above the ground seeping out of the faces. */
+/** What the model does that the parameters do not say: a base shallower than recommended, the water above the ground seeping out of the faces. */
 export function embankmentNotes(params: EmbankmentParams): string[] {
   if (embankmentProblems(params).length) return [];
   const out: string[] = [];
-  const note = lastLayerNote(params.layers, embankmentGeometry(params).base, "3h, or half the embankment's width at its foot, below the ground");
+  const note = shallowBaseNote(embankmentGeometry(params).base, params.groundLevel - modelDepth(params));
   if (note) out.push(note);
   if (params.waterLevel !== null && params.waterLevel > params.groundLevel) out.push(WATER_ABOVE_GROUND);
   return out;
@@ -206,7 +208,7 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   const g = embankmentGeometry(params);
   const d = new Definition("ltr");
   d.exterior = embankmentExterior(g);
-  addLayers(d, params.layers, g.ground, g.base, g.left + 1);
+  addLayers(d, params.layers, g.ground, g.left + 1);
   for (const level of g.levels) {
     d.addInteriorBoundary([
       [g.left, level],

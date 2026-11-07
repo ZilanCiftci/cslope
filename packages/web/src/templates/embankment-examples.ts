@@ -120,7 +120,7 @@ export const EMBANKMENT_EXAMPLES: Record<string, EmbankmentParams> = {
     slope: 3,
     fill: { gamma: 20, gammaSat: 21, c: 0, phi: 38 },
     crestLoad: 20,
-    layers: [{ name: "Clay", bottomLevel: -25, material: { kind: "undrained-increasing", gamma: 16, su: 20, suRate: 1.2 } }],
+    layers: [{ name: "Clay", bottomLevel: -30, material: { kind: "undrained-increasing", gamma: 16, su: 20, suRate: 1.2 } }],
     waterLevel: -1,
     values: characteristic,
   },

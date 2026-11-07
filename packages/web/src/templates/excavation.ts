@@ -15,9 +15,10 @@
  *
  * - The model reaches EXTENT_FACTOR × its depth (ground to base), and at
  *   least 3H, beyond the crest (beyond the road when there is one) and
- *   beyond the toe; its base is 2H below the bottom, or the deepest layer's
- *   bottom when that is deeper. A test widens every example 2× and finds
- *   F unchanged.
+ *   beyond the toe. Its base is the last layer's bottom, as typed, treated
+ *   as firm ground; it must be below the excavation bottom, and a note
+ *   says when it is less than 3H below the ground (RECOMMENDED_DEPTH). A
+ *   test widens every example 2× and finds F unchanged.
  * - Each layer level is a vertex of the outline at the left edge and at
  *   the slope face (or the right edge, below the bottom), and its interior
  *   boundary runs between those two vertices; one region assignment per
@@ -44,7 +45,8 @@ import {
   fmt,
   GROUND_LEVEL,
   LAYER_PARAMETERS,
-  lastLayerNote,
+  MIN_LAYER_THICKNESS,
+  shallowBaseNote,
   p,
   partialFactorsOf,
   Problems,
@@ -146,7 +148,7 @@ export function geometry(params: ExcavationParams): ExcavationGeometry {
   const bottom = G - H;
   const levels = params.layers.slice(0, -1).map((l) => l.bottomLevel);
   const last = params.layers[params.layers.length - 1];
-  const base = Math.min(G - 3 * H, last ? last.bottomLevel : Infinity);
+  const base = last ? last.bottomLevel : bottom - MIN_LAYER_THICKNESS;
   const reach = Math.max(3 * H, EXTENT_FACTOR * (G - base));
   const toeX = n * H;
   const right = toeX + Math.max(params.bottomWidth ?? 0, reach);
@@ -179,6 +181,12 @@ export function excavationFieldProblems(params: ExcavationParams): FieldProblem[
     avoid: { level: params.groundLevel - params.excavationDepth, text: "the excavation bottom" },
     reserved: params.road ? { name: ROAD_FILL_NAME, what: "the road's material" } : undefined,
   });
+  const i = params.layers.length - 1;
+  const lastBottom = params.layers[i]?.bottomLevel;
+  const bottom = params.groundLevel - params.excavationDepth;
+  if (Number.isFinite(lastBottom) && Number.isFinite(bottom) && lastBottom > bottom - MIN_LAYER_THICKNESS + 1e-9 && !out.list.some((x) => x.field === `layers.${i}.bottomLevel`)) {
+    out.add(`layers.${i}.bottomLevel`, `Layer ${i + 1}: the bottom level ${lastBottom} must be at least ${MIN_LAYER_THICKNESS} m below the excavation bottom (${fmt(bottom)}); the model ends at the last layer's bottom.`);
+  }
   if (params.road) {
     const r = params.road;
     const where = "Road: ";
@@ -199,18 +207,21 @@ export function excavationProblems(params: ExcavationParams): string[] {
 
 export const ROAD_FILL_NAME = "Road fill";
 
+/** The depth below the ground, in H, the last layer's bottom should reach; a note says when it does not. */
+export const RECOMMENDED_DEPTH = 3;
+
 /**
  * What the model does that the parameters do not say, for the form to show
- * beside them (they do not stop the analysis): the last layer going on
- * below its bottom level, a bottom wider than asked. Empty for a set
+ * beside them (they do not stop the analysis): a base (the last layer's
+ * bottom) less than 3H below the ground, a bottom wider than asked. Empty for a set
  * `excavationProblems` refuses.
  */
 export function excavationNotes(params: ExcavationParams): string[] {
   if (excavationProblems(params).length) return [];
   const g = geometry(params);
   const out: string[] = [];
-  const last = lastLayerNote(params.layers, g.base, "2H below the excavation bottom");
-  if (last) out.push(last);
+  const shallow = shallowBaseNote(g.base, params.groundLevel - RECOMMENDED_DEPTH * params.excavationDepth);
+  if (shallow) out.push(shallow);
   if (params.bottomWidth !== null && g.right - g.toeX > params.bottomWidth + 1e-9) {
     out.push(`The bottom is modelled ${fmt(g.right - g.toeX)} m wide, not ${fmt(params.bottomWidth)} m: the model needs that width.`);
   }
@@ -241,13 +252,13 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   const problems = excavationProblems(params);
   if (problems.length) throw new Error(`The parameters cannot be built:\n${problems.join("\n")}`);
   const g = geometry(params);
-  const { ground: G, bottom, base, left, right, road } = g;
+  const { ground: G, bottom, left, right, road } = g;
   const d = new Definition("ltr");
   d.exterior = exteriorOf(params, g);
   const faceX = (level: number) => params.slope * (G - level);
 
   // The layers: a region each on the ground side, and a boundary at each level, between its two vertices.
-  addLayers(d, params.layers, G, base, left + Math.min(1, params.excavationDepth / 2));
+  addLayers(d, params.layers, G, left + Math.min(1, params.excavationDepth / 2));
   for (const level of g.levels) {
     d.addInteriorBoundary([
       [left, level],

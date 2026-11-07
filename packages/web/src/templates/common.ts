@@ -37,7 +37,7 @@ export type LayerKind = LayerMaterial["kind"];
 export interface Layer {
   /** The name in the results; default "Layer n". */
   name?: string;
-  /** The elevation of the layer's bottom (m). The last layer goes on down to the model's base when that is deeper (a note says so). */
+  /** The elevation of the layer's bottom (m). The last layer's bottom is the model's base, treated as firm ground (a note says when it is shallower than recommended). */
   bottomLevel: number;
   material: LayerMaterial;
 }
@@ -207,12 +207,15 @@ export class Problems {
 
 export const fmt = (v: number) => String(Math.round(v * 100) / 100);
 
-/** The note when the last layer goes on below its bottom level, down to the model's base; null when it does not. */
-export function lastLayerNote(layers: Layer[], base: number, why: string): string | null {
-  const i = layers.length - 1;
-  const last = layers[i];
-  if (!last || !(last.bottomLevel > base)) return null;
-  return `${layerName(last, i)} goes on below its bottom level ${fmt(last.bottomLevel)} m, down to ${fmt(base)} m, ${why}: the model needs that depth.`;
+/**
+ * The note when the model's base (the last layer's bottom, treated as firm
+ * ground) is above the recommended level: in a soil that goes on deeper, a
+ * deeper base can give a lower F (in uniform clay under a flat slope F
+ * keeps falling with depth). Null when the base is deep enough.
+ */
+export function shallowBaseNote(base: number, recommended: number): string | null {
+  if (!(base > recommended + 1e-9)) return null;
+  return `The model ends at the last layer's bottom (${fmt(base)} m), treated as firm ground. If the soil continues deeper, enter its real bottom: a deeper base can give a lower F.`;
 }
 
 function strengthOf(material: LayerMaterial, top: number): Strength {
@@ -231,14 +234,13 @@ function strengthOf(material: LayerMaterial, top: number): Strength {
 /**
  * The layers' materials, in order (Su growing from each layer's top), and
  * one region assignment per layer at x, between its top and its bottom
- * (the last one's at the model's base). Returns the materials' names.
+ * (the last one's at its own bottom, the model's base). Returns the materials' names.
  */
-export function addLayers(d: Definition, layers: Layer[], ground: number, base: number, x: number): string[] {
+export function addLayers(d: Definition, layers: Layer[], ground: number, x: number): string[] {
   const names = layers.map((layer, i) => d.addMaterial(layerName(layer, i), strengthOf(layer.material, i === 0 ? ground : layers[i - 1].bottomLevel)));
   let top = ground;
   for (const [i, layer] of layers.entries()) {
-    const bottom = i === layers.length - 1 ? base : layer.bottomLevel;
-    d.assign(names[i], [x, (top + bottom) / 2] as Point);
+    d.assign(names[i], [x, (top + layer.bottomLevel) / 2] as Point);
     top = layer.bottomLevel;
   }
   return names;

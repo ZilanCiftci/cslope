@@ -4,12 +4,14 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-22.5, -5],
-      [-22.5, 10],
+      [-37.5, -15],
+      [-37.5, -5],
+      [-37.5, 10],
       [0, 10],
       [4.5, 7],
-      [27, 7],
-      [27, -5]
+      [42, 7],
+      [42, -5],
+      [42, -15]
     ],
     "materials": [
       {
@@ -20,19 +22,38 @@
           "unitWeightSat": 16,
           "undrainedShearStrength": 20
         }
+      },
+      {
+        "name": "Layer 2",
+        "model": {
+          "kind": "impenetrable",
+          "unitWeight": 24
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-37.5, -5],
+          [42, -5]
+        ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-21.5, 2.5],
+        "point": [-36.5, 2.5],
         "materialName": "Layer 1"
+      },
+      {
+        "point": [-36.5, -10],
+        "materialName": "Layer 2"
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -22.5,
+      "entryLeftX": -37.5,
       "entryRightX": 0,
       "exitLeftX": 0,
-      "exitRightX": 27
+      "exitRightX": 42
     }
   },
   "options": {
