@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { AnalysisResult, ResultSummary, ValidationIssue } from "@cslope/engine";
 import { App } from "./App";
 import { ThemeProvider } from "./components/theme-provider";
@@ -71,14 +71,20 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Download JSON" })).toBeDisabled();
     expect(requests).toEqual([]);
+    expect(screen.queryByRole("complementary", { name: "Result summary" })).toBeNull();
   });
 
   it("runs when the form is filled in and shows F with its label and the engine's warnings", async () => {
     const { requests } = renderApp();
     type("Unit weight γ (kN/m³)", "16");
     type("Su (kPa)", "20");
-    expect(await screen.findByText("F 1.234")).toBeInTheDocument();
-    expect(screen.getByText("Minimum factor of safety")).toBeInTheDocument();
+    const card = await screen.findByRole("region", { name: "Result" });
+    expect(await within(card).findByText("F 1.234")).toBeInTheDocument();
+    expect(within(card).getByText("Minimum factor of safety")).toBeInTheDocument();
+    // The bar that keeps F in view on a phone, with a link to the card.
+    const bar = screen.getByRole("complementary", { name: "Result summary" });
+    expect(bar).toHaveTextContent("F 1.234Factor of safety");
+    expect(within(bar).getByRole("link", { name: "Result" })).toHaveAttribute("href", "#result");
     expect(screen.getByText("The surface enters the slope at 71°.")).toBeInTheDocument();
     expect(requests).toHaveLength(1);
     const material = requests[0].document.definition.materials[0];

@@ -33,12 +33,14 @@ export function ErrorText({ id, children }: { id?: string; children: ReactNode }
 
 function Field({ label, title, error, children, id }: { label: string; title?: string; error?: string; children: ReactNode; id: string }) {
   return (
-    <div className="min-w-0">
-      <label htmlFor={id} title={title} className="mb-1 block text-xs text-muted-foreground">
+    // Three rows of the form's grid (label, input, problem), so that the
+    // inputs of a row line up when one label wraps to two lines.
+    <div className="row-span-3 grid min-w-0 grid-rows-subgrid gap-0 pb-2">
+      <label htmlFor={id} title={title} className="mb-1 block self-end text-xs text-muted-foreground">
         {label}
       </label>
       {children}
-      {error && <ErrorText id={`${id}-error`}>{error}</ErrorText>}
+      <div>{error && <ErrorText id={`${id}-error`}>{error}</ErrorText>}</div>
     </div>
   );
 }
@@ -108,7 +110,7 @@ function Choices<T extends string>({ label, options, value, onChange }: { label:
   );
 }
 
-const grid = "grid grid-cols-2 items-start gap-x-3 gap-y-2";
+const grid = "grid grid-cols-2 gap-x-3";
 
 function LayerFields({ layer, index, count, onChange, onRemove, errors }: { layer: LayerDraft; index: number; count: number; onChange: (l: LayerDraft) => void; onRemove: () => void; errors: Map<string, string> }) {
   const nameId = useId();
@@ -140,7 +142,7 @@ function LayerFields({ layer, index, count, onChange, onRemove, errors }: { laye
             onChange={(e) => onChange({ ...layer, name: e.target.value })}
           />
         </Field>
-        <Field id={kindId} label="Kind" title="What the layer is: its kind sets the fields of its strength.">
+        <Field id={kindId} label="Kind" title="Su constant and Su increasing (with depth) are undrained; drained has c′ and φ′; rock is impenetrable. The kind sets the fields.">
           <select id={kindId} className={inputClass} value={layer.kind} onChange={(e) => onChange({ ...layer, kind: e.target.value as LayerDraft["kind"] })}>
             {LAYER_KINDS.map((k) => (
               <option key={k.kind} value={k.kind}>

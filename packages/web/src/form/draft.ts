@@ -61,10 +61,10 @@ export interface Draft {
 
 /** The kinds of layer, as the form offers them. */
 export const LAYER_KINDS: { kind: LayerKind; label: string }[] = [
-  { kind: "undrained", label: "Undrained, Su constant" },
-  { kind: "undrained-increasing", label: "Undrained, Su increasing with depth" },
-  { kind: "drained", label: "Drained, c′ and φ′" },
-  { kind: "impenetrable", label: "Rock (impenetrable)" },
+  { kind: "undrained", label: "Su constant" },
+  { kind: "undrained-increasing", label: "Su increasing" },
+  { kind: "drained", label: "Drained c′, φ′" },
+  { kind: "impenetrable", label: "Rock" },
 ];
 
 /** The fields of a layer of each kind, in the form's order. */

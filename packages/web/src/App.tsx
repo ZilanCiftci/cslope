@@ -165,7 +165,7 @@ export function App({ client }: { client: AnalysisClient }) {
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 lg:pb-6">
         <h1 className="text-xl font-semibold tracking-tight">{excavationTemplate.title}</h1>
         <p className="mt-1 max-w-prose text-sm text-muted-foreground">
           {excavationTemplate.description} F is computed on your own computer by the cSlope engine.
@@ -202,6 +202,18 @@ export function App({ client }: { client: AnalysisClient }) {
           </div>
         </div>
       </main>
+      {/* On a phone the result card is below the form: a bar keeps F in view. */}
+      {state.kind === "complete" && (
+        <aside aria-label="Result summary" className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur lg:hidden">
+          <div className="mx-auto flex h-11 max-w-6xl items-center gap-3 px-4 text-sm">
+            <span className="font-semibold tabular">F {state.summary.fosText}</span>
+            <span className="min-w-0 truncate text-muted-foreground">{state.summary.fosLabel === "over-design factor" ? "Over-design factor" : "Factor of safety"}</span>
+            <a href="#result" className="ml-auto text-primary underline-offset-4 hover:underline">
+              Result
+            </a>
+          </div>
+        </aside>
+      )}
     </>
   );
 }

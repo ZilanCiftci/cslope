@@ -105,7 +105,7 @@ export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownloa
   const complete = state.kind === "complete" ? state : null;
   const warnings = complete ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)] : [];
   return (
-    <section aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
+    <section id="result" aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
       <h2 id="result-heading" className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
         Result
       </h2>

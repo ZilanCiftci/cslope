@@ -34,7 +34,7 @@ export const FILLED =
   "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
 
 /** The value F of the result card, once it shows one ("F 0.872"). */
-const fValue = (page: Page) => page.getByText(/^F \d+\.\d{3}$/);
+const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
 
 /** T-ACADS Simple (the app's first example), as the worker's protocol test runs it: F 0.984. */
 const T_ACADS_SIMPLE = {
@@ -118,6 +118,12 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       const second = await fValue(page).textContent();
       console.log(`  H 4 m → 3 m: ${first} → ${second}`);
       if (!new URL(page.url()).searchParams.get("H")?.startsWith("3")) problems.push(`the address did not follow the change: ${page.url()}`);
+      // Two columns: the result stays in view while the form scrolls; the phone's bar is hidden.
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      const box = await fValue(page).boundingBox();
+      const height = page.viewportSize()?.height ?? 0;
+      if (!box || box.y < 0 || box.y + box.height > height) problems.push(`F is out of view after scrolling the form (at ${box?.y} of ${height} px)`);
+      if (await page.getByRole("complementary", { name: "Result summary" }).isVisible()) problems.push("the phone's result bar shows on a wide screen");
     } catch (e) {
       problems.push(`no result: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
     }
@@ -162,12 +168,16 @@ async function checkAnalysis(page: Page, base: string): Promise<string[]> {
 }
 
 /** On a phone, the page does not scroll sideways. */
-async function checkPhone(browser: Browser, base: string): Promise<string[]> {
+async function checkPhone(browser: Browser, base: string, colorScheme: "light" | "dark"): Promise<string[]> {
   const problems: string[] = [];
-  const context = await browser.newContext({ ...devices["iPhone 13"] });
+  const context = await browser.newContext({ ...devices["iPhone 13"], colorScheme });
   const page = await context.newPage();
   await page.goto(`${base}/?${FILLED}`, { waitUntil: "load" });
   await fValue(page).waitFor({ timeout: 30_000 }).catch(() => problems.push("no result on the phone"));
+  const bar = page.getByRole("complementary", { name: "Result summary" });
+  if (!(await bar.isVisible())) problems.push("the result bar does not show on the phone");
+  else if (!/^F \d+\.\d{3}/.test((await bar.textContent()) ?? "")) problems.push(`the result bar says "${await bar.textContent()}"`);
+  for (const v of await axeViolations(page)) problems.push(`axe ${v.id} (${v.impact}) on the phone: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) problems.push(`the page is ${overflow} px wider than the phone`);
   await context.close();
@@ -202,7 +212,7 @@ async function main() {
     report("analysis", await checkAnalysis(await context.newPage(), server.url));
     report("/no-such-page", await checkNotFound(await context.newPage(), server.url));
     await context.close();
-    report("phone", await checkPhone(browser, server.url));
+    for (const colorScheme of ["light", "dark"] as const) report(`phone (${colorScheme})`, await checkPhone(browser, server.url, colorScheme));
   } finally {
     await browser.close();
     await server.close();
