@@ -92,9 +92,13 @@ pub struct SurfaceSlide {
     pub x2: f64,
     pub y2: f64,
     pub material: String,
-    /// Friction angle (design value) and the face's inclination, degrees.
+    /// Friction angle (the design value when partial factors apply) and the
+    /// face's inclination, degrees.
     pub friction_angle: f64,
     pub inclination: f64,
+    /// Whether partial factors apply, so the friction angle is a design value.
+    #[serde(default)]
+    pub design: bool,
 }
 
 /// The face of the ground surface with the lowest infinite-slope factor, or
@@ -206,6 +210,7 @@ pub fn frictional_surface_slide(slope: &Slope, sliding_only: bool) -> Result<Opt
                     material: m.name.clone(),
                     friction_angle: (js::math::atan(d.tan_phi) * 180.0) / PI,
                     inclination: (js::math::atan(dy / dx) * 180.0) / PI,
+                    design: slope.partial_factors().is_some(),
                 });
             }
             break;
@@ -219,12 +224,13 @@ pub fn frictional_surface_slide(slope: &Slope, sliding_only: bool) -> Result<Opt
 pub fn surface_slide_message(s: &SurfaceSlide, f: f64) -> String {
     let fx = |v: f64| js::num::to_fixed(v, 2);
     format!(
-        "The ground surface from ({}, {}) to ({}, {}) in {} (c′ = 0, design φ′ = {}°) is inclined at {}°: a shallow slide parallel to it has F = tan φ′/tan β = {}, below {}. The analysis cannot represent so thin a slide; the slope face governs.",
+        "The ground surface from ({}, {}) to ({}, {}) in {} (c′ = 0, {}φ′ = {}°) is inclined at {}°: a shallow slide parallel to it has F = tan φ′/tan β = {}, below {}. The analysis cannot represent so thin a slide; the slope face governs.",
         fx(s.x1),
         fx(s.y1),
         fx(s.x2),
         fx(s.y2),
         s.material,
+        if s.design { "design " } else { "" },
         js::num::to_fixed(s.friction_angle, 1),
         js::num::to_fixed(s.inclination, 1),
         js::num::to_fixed(s.factor_of_safety, 3),
