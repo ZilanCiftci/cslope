@@ -137,6 +137,33 @@ def _inside(p: Point, poly: List[Point]) -> bool:
 # ── partial factors ─────────────────────────────────────────────────────
 
 
+def _material_model(
+    name: str, gamma: Any, c: Any, phi: Any, su: Any, gamma_sat: Any
+) -> Dict[str, Any]:
+    """The engine's material model of ``add_material``'s arguments."""
+    model: Dict[str, Any]
+    if su is not None:
+        if c is not None or phi is not None:
+            raise ValueError("Give either su (undrained) or c and phi (drained) for {!r}, not both".format(name))
+        model = {"kind": "undrained", "unitWeight": _positive(gamma, "gamma"),
+                 "undrainedShearStrength": _positive(su, "su")}
+    else:
+        if c is None or phi is None:
+            raise ValueError("{!r} needs c and phi (drained) or su (undrained)".format(name))
+        model = {"kind": "mohr-coulomb", "unitWeight": _positive(gamma, "gamma"),
+                 "cohesion": _non_negative(c, "c"), "frictionAngle": _phi(phi)}
+    if gamma_sat is not None:
+        model["unitWeightSat"] = _positive(gamma_sat, "gamma_sat")
+    return model
+
+
+def _phi(phi: Any) -> float:
+    v = _non_negative(phi, "phi")
+    if v >= 90:
+        raise ValueError("phi must be less than 90°, not {!r}".format(phi))
+    return v
+
+
 def swedish_partial_factors(
     safety_class: int, eta_cu: float, eta_drained: float, variable_load_base: float
 ) -> Dict[str, Any]:
@@ -159,7 +186,8 @@ def swedish_partial_factors(
 
 # ── options ─────────────────────────────────────────────────────────────
 
-# attribute -> (engine key, the app's default for a new model)
+# attribute -> (engine key, the app's default for a new model). The builder
+# writes these into every document.
 _OPTION_FIELDS = {
     "method": ("method", "Morgenstern-Price"),
     "slices": ("slices", 30),
@@ -176,8 +204,29 @@ _OPTION_FIELDS = {
     "both_directions": ("bothDirections", False),
     "partial_factors": ("partialFactors", None),
 }
-_OPTION_KEYS = {key: attr for attr, (key, _) in _OPTION_FIELDS.items()}
-_INTERSLICE = ("constant", "half-sine", "clipped-sine", "trapezoidal")
+# The rest of the app's options (Analysis › Options): written only when set.
+# None: not given (the app's own behaviour without it).
+_MORE_OPTION_FIELDS = {
+    "max_iterations": ("maxIterations", 15),
+    "min_failure_dist": ("minFailureDist", 0.0),
+    "min_slip_area": ("minSlipArea", 0.0),
+    "janbu_correction": ("janbuCorrection", False),
+    "interslice_data_points": ("intersliceDataPoints", []),
+    "pore_pressure_head": ("porePressureHead", "vertical"),
+    "tension_crack_water": ("tensionCrackWater", 0.0),
+    "tension_crack_auto": ("tensionCrackAuto", None),
+    "tension_crack_angle": ("tensionCrackAngle", None),
+    "non_circular_optimization": ("nonCircularOptimization", False),
+    "composite_base": ("compositeBase", None),
+    "block_active_angle": ("blockActiveAngle", None),
+    "block_passive_angle": ("blockPassiveAngle", None),
+    "fem": ("fem", None),
+    "sgi3d": ("sgi3d", None),
+}
+_ALL_OPTION_FIELDS = dict(_OPTION_FIELDS, **_MORE_OPTION_FIELDS)
+_OPTION_KEYS = {key: attr for attr, (key, _) in _ALL_OPTION_FIELDS.items()}
+_INTERSLICE = ("constant", "half-sine", "clipped-sine", "trapezoidal", "data-point-specified")
+_WHOLE = ("slices", "iterations", "refined_iterations", "max_iterations")
 
 
 class Options:
@@ -191,7 +240,8 @@ class Options:
     - ``composite_surfaces`` (True): circles follow a stronger layer below
     - ``search_method``: "circular" (default) or "block"
     - ``interslice_function``: "half-sine" (default), "constant",
-      "clipped-sine" or "trapezoidal" (Morgenstern-Price)
+      "clipped-sine", "trapezoidal" or "data-point-specified"
+      (Morgenstern-Price; the last with ``interslice_data_points``)
     - ``tolerance`` (0.001), ``min_slip_depth`` (0 m),
       ``tension_crack_depth`` (0 m)
     - ``seismic_horizontal``, ``seismic_vertical`` (0, as a fraction of g)
@@ -199,51 +249,98 @@ class Options:
     - ``partial_factors`` (None): from ``swedish_partial_factors`` or a dict
       ``{"cu", "cohesion", "tanPhi", "variableLoad"}``; then F is an
       over-design factor on design values
+
+    and the rest of the app's options, written into a document only when
+    set: ``max_iterations`` (15), ``min_failure_dist`` (0 m),
+    ``min_slip_area`` (0 m²), ``janbu_correction`` (False),
+    ``interslice_data_points`` ([(x, f)]), ``pore_pressure_head``
+    ("vertical" or "phreatic-correction"), ``tension_crack_water`` (0, the
+    crack's water filling, 0 to 1), ``tension_crack_auto`` and
+    ``tension_crack_angle`` (°), ``non_circular_optimization`` (False),
+    ``composite_base``, ``block_active_angle`` and ``block_passive_angle``
+    ((from, to) in °), ``fem`` and ``sgi3d`` (the engine's settings dicts).
+    Setting an option to None removes it where None is allowed.
     """
 
-    __slots__ = tuple(_OPTION_FIELDS) + ("_extra",)
+    __slots__ = ("_own", "_source", "_changed")
 
     def __init__(self, **values: Any):
-        object.__setattr__(self, "_extra", {})
-        for attr, (_, default) in _OPTION_FIELDS.items():
-            object.__setattr__(self, attr, copy.deepcopy(default))
+        defaults = {key: copy.deepcopy(d) for key, d in _OPTION_FIELDS.values() if d is not None}
+        object.__setattr__(self, "_own", defaults)
+        object.__setattr__(self, "_source", None)
+        object.__setattr__(self, "_changed", None)
         for attr, v in values.items():
             setattr(self, attr, v)
 
+    @classmethod
+    def _over(cls, source: Any, changed: Any) -> "Options":
+        """Options that read the dict ``source()`` gives (a model's
+        options); a change is ``changed(key, value)`` (value None: remove
+        the key), which the owner applies."""
+        o = cls.__new__(cls)
+        object.__setattr__(o, "_own", None)
+        object.__setattr__(o, "_source", source)
+        object.__setattr__(o, "_changed", changed)
+        return o
+
+    @property
+    def _values(self) -> Dict[str, Any]:
+        return self._source() if self._source is not None else self._own
+
+    def __getattr__(self, attr: str) -> Any:
+        field = _ALL_OPTION_FIELDS.get(attr)
+        if field is None:
+            raise AttributeError("Options has no attribute {!r}".format(attr))
+        key, default = field
+        v = self._values.get(key, default)
+        if attr in _WHOLE and isinstance(v, float) and v.is_integer():
+            v = int(v)
+        return copy.deepcopy(v)
+
     def __setattr__(self, attr: str, value: Any) -> None:
-        if attr not in _OPTION_FIELDS:
+        if attr not in _ALL_OPTION_FIELDS:
             raise AttributeError(
-                "Options has no attribute {!r}; the options are: {}".format(attr, ", ".join(_OPTION_FIELDS))
+                "Options has no attribute {!r}; the options are: {}".format(attr, ", ".join(_ALL_OPTION_FIELDS))
             )
-        object.__setattr__(self, attr, _check_option(attr, value))
+        key = _ALL_OPTION_FIELDS[attr][0]
+        v = _check_option(attr, value)
+        if self._changed is not None:
+            self._changed(key, v)  # the owner changes its dict
+        elif v is None:
+            self._values.pop(key, None)
+        else:
+            self._values[key] = v
+
+    def __dir__(self) -> List[str]:
+        return sorted(set(object.__dir__(self)) | set(_ALL_OPTION_FIELDS))
 
     def __repr__(self) -> str:
         return "Options({})".format(", ".join("{}={!r}".format(a, getattr(self, a)) for a in _OPTION_FIELDS))
 
     def to_dict(self) -> Dict[str, Any]:
-        """The engine's ``AnalysisOptions`` dict: every option, written out."""
-        out = copy.deepcopy(self._extra)
-        for attr, (key, _) in _OPTION_FIELDS.items():
-            v = getattr(self, attr)
-            if v is not None:
-                out[key] = copy.deepcopy(v)
-        return out
+        """The engine's ``AnalysisOptions`` dict: the options above written
+        out, the others as set."""
+        return copy.deepcopy(self._values)
 
     @classmethod
     def from_dict(cls, options: Dict[str, Any]) -> "Options":
         """Options from an ``AnalysisOptions`` dict; keys the builder does not
-        handle are kept as they are."""
+        know are kept as they are."""
         o = cls()
         for key, v in options.items():
             attr = _OPTION_KEYS.get(key)
             if attr is None:
-                o._extra[key] = copy.deepcopy(v)
+                o._values[key] = copy.deepcopy(v)
             else:
                 setattr(o, attr, v)
         return o
 
 
 def _check_option(attr: str, v: Any) -> Any:
+    if v is None:
+        if _ALL_OPTION_FIELDS[attr][1] is None:
+            return None
+        raise ValueError("{} cannot be None".format(attr))
     if attr == "method":
         if v not in METHODS:
             raise ValueError("method must be one of {}, not {!r}".format(", ".join(METHODS), v))
@@ -256,23 +353,44 @@ def _check_option(attr: str, v: Any) -> Any:
         if v not in _INTERSLICE:
             raise ValueError("interslice_function must be one of {}, not {!r}".format(", ".join(_INTERSLICE), v))
         return v
-    if attr in ("composite_surfaces", "both_directions"):
+    if attr == "pore_pressure_head":
+        if v not in ("vertical", "phreatic-correction"):
+            raise ValueError("pore_pressure_head must be 'vertical' or 'phreatic-correction', not {!r}".format(v))
+        return v
+    if attr in (
+        "composite_surfaces", "both_directions", "janbu_correction", "non_circular_optimization",
+        "composite_base", "tension_crack_auto",
+    ):
         if not isinstance(v, bool):
             raise TypeError("{} must be True or False, not {!r}".format(attr, v))
         return v
-    if attr in ("slices", "iterations", "refined_iterations"):
+    if attr in _WHOLE:
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
         if isinstance(v, bool) or not isinstance(v, int) or v < (0 if attr == "refined_iterations" else 1):
             raise ValueError("{} must be a whole number of at least 1, not {!r}".format(attr, v))
         return v
     if attr == "tolerance":
         return _positive(v, attr)
-    if attr in ("min_slip_depth", "tension_crack_depth"):
+    if attr in ("min_slip_depth", "tension_crack_depth", "min_failure_dist", "min_slip_area"):
         return _non_negative(v, attr)
-    if attr in ("seismic_horizontal", "seismic_vertical"):
+    if attr == "tension_crack_water":
+        w = _non_negative(v, attr)
+        if w > 1:
+            raise ValueError("tension_crack_water is the crack's filling, from 0 to 1, not {!r}".format(v))
+        return w
+    if attr in ("seismic_horizontal", "seismic_vertical", "tension_crack_angle"):
         return _number(v, attr)
+    if attr in ("block_active_angle", "block_passive_angle"):
+        a, b = _range(v, attr)
+        return [a, b]
+    if attr == "interslice_data_points":
+        return [list(p) for p in _points(v, attr, 0)]
+    if attr in ("fem", "sgi3d"):
+        if not isinstance(v, dict):
+            raise TypeError("{} must be a dict (the engine's settings) or None, not {!r}".format(attr, v))
+        return copy.deepcopy(v)
     if attr == "partial_factors":
-        if v is None:
-            return None
         if not isinstance(v, dict):
             raise TypeError("partial_factors must be a dict or None, not {!r}".format(v))
         for k in ("cu", "cohesion", "tanPhi", "variableLoad"):
@@ -399,22 +517,7 @@ class Definition:
             raise ValueError("A material needs a name")
         if any(m["name"] == name for m in self._materials):
             raise ValueError("A material named {!r} exists already".format(name))
-        model: Dict[str, Any]
-        if su is not None:
-            if c is not None or phi is not None:
-                raise ValueError("Give either su (undrained) or c and phi (drained) for {!r}, not both".format(name))
-            model = {"kind": "undrained", "unitWeight": _positive(gamma, "gamma"),
-                     "undrainedShearStrength": _positive(su, "su")}
-        else:
-            if c is None or phi is None:
-                raise ValueError("{!r} needs c and phi (drained) or su (undrained)".format(name))
-            phi_v = _non_negative(phi, "phi")
-            if phi_v >= 90:
-                raise ValueError("phi must be less than 90°, not {!r}".format(phi))
-            model = {"kind": "mohr-coulomb", "unitWeight": _positive(gamma, "gamma"),
-                     "cohesion": _non_negative(c, "c"), "frictionAngle": phi_v}
-        if gamma_sat is not None:
-            model["unitWeightSat"] = _positive(gamma_sat, "gamma_sat")
+        model = _material_model(name, gamma, c, phi, su, gamma_sat)
         self._materials.append({"name": name, "model": model})
         return name
 
