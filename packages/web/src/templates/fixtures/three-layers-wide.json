@@ -4,15 +4,19 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-37.6, -15],
-      [-37.6, 5],
-      [-19.6, 5],
-      [-17.8, 6.2],
-      [-11.8, 6.2],
-      [-10, 5],
+      [-47.8, -15],
+      [-47.8, -3],
+      [-47.8, 3],
+      [-47.8, 5],
+      [-17.8, 5],
+      [-16, 6.2],
+      [-10, 6.2],
+      [-8.2, 5],
       [0, 5],
+      [5, 3],
       [15, -1],
       [45, -1],
+      [45, -3],
       [45, -15]
     ],
     "materials": [
@@ -21,7 +25,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 18,
-          "unitWeightSat": 18,
+          "unitWeightSat": 19,
           "cohesion": 3,
           "frictionAngle": 30
         }
@@ -42,7 +46,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 19,
-          "unitWeightSat": 19,
+          "unitWeightSat": 20,
           "cohesion": 1,
           "frictionAngle": 33
         }
@@ -52,7 +56,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 20,
-          "unitWeightSat": 20,
+          "unitWeightSat": 21,
           "cohesion": 0,
           "frictionAngle": 40
         }
@@ -61,38 +65,38 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-37.8478, 3],
-          [5.667221919603965, 3]
+          [-47.8, 3],
+          [5, 3]
         ]
       },
       {
         "coordinates": [
-          [-37.8478, -3],
-          [45.2478, -3]
+          [-47.8, -3],
+          [45, -3]
         ]
       },
       {
         "coordinates": [
-          [-19.6, 5],
-          [-10, 5]
+          [-17.8, 5],
+          [-8.2, 5]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-36.6, 4],
+        "point": [-46.8, 4],
         "materialName": "Crust"
       },
       {
-        "point": [-36.6, 0],
+        "point": [-46.8, 0],
         "materialName": "Clay"
       },
       {
-        "point": [-36.6, -9],
+        "point": [-46.8, -9],
         "materialName": "Silt"
       },
       {
-        "point": [-14.8, 5.6],
+        "point": [-13, 5.6],
         "materialName": "Road fill"
       }
     ],
@@ -104,14 +108,14 @@
     "udls": [
       {
         "magnitude": 15,
-        "x1": -17.8,
-        "x2": -11.8
+        "x1": -16,
+        "x2": -10
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -37.6,
+      "entryLeftX": -47.8,
       "entryRightX": 0,
-      "exitLeftX": 15,
+      "exitLeftX": 0,
       "exitRightX": 45
     }
   },
@@ -125,7 +129,7 @@
     "intersliceFunction": "half-sine",
     "tolerance": 0.001,
     "minSlipDepth": 0,
-    "tensionCrackDepth": 0,
+    "tensionCrackDepth": 1,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
     "bothDirections": false,

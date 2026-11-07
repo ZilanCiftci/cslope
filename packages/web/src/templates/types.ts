@@ -38,6 +38,12 @@ export interface Template<P> {
    * missing strength), as sentences for the form; empty when it can be.
    */
   problems(params: P): string[];
+  /**
+   * What the model does that the parameters do not say (a layer extended,
+   * a bottom widened), as sentences the form shows beside them; they do
+   * not stop the analysis.
+   */
+  notes(params: P): string[];
   /** The analysis document of a parameter set `problems` accepts. */
   toDocument(params: P): AnalysisDocument;
 }

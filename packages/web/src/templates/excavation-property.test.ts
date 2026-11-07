@@ -7,10 +7,11 @@
  */
 import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
+import { regionCount } from "./regions";
 import {
   EXCAVATION_PARAMETERS as P,
+  MIN_LAYER_THICKNESS,
   excavationDocument,
-  minLayerThickness,
   excavationProblems,
   type ExcavationParams,
   type Layer,
@@ -47,7 +48,7 @@ function material(rnd: () => number): LayerMaterial {
     case "undrained-increasing":
       return { kind: "undrained-increasing", gamma, su: value(rnd, P.layer.su), suRate: value(rnd, P.layer.suRate) };
     case "drained":
-      return { kind: "drained", gamma, c: value(rnd, P.layer.c), phi: value(rnd, P.layer.phi) };
+      return { kind: "drained", gamma, gammaSat: rnd() < 0.5 ? value(rnd, P.layer.gammaSat) : undefined, c: value(rnd, P.layer.c), phi: value(rnd, P.layer.phi) };
     case "impenetrable":
       return { kind: "impenetrable", gamma };
   }
@@ -56,8 +57,8 @@ function material(rnd: () => number): LayerMaterial {
 /**
  * A parameter set within the bounds. The geometry is drawn first (the
  * depth, the slope, the road, the deepest layer), then the levels between
- * the ground and the deepest layer with that model's least thickness
- * (minLayerThickness), mostly thin ones near the excavation.
+ * the ground and the deepest layer, at least 5 cm apart
+ * (MIN_LAYER_THICKNESS), mostly thin ones near the excavation.
  */
 export function randomParams(rnd: () => number): ExcavationParams {
   const groundLevel = value(rnd, P.groundLevel, -20, 100);
@@ -70,7 +71,7 @@ export function randomParams(rnd: () => number): ExcavationParams {
           distanceFromCrest: rnd() < 0.2 ? 0 : value(rnd, P.road.distanceFromCrest, 0, 12),
           width: value(rnd, P.road.width),
           height: value(rnd, P.road.height),
-          fill: { gamma: value(rnd, P.road.gamma), c: value(rnd, P.road.c), phi: value(rnd, P.road.phi) },
+          fill: { gamma: value(rnd, P.road.gamma), gammaSat: rnd() < 0.5 ? value(rnd, P.road.gammaSat) : undefined, c: value(rnd, P.road.c), phi: value(rnd, P.road.phi) },
           trafficLoad: rnd() < 0.7 ? value(rnd, P.road.trafficLoad) : null,
         }
       : null;
@@ -86,17 +87,16 @@ export function randomParams(rnd: () => number): ExcavationParams {
     road,
     values: { basis: "characteristic" },
   };
-  const thin = minLayerThickness(shape);
-  // The deepest layer is at least that thick too (moving it up stays above 2H below the bottom: the size holds).
-  shape.layers[0].bottomLevel = Math.min(deepest, Math.floor((groundLevel - thin) * 10) / 10);
+  const thin = MIN_LAYER_THICKNESS;
   const levels: number[] = [];
   let top = groundLevel;
   const wanted = Math.floor(rnd() * 5);
   for (let i = 0; i < wanted; i++) {
-    const thickness = rnd() < 0.7 ? thin + rnd() * 2 : thin + rnd() * 2 * excavationDepth;
-    let level = Math.floor((top - thickness) * 10) / 10;
-    if (Math.abs(level - bottom) < thin) level = Math.floor((bottom - thin) * 10) / 10;
-    level = Number(level.toFixed(1));
+    // A third are 5–10 cm thick.
+    const thickness = rnd() < 0.3 ? thin + rnd() * thin : rnd() < 0.7 ? thin + rnd() * 2 : thin + rnd() * 2 * excavationDepth;
+    let level = Math.floor((top - thickness) * 100) / 100;
+    if (Math.abs(level - bottom) < thin) level = Math.floor((bottom - thin) * 100) / 100;
+    level = Number(level.toFixed(2));
     if (level > top - thin || level < shape.layers[0].bottomLevel + thin) break;
     levels.push(level);
     top = level;
@@ -114,7 +114,8 @@ export function randomParams(rnd: () => number): ExcavationParams {
           etaDrained: value(rnd, P.design.etaDrained),
           variableLoadBase: value(rnd, P.design.variableLoadBase),
         };
-  return { ...shape, layers, waterLevel, values };
+  const tensionCrackDepth = rnd() < 0.3 ? value(rnd, P.tensionCrackDepth, 0, 3) : undefined;
+  return { ...shape, layers, waterLevel, values, tensionCrackDepth };
 }
 
 describe("random parameter sets within the bounds", () => {
@@ -133,12 +134,14 @@ describe("random parameter sets within the bounds", () => {
         issues.filter((x) => x.severity === "error").map((x) => `${x.path}: ${x.message}`),
         `${where}\n${JSON.stringify(doc)}`,
       ).toEqual([]);
+      // Every layer and the road is a region of its own.
+      expect(regionCount(doc.definition), where).toBe(params.layers.length + (params.road ? 1 : 0));
       if (issues.length) seen.warnings++;
       if (params.road) seen.road++;
       if (params.road && params.road.distanceFromCrest === 0) seen.roadAtCrest++;
       if (params.layers.every((l) => l.bottomLevel > params.groundLevel - params.excavationDepth)) seen.deeperThanLayers++;
       if (params.waterLevel !== null && params.waterLevel > params.groundLevel) seen.waterAboveGround++;
-      if (params.layers.some((l, k) => (k === 0 ? params.groundLevel : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.3)) seen.thin++;
+      if (params.layers.some((l, k) => (k === 0 ? params.groundLevel : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
       if (params.values.basis === "design") seen.design++;
     }
     // The cases the issue names all came up.

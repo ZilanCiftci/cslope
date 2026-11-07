@@ -4,12 +4,12 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-9, -5],
-      [-9, 10],
+      [-22.5, -5],
+      [-22.5, 10],
       [0, 10],
       [4.5, 7],
-      [13.5, 7],
-      [13.5, -5]
+      [27, 7],
+      [27, -5]
     ],
     "materials": [
       {
@@ -24,15 +24,15 @@
     ],
     "regionAssignments": [
       {
-        "point": [-8, 2.5],
+        "point": [-21.5, 2.5],
         "materialName": "Layer 1"
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -9,
+      "entryLeftX": -22.5,
       "entryRightX": 0,
-      "exitLeftX": 4.5,
-      "exitRightX": 13.5
+      "exitLeftX": 0,
+      "exitRightX": 27
     }
   },
   "options": {

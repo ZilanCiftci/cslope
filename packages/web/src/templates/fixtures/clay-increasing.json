@@ -4,12 +4,12 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-15, -10],
-      [-15, 10],
+      [-30, -10],
+      [-30, 10],
       [0, 10],
       [10, 5],
-      [25, 5],
-      [25, -10]
+      [40, 5],
+      [40, -10]
     ],
     "materials": [
       {
@@ -26,7 +26,7 @@
     ],
     "regionAssignments": [
       {
-        "point": [-14, 0],
+        "point": [-29, 0],
         "materialName": "Layer 1"
       }
     ],
@@ -36,10 +36,10 @@
       "freeWater": false
     },
     "analysisLimits": {
-      "entryLeftX": -15,
+      "entryLeftX": -30,
       "entryRightX": 0,
-      "exitLeftX": 10,
-      "exitRightX": 25
+      "exitLeftX": 0,
+      "exitRightX": 40
     }
   },
   "options": {

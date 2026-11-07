@@ -103,7 +103,7 @@ export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {
     road: { distanceFromCrest: 3, width: 4, height: 0.8, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: 20 },
     values: { basis: "design", safetyClass: 2, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 },
   },
-  /** A steep slope 1:1, the road at the crest. */
+  /** A steep slope 1:1, the road's fill reaching the crest (its top 1.5 m behind it). */
   "steep-road-at-crest": {
     groundLevel: 20,
     excavationDepth: 6,
@@ -111,22 +111,23 @@ export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {
     bottomWidth: 10,
     layers: [{ bottomLevel: 0, material: { kind: "undrained", gamma: 17, su: 35 } }],
     waterLevel: 19,
-    road: { distanceFromCrest: 0, width: 5, height: 1, fill: { gamma: 21, c: 2, phi: 36 }, trafficLoad: 30 },
+    road: { distanceFromCrest: 1.5, width: 5, height: 1, fill: { gamma: 21, c: 2, phi: 36 }, trafficLoad: 30 },
     values: characteristic,
   },
-  /** Three layers, a wide bottom, the water above the bottom, the road 10 m back. */
+  /** Three layers (saturated unit weights below the water), a wide bottom, the water above the bottom, the road 10 m back, a 1 m tension crack. */
   "three-layers-wide": {
     groundLevel: 5,
     excavationDepth: 6,
     slope: 2.5,
     bottomWidth: 30,
     layers: [
-      { name: "Crust", bottomLevel: 3, material: { kind: "drained", gamma: 18, c: 3, phi: 30 } },
+      { name: "Crust", bottomLevel: 3, material: { kind: "drained", gamma: 18, gammaSat: 19, c: 3, phi: 30 } },
       { name: "Clay", bottomLevel: -3, material: { kind: "undrained-increasing", gamma: 16, su: 14, suRate: 1.2 } },
-      { name: "Silt", bottomLevel: -15, material: { kind: "drained", gamma: 19, c: 1, phi: 33 } },
+      { name: "Silt", bottomLevel: -15, material: { kind: "drained", gamma: 19, gammaSat: 20, c: 1, phi: 33 } },
     ],
     waterLevel: 1,
-    road: { distanceFromCrest: 10, width: 6, height: 1.2, fill: { gamma: 20, c: 0, phi: 40 }, trafficLoad: 15 },
+    road: { distanceFromCrest: 10, width: 6, height: 1.2, fill: { gamma: 20, gammaSat: 21, c: 0, phi: 40 }, trafficLoad: 15 },
     values: { basis: "design", safetyClass: 3, etaCu: 0.9, etaDrained: 1, variableLoadBase: 1.4 },
+    tensionCrackDepth: 1,
   },
 };

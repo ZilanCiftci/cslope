@@ -4,16 +4,16 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-21.4, -20],
-      [-21.4, 0],
-      [-9.399999999999999, 0],
-      [-8.2, 0.8],
-      [-4.2, 0.8],
-      [-3, 0],
+      [-38.2, -20],
+      [-38.2, 0],
+      [-8.2, 0],
+      [-7, 0.8],
+      [-3, 0.8],
+      [-1.7999999999999998, 0],
       [0, 0],
       [8, -4],
-      [20, -4],
-      [20, -20]
+      [38, -4],
+      [38, -20]
     ],
     "materials": [
       {
@@ -39,18 +39,18 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-9.399999999999999, 0],
-          [-3, 0]
+          [-8.2, 0],
+          [-1.7999999999999998, 0]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-20.4, -10],
+        "point": [-37.2, -10],
         "materialName": "Layer 1"
       },
       {
-        "point": [-6.199999999999999, 0.4],
+        "point": [-5, 0.4],
         "materialName": "Road fill"
       }
     ],
@@ -62,15 +62,15 @@
     "udls": [
       {
         "magnitude": 20,
-        "x1": -8.2,
-        "x2": -4.2
+        "x1": -7,
+        "x2": -3
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -21.4,
+      "entryLeftX": -38.2,
       "entryRightX": 0,
-      "exitLeftX": 8,
-      "exitRightX": 20
+      "exitLeftX": 0,
+      "exitRightX": 38
     }
   },
   "options": {

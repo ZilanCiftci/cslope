@@ -13,24 +13,26 @@
  *                          ╲ 1:n
  *                           toe (nH, G − H) ─── bottom ─── edge
  *
- * - The model reaches 3H beyond the crest (beyond the road when there is
- *   one) and at least 3H beyond the toe, and 2H below the bottom, or down
- *   to the deepest layer when that is deeper.
- * - One interior boundary per layer level, from the left edge to the slope
- *   face or across the whole model, crossing the outline by 0.3 % of the
- *   model's size (OVERSHOOT); one region assignment per layer, on
- *   the ground side (a layer under the bottom is one region with its
- *   ground side, which the engine assigns as one).
- * - Layers are at least 0.1 m thick, or 0.25 % of the model's size when
- *   that is more, and no level comes that close to the excavation bottom
- *   (the engine joins lines closer than 0.1 % of the size).
+ * - The model reaches EXTENT_FACTOR × its depth (ground to base), and at
+ *   least 3H, beyond the crest (beyond the road when there is one) and
+ *   beyond the toe; its base is 2H below the bottom, or the deepest layer's
+ *   bottom when that is deeper. A test widens every example 2× and finds
+ *   F unchanged.
+ * - Each layer level is a vertex of the outline at the left edge and at
+ *   the slope face (or the right edge, below the bottom), and its interior
+ *   boundary runs between those two vertices; one region assignment per
+ *   layer on the ground side (a layer under the bottom is one region with
+ *   its ground side).
+ * - Layers are at least 5 cm thick, and no level is within 5 cm of the
+ *   excavation bottom.
  * - The road is its own region above the ground, with the fill material,
- *   its sides 1:1.5 and its near toe at the given distance behind the
- *   crest (at the crest for 0), and a vertical distributed load over the
- *   width of its top.
+ *   its sides 1:1.5 and the near edge of its top at the given distance
+ *   behind the crest (its side cut at the crest when closer), and a
+ *   vertical distributed load over the width of its top.
  * - Water: a level, cut at the ground (no free water).
- * - Surfaces enter on the ground and the road (left of the crest) and exit
- *   in the bottom; the app's options (D-23).
+ * - Surfaces enter left of the crest (on the ground and the road) and exit
+ *   anywhere from the crest to the right edge (on the face or in the
+ *   bottom); the app's options (D-23) with the given tension crack depth.
  */
 import type { PartialFactors, SafetyClass } from "@cslope/engine";
 import type { AnalysisDocument } from "../engine/document";
@@ -51,7 +53,14 @@ export type LayerMaterial =
       su: number;
       suRate: number;
     }
-  | { kind: "drained"; gamma: number; c: number; phi: number }
+  | {
+      kind: "drained";
+      gamma: number;
+      /** The unit weight below the water (kN/m³); not set: `gamma`. */
+      gammaSat?: number;
+      c: number;
+      phi: number;
+    }
   | { kind: "impenetrable"; gamma: number };
 
 export type LayerKind = LayerMaterial["kind"];
@@ -59,20 +68,20 @@ export type LayerKind = LayerMaterial["kind"];
 export interface Layer {
   /** The name in the results; default "Layer n". */
   name?: string;
-  /** The elevation of the layer's bottom (m). The last layer's is where the model ends when deeper than 2H below the bottom. */
+  /** The elevation of the layer's bottom (m). The last layer goes on down to the model's base when that is deeper (a note says so). */
   bottomLevel: number;
   material: LayerMaterial;
 }
 
 export interface Road {
-  /** From the crest to the near toe of the fill (m). */
+  /** From the crest to the near edge of the road's top, where the load starts (m). */
   distanceFromCrest: number;
   /** The width of the road's top (m). */
   width: number;
   /** The height of the fill above the ground (m). */
   height: number;
   /** The fill, drained. */
-  fill: { gamma: number; c: number; phi: number };
+  fill: { gamma: number; gammaSat?: number; c: number; phi: number };
   /** The traffic load q over the road's width (kPa); null: none. */
   trafficLoad: number | null;
 }
@@ -89,7 +98,7 @@ export interface ExcavationParams {
   excavationDepth: number;
   /** n in 1:n, horizontal per vertical. */
   slope: number;
-  /** The bottom from the toe to the model's edge (m); null: 3H. At least 3H is modelled. */
+  /** The bottom from the toe to the model's edge (m); null: as far as the model needs. More is modelled when the model needs it (a note says so). */
   bottomWidth: number | null;
   /** From the top down; the first starts at the ground. */
   layers: Layer[];
@@ -97,6 +106,12 @@ export interface ExcavationParams {
   waterLevel: number | null;
   road: Road | null;
   values: Values;
+  /**
+   * The depth of a tension crack (m), an analysis option; not set: 0, the
+   * app's default. The engine warns when a crack is deeper than it should
+   * be; the page (#89) shows the run's warnings with F.
+   */
+  tensionCrackDepth?: number;
 }
 
 const p = (name: string, label: string, unit: string | null, min: number, max: number, step: number, description: string): ParameterDescription => ({
@@ -114,21 +129,24 @@ export const EXCAVATION_PARAMETERS = {
   groundLevel: p("groundLevel", "Ground level (m)", "m", -100, 1000, 0.1, "The elevation of the ground surface; the levels of the layers and the water are elevations too."),
   excavationDepth: p("excavationDepth", "Excavation depth H (m)", "m", 0.5, 20, 0.1, "From the ground to the bottom of the excavation."),
   slope: p("slope", "Slope 1:n", null, 0.5, 5, 0.1, "n horizontal per 1 vertical: 1:2 is flatter than 1:1."),
-  bottomWidth: p("bottomWidth", "Bottom width (m)", "m", 1, 100, 0.5, "The flat bottom from the toe to the edge of the model; 3H when left out, and at least 3H is modelled."),
+  bottomWidth: p("bottomWidth", "Bottom width (m)", "m", 1, 300, 0.5, "The flat bottom from the toe to the edge of the model; as wide as the model needs when left out, and never narrower."),
+  tensionCrackDepth: p("tensionCrackDepth", "Tension crack depth (m)", "m", 0, 10, 0.1, "A dry tension crack at the top of each slip surface; 0 for none, as in the app."),
   waterLevel: p("waterLevel", "Ground-water level (m)", "m", -100, 1000, 0.1, "The elevation of the ground water, cut at the ground; leave out for a dry slope."),
   layer: {
-    bottomLevel: p("bottomLevel", "Bottom level (m)", "m", -100, 1000, 0.1, "The elevation of the layer's bottom. A layer is at least 0.1 m thick (more in a large model) and does not end that close to the excavation bottom."),
-    gamma: p("gamma", "Unit weight γ (kN/m³)", "kN/m³", 10, 25, 0.1, "Used above and below the water."),
+    bottomLevel: p("bottomLevel", "Bottom level (m)", "m", -100, 1000, 0.1, "The elevation of the layer's bottom. A layer is at least 0.05 m thick and does not end within 0.05 m of the excavation bottom."),
+    gamma: p("gamma", "Unit weight γ (kN/m³)", "kN/m³", 10, 25, 0.1, "Above the water, and below it for clay and rock."),
+    gammaSat: p("gammaSat", "Saturated unit weight γsat (kN/m³)", "kN/m³", 10, 25, 0.1, "Below the water, for a drained layer; γ when left out."),
     su: p("su", "Su (kPa)", "kPa", 1, 500, 0.5, "The undrained shear strength; for a growing profile, its value at the top of the layer."),
-    suRate: p("suRate", "Su increase (kPa/m)", "kPa/m", 0, 10, 0.1, "The growth of Su per metre below the top of the layer."),
+    suRate: p("suRate", "Su increase (kPa/m)", "kPa/m", 0, 10, 0.1, "The growth of Su per metre below the top of the layer (by elevation)."),
     c: p("c", "c′ (kPa)", "kPa", 0, 100, 0.5, "The effective cohesion."),
     phi: p("phi", "φ′ (°)", "°", 5, 45, 0.5, "The effective friction angle."),
   },
   road: {
-    distanceFromCrest: p("distanceFromCrest", "Distance from the crest (m)", "m", 0, 50, 0.5, "From the crest to the near toe of the fill; 0 puts the fill at the crest."),
+    distanceFromCrest: p("distanceFromCrest", "Distance from the crest to the road (m)", "m", 0, 50, 0.5, "From the crest to the near edge of the road's top, where the load starts; the fill's side goes down 1:1.5 from there, cut at the crest."),
     width: p("width", "Width (m)", "m", 2, 20, 0.5, "The width of the road's top; the load acts over it."),
     height: p("height", "Height (m)", "m", 0.2, 5, 0.1, "The height of the fill above the ground; its sides are 1:1.5."),
-    gamma: p("gamma", "Fill unit weight γ (kN/m³)", "kN/m³", 15, 24, 0.1, "Used above and below the water."),
+    gamma: p("gamma", "Fill unit weight γ (kN/m³)", "kN/m³", 15, 24, 0.1, "Above the water."),
+    gammaSat: p("gammaSat", "Fill saturated unit weight γsat (kN/m³)", "kN/m³", 15, 24, 0.1, "Below the water; γ when left out."),
     c: p("c", "Fill c′ (kPa)", "kPa", 0, 20, 0.5, "The effective cohesion of the fill."),
     phi: p("phi", "Fill φ′ (°)", "°", 25, 45, 0.5, "The effective friction angle of the fill."),
     trafficLoad: p("trafficLoad", "Traffic load q (kPa)", "kPa", 0, 50, 1, "A vertical load over the road's width, a variable load; leave out for none."),
@@ -136,33 +154,22 @@ export const EXCAVATION_PARAMETERS = {
   design: {
     etaCu: p("etaCu", "η undrained", null, 0.5, 1.2, 0.05, "The conversion factor on Su: γcu = 1.5 / η."),
     etaDrained: p("etaDrained", "η drained", null, 0.5, 1.2, 0.05, "The conversion factor on c′ and tan φ′: γc′ = γφ′ = 1.3 / η."),
-    variableLoadBase: p("variableLoadBase", "γQ before γd", null, 1, 1.5, 0.1, "γQ = this × γd of the safety class; 1.3 as EN 1997-1, 1.4 in some guidance for traffic loads."),
+    variableLoadBase: p("variableLoadBase", "γQ / γd", null, 1, 1.5, 0.1, "γQ = this factor × γd: variable loads Q_d = γQ γd Q_k, γd = 0.83, 0.91, 1.0 in safety class 1, 2, 3. The governing document decides γQ."),
   },
 } satisfies Template<ExcavationParams>["params"];
 
 /** The sides of the road's fill: horizontal per vertical. */
 export const ROAD_FILL_SLOPE = 1.5;
-/** A layer is at least this thick, and no level comes closer than this to the bottom (m); more in a large model (minLayerThickness). */
-export const MIN_LAYER_THICKNESS = 0.1;
+/** A layer is at least this thick, and no level comes closer than this to the excavation bottom (m). */
+export const MIN_LAYER_THICKNESS = 0.05;
 /**
- * The engine puts a boundary end that lies within 1e-3 of the model's size
- * of another line onto it (END_SNAP_TOLERANCE, packages/engine-rs/crates/
- * cslope-engine/src/model/geometry_ops.rs), so two levels that close would
- * merge and a layer would vanish. The template keeps lines 2.5 times that
- * apart (the property test found 0.15 m layers merging in a 167 m model).
+ * Each side of the model reaches this many times the model's depth (ground
+ * to base), and at least 3H: a slip circle through a deep soft layer
+ * reaches far, and an edge too close cuts it off and raises F (the review
+ * found 1–4 %). A test widens every example 2× and finds F unchanged.
  */
-export const LINE_SEPARATION = 2.5e-3;
-/**
- * How far a layer's boundary crosses the outline, normal to it, as a
- * fraction of the model's size: three times the engine's snap distance.
- * An end on the outline, or outside it within the snap distance, is put on
- * the outline by the engine, which then sometimes does not split the
- * layer off (the property test found an end on a 1:3.2 face, computed to
- * the last digit, failing where 1e-6 m past it worked); a plain crossing
- * is split reliably.
- */
-export const OVERSHOOT = 3e-3;
-/** The road's near toe snaps to the crest when closer than this (m), so that no edge is nearly zero. */
+export const EXTENT_FACTOR = 1.5;
+/** The fill's near toe snaps to the crest when closer than this (m), so that no edge is nearly zero. */
 const SNAP = 0.05;
 
 /** The numbers of the geometry a parameter set gives. */
@@ -174,7 +181,7 @@ export interface ExcavationGeometry {
   toeX: number;
   left: number;
   right: number;
-  /** The road's fill: the far toe, the top from `topLeft` to `topRight`, the near toe (≤ the crest). */
+  /** The road's fill: the far toe, the top from `topLeft` to `topRight` (its near edge), the near toe (≤ the crest). */
   road: { farToe: number; topLeft: number; topRight: number; nearToe: number; top: number } | null;
   /** The levels of the interior boundaries between layers (all but the last layer's bottom). */
   levels: number[];
@@ -188,31 +195,22 @@ export function geometry(params: ExcavationParams): ExcavationGeometry {
   const levels = params.layers.slice(0, -1).map((l) => l.bottomLevel);
   const last = params.layers[params.layers.length - 1];
   const base = Math.min(G - 3 * H, last ? last.bottomLevel : Infinity);
+  const reach = Math.max(3 * H, EXTENT_FACTOR * (G - base));
   const toeX = n * H;
-  const right = toeX + Math.max(params.bottomWidth ?? 3 * H, 3 * H);
+  const right = toeX + Math.max(params.bottomWidth ?? 0, reach);
   let road: ExcavationGeometry["road"] = null;
-  let left = -3 * H;
+  let left = -reach;
   if (params.road) {
     const { distanceFromCrest: d, width: w, height: h } = params.road;
-    const nearToe = d < SNAP ? 0 : -d;
-    const topRight = nearToe - ROAD_FILL_SLOPE * h;
+    const topRight = -d;
+    let nearToe = Math.min(0, topRight + ROAD_FILL_SLOPE * h);
+    if (nearToe > -SNAP) nearToe = 0;
     const topLeft = topRight - w;
     const farToe = topLeft - ROAD_FILL_SLOPE * h;
     road = { farToe, topLeft, topRight, nearToe, top: G + h };
-    left = Math.min(left, farToe - 3 * H);
+    left = Math.min(left, farToe - reach);
   }
   return { ground: G, bottom, base, crestX: 0, toeX, left, right, road, levels };
-}
-
-/** The model's size: its width or its height, the larger. */
-export function modelSize(g: ExcavationGeometry): number {
-  return Math.max(g.right - g.left, (g.road ? g.road.top : g.ground) - g.base);
-}
-
-/** The least thickness of a layer in this model (m), and the least distance of a level from the excavation bottom. */
-export function minLayerThickness(params: ExcavationParams): number {
-  const size = modelSize(geometry(params));
-  return Math.max(MIN_LAYER_THICKNESS, Math.ceil(LINE_SEPARATION * size * 100) / 100);
 }
 
 const within = (v: number, d: ParameterDescription) => Number.isFinite(v) && v >= d.min && v <= d.max;
@@ -229,10 +227,10 @@ export function excavationProblems(params: ExcavationParams): string[] {
   check(params.slope, P.slope);
   if (params.bottomWidth !== null) check(params.bottomWidth, P.bottomWidth);
   if (params.waterLevel !== null) check(params.waterLevel, P.waterLevel);
+  if (params.tensionCrackDepth !== undefined) check(params.tensionCrackDepth, P.tensionCrackDepth);
   if (!params.layers.length) out.push("The ground needs at least one layer.");
   const names = new Set<string>();
-  const finiteLevels = params.layers.every((l) => Number.isFinite(l.bottomLevel)) && [params.groundLevel, params.excavationDepth, params.slope].every(Number.isFinite);
-  const thin = finiteLevels && params.layers.length ? minLayerThickness(params) : MIN_LAYER_THICKNESS;
+  const thin = MIN_LAYER_THICKNESS;
   let top = params.groundLevel;
   for (const [i, layer] of params.layers.entries()) {
     const where = `Layer ${i + 1}: `;
@@ -256,6 +254,7 @@ export function excavationProblems(params: ExcavationParams): string[] {
     if (m.kind === "undrained" || m.kind === "undrained-increasing") check(m.su, P.layer.su, where);
     if (m.kind === "undrained-increasing") check(m.suRate, P.layer.suRate, where);
     if (m.kind === "drained") {
+      if (m.gammaSat !== undefined) check(m.gammaSat, P.layer.gammaSat, where);
       check(m.c, P.layer.c, where);
       check(m.phi, P.layer.phi, where);
     }
@@ -268,6 +267,7 @@ export function excavationProblems(params: ExcavationParams): string[] {
     check(r.width, P.road.width, where);
     check(r.height, P.road.height, where);
     check(r.fill.gamma, P.road.gamma, where);
+    if (r.fill.gammaSat !== undefined) check(r.fill.gammaSat, P.road.gammaSat, where);
     check(r.fill.c, P.road.c, where);
     check(r.fill.phi, P.road.phi, where);
     if (r.trafficLoad !== null) check(r.trafficLoad, P.road.trafficLoad, where);
@@ -284,6 +284,29 @@ export function excavationProblems(params: ExcavationParams): string[] {
 
 export const ROAD_FILL_NAME = "Road fill";
 
+const fmt = (v: number) => String(Math.round(v * 100) / 100);
+
+/**
+ * What the model does that the parameters do not say, for the form to show
+ * beside them (they do not stop the analysis): the last layer going on
+ * below its bottom level, a bottom wider than asked. Empty for a set
+ * `excavationProblems` refuses.
+ */
+export function excavationNotes(params: ExcavationParams): string[] {
+  if (excavationProblems(params).length) return [];
+  const g = geometry(params);
+  const out: string[] = [];
+  const i = params.layers.length - 1;
+  const last = params.layers[i];
+  if (last.bottomLevel > g.base) {
+    out.push(`${layerName(last, i)} goes on below its bottom level ${fmt(last.bottomLevel)} m, down to ${fmt(g.base)} m, 2H below the excavation bottom: the model needs that depth.`);
+  }
+  if (params.bottomWidth !== null && g.right - g.toeX > params.bottomWidth + 1e-9) {
+    out.push(`The bottom is modelled ${fmt(g.right - g.toeX)} m wide, not ${fmt(params.bottomWidth)} m: the model needs that width.`);
+  }
+  return out;
+}
+
 function layerName(layer: Layer, index: number): string {
   return layer.name?.trim() || `Layer ${index + 1}`;
 }
@@ -295,7 +318,7 @@ function strengthOf(material: LayerMaterial, top: number): Strength {
     case "undrained-increasing":
       return { su: material.su, suRate: material.suRate, suLevel: top, gamma: material.gamma };
     case "drained":
-      return { c: material.c, phi: material.phi, gamma: material.gamma };
+      return { c: material.c, phi: material.phi, gamma: material.gamma, gammaSat: material.gammaSat };
     case "impenetrable":
       return { impenetrable: true, gamma: material.gamma };
   }
@@ -317,28 +340,26 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   const n = params.slope;
   const d = new Definition("ltr");
 
-  // The outline: ground → road → crest → slope → bottom → edge.
-  const exterior: Point[] = [
-    [left, base],
-    [left, G],
-  ];
+  // The outline: ground → road → crest → slope → bottom → edge, with a
+  // vertex at each layer level on the left edge and on the face (or the
+  // right edge, below the bottom), where the level's boundary ends.
+  const above = g.levels.filter((l) => l > bottom);
+  const below = g.levels.filter((l) => l < bottom);
+  const faceX = (level: number) => n * (G - level);
+  const exterior: Point[] = [[left, base], ...[...g.levels].reverse().map((l): Point => [left, l]), [left, G]];
   if (road) {
     exterior.push([road.farToe, G], [road.topLeft, road.top], [road.topRight, road.top]);
     if (road.nearToe < 0) exterior.push([road.nearToe, G]);
   }
-  exterior.push([0, G], [toeX, bottom], [right, bottom], [right, base]);
+  exterior.push([0, G], ...above.map((l): Point => [faceX(l), l]), [toeX, bottom], [right, bottom], ...below.map((l): Point => [right, l]), [right, base]);
   d.exterior = exterior;
 
-  // The layers: a boundary at each level, a region on the ground side.
-  const over = OVERSHOOT * modelSize(g);
+  // The layers: a boundary at each level, between its two vertices, and a region on the ground side.
   const names = params.layers.map((layer, i) => d.addMaterial(layerName(layer, i), strengthOf(layer.material, i === 0 ? G : params.layers[i - 1].bottomLevel)));
   for (const level of g.levels) {
-    // Above the bottom the boundary ends on the slope face; below it crosses the model.
-    // Normal to a face 1:n, a horizontal reach of o·√(1 + n²) is o.
-    const end = level > bottom ? n * (G - level) + over * Math.hypot(1, n) : right + over;
     d.addInteriorBoundary([
-      [left - over, level],
-      [end, level],
+      [left, level],
+      [level > bottom ? faceX(level) : right, level],
     ]);
   }
   const x = left + Math.min(1, params.excavationDepth / 2);
@@ -352,7 +373,8 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   // The road: its own region on the ground (its line from toe to toe, both
   // corners of the outline), and the traffic load over it.
   if (road && params.road) {
-    const fill = d.addMaterial(ROAD_FILL_NAME, { c: params.road.fill.c, phi: params.road.fill.phi, gamma: params.road.fill.gamma });
+    const { c, phi, gamma, gammaSat } = params.road.fill;
+    const fill = d.addMaterial(ROAD_FILL_NAME, { c, phi, gamma, gammaSat });
     d.addInteriorBoundary([
       [road.farToe, G],
       [road.nearToe, G],
@@ -362,10 +384,14 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   }
 
   if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel);
-  d.searchLimits([left, 0], [toeX, right]);
+  // Entry behind the crest, exit from the crest on: the face or the bottom.
+  d.searchLimits([left, 0], [0, right]);
 
   const factors = partialFactorsOf(params.values);
-  return d.toDocument(factors ? { partialFactors: factors } : {});
+  return d.toDocument({
+    ...(factors ? { partialFactors: factors } : {}),
+    ...(params.tensionCrackDepth ? { tensionCrackDepth: params.tensionCrackDepth } : {}),
+  });
 }
 
 export const excavationTemplate: Template<ExcavationParams> = {
@@ -375,5 +401,6 @@ export const excavationTemplate: Template<ExcavationParams> = {
     "An excavation with a slope 1:n in level ground of horizontal layers, with a ground-water level and, behind the crest, a working road with a traffic load.",
   params: EXCAVATION_PARAMETERS,
   problems: excavationProblems,
+  notes: excavationNotes,
   toDocument: excavationDocument,
 };

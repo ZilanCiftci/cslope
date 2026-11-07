@@ -4,12 +4,14 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-12, -20],
-      [-12, 0],
+      [-30, -20],
+      [-30, -1.5],
+      [-30, 0],
       [0, 0],
+      [3, -1.5],
       [8, -4],
-      [20, -4],
-      [20, -20]
+      [38, -4],
+      [38, -20]
     ],
     "materials": [
       {
@@ -35,18 +37,18 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-12.096, -1.5],
-          [3.2146625258399797, -1.5]
+          [-30, -1.5],
+          [3, -1.5]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-11, -0.75],
+        "point": [-29, -0.75],
         "materialName": "Crust"
       },
       {
-        "point": [-11, -10.75],
+        "point": [-29, -10.75],
         "materialName": "Clay"
       }
     ],
@@ -56,10 +58,10 @@
       "freeWater": false
     },
     "analysisLimits": {
-      "entryLeftX": -12,
+      "entryLeftX": -30,
       "entryRightX": 0,
-      "exitLeftX": 8,
-      "exitRightX": 20
+      "exitLeftX": 0,
+      "exitRightX": 38
     }
   },
   "options": {
