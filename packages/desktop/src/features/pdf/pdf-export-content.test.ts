@@ -37,6 +37,7 @@ import {
 } from "../../store/defaults";
 import { newPile, newReinforcement } from "../../utils/reinforcement";
 import type { ProjectInfo } from "../../store/types";
+import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 
 const COORDS: [number, number][] = [
   [0, 0],
@@ -259,6 +260,24 @@ describe("exportVectorPdf — full model", () => {
     expect(name).toBeDefined();
     expect(name!.y).toBeLessThan(210 * PLOT_MARGINS.T);
     expect(texts.indexOf("Model B")).toBeLessThan(texts.indexOf("Analysis summary"));
+  });
+
+  it("says on page 1 and in the summary when the result is out of date", () => {
+    expect(pageTexts(exportDoc(withSummary()).doc)).not.toContain(RESULT_OUT_OF_DATE_NOTE);
+    const stale = withSummary();
+    stale.summary!.header.outOfDate = true;
+    const { doc } = exportDoc(stale);
+    const notes = recordedTexts(doc).filter((t) => t.text === RESULT_OUT_OF_DATE_NOTE);
+    expect(notes).toHaveLength(2);
+    // in the top margin of page 1, before the summary pages, and the title line keeps the result
+    expect(notes[0].y).toBeLessThan(210 * PLOT_MARGINS.T);
+    const texts = pageTexts(doc);
+    expect(texts.indexOf(RESULT_OUT_OF_DATE_NOTE)).toBeLessThan(texts.indexOf("Analysis summary"));
+    expect(texts.some((t) => t.startsWith("Over-design factor (design values) 1.234"))).toBe(true);
+    // also with the title line and the summary pages turned off
+    const bare = withSummary({ pdfSummaryPages: false, pdfTitleLine: false });
+    bare.summary!.header.outOfDate = true;
+    expect(pageTexts(exportDoc(bare).doc)).toContain(RESULT_OUT_OF_DATE_NOTE);
   });
 
   it("leaves the summary pages out when they are turned off", () => {

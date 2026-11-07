@@ -2,6 +2,7 @@ import type { jsPDF } from "jspdf";
 import type { ProjectInfo } from "../../store/types";
 import type { SummarySection } from "../export/analysisSummary";
 import { setSansFont } from "./pdf-fonts";
+import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 
 /** Header of the summary pages. */
 export interface SummaryHeader {
@@ -11,6 +12,8 @@ export interface SummaryHeader {
   version?: string;
   /** Export date (ISO). */
   date: string;
+  /** The result was computed for other input (store/out-of-date.ts): page 1 and the summary say so. */
+  outOfDate?: boolean;
 }
 
 /**
@@ -48,15 +51,33 @@ export function drawingTitleParts(sections: SummarySection[], header: SummaryHea
   return { name: pdfSafeText(name), result: pdfSafeText(result) };
 }
 
-/** Write the drawing's title line in the top margin of page 1, above the frame at `left`, `top`. */
+/**
+ * The note that the result is out of date, right-aligned in the top margin
+ * of page 1 (on the title line's baseline). Returns where it starts.
+ */
+export function drawOutOfDateNote(pdf: jsPDF, frame: { left: number; top: number; width: number }): number {
+  const right = frame.left + frame.width;
+  setSansFont(pdf, "bold");
+  pdf.setFontSize(BODY_PT);
+  pdf.setTextColor(0, 0, 0);
+  const [line] = pdf.splitTextToSize(RESULT_OUT_OF_DATE_NOTE, frame.width) as string[];
+  pdf.text(line, right, frame.top - 2.5, { align: "right" });
+  return right - pdf.getTextWidth(line);
+}
+
+/**
+ * Write the drawing's title line in the top margin of page 1, above the
+ * frame at `left`, `top`; up to `right` (the out-of-date note's start).
+ */
 export function drawDrawingTitle(
   pdf: jsPDF,
   sections: SummarySection[],
   header: SummaryHeader,
-  frame: { left: number; top: number; width: number },
+  frame: { left: number; top: number; width: number; right?: number },
 ): void {
   const { name, result } = drawingTitleParts(sections, header);
   if (!name && !result) return;
+  const end = frame.right !== undefined ? frame.right - 4 : frame.left + frame.width;
   const y = frame.top - 2.5;
   pdf.setFontSize(BODY_PT);
   pdf.setTextColor(0, 0, 0);
@@ -68,9 +89,12 @@ export function drawDrawingTitle(
   }
   if (result) {
     setSansFont(pdf, "normal");
-    const room = frame.left + frame.width - x;
-    const [line] = pdf.splitTextToSize(result, Math.max(room, 10)) as string[];
-    pdf.text(line ?? result, x, y);
+    const room = end - x;
+    // (no room left beside a long name and the out-of-date note: the summary pages carry it)
+    if (room >= 10) {
+      const [line] = pdf.splitTextToSize(result, room) as string[];
+      pdf.text(line ?? result, x, y);
+    }
   }
 }
 
@@ -145,6 +169,13 @@ export function drawSummaryPages(
   };
 
   newPage();
+  if (header.outOfDate) {
+    setSansFont(pdf, "bold");
+    pdf.setFontSize(BODY_PT);
+    const note = pdf.splitTextToSize(RESULT_OUT_OF_DATE_NOTE, width) as string[];
+    pdf.text(note, MARGIN, y);
+    y += note.length * LINE + LINE * 0.8;
+  }
   for (const section of sections) {
     ensure(LINE * 3);
     setSansFont(pdf, "bold");

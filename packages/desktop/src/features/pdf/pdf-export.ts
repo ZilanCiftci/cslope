@@ -54,7 +54,7 @@ import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
 import { surfacePoints } from "../../utils/arc";
 import { drawReferenceLabelsPdf, drawReferenceLinesPdf } from "./pdf-reference";
-import { drawDrawingTitle, drawSummaryPages, type SummaryHeader } from "./pdf-summary";
+import { drawDrawingTitle, drawOutOfDateNote, drawSummaryPages, type SummaryHeader } from "./pdf-summary";
 import type { SummarySection } from "../export/analysisSummary";
 import { clampMinorTicks } from "../../utils/ruler";
 import { computeRegions } from "../../utils/regions";
@@ -648,8 +648,11 @@ export function exportVectorPdf(data: PdfExportData): void {
     // (pdfPageOptions): the title line, so that page 1 printed on its own
     // carries the result; the user can turn either off in that menu.
     const pages = pdfPageOptions(rvs);
+    // A result out of date says so on page 1 also without the title line.
+    const titleFrame = { left: innerFrame.x, top: innerFrame.y, width: innerFrame.w };
+    const noteStart = summary?.header.outOfDate ? drawOutOfDateNote(pdf, titleFrame) : undefined;
     if (summary && pages.titleLine) {
-      drawDrawingTitle(pdf, summary.sections, summary.header, { left: innerFrame.x, top: innerFrame.y, width: innerFrame.w });
+      drawDrawingTitle(pdf, summary.sections, summary.header, { ...titleFrame, right: noteStart });
     }
     if (summary && pages.summaryPages) {
       drawSummaryPages(pdf, summary.sections, summary.header, {

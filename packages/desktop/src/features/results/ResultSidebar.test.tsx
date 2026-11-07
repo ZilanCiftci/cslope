@@ -9,6 +9,7 @@ import { getPlotAspectRatio } from "../view/paper";
 import { modelViewLock, viewLockContains } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import type { Annotation } from "../../store/types";
+import { markResultOutOfDate, RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 
 const surface = (fos: number) => ({ cx: 10, cy: 12, radius: 10, fos, entryPoint: [2, 8], exitPoint: [18, 2] });
 
@@ -169,6 +170,22 @@ describe("ResultSidebar summary", () => {
     );
     expect(screen.getByText("F, limit analysis (FE)").nextSibling!.textContent).toBe("1.350 – 1.450");
     expect(screen.getByText("Strength reduction (comparison)").nextSibling!.textContent).toBe("1.400");
+  });
+
+  it("says at the top of the summary when the result is out of date", () => {
+    render(<ResultSidebar />);
+    expect(screen.queryByText(RESULT_OUT_OF_DATE_NOTE)).toBeNull();
+    const stale = result();
+    markResultOutOfDate(stale);
+    act(() => useAppStore.setState({ result: stale }));
+    expect(screen.getByRole("status")).toHaveTextContent(RESULT_OUT_OF_DATE_NOTE);
+    // above the factor of safety, and the result is still shown
+    const note = screen.getByText(RESULT_OUT_OF_DATE_NOTE);
+    expect(note.compareDocumentPosition(screen.getByText("Min F")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText("Min F").nextSibling!.textContent).toBe("1.234");
+    // a new run gives a new result: the note goes
+    act(() => useAppStore.setState({ result: result() }));
+    expect(screen.queryByText(RESULT_OUT_OF_DATE_NOTE)).toBeNull();
   });
 
   it("reports a failed run, or that there is no result yet", () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AnalysisResult } from "@cslope/engine";
 import { buildSliceTable, toCsv } from "./sliceTable";
+import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 
 const result = {
   minFOS: 1.23456,
@@ -39,6 +40,15 @@ describe("slice table export", () => {
     const rows = buildSliceTable({ ...result, criticalSlices: slices } as unknown as AnalysisResult, { modelName: "M" });
     const slice = rows[rows.findIndex((r) => r[0] === "Slice") + 1];
     expect(slice[18]).toBeCloseTo(5 * 2.31 + 50 * Math.tan(Math.PI / 6), 3);
+  });
+
+  it("starts with a note when the result is out of date, in CSV too", () => {
+    const stale = buildSliceTable(result, { modelName: "M", outOfDate: true });
+    expect(stale[0]).toEqual([RESULT_OUT_OF_DATE_NOTE]);
+    expect(stale[1]).toEqual(["Model", "M"]);
+    expect(toCsv(stale).split("\r\n")[0]).toBe(RESULT_OUT_OF_DATE_NOTE);
+    expect(toCsv(stale, true).split("\r\n")[0]).toBe(RESULT_OUT_OF_DATE_NOTE);
+    expect(buildSliceTable(result, { modelName: "M" }).flat()).not.toContain(RESULT_OUT_OF_DATE_NOTE);
   });
 
   it("states characteristic values without partial factors", () => {
