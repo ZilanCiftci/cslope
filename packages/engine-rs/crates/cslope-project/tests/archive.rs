@@ -298,6 +298,8 @@ fn a_result_this_reader_cannot_read_is_left_out_with_a_warning() {
     ] {
         let project = read_project(edited(rel, name, edit), &options()).unwrap();
         let id = name.split('/').nth(1).unwrap();
+        // (model-2 is the active model: its result shows in the thumbnail)
+        assert_eq!(project.thumbnail.is_none(), id == "model-2");
         assert!(project.model(id).unwrap().result.is_none());
         assert_eq!(project.warnings.len(), 1);
         assert!(

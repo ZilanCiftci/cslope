@@ -33,6 +33,20 @@ export async function resultInputHash(result: AnalysisResult | null | undefined)
 
 const errorInputs = new Map<string, { message: string; json?: string; hash?: string }>();
 
+/**
+ * Forget what is known of failed runs: of the models with these ids (a
+ * project being read), or, without ids, of every model (a new project).
+ * The ones of models not in `keep` go too (a project loaded).
+ */
+export function forgetErrorInputs(ids?: string[], keep?: string[]): void {
+  if (keep) {
+    const kept = new Set(keep);
+    for (const id of [...errorInputs.keys()]) if (!kept.has(id)) errorInputs.delete(id);
+  }
+  if (ids) for (const id of ids) errorInputs.delete(id);
+  else if (!keep) errorInputs.clear();
+}
+
 /** A run of `model` (as it was run) failed with `message`. */
 export function rememberErrorInput(modelId: string, message: string, model: ModelEntry): void {
   errorInputs.set(modelId, { message, json: analysisInputJson(model) });

@@ -35,9 +35,11 @@ export function analysisInputJson(model: ModelEntry): string {
 
 /** The model as it reads back from its model.json (the model itself when it cannot be read). */
 function readBack(model: ModelEntry): ModelEntry {
-  const saved: Record<string, unknown> = JSON.parse(JSON.stringify(model));
-  for (const f of RUN_FIELDS) delete saved[f];
-  delete saved.backgrounds;
+  // (the run fields and drawings left out before the copy: a result is large)
+  const rest: Record<string, unknown> = { ...model };
+  for (const f of RUN_FIELDS) delete rest[f];
+  delete rest.backgrounds;
+  const saved: Record<string, unknown> = JSON.parse(JSON.stringify(rest));
   try {
     return parseProjectData({ version: PROJECT_FILE_VERSION, models: [saved] }).models[0];
   } catch {

@@ -1188,7 +1188,14 @@ impl Project {
         } else {
             ids[0].clone()
         };
-        let thumbnail = if has("thumbnail.png") {
+        // the thumbnail shows the active model's result: not kept when that
+        // result was left out
+        let active_left_out = models.iter().any(|m| {
+            m.model.id == active_model_id
+                && m.result.is_none()
+                && has(&format!("models/{}/result.json", m.model.id))
+        });
+        let thumbnail = if has("thumbnail.png") && !active_left_out {
             Some(src.read("thumbnail.png")?)
         } else {
             None

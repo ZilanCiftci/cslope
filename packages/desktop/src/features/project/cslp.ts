@@ -44,7 +44,7 @@ import { adoptProjectAssets, openedProjectAssets, type ProjectAsset } from "../d
 import { isLegacyEntry, normalizeBackgrounds } from "../drawings/placement";
 import { imageSize } from "../drawings/image-size";
 import { markResultOutOfDate } from "../../store/out-of-date";
-import { errorInputHash, rememberErrorHash, rememberResultHash, resultInputHash } from "../../store/result-input";
+import { errorInputHash, forgetErrorInputs, rememberErrorHash, rememberResultHash, resultInputHash } from "../../store/result-input";
 
 export { adoptProjectAssets, openedProjectAssets, normalizeBackgrounds, type ProjectAsset };
 
@@ -365,6 +365,7 @@ export async function readProject(bytes: Uint8Array, limits: ProjectZipLimits = 
   const opened = await openProject(bytes, limits);
   // A result computed for other input than its model's (the file was
   // edited after the run) stays, marked as out of date.
+  forgetErrorInputs(opened.file.models.map((m) => m.id));
   for (const model of opened.file.models) {
     const saved = opened.results.get(model.id);
     if (!saved) continue;

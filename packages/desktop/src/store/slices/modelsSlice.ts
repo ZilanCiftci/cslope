@@ -14,6 +14,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../defaults";
 import type { SliceCreator } from "../helpers";
+import { forgetErrorInputs } from "../result-input";
 import { cloneData, nextId } from "../helpers";
 import { cloneAnnotation } from "../../features/annotations/reference";
 import type { ModelEntry, ModelLocks, ModelsSlice } from "../types";
@@ -498,6 +499,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadProject: ({ models, activeModelId, created }) => {
     abortAllAnalyses();
+    forgetErrorInputs(undefined, (models ?? []).map((m) => m.id));
     if (!models || models.length === 0) return;
     const targetId =
       activeModelId && models.some((m) => m.id === activeModelId)
@@ -525,6 +527,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   newProject: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     const id = nextId("model");
     const entry = createStarterModel(id);
 
@@ -541,6 +544,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadBenchmarks: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     // Every verification problem (the bundled examples repeat some of them).
     const models = verificationModels();
     if (models.length === 0) return;
@@ -559,6 +563,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
 
   loadExamples: () => {
     abortAllAnalyses();
+    forgetErrorInputs();
     const models = BENCHMARK_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
     const first = models[0];
@@ -578,6 +583,7 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     const models = (await loadLocalLovoModels()).map(cloneModelEntry);
     if (models.length === 0) return;
     abortAllAnalyses();
+    forgetErrorInputs();
     const first = models[0];
     set({
       models,
