@@ -5,7 +5,7 @@ import { EMBANKMENT_EXAMPLES } from "../templates/embankment-examples";
 import { embankmentGeometry } from "../templates/embankment";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
 import { geometry } from "../templates/excavation";
-import { clipBand, embankmentShapes, excavationShapes, groundAt, lineAt, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
+import { clipBand, embankmentShapes, excavationShapes, fitView, groundAt, lineAt, surfaceLine, ticks, viewOf, type Point } from "./section-geometry";
 
 const square: Point[] = [
   [0, 0],
@@ -44,6 +44,15 @@ describe("the section's shapes", () => {
     expect(view.x0).toBeGreaterThan(g.left);
     expect(view.x1).toBeLessThan(g.right);
     expect(view.y1).toBe(0.8);
+    // Down to the firm base (the last layer's bottom), with or without a critical surface: the scale does not jump when F comes.
+    expect(view.y0).toBe(g.base);
+    const shallow: Point[] = [
+      [-3, 0],
+      [1, -2],
+      [6, -4],
+    ];
+    expect(viewOf(s, shallow).y0).toBe(g.base);
+    expect(viewOf(s, shallow).y1).toBe(view.y1);
   });
 
   it("draws the embankment over its layers, the load on its crest, and shows it whole", () => {
@@ -74,6 +83,22 @@ describe("the section's shapes", () => {
     expect(view.x0).toBeLessThan(-16);
     expect(view.x0).toBeGreaterThan(g.left);
     expect(view.y1).toBe(3);
+    expect(view.y0).toBe(g.base);
+    expect(g.base).toBe(p.layers[p.layers.length - 1].bottomLevel);
+  });
+
+  it("fits a deep model in the height it may take by showing more ground across, within the model", () => {
+    const extent = { left: -40, right: 50, base: -20, top: 0 };
+    const view = { x0: -8, x1: 12, y0: -20, y1: 0 };
+    // 20 m wide and 20 m deep in 400 by 240 px: the height decides, 12 px/m, 33.3 m across around the middle.
+    const fit = fitView(view, extent, 400, 240);
+    expect(fit.scale).toBeCloseTo(12);
+    expect(fit.view.x1 - fit.view.x0).toBeCloseTo(400 / 12);
+    expect((fit.view.x0 + fit.view.x1) / 2).toBeCloseTo(2);
+    expect(fit.view.y0).toBe(-20);
+    // At the model's edge it shifts inside; a shallow view is left as it is.
+    expect(fitView({ ...view, x0: -40, x1: -20 }, extent, 400, 240).view.x0).toBe(-40);
+    expect(fitView({ ...view, y0: -5 }, extent, 400, 240)).toEqual({ view: { ...view, y0: -5 }, scale: 20 });
   });
 
   it("draws water above the ground along the ground, and in the road's fill up to its level", () => {

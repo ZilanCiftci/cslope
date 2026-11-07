@@ -107,10 +107,10 @@ export interface SectionShapes {
   /** The model's extent. */
   extent: { left: number; right: number; base: number; top: number };
   /**
-   * The part the drawing shows at least (`x0` to `x1`, down to `y0`), and
-   * the margin it adds around that and the critical surface.
+   * The part the drawing shows at least across (`x0` to `x1`), and the
+   * margin it adds around that and the critical surface.
    */
-  focus: { x0: number; x1: number; y0: number; margin: number };
+  focus: { x0: number; x1: number; margin: number };
 }
 
 /** Each layer's band of the outline, from the top down (the last one's down to the base). */
@@ -152,7 +152,7 @@ export function excavationShapes(params: ExcavationParams): SectionShapes {
     load: r && q ? { x1: r.topLeft, x2: r.topRight, y: r.top, q } : null,
     extent: { left: g.left, right: g.right, base: g.base, top: r ? r.top : g.ground },
     // The whole trench, with its opposite crest.
-    focus: { x0: Math.min(r?.farToe ?? 0, -2 * H), x1: Math.max(g.toeX + 2 * H, g.trench ? g.trench.farCrest : 0), y0: g.bottom - 1.5 * H, margin: H },
+    focus: { x0: Math.min(r?.farToe ?? 0, -2 * H), x1: Math.max(g.toeX + 2 * H, g.trench ? g.trench.farCrest : 0), margin: H },
   };
 }
 
@@ -183,7 +183,7 @@ export function embankmentShapes(params: EmbankmentParams): SectionShapes {
     ...waterOf(exterior, params.waterLevel, params.ponded === true, g.ground),
     load: params.crestLoad ? { x1: g.crestLeft, x2: 0, y: g.crest, q: params.crestLoad } : null,
     extent: { left: g.left, right: g.right, base: g.base, top: g.crest },
-    focus: { x0: g.farToe, x1: g.toeX + 2 * h, y0: g.ground - 1.5 * h, margin: h },
+    focus: { x0: g.farToe, x1: g.toeX + 2 * h, margin: h },
   };
 }
 
@@ -238,16 +238,34 @@ export function ticks(lo: number, hi: number, count = 6): number[] {
 }
 
 /**
- * The part of the model the drawing shows: the slope, the fill and the
- * critical surface with some ground around them, not the whole width the
- * search needs (which would make the slope small, on a phone tiny).
+ * The part of the model the drawing shows: across, the slope, the fill and
+ * the critical surface with some ground around them, not the whole width the
+ * search needs (which would make the slope small, on a phone tiny); down,
+ * always the whole depth to the model's firm base (the last layer's bottom),
+ * so that the drawing does not change its scale when the result comes.
  */
 export function viewOf(s: Pick<SectionShapes, "extent" | "focus">, surface: Point[] | null): { x0: number; x1: number; y0: number; y1: number } {
   const xs = surface?.map((p) => p[0]) ?? [];
-  const ys = surface?.map((p) => p[1]) ?? [];
   const { extent: e, focus: f } = s;
   const x0 = Math.max(e.left, Math.min(f.x0, ...xs) - f.margin);
   const x1 = Math.min(e.right, Math.max(f.x1, ...xs) + f.margin);
-  const y0 = Math.max(e.base, Math.min(f.y0, ...ys) - 1);
-  return { x0, x1, y0, y1: e.top };
+  return { x0, x1, y0: e.base, y1: e.top };
+}
+
+/**
+ * A view that fits a plot of `width` by at most `maxHeight` (px): when the
+ * whole depth would be taller than that, the scale follows the height and
+ * the view shows more ground across (around its middle, within the model),
+ * so that a deep model does not make the drawing tall and push F out of view.
+ * Returns the view and its scale (px per m).
+ */
+export function fitView(view: { x0: number; x1: number; y0: number; y1: number }, extent: SectionShapes["extent"], width: number, maxHeight: number) {
+  const byWidth = width / (view.x1 - view.x0);
+  const byHeight = maxHeight / (view.y1 - view.y0);
+  if (byHeight >= byWidth) return { view, scale: byWidth };
+  const span = Math.min(width / byHeight, extent.right - extent.left);
+  let x0 = (view.x0 + view.x1) / 2 - span / 2;
+  x0 = Math.min(Math.max(x0, extent.left), extent.right - span);
+  const x1 = x0 + span;
+  return { view: { ...view, x0, x1 }, scale: Math.min(width / span, byHeight) };
 }

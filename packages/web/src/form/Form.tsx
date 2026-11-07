@@ -9,7 +9,7 @@ import { ArrowDown, ArrowUp, BetweenHorizontalStart, ChevronDown, ChevronRight, 
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
 import { LAYER_PARAMETERS } from "@/templates/common";
-import { draftLevels, emptyText, formState, LAYER_FIELDS, LAYER_KINDS, moveLayer, parseNumber, strengthSummary, withGroup, withNewLayer, type Draft, type LayerDraft } from "./draft";
+import { draftLevels, emptyText, formState, headerIdOf, LAYER_FIELDS, LAYER_KINDS, moveLayer, parseNumber, strengthSummary, withGroup, withNewLayer, type Draft, type LayerDraft } from "./draft";
 import { ColorPicker, Swatch } from "./ColorPicker";
 import { LAYER_THICKNESS, rangeText } from "./layers";
 import { descOf, type AnySpec, type GroupSpec } from "./specs";
@@ -25,6 +25,8 @@ export interface FormProps {
   missing?: string[];
   /** Sentences on what the model does that the fields do not say. */
   notes: string[];
+  /** A layer was removed: its place, and the draft before (for Undo). */
+  onRemoveLayer?: (index: number, before: Draft) => void;
 }
 
 const inputClass = "h-8 w-full rounded-md border border-input bg-background px-2 text-sm tabular placeholder:text-muted-foreground/80 aria-[invalid=true]:border-destructive";
@@ -172,8 +174,6 @@ const MAX_LAYERS = 12;
 
 /** The id of a layer's name field, which gets the focus when the layer is added. */
 const nameIdOf = (layer: LayerDraft) => `${layer.key}-name`;
-/** The id of a layer's header button, which gets the focus when the layer after it is removed. */
-const headerIdOf = (layer: LayerDraft) => `${layer.key}-header`;
 /** The id of a layer's action button ("up", "down", "insert"), which keeps the focus when the layer moves. */
 const actionIdOf = (layer: LayerDraft, action: LayerAction) => `${layer.key}-${action}`;
 
@@ -393,7 +393,7 @@ function TemplateGroup({ spec, group, draft, onChange, errors, children }: { spe
   );
 }
 
-export function Form({ spec, draft, onChange, errors, missing = [], notes }: FormProps) {
+export function Form({ spec, draft, onChange, errors, missing = [], notes, onRemoveLayer }: FormProps) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
   const params = useMemo(() => formState(draft).params, [draft]);
   const setLayer = (i: number, layer: LayerDraft) => set("layers", draft.layers.map((l, j) => (j === i ? layer : l)));
@@ -424,6 +424,7 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
     const layers = draft.layers.filter((_, j) => j !== i);
     set("layers", layers);
     setFocus(headerIdOf(layers[Math.max(0, i - 1)]));
+    onRemoveLayer?.(i, draft);
   };
   // A moved layer keeps the focus on the same button, so that it can be pressed again; on its other move button once that one is disabled at the end (never lost to the page).
   const move = (i: number, by: -1 | 1) => {
