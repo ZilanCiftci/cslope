@@ -123,7 +123,7 @@ describe("the form's state", () => {
     expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained", gamma: 16, su: 25 });
     d.layers[0].suRate = "1.5";
     expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained-increasing", gamma: 16, su: 25, suRate: 1.5 });
-    expect(strengthSummary(d.layers[0])).toBe("Su 25 kPa, +1.5 kPa/m");
+    expect(strengthSummary(d.layers[0])).toBe("Su\u00a025\u00a0kPa, +1.5\u00a0kPa/m");
     expect(toQuery(d)).toContain("layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25&layer1.suRate=1.5");
   });
 
@@ -158,9 +158,9 @@ describe("the form's state", () => {
     expect(bottomLevels(0, [1, NaN, 2])).toEqual([-1, NaN, NaN]);
     expect(thicknesses(30.2, [29.8, 29.7, 29.5])).toEqual([0.4, 0.1, 0.2]);
     expect(thicknesses(0, [-1.5, -15])).toEqual([1.5, 13.5]);
-    expect(rangeText(13.5, -1.5, -15)).toBe("13.5 m (−1.5 to −15 m)");
-    expect(rangeText(1.5, 0, -1.5)).toBe("1.5 m (0 to −1.5 m)");
-    expect(rangeText(2, NaN, NaN)).toBe("2 m");
+    expect(rangeText(13.5, -1.5, -15)).toBe("13.5\u00a0m (−1.5 to −15\u00a0m)");
+    expect(rangeText(1.5, 0, -1.5)).toBe("1.5\u00a0m (0 to −1.5\u00a0m)");
+    expect(rangeText(2, NaN, NaN)).toBe("2\u00a0m");
     const d = draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"]);
     expect(d.layers.map((l) => l.thickness)).toEqual(["1.5", "18.5"]);
     expect(draftLevels(d)).toEqual(EXCAVATION_EXAMPLES["crust-over-clay"].layers.map((l) => l.bottomLevel));

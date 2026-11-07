@@ -44,8 +44,9 @@ export const levelText = (v: number) => num(v).replace("-", "−");
 
 /** A layer's thickness and its level range: "13.5 m (−1.5 to −15 m)"; the thickness alone when the levels are not known. */
 export function rangeText(thickness: number, top: number, bottom: number): string {
-  const t = `${num(thickness)} m`;
-  return Number.isFinite(top) && Number.isFinite(bottom) ? `${t} (${levelText(top)} to ${levelText(bottom)} m)` : t;
+  // No-break spaces between a value and its unit, so that "1.5 m" never wraps inside.
+  const t = `${num(thickness)}\u00a0m`;
+  return Number.isFinite(top) && Number.isFinite(bottom) ? `${t} (${levelText(top)} to ${levelText(bottom)}\u00a0m)` : t;
 }
 
 /** A thickness for a new layer: `preferred` m, less when the lowest level allowed (−100 m) is closer below `base`. */

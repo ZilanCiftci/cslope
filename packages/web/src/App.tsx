@@ -20,6 +20,9 @@ type Run =
   | { kind: "failed"; key: string; message: string }
   | { kind: "cancelled"; key: string };
 
+/** The fields of the layers' geometry: the list and each thickness. */
+const LAYER_GEOMETRY = /^layers(\.\d+\.thickness)?$/;
+
 /** How long the form waits after a change before it runs (ms). */
 const RUN_DELAY = 300;
 
@@ -40,9 +43,6 @@ function buildDocument(spec: AnySpec, form: FormState): { doc: AnalysisDocument 
     return { doc: null, error: err instanceof Error ? err.message : String(err) };
   }
 }
-
-/** "factor of safety" as a label: "Factor of safety". */
-const sentenceCase = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 function download(name: string, text: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
@@ -109,8 +109,10 @@ export function App({ client }: { client: AnalysisClient }) {
   const key = useMemo(() => (doc ? JSON.stringify(doc) : null), [doc]);
   const notes = useMemo(() => (form.ready ? spec.template.notes(form.params) : []), [spec, form]);
 
-  // The drawing keeps the last section it could draw while a geometry field is being typed.
+  // The drawing keeps the last section it could draw while a geometry field is being typed;
+  // while the layers cannot be built, only its outline, greyed (not layers that are no longer there).
   const shape = useMemo(() => drawable(spec, form), [spec, form]);
+  const layersBroken = form.missing.some((f) => LAYER_GEOMETRY.test(f)) || [...form.errors.keys()].some((f) => LAYER_GEOMETRY.test(f));
   const [lastShape, setLastShape] = useState(() => ({ template: draft.template, params: shape }));
   if (shape && shape !== lastShape.params) setLastShape({ template: draft.template, params: shape });
 
@@ -185,9 +187,12 @@ export function App({ client }: { client: AnalysisClient }) {
 
   const slices: SliceData[] | null = outcome?.kind === "complete" ? outcome.result.criticalSlices : null;
   const drawn = lastShape.template === draft.template ? lastShape.params : null;
-  const sectionLabel = drawn
-    ? `Section of ${spec.describe(drawn)}${slices && outcome?.kind === "complete" ? `, and the critical surface of F ${outcome.summary.fosText}` : ""}.`
-    : "";
+  const outlineOnly = !!drawn && !shape && layersBroken;
+  const sectionLabel = !drawn
+    ? ""
+    : outlineOnly
+      ? "Outline of the section; the layers are drawn when they are correct."
+      : `Section of ${spec.describe(drawn)}${slices && outcome?.kind === "complete" ? `, and the critical surface of F ${outcome.summary.fosText}` : ""}.`;
 
   return (
     <>
@@ -208,11 +213,11 @@ export function App({ client }: { client: AnalysisClient }) {
           <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <figure className="rounded-lg border bg-card p-3">
               {drawn ? (
-                <Section shapes={spec.shapes(drawn)} layers={drawn.layers} slices={slices} label={sectionLabel} />
+                <Section shapes={spec.shapes(drawn)} layers={drawn.layers} slices={slices} label={sectionLabel} outlineOnly={outlineOnly} />
               ) : (
                 <p className="p-6 text-sm text-muted-foreground">The section is drawn when the geometry is filled in.</p>
               )}
-              <figcaption className="mt-1 text-xs text-muted-foreground">{spec.caption}</figcaption>
+              <figcaption className="mt-1 text-xs text-muted-foreground">{outlineOnly ? `Fix the layers to draw the section. ${spec.caption}` : spec.caption}</figcaption>
             </figure>
             <ResultCard
               state={state}
@@ -241,7 +246,7 @@ export function App({ client }: { client: AnalysisClient }) {
         <aside aria-label="Result summary" className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur lg:hidden">
           <div className="mx-auto flex h-11 max-w-6xl items-center gap-3 px-4 text-sm">
             <span className="font-semibold tabular">F {state.summary.fosText}</span>
-            <span className="min-w-0 truncate text-muted-foreground">{sentenceCase(state.summary.fosLabel)}</span>
+            <span className="min-w-0 truncate text-muted-foreground">{state.summary.fosHeading}</span>
             <a href="#result" className="ml-auto text-primary underline-offset-4 hover:underline">
               Result
             </a>

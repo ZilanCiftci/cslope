@@ -144,7 +144,7 @@ describe("the geometry rules", () => {
       { field: "fill.phi", message: "Must be at least 0° and less than 90°.", general: "Embankment: Fill φ′ must be at least 0° and less than 90°." },
       { field: "crestLoad", message: "Must be at least 0 kPa.", general: "Load on the crest q must be at least 0 kPa." },
       { field: "layers.1.bottomLevel", message: "Layer 2: the bottom level -14.98 must be at least 0.05 m below the layer above (-15)." },
-      { field: "layers.1.su", message: "Must be at least 0 kPa.", general: "Layer 2: Su must be at least 0 kPa." },
+      { field: "layers.1.su", message: "Must be more than 0 kPa.", general: "Layer 2: Su must be more than 0 kPa." },
       { field: "layers.0.name", message: 'A layer is named "Embankment", which is the embankment\'s material.' },
     ]);
     expect(() => embankmentDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");

@@ -244,6 +244,13 @@ describe("the geometry rules", () => {
     expect(doc.formatVersion).toBe(1);
   });
 
+  it("refuses an undrained Su of 0 (the bound is exclusive), constant or at the top of a rate, and takes any Su above it", () => {
+    const withSu = (su: number, suRate?: number) => withLayers(base, { bottomLevel: -10, material: suRate === undefined ? { kind: "undrained", gamma: 16, su } : { kind: "undrained-increasing", gamma: 16, su, suRate } });
+    expect(excavationFieldProblems(withSu(0))).toEqual([{ field: "layers.0.su", message: "Must be more than 0 kPa.", general: "Layer 1: Su must be more than 0 kPa." }]);
+    expect(excavationProblems(withSu(0, 2))).toEqual(["Layer 1: Su must be more than 0 kPa."]);
+    expect(excavationProblems(withSu(0.5))).toEqual([]);
+  });
+
   it("refuses what it cannot build, with a sentence each", () => {
     expect(excavationProblems(base)).toEqual([]);
     expect(excavationProblems({ ...base, excavationDepth: 0 })).toEqual(["Excavation depth H must be from 0.5 to 20 m."]);

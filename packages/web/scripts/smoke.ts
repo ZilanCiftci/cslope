@@ -189,6 +189,9 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       const before = await fValue(page).textContent();
       await page.getByRole("button", { name: "Move Crust down" }).click();
       await page.waitForFunction(() => new URLSearchParams(location.search).get("layer1.name") === "Clay", null, { timeout: 5_000 });
+      // At the end the pressed button is disabled: the focus goes to the layer's other move button, not to the page.
+      const focused = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+      if (focused !== "Move Crust up") problems.push(`after a move to the end the focus is on "${focused}", expected "Move Crust up"`);
       const q = new URL(page.url()).searchParams;
       if (q.get("layer1.t") !== "18.5" || q.get("layer2.t") !== "1.5") problems.push(`after a move the address has the thicknesses ${q.get("layer1.t")}, ${q.get("layer2.t")}, expected 18.5, 1.5`);
       await page.waitForFunction((b) => {

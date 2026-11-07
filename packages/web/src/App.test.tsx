@@ -117,7 +117,8 @@ describe("App", () => {
     expect(within(card).getByText("Minimum factor of safety")).toBeInTheDocument();
     // The bar that keeps F in view on a phone, with a link to the card.
     const bar = screen.getByRole("complementary", { name: "Result summary" });
-    expect(bar).toHaveTextContent("F 1.234Factor of safety");
+    // The same label as the card's.
+    expect(bar).toHaveTextContent("F 1.234Minimum factor of safety");
     expect(within(bar).getByRole("link", { name: "Result" })).toHaveAttribute("href", "#result");
     // The engine's warnings are not shown (the app shows them): the page's users cannot act on them.
     expect(screen.queryByText("The surface enters the slope at 71°.")).toBeNull();
@@ -138,8 +139,11 @@ describe("App", () => {
     type("Su (kPa)", "-5");
     expect(field("Su (kPa)")).toHaveAttribute("aria-invalid", "true");
     // At the field, the bounds alone: the field's label is beside them.
-    expect(screen.getByText("Must be at least 0 kPa.")).toBeInTheDocument();
+    expect(screen.getByText("Must be more than 0 kPa.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("To get F, correct the field marked in red.");
+    // Su 0 is refused too: an undrained layer needs a strength.
+    type("Su (kPa)", "0");
+    expect(field("Su (kPa)")).toHaveAttribute("aria-invalid", "true");
     await act(() => new Promise<void>((r) => setTimeout(r, 400)));
     expect(requests).toEqual([]);
   });
@@ -207,17 +211,22 @@ describe("App", () => {
     expect(header(/^Clay/)).toHaveTextContent("18.5 m (−2.5 to −21 m)");
     expect(document.activeElement).toBe(field("Name"));
     type("Name", "Silt");
-    // Down twice from the top: the focus stays on "Move Crust down", then (at the end, where it is disabled) on the header.
+    // Down twice from the top: the focus stays on "Move Crust down", then (at the end, where it is disabled) on "Move Crust up".
     fireEvent.click(screen.getByRole("button", { name: "Move Crust down" }));
     expect(names().map((t) => /^(Silt|Crust|Clay)/.exec(t ?? "")?.[0])).toEqual(["Silt", "Crust", "Clay"]);
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust down" }));
     expect(header(/^Crust/)).toHaveTextContent("1.5 m (−1 to −2.5 m)");
     fireEvent.click(screen.getByRole("button", { name: "Move Crust down" }));
     expect(screen.getByRole("button", { name: "Move Crust down" })).toBeDisabled();
-    expect(document.activeElement).toBe(header(/^Crust/));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust up" }));
     expect(header(/^Crust/)).toHaveTextContent("1.5 m (−19.5 to −21 m)");
     fireEvent.click(screen.getByRole("button", { name: "Move Crust up" }));
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust up" }));
+    // Up to the top: "Move Crust up" is disabled, the focus goes to "Move Crust down".
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust up" }));
+    expect(screen.getByRole("button", { name: "Move Crust up" })).toBeDisabled();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust down" }));
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust down" }));
     // A problem stays with the moved layer's field: the crust's c′, moved from the second place to the first.
     fireEvent.click(header(/^Crust/));
     type("c′ (kPa)", "-1");
@@ -302,6 +311,32 @@ describe("App", () => {
     expect(crust).not.toHaveTextContent("Problem");
   });
 
+  it("draws only the outline, greyed, while the layers cannot be built, and the layers again once they can", () => {
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"])));
+    renderApp({ loadEngine: () => new Promise(() => {}) });
+    const section = () => screen.getByRole("img", { name: /section/i });
+    expect(section()).toHaveAccessibleName(/^Section of the excavation: 2 layers/);
+    expect(within(section()).getByText("Crust")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Clay/ }));
+    type("Thickness (m)", "abc");
+    // Not the last section's layers: the outline, and a note.
+    expect(section()).toHaveAccessibleName("Outline of the section; the layers are drawn when they are correct.");
+    expect(within(section()).queryByText("Crust")).toBeNull();
+    expect(within(section()).queryByText("Clay")).toBeNull();
+    expect(screen.getByText(/^Fix the layers to draw the section\./)).toBeInTheDocument();
+    // An empty thickness, or a removed layer that leaves the rest invalid, the same.
+    type("Thickness (m)", "");
+    expect(section()).toHaveAccessibleName(/^Outline of the section/);
+    type("Thickness (m)", "10");
+    expect(section()).toHaveAccessibleName(/^Section of the excavation: 2 layers/);
+    expect(within(section()).getByText("Clay")).toBeInTheDocument();
+    expect(screen.queryByText(/^Fix the layers to draw the section\./)).toBeNull();
+    // Removing the clay leaves the crust ending above the excavation bottom: the removed clay is not drawn.
+    fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
+    expect(section()).toHaveAccessibleName(/^Outline of the section/);
+    expect(within(section()).queryByText("Clay")).toBeNull();
+  });
+
   it("names the layer kinds as the app names its material models", () => {
     window.history.replaceState(null, "", "/?t=excavation&layers=2&layer1.kind=undrained&layer1.t=5&layer1.su=10&layer1.suRate=1.5&layer2.kind=mohr-coulomb&layer2.t=15");
     renderApp({ loadEngine: () => new Promise(() => {}) });
@@ -378,11 +413,13 @@ describe("App", () => {
     expect(screen.getByRole("status")).toHaveTextContent("The engine could not load: no network");
   });
 
-  it("links to the website's download and limitations pages; the .cslp download waits", () => {
+  it("links to the website's download and limitations pages; no .cslp download yet", () => {
     renderApp({ loadEngine: () => new Promise(() => {}) });
-    expect(screen.getByRole("link", { name: "Open in cSlope" })).toHaveAttribute("href", "https://cslope.com/download");
+    expect(screen.getByRole("link", { name: "Get the cSlope app" })).toHaveAttribute("href", "https://cslope.com/download");
     expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/browser#limitations");
-    expect(screen.getByRole("button", { name: "Download .cslp" })).toBeDisabled();
+    // The .cslp download is not shown until it works (#107).
+    expect(screen.queryByRole("button", { name: "Download .cslp" })).toBeNull();
+    expect(screen.queryByText(/\.cslp/)).toBeNull();
   });
 
   it("switches the theme and remembers it", async () => {

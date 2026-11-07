@@ -136,21 +136,18 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
             Run
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyse runs." : "Fill in the form to download it."}>
+        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyze runs." : "Fill in the form to download it."}>
           Download JSON
-        </Button>
-        <Button size="sm" variant="outline" disabled title="Not available yet: the engine in the browser cannot write cSlope projects.">
-          Download .cslp
         </Button>
         <Button size="sm" variant="outline" onClick={onCopyLink} title="Copy the address of this section: the parameters are in it, nothing is stored.">
           Copy link
         </Button>
         <Button size="sm" variant="link" asChild>
-          <a href={DOWNLOAD_URL}>Open in cSlope</a>
+          <a href={DOWNLOAD_URL}>Get the cSlope app</a>
         </Button>
       </div>
       <p className="mt-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
-        {notice ?? "The .cslp download comes when the engine in the browser can write cSlope projects."}
+        {notice}
       </p>
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         {TEMPLATE_NOTE} See the{" "}

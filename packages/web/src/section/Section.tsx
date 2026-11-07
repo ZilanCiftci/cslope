@@ -41,11 +41,13 @@ export interface SectionProps {
   slices: SliceData[] | null;
   /** A short sentence for screen readers: what the drawing shows. */
   label: string;
+  /** Only the outline, greyed: the layers cannot be built (the last section's layers would be stale). */
+  outlineOnly?: boolean;
 }
 
-export function Section({ shapes: s, layers, slices, label }: SectionProps) {
+export function Section({ shapes: s, layers, slices, label, outlineOnly = false }: SectionProps) {
   const [ref, width] = useWidth<HTMLDivElement>(720);
-  const surface = slices?.length ? surfaceLine(slices) : null;
+  const surface = !outlineOnly && slices?.length ? surfaceLine(slices) : null;
   const view = viewOf(s, surface);
   const top = view.y1;
   const scale = (width - MARGIN.left - MARGIN.right) / (view.x1 - view.x0);
@@ -67,6 +69,9 @@ export function Section({ shapes: s, layers, slices, label }: SectionProps) {
           </clipPath>
         </defs>
         <g clipPath={`url(#${clip})`}>
+        {outlineOnly && <path d={path(s.exterior)} className="fill-muted stroke-muted-foreground" strokeWidth={1.25} strokeLinejoin="round" strokeDasharray="4 3" />}
+        {!outlineOnly && (
+        <>
         {s.layers.map((poly, i) => (
           <path key={i} d={path(poly)} fill={layers[i].color ?? defaultLayerColor(i)} className={LAYER_FILL} />
         ))}
@@ -111,6 +116,8 @@ export function Section({ shapes: s, layers, slices, label }: SectionProps) {
             <line key={i} x1={X(a[0])} x2={X(b[0])} y1={Y(a[1])} y2={Y(b[1])} className="stroke-foreground/45" strokeWidth={0.5} />
           ))}
         {surface && <path d={path(surface, false)} className="fill-none stroke-signal" strokeWidth={2} strokeLinejoin="round" />}
+        </>
+        )}
         </g>
         {/* Axes: elevations at the left, distances from the crest below. */}
         <g className="fill-muted-foreground text-[10px] tabular">

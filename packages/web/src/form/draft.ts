@@ -67,14 +67,14 @@ export const LAYER_FIELDS: Record<LayerModel, Exclude<keyof typeof LAYER_PARAMET
   impenetrable: ["gamma"],
 };
 
-/** A layer's strength in a few words, from the text typed: "Su 18 kPa, +1.2 kPa/m", "c′ 3 kPa, φ′ 30°"; empty values are left out. */
+/** A layer's strength in a few words, from the text typed: "Su 18 kPa, +1.2 kPa/m", "c′ 3 kPa, φ′ 30°", each part with no-break spaces (it never wraps inside); empty values are left out. */
 export function strengthSummary(layer: LayerDraft): string {
   const v = (t: string) => t.trim();
   switch (layer.kind) {
     case "undrained":
-      return [v(layer.su) && `Su ${v(layer.su)} kPa`, v(layer.su) && v(layer.suRate) && `+${v(layer.suRate)} kPa/m`].filter(Boolean).join(", ");
+      return [v(layer.su) && `Su\u00a0${v(layer.su)}\u00a0kPa`, v(layer.su) && v(layer.suRate) && `+${v(layer.suRate)}\u00a0kPa/m`].filter(Boolean).join(", ");
     case "mohr-coulomb":
-      return [v(layer.c) && `c′ ${v(layer.c)} kPa`, v(layer.phi) && `φ′ ${v(layer.phi)}°`].filter(Boolean).join(", ");
+      return [v(layer.c) && `c′\u00a0${v(layer.c)}\u00a0kPa`, v(layer.phi) && `φ′\u00a0${v(layer.phi)}°`].filter(Boolean).join(", ");
     case "impenetrable":
       return "";
   }
