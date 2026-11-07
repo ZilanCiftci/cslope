@@ -845,7 +845,8 @@ fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
         for h in [2., 3.3, 5., 7.7] {
             for k in 1..20 {
                 let (g, bottom) = (10., 10. - h);
-                let level = ((g - (h * k as f64) / 20.) * 100.).round() / 100.;
+                let level =
+                    cslope_engine::js::math::round((g - (h * k as f64) / 20.) * 100.) / 100.;
                 if level >= g || level <= bottom {
                     continue;
                 }
