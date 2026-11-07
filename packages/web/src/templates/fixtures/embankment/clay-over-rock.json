@@ -96,6 +96,8 @@
     "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
-    "bothDirections": false
+    "bothDirections": false,
+    "tensionCrackAuto": true,
+    "tensionCrackAngle": 65
   }
 }

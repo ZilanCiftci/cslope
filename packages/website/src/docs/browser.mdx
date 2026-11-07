@@ -15,7 +15,7 @@ order: 1.5
 
 Choose the template at the top of the page. The address carries its name (`t=excavation` or `t=embankment`); a link without it opens the excavation.
 
-- **Excavation in clay with a haul road.** An excavation of depth H with a slope 1:n and a flat bottom, in level ground. Without a bottom width it is one-sided, its bottom as wide as the model needs; with a bottom width b it is a trench: the bottom is b wide and the opposite side rises 1:n to the ground. Behind the crest an optional haul road: a fill with sides 1:1.5, its own Mohr-Coulomb material (c′, φ′) and a traffic load q over its top.
+- **Excavation in clay with a haul road.** An excavation of depth H with a slope 1:n and a flat bottom, in level ground. Without a bottom width it is one-sided, its bottom as wide as the model needs; with a bottom width b it is a trench: the bottom is b wide and the opposite side rises 1:n to the ground. Behind the crest an optional haul road: a fill with sides 1:2.5, its own Mohr-Coulomb material (c′, φ′) and a traffic load q over its top.
 - **Embankment on clay.** An embankment of height h with a crest of width B and both sides 1:n, on level ground, of a Mohr-Coulomb (drained) fill. An optional load q over the crest.
 
 Both have:
@@ -29,8 +29,8 @@ One unit weight γ per material applies above and below the water. The values ar
 
 - **The model's extent.** Each side reaches 1.5 times the model's depth beyond the slope (in a trench, beyond its opposite side), and at least 3 times its height.
 - **The model's base** is the last layer's bottom, the ground level less the layers' thicknesses, treated as firm ground; it is never extended. When it is less deep than recommended (3H below the ground for the excavation; 3h, or half the embankment's width at its foot B + 2nh, for the embankment), a note under the form says so: if the soil continues deeper, enter its real bottom, since a deeper base can give a lower F. In a uniform clay under a flat slope, F keeps falling as the clay gets deeper. In the excavation the last layer must end below the excavation bottom.
-- **The search limits.** In the excavation, slip surfaces enter on the ground (and the road) behind the crest and exit anywhere from the crest to the model's right edge, in the face or the bottom; in a trench, from the crest to the far end of the bottom, so that no surface exits beyond the trench. On the embankment, they enter on the embankment (its crest and its far side) and exit anywhere from the crest's edge to the right edge: in the face, at the toe or on the ground beyond it. A fill with a low φ′ and no cohesion can govern by a shallow slide in the slope, with F close to tan φ′/tan β; the engine's warning says so.
-- **The options** of a new model in the app: Morgenstern-Price with a half-sine interslice function, 30 slices, the circular search with composite surfaces along bedrock, no tension crack ([Analysis options](/docs/analysis), [Slip surface search](/docs/search)).
+- **The search limits.** In the excavation, slip surfaces enter on the ground (and the road) behind the crest and exit anywhere from the crest to the model's right edge, in the face or the bottom; in a trench, from the crest to the far end of the bottom, so that no surface exits beyond the trench. On the embankment, they enter on the embankment (its crest and its far side) and exit anywhere from the crest's edge to the right edge: in the face, at the toe or on the ground beyond it. An embankment fill with a low φ′ and no cohesion can govern by a shallow slide in its face, with F close to tan φ′/tan β. The haul road's sides are flat (1:2.5) so that such a slide down them does not govern for usual fills.
+- **The options** of a new model in the app: Morgenstern-Price with a half-sine interslice function, 30 slices, the circular search with composite surfaces along bedrock ([Analysis options](/docs/analysis), [Slip surface search](/docs/search)), and an automatic tension crack: its depth from the soil at each surface's entry, and at a base steeper than 65°, so that a steep entry that would need tension at the base is cut off ([Tension crack](/docs/analysis#tension-crack)).
 - **The direction.** The slope slides to the right, as drawn. The embankment is symmetric, so its left side has the same F.
 
 ## Limitations
@@ -52,10 +52,7 @@ The result card shows F with three decimals, labeled **Minimum factor of safety*
 
 Under F: the method, the critical surface's entry and exit points, the surface (a circle's center and radius) and the number of surfaces searched. The drawing shows the critical surface in red with its slices.
 
-**Warnings from the engine** are listed under the result, in the engine's own words; they are the warnings of the app's result summary, and [Troubleshooting](/docs/troubleshooting) explains each. Read them before you use F. Common ones on these sections:
-
-- a shallow slide in the face of a cohesionless fill or crust, where F approaches tan φ′/tan β ([Shallow slides in cohesionless soil](/docs/troubleshooting#shallow-slides-in-cohesionless-soil));
-- a steep entry or slices with a small $m_\alpha$ near the crest ([Warnings about the slices](/docs/troubleshooting#warnings-about-the-slices-of-the-critical-surface)).
+The templates use an automatic tension crack at steep entries and do not show the engine's warnings; the app does ([Troubleshooting](/docs/troubleshooting)).
 
 While a new analysis runs, the last result stays in view, dimmed and marked *Previous result*. A field marked in red says what is wrong with it; the status line says how many fields are still empty. On a phone, a bar at the bottom keeps F in view.
 

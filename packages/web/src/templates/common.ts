@@ -6,6 +6,7 @@
  * values with partial factors are for the app and Python). No strength
  * has a default (B5).
  */
+import type { AnalysisOptions } from "@cslope/engine";
 import type { Definition, Point, Strength } from "./builder";
 import { appMaterialColor, defaultLayerColor } from "./colors";
 import type { ParameterDescription } from "./types";
@@ -111,6 +112,17 @@ export const FILL_PARAMETERS = {
   c: p("c", "Fill c′ (kPa)", "kPa", 0, Infinity, 0.5, "The effective cohesion of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { typical: [0, 20] }),
   phi: p("phi", "Fill φ′ (°)", "°", 0, 90, 0.5, "The effective friction angle of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { maxExclusive: true, typical: [25, 45] }),
 };
+
+/**
+ * The templates' options over the app's: the engine's automatic tension
+ * crack, its depth from the soil at each surface's entry (2c/(γ√Ka) − q/γ;
+ * 2Su/γ − q/γ in clay) and at a base steeper than 65°, so that a steep
+ * entry relying on tension at the base (N′ < 0, a low m_α) is cut off
+ * rather than counted. The page does not show the engine's warnings (its
+ * users cannot act on them; the app does), so the model avoids what they
+ * are about.
+ */
+export const TEMPLATE_OPTIONS = { tensionCrackAuto: true, tensionCrackAngle: 65 } satisfies Partial<AnalysisOptions>;
 
 /** A layer is at least this thick, and no level comes closer than this to an excavation bottom (m). */
 export const MIN_LAYER_THICKNESS = 0.05;

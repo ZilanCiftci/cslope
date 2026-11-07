@@ -4,14 +4,14 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-47.8, -15],
-      [-47.8, -3],
-      [-47.8, 3],
-      [-47.8, 5],
-      [-17.8, 5],
+      [-49, -15],
+      [-49, -3],
+      [-49, 3],
+      [-49, 5],
+      [-19, 5],
       [-16, 6.2],
       [-10, 6.2],
-      [-8.2, 5],
+      [-7, 5],
       [0, 5],
       [5, 3],
       [15, -1],
@@ -65,34 +65,34 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-47.8, 3],
+          [-49, 3],
           [5, 3]
         ]
       },
       {
         "coordinates": [
-          [-47.8, -3],
+          [-49, -3],
           [45, -3]
         ]
       },
       {
         "coordinates": [
-          [-17.8, 5],
-          [-8.2, 5]
+          [-19, 5],
+          [-7, 5]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-46.8, 4],
+        "point": [-48, 4],
         "materialName": "Crust"
       },
       {
-        "point": [-46.8, 0],
+        "point": [-48, 0],
         "materialName": "Clay"
       },
       {
-        "point": [-46.8, -9],
+        "point": [-48, -9],
         "materialName": "Silt"
       },
       {
@@ -113,7 +113,7 @@
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -47.8,
+      "entryLeftX": -49,
       "entryRightX": 0,
       "exitLeftX": 0,
       "exitRightX": 45
@@ -132,6 +132,8 @@
     "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
-    "bothDirections": false
+    "bothDirections": false,
+    "tensionCrackAuto": true,
+    "tensionCrackAngle": 65
   }
 }

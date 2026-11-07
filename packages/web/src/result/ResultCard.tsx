@@ -1,9 +1,11 @@
 /**
  * The result card: F, a factor of safety on characteristic values, with
  * the engine's own label, the method, the critical surface's entry and exit,
- * the surfaces searched, and the engine's warnings as it gives them; then
- * the commands (run, cancel, the link, the downloads) and a note that this
- * is a template calculation, not a design.
+ * the surfaces searched; then the commands (run, cancel, the link, the
+ * downloads) and a note that this is a template calculation, not a design.
+ * The engine's warnings are not shown: the page's users cannot act on them
+ * (the geometry and the options are the template's), and the templates
+ * avoid what they are about (TEMPLATE_OPTIONS); the app shows them.
  */
 import type { ResultSummary, ValidationIssue } from "@cslope/engine";
 import type { ReactNode } from "react";
@@ -22,8 +24,8 @@ export type CardState =
   | { kind: "cancelled" }
   | { kind: "failed"; message: string }
   /** The engine refused the model: the issues it could not put at a field. */
-  | { kind: "invalid"; general: ValidationIssue[]; warnings: ValidationIssue[] }
-  | { kind: "complete"; summary: ResultSummary; warnings: ValidationIssue[] };
+  | { kind: "invalid"; general: ValidationIssue[] }
+  | { kind: "complete"; summary: ResultSummary };
 
 export interface ResultCardProps {
   state: CardState;
@@ -102,11 +104,6 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
 export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
   const status = statusText(state);
   const complete = state.kind === "complete" ? state : null;
-  const warnings = complete
-    ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)]
-    : state.kind === "invalid"
-      ? state.warnings.map((w) => w.message)
-      : [];
   return (
     <section id="result" aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
       <h2 id="result-heading" className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -127,16 +124,6 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
             </li>
           ))}
         </ul>
-      )}
-      {warnings.length > 0 && (
-        <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
-          <p className="font-medium">{warnings.length === 1 ? "Warning from the engine" : "Warnings from the engine"}</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
-            {warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        </div>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

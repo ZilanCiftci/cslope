@@ -33,14 +33,15 @@
  * - Layers are at least 5 cm thick, and no level is within 5 cm of the
  *   excavation bottom.
  * - The road is its own region above the ground, with the fill material,
- *   its sides 1:1.5 and the near edge of its top at the given distance
+ *   its sides 1:2.5 (ROAD_FILL_SLOPE) and the near edge of its top at the given distance
  *   behind the crest (its side cut at the crest when closer), and a
  *   vertical distributed load over the width of its top.
  * - Water: a level, cut at the ground (no free water); with `ponded`, free
  *   water stands above the ground in the excavation (the engine's freeWater).
  * - Surfaces enter left of the crest (on the ground and the road) and exit
  *   anywhere from the crest to the right edge (on the face or in the
- *   bottom; in a trench, up to the far end of its bottom); the app's options (D-23), without a tension crack.
+ *   bottom; in a trench, up to the far end of its bottom); the app's options (D-23)
+ *   with the automatic tension crack (TEMPLATE_OPTIONS).
  */
 import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";
@@ -60,6 +61,7 @@ import {
   type FieldProblem,
   type Fill,
   type Layer,
+  TEMPLATE_OPTIONS,
 } from "./common";
 import type { Template } from "./types";
 
@@ -121,16 +123,22 @@ export const EXCAVATION_PARAMETERS = {
     bottomLevel: { ...LAYER_PARAMETERS.bottomLevel, description: "The elevation of the layer's bottom. A layer is at least 0.05 m thick and does not end within 0.05 m of the excavation bottom." },
   },
   road: {
-    distanceFromCrest: p("distanceFromCrest", "Distance from the crest to the road (m)", "m", 0, 50, 0.5, "From the crest to the near edge of the road's top, where the load starts; the fill's side goes down 1:1.5 from there, cut at the crest."),
+    distanceFromCrest: p("distanceFromCrest", "Distance from the crest to the road (m)", "m", 0, 50, 0.5, "From the crest to the near edge of the road's top, where the load starts; the fill's side goes down 1:2.5 from there, cut at the crest."),
     width: p("width", "Width (m)", "m", 2, 20, 0.5, "The width of the road's top; the load acts over it."),
-    height: p("height", "Height (m)", "m", 0.2, 5, 0.1, "The height of the fill above the ground; its sides are 1:1.5."),
+    height: p("height", "Height (m)", "m", 0.2, 5, 0.1, "The height of the fill above the ground; its sides are 1:2.5."),
     ...FILL_PARAMETERS,
     trafficLoad: p("trafficLoad", "Traffic load q (kPa)", "kPa", 0, Infinity, 1, "A vertical load over the road's width, a variable load; leave out for none.", { typical: [0, 50] }),
   },
 } satisfies Template<ExcavationParams>["params"];
 
-/** The sides of the road's fill: horizontal per vertical. */
-export const ROAD_FILL_SLOPE = 1.5;
+/**
+ * The sides of the road's fill: horizontal per vertical. At 1:2.5 (21.8°)
+ * a cohesionless fill of φ′ 38° has tan φ′ / tan β = 1.95, so the thin
+ * slide down its side (which the search does not reach) does not govern
+ * the examples; at 1:1.5 it was 1.17 and at 1:2 1.56, below the F of
+ * some (clay-road-no-traffic: 1.81).
+ */
+export const ROAD_FILL_SLOPE = 2.5;
 /** The fill's near toe snaps to the crest when closer than this (m), so that no edge is nearly zero. */
 const SNAP = 0.05;
 
@@ -340,7 +348,7 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   // Entry behind the crest, exit from the crest on: the face or the bottom (in a trench, up to its far end).
   d.searchLimits([left, 0], [0, trench ? trench.bottomEnd : right]);
 
-  return d.toDocument();
+  return d.toDocument(TEMPLATE_OPTIONS);
 }
 
 export const excavationTemplate: Template<ExcavationParams> = {

@@ -4,12 +4,12 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-38.2, -20],
-      [-38.2, 0],
-      [-8.2, 0],
+      [-39, -20],
+      [-39, 0],
+      [-9, 0],
       [-7, 0.8],
       [-3, 0.8],
-      [-1.7999999999999998, 0],
+      [-1, 0],
       [0, 0],
       [8, -4],
       [38, -4],
@@ -39,14 +39,14 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-8.2, 0],
-          [-1.7999999999999998, 0]
+          [-9, 0],
+          [-1, 0]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-37.2, -10],
+        "point": [-38, -10],
         "materialName": "Layer 1"
       },
       {
@@ -60,7 +60,7 @@
       "freeWater": false
     },
     "analysisLimits": {
-      "entryLeftX": -38.2,
+      "entryLeftX": -39,
       "entryRightX": 0,
       "exitLeftX": 0,
       "exitRightX": 38
@@ -79,6 +79,8 @@
     "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
-    "bothDirections": false
+    "bothDirections": false,
+    "tensionCrackAuto": true,
+    "tensionCrackAngle": 65
   }
 }

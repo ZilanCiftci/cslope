@@ -179,8 +179,8 @@ export function App({ client }: { client: AnalysisClient }) {
   else if (current?.kind === "running") state = { kind: "running", surfaces: current.surfaces };
   else if (current?.kind === "cancelled") state = { kind: "cancelled" };
   else if (current?.kind === "failed") state = { kind: "failed", message: current.message };
-  else if (engineIssues) state = { kind: "invalid", general: engineIssues.general, warnings: engineIssues.warnings };
-  else if (outcome?.kind === "complete") state = { kind: "complete", summary: outcome.summary, warnings: outcome.warnings };
+  else if (engineIssues) state = { kind: "invalid", general: engineIssues.general };
+  else if (outcome?.kind === "complete") state = { kind: "complete", summary: outcome.summary };
   else state = engine.kind === "loading" ? { kind: "loading" } : { kind: "waiting" };
 
   const slices: SliceData[] | null = outcome?.kind === "complete" ? outcome.result.criticalSlices : null;

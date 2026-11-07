@@ -1,50 +1,50 @@
 {
   "clay-3m": {
-    "fos": 2.312767467906795,
+    "fos": 2.2916321601213783,
     "fosLabel": "factor of safety"
   },
   "clay-5m-water": {
-    "fos": 1.7486358352974525,
+    "fos": 1.7158141692366136,
     "fosLabel": "factor of safety"
   },
   "clay-increasing": {
-    "fos": 1.8227575986714115,
+    "fos": 1.775740352085513,
     "fosLabel": "factor of safety"
   },
   "crust-over-clay": {
-    "fos": 1.4409311367124182,
+    "fos": 1.445876514759328,
     "fosLabel": "factor of safety"
   },
   "clay-over-rock": {
-    "fos": 1.530186648047888,
+    "fos": 1.4383105522011463,
     "fosLabel": "factor of safety"
   },
   "clay-road": {
-    "fos": 1.5791548593791442,
+    "fos": 1.5370689955674681,
     "fosLabel": "factor of safety"
   },
   "clay-road-no-traffic": {
-    "fos": 1.8882402031601329,
+    "fos": 1.8127661646241344,
     "fosLabel": "factor of safety"
   },
   "steep-road-at-crest": {
-    "fos": 1.2008738091910158,
+    "fos": 1.1783068092113798,
     "fosLabel": "factor of safety"
   },
   "three-layers-wide": {
-    "fos": 1.1847160912342858,
+    "fos": 1.170003510626173,
     "fosLabel": "factor of safety"
   },
   "trench-1m": {
-    "fos": 2.3220399093429926,
+    "fos": 2.237971565078685,
     "fosLabel": "factor of safety"
   },
   "trench-2m-road": {
-    "fos": 1.2399829983247495,
+    "fos": 1.2376200863612377,
     "fosLabel": "factor of safety"
   },
   "clay-5m-ponded": {
-    "fos": 2.2731401923343473,
+    "fos": 2.251243019147563,
     "fosLabel": "factor of safety"
   }
 }

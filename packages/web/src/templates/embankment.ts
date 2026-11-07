@@ -30,7 +30,7 @@
  *   deep circle under a narrow crest enters) and exit anywhere from the
  *   crest's edge to the right edge: in the face (a shallow slide in the
  *   fill, which can govern), at the toe or on the ground beyond it; the
- *   app's options (D-23).
+ *   app's options (D-23) with the automatic tension crack (TEMPLATE_OPTIONS).
  */
 import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";
@@ -50,6 +50,7 @@ import {
   type FieldProblem,
   type Fill,
   type Layer,
+  TEMPLATE_OPTIONS,
 } from "./common";
 import type { Template } from "./types";
 
@@ -216,7 +217,7 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel, params.ponded === true);
   // Entry on the embankment, from the far toe to the crest's edge; exit from the crest's edge on: the face, the toe, the ground.
   d.searchLimits([g.farToe, 0], [0, g.right]);
-  return d.toDocument();
+  return d.toDocument(TEMPLATE_OPTIONS);
 }
 
 export const embankmentTemplate: Template<EmbankmentParams> = {

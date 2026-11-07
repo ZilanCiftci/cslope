@@ -26,6 +26,8 @@ const SUMMARY = {
   warnings: [{ code: "steep-entry-tension", message: "The surface enters the slope at 71°." }],
 } as unknown as ResultSummary;
 
+const DOCUMENT_WARNING: ValidationIssue = { path: "/definition/materials/0/model", code: "missing-unit-weight-sat", message: 'Material "Clay": no saturated unit weight.', severity: "warning" };
+
 /** A worker that answers each run as `answer` says, and records the requests. */
 function fakeWorker(answer: (request: WorkerRequest) => WorkerResponse | null) {
   const requests: WorkerRequest[] = [];
@@ -42,7 +44,7 @@ function fakeWorker(answer: (request: WorkerRequest) => WorkerResponse | null) {
   return { worker, requests };
 }
 
-const complete = (r: WorkerRequest): WorkerResponse => ({ type: "complete", id: r.id, result: { criticalSlices: [] } as unknown as AnalysisResult, summary: SUMMARY, warnings: [] });
+const complete = (r: WorkerRequest): WorkerResponse => ({ type: "complete", id: r.id, result: { criticalSlices: [] } as unknown as AnalysisResult, summary: SUMMARY, warnings: [DOCUMENT_WARNING] });
 
 function renderApp({ loadEngine = () => Promise.resolve({} as WebAssembly.Module), answer = complete }: { loadEngine?: () => Promise<WebAssembly.Module>; answer?: (r: WorkerRequest) => WorkerResponse | null } = {}) {
   const fake = fakeWorker(answer);
@@ -87,7 +89,7 @@ describe("App", () => {
     expect(screen.queryByRole("complementary", { name: "Result summary" })).toBeNull();
   });
 
-  it("runs when the form is filled in and shows F with its label and the engine's warnings", async () => {
+  it("runs when the form is filled in and shows F with its label, without the engine's warnings", async () => {
     const { requests } = renderApp();
     type("γ (kN/m³)", "16");
     type("Su (kPa)", "20");
@@ -98,7 +100,11 @@ describe("App", () => {
     const bar = screen.getByRole("complementary", { name: "Result summary" });
     expect(bar).toHaveTextContent("F 1.234Factor of safety");
     expect(within(bar).getByRole("link", { name: "Result" })).toHaveAttribute("href", "#result");
-    expect(screen.getByText("The surface enters the slope at 71°.")).toBeInTheDocument();
+    // The engine's warnings are not shown (the app shows them): the page's users cannot act on them.
+    expect(screen.queryByText("The surface enters the slope at 71°.")).toBeNull();
+    expect(screen.queryByText(/warnings? from the engine/i)).toBeNull();
+    expect(screen.queryByText(DOCUMENT_WARNING.message)).toBeNull();
+    expect(card).not.toHaveTextContent(/warning/i);
     expect(requests).toHaveLength(1);
     const material = requests[0].document.definition.materials[0];
     expect(material).toEqual({ name: "Clay", model: { kind: "undrained", unitWeight: 16, unitWeightSat: 16, undrainedShearStrength: 20 } });
