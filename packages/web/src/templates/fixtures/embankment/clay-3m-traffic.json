@@ -28,7 +28,7 @@
         "model": {
           "kind": "mohr-coulomb",
           "unitWeight": 19,
-          "unitWeightSat": 20,
+          "unitWeightSat": 19,
           "cohesion": 0,
           "frictionAngle": 35
         }

@@ -1,0 +1,79 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-45, -20],
+      [-45, -10],
+      [-45, 10],
+      [0, 10],
+      [10, 5],
+      [55, 5],
+      [55, -10],
+      [55, -20]
+    ],
+    "materials": [
+      {
+        "name": "Layer 1",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 16,
+          "unitWeightSat": 16,
+          "undrainedShearStrength": 25
+        }
+      },
+      {
+        "name": "Layer 2",
+        "model": {
+          "kind": "impenetrable",
+          "unitWeight": 24
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-45, -10],
+          [55, -10]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-44, 0],
+        "materialName": "Layer 1"
+      },
+      {
+        "point": [-44, -15],
+        "materialName": "Layer 2"
+      }
+    ],
+    "waterTable": {
+      "mode": "height",
+      "value": 7,
+      "freeWater": true
+    },
+    "analysisLimits": {
+      "entryLeftX": -45,
+      "entryRightX": 0,
+      "exitLeftX": 0,
+      "exitRightX": 55
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false
+  }
+}

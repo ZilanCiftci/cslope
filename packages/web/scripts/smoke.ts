@@ -25,7 +25,7 @@ const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.mi
 
 /**
  * A filled-in section, as its link gives it (the address holds the
- * parameters): a crust over clay with a working road, on design values.
+ * parameters): a crust over clay with a haul road, on design values.
  */
 export const FILLED =
   "ground=0&H=4&slope=2&water=-1&layers=2&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
@@ -36,8 +36,13 @@ export const FILLED =
 /** A filled-in embankment, as its link gives it ("t=embankment"): a crust over clay with a load on the crest. */
 export const EMBANKMENT =
   "t=embankment&ground=0&h=3&B=10&slope=2&fill.gamma=20&fill.c=0&fill.phi=38&q=10&water=-1&layers=2" +
-  "&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.gammaSat=19&layer1.c=3&layer1.phi=30" +
+  "&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=3&layer1.phi=30" +
   "&layer2.name=Clay&layer2.kind=undrained&layer2.bottomLevel=-20&layer2.gamma=16&layer2.su=14";
+
+/** A one-sided excavation with ponded water 2 m above its bottom (the example clay-5m-ponded): F 2.273. */
+export const PONDED =
+  "t=excavation&ground=10&H=5&slope=2&water=7&pond=1&layers=2&layer1.kind=undrained&layer1.bottomLevel=-10&layer1.gamma=16&layer1.su=25" +
+  "&layer2.kind=impenetrable&layer2.bottomLevel=-20&layer2.gamma=24";
 
 /** The value F of the result card, once it shows one ("F 0.872"). */
 const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
@@ -152,11 +157,29 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!(await page.locator("#result").getByText("Minimum factor of safety").count())) problems.push("the embankment's F shows without its label");
       console.log(`  embankment: ${f}`);
       await axe("on the embankment with a result");
-      await page.getByRole("button", { name: "Excavation in clay with a working road" }).click();
-      await page.getByRole("heading", { level: 1, name: "Excavation in clay with a working road" }).waitFor({ timeout: 5_000 });
+      // A layer opened from its header (the accordion), checked by axe.
+      const crust = page.getByRole("button", { name: /^Crust/ });
+      await crust.click();
+      if ((await crust.getAttribute("aria-expanded")) !== "true") problems.push("a layer's header does not open the layer");
+      await axe("on the embankment with a layer open");
+      await page.getByRole("button", { name: "Excavation in clay with a haul road" }).click();
+      await page.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" }).waitFor({ timeout: 5_000 });
       await page.waitForFunction(() => new URLSearchParams(location.search).get("t") === "excavation", null, { timeout: 5_000 });
     } catch (e) {
       problems.push(`the embankment: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+    }
+
+    // Ponded water from its link: the checkbox is on and F is the pinned one.
+    await page.goto(`${base}/?${PONDED}`, { waitUntil: "load" });
+    try {
+      if (!(await page.getByRole("checkbox", { name: "Free water above ground (ponding)" }).isChecked())) problems.push("the ponded link does not check Free water above ground");
+      await fValue(page).waitFor({ timeout: 30_000 });
+      const f = await fValue(page).textContent();
+      if (f !== "F 2.273") problems.push(`the ponded excavation gave ${f}, expected F 2.273`);
+      console.log(`  ponded excavation: ${f}`);
+      await axe("with ponded water");
+    } catch (e) {
+      problems.push(`ponded water: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
     }
   } finally {
     page.off("console", onConsole);

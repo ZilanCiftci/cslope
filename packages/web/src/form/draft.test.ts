@@ -4,11 +4,13 @@
  * problem is at its field, and the address round-trips every example.
  */
 import { describe, expect, it } from "vitest";
+import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
+import type { Layer, Values } from "../templates/common";
 import { EMBANKMENT_EXAMPLES } from "../templates/embankment-examples";
 import { embankmentDocument } from "../templates/embankment";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
 import { excavationDocument } from "../templates/excavation";
-import { draftOf, emptyLayer, formState, fromQuery, initialDraft, nextBottomLevel, parseNumber, toQuery, withGroup, type Draft } from "./draft";
+import { draftOf, emptyLayer, LAYER_KINDS, strengthSummary, formState, fromQuery, initialDraft, nextBottomLevel, parseNumber, toQuery, withGroup, type Draft } from "./draft";
 
 const filled = (): Draft => draftOf("excavation", EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
 
@@ -37,13 +39,13 @@ describe("the form's state", () => {
     d.fields.excavationDepth = "30";
     d.layers[0].bottomLevel = "5";
     d.fields["road.width"] = "1";
-    d.etaCu = "2";
+    d.etaCu = "0";
     const s = formState(d);
     expect(Object.fromEntries(s.errors)).toEqual({
-      excavationDepth: "Excavation depth H (m) must be from 0.5 to 20 m.",
+      excavationDepth: "Must be from 0.5 to 20 m.",
       "layers.0.bottomLevel": "Layer 1: the bottom level 5 must be at least 0.05 m below the ground (0).",
-      "road.width": "Road: Width (m) must be from 2 to 20 m.",
-      "values.etaCu": "η undrained must be from 0.5 to 1.2.",
+      "road.width": "Must be from 2 to 20 m.",
+      "values.etaCu": "Must be at least 0.1.",
     });
     expect(s.ready).toBe(false);
   });
@@ -95,6 +97,55 @@ describe("the form's state", () => {
     }
   });
 
+  it("names the layers' material models as the app does", () => {
+    expect(LAYER_KINDS.map((k) => k.label)).toEqual(["Undrained", "Mohr-Coulomb", "Impenetrable (bedrock)"]);
+    for (const k of LAYER_KINDS) expect(k.label).toBe(MATERIAL_MODEL_LABELS[k.kind]);
+  });
+
+  it("makes an Undrained layer with a rate Su increasing with depth, and without one constant", () => {
+    const d = filled();
+    expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained", gamma: 16, su: 25 });
+    d.layers[0].suRate = "1.5";
+    expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained-increasing", gamma: 16, su: 25, suRate: 1.5 });
+    expect(strengthSummary(d.layers[0])).toBe("Su 25 kPa, +1.5 kPa/m");
+    expect(toQuery(d)).toContain("layer1.kind=undrained&layer1.bottomLevel=-20&layer1.gamma=16&layer1.su=25&layer1.suRate=1.5");
+  });
+
+  it("opens older links: the old layer kinds, and without the removed fields (γsat, the tension crack)", () => {
+    for (const [template, examples] of [
+      ["excavation", EXCAVATION_EXAMPLES],
+      ["embankment", EMBANKMENT_EXAMPLES],
+    ] as const) {
+      for (const [name, params] of Object.entries(examples as Record<string, { layers: Layer[]; values: Values; ponded?: boolean }>)) {
+        const query = toQuery(draftOf(template, params));
+        // The kinds as older links wrote them: Su increasing a kind of its own, Mohr-Coulomb "drained".
+        const old = new URLSearchParams(query);
+        params.layers.forEach((l, i) => {
+          if (l.material.kind === "undrained-increasing" || l.material.kind === "drained") old.set(`layer${i + 1}.kind`, l.material.kind);
+          if (l.material.kind === "drained") old.set(`layer${i + 1}.gammaSat`, "21");
+        });
+        old.set("crack", "1.5");
+        old.set("fill.gammaSat", "22");
+        old.set("road.gammaSat", "22");
+        const back = formState(fromQuery("?" + old.toString()));
+        expect(back.params, name).toEqual(params);
+        const doc = template === "excavation" ? excavationDocument(back.params) : embankmentDocument(back.params);
+        expect(doc, name).toEqual(template === "excavation" ? excavationDocument(params as never) : embankmentDocument(params as never));
+      }
+    }
+  });
+
+  it("keeps ponded water in the address only with a water level", () => {
+    const d = filled();
+    d.ponded = true;
+    expect(new URLSearchParams(toQuery(d)).get("pond")).toBe("1");
+    expect(formState(fromQuery("?" + toQuery(d))).params.ponded).toBe(true);
+    d.fields.waterLevel = "";
+    expect(new URLSearchParams(toQuery(d)).get("pond")).toBeNull();
+    expect(formState(d).params.ponded).toBeUndefined();
+    expect(fromQuery("?" + toQuery(filled())).ponded).toBe(false);
+  });
+
   it("puts a new layer 5 m below the last, within the bounds", () => {
     expect(nextBottomLevel([emptyLayer("-15")])).toBe("-20");
     expect(nextBottomLevel([emptyLayer("-97,5")])).toBe("-100");
@@ -118,7 +169,7 @@ describe("the form's state", () => {
     expect(toQuery(fromQuery(""))).toEqual(toQuery(initialDraft()));
     expect(toQuery(fromQuery("?t=embankment"))).toEqual(toQuery(initialDraft("embankment")));
     expect(toQuery(draftOf("embankment", EMBANKMENT_EXAMPLES["clay-3m-traffic"]))).toBe(
-      "t=embankment&ground=0&h=3&B=6&slope=2.5&fill.gamma=19&fill.gammaSat=20&fill.c=0&fill.phi=35&q=20&water=-1" +
+      "t=embankment&ground=0&h=3&B=6&slope=2.5&fill.gamma=19&fill.c=0&fill.phi=35&q=20&water=-1" +
         "&layers=1&layer1.name=Clay&layer1.kind=undrained&layer1.bottomLevel=-15&layer1.gamma=16&layer1.su=15",
     );
     expect(fromQuery("?layers=1&values=design&safetyClass=2.0").safetyClass).toBe("2");

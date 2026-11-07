@@ -10,20 +10,27 @@
  * class and η (they are the engineer's choice). The geometry starts at a
  * plain section that the drawing can show.
  */
-import type { SafetyClass } from "@cslope/engine";
-import { LAYER_PARAMETERS, type Layer, type LayerKind, type LayerMaterial, type Values } from "../templates/common";
+import { MATERIAL_MODEL_LABELS, type SafetyClass } from "@cslope/engine";
+import { LAYER_PARAMETERS, type Layer, type LayerMaterial, type Values } from "../templates/common";
 import { groupsOf, specOf, type GroupSpec, type TemplateId } from "./specs";
 
 export type { TemplateId } from "./specs";
+
+/**
+ * A layer's material model, as the app names them (MATERIAL_MODEL_LABELS):
+ * Undrained (Su, increasing with depth when the rate is filled in),
+ * Mohr-Coulomb (c′, φ′) or Impenetrable (bedrock). The template's own
+ * kinds split Undrained in two: constant and increasing.
+ */
+export type LayerModel = "undrained" | "mohr-coulomb" | "impenetrable";
 
 export interface LayerDraft {
   /** A key that stays with the layer while others are added or removed (not a parameter). */
   key: string;
   name: string;
-  kind: LayerKind;
+  kind: LayerModel;
   bottomLevel: string;
   gamma: string;
-  gammaSat: string;
   su: string;
   suRate: string;
   c: string;
@@ -40,6 +47,8 @@ export interface Draft {
   /** The optional groups switched on ("road"). */
   on: string[];
   layers: LayerDraft[];
+  /** Water above the ground stands as ponded (free) water. */
+  ponded: boolean;
   basis: Basis;
   safetyClass: string;
   etaCu: string;
@@ -47,21 +56,40 @@ export interface Draft {
   variableLoadBase: string;
 }
 
-/** The kinds of layer, as the form offers them. */
-export const LAYER_KINDS: { kind: LayerKind; label: string }[] = [
-  { kind: "undrained", label: "Su constant" },
-  { kind: "undrained-increasing", label: "Su increasing" },
-  { kind: "drained", label: "Drained c′, φ′" },
-  { kind: "impenetrable", label: "Rock" },
-];
+/** The material models of a layer, as the form offers them, with the app's names. */
+export const LAYER_KINDS: { kind: LayerModel; label: string }[] = (["undrained", "mohr-coulomb", "impenetrable"] as const).map((kind) => ({
+  kind,
+  label: MATERIAL_MODEL_LABELS[kind],
+}));
 
-/** The fields of a layer of each kind, in the form's order. */
-export const LAYER_FIELDS: Record<LayerKind, (keyof typeof LAYER_PARAMETERS)[]> = {
-  undrained: ["gamma", "su"],
-  "undrained-increasing": ["gamma", "su", "suRate"],
-  drained: ["gamma", "gammaSat", "c", "phi"],
+/** The model of a layer's kind in an address: the app's, or the names of older links. */
+const KIND_ALIASES: Record<string, LayerModel> = {
+  undrained: "undrained",
+  "undrained-increasing": "undrained",
+  "mohr-coulomb": "mohr-coulomb",
+  drained: "mohr-coulomb",
+  impenetrable: "impenetrable",
+};
+
+/** The fields of a layer of each model, in the form's order. */
+export const LAYER_FIELDS: Record<LayerModel, (keyof typeof LAYER_PARAMETERS)[]> = {
+  undrained: ["gamma", "su", "suRate"],
+  "mohr-coulomb": ["gamma", "c", "phi"],
   impenetrable: ["gamma"],
 };
+
+/** A layer's strength in a few words, from the text typed: "Su 18 kPa, +1.2 kPa/m", "c′ 3 kPa, φ′ 30°"; empty values are left out. */
+export function strengthSummary(layer: LayerDraft): string {
+  const v = (t: string) => t.trim();
+  switch (layer.kind) {
+    case "undrained":
+      return [v(layer.su) && `Su ${v(layer.su)} kPa`, v(layer.su) && v(layer.suRate) && `+${v(layer.suRate)} kPa/m`].filter(Boolean).join(", ");
+    case "mohr-coulomb":
+      return [v(layer.c) && `c′ ${v(layer.c)} kPa`, v(layer.phi) && `φ′ ${v(layer.phi)}°`].filter(Boolean).join(", ");
+    case "impenetrable":
+      return "";
+  }
+}
 
 const VALUE_KEYS = ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const;
 
@@ -75,10 +103,9 @@ export function nextBottomLevel(layers: LayerDraft[]): string {
 
 /** Fields that may be left empty, by their last key, with what empty means (the placeholder). */
 export const OPTIONAL_FIELDS: Record<string, string> = {
-  bottomWidth: "As needed",
-  tensionCrackDepth: "None",
+  bottomWidth: "Wide",
   waterLevel: "Dry",
-  gammaSat: "As γ",
+  suRate: "Constant",
   trafficLoad: "None",
   crestLoad: "None",
 };
@@ -90,7 +117,7 @@ export const emptyText = (field: string): string | undefined => OPTIONAL_FIELDS[
 let layerKeys = 0;
 
 export function emptyLayer(bottomLevel = ""): LayerDraft {
-  return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", bottomLevel, gamma: "", gammaSat: "", su: "", suRate: "", c: "", phi: "" };
+  return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", bottomLevel, gamma: "", su: "", suRate: "", c: "", phi: "" };
 }
 
 /** The form on a first visit of a template. */
@@ -101,6 +128,7 @@ export function initialDraft(template: TemplateId = "excavation"): Draft {
     fields: { ...spec.initial },
     on: [],
     layers: [{ ...emptyLayer("-15"), name: "Clay" }],
+    ponded: false,
     basis: "characteristic",
     safetyClass: "",
     etaCu: "",
@@ -161,15 +189,14 @@ function layerOf(l: LayerDraft): Layer {
   const gamma = required(l.gamma);
   let material: LayerMaterial;
   switch (l.kind) {
-    case "undrained":
-      material = { kind: "undrained", gamma, su: required(l.su) };
+    case "undrained": {
+      // An empty rate: Su constant; a rate: Su increasing with depth.
+      const suRate = parseNumber(l.suRate);
+      material = suRate === null ? { kind: "undrained", gamma, su: required(l.su) } : { kind: "undrained-increasing", gamma, su: required(l.su), suRate };
       break;
-    case "undrained-increasing":
-      material = { kind: "undrained-increasing", gamma, su: required(l.su), suRate: required(l.suRate) };
-      break;
-    case "drained": {
-      const gammaSat = parseNumber(l.gammaSat);
-      material = { kind: "drained", gamma, c: required(l.c), phi: required(l.phi), ...(gammaSat === null ? {} : { gammaSat }) };
+    }
+    case "mohr-coulomb": {
+      material = { kind: "drained", gamma, c: required(l.c), phi: required(l.phi) };
       break;
     }
     case "impenetrable":
@@ -199,6 +226,7 @@ export function formState(draft: Draft): FormState {
     on: new Set(draft.on),
     layers: draft.layers.map(layerOf),
     values: valuesOf(draft),
+    ponded: draft.ponded,
   });
   const errors = new Map<string, string>();
   const missing: string[] = [];
@@ -239,6 +267,7 @@ export function toQuery(draft: Draft): string {
     put(p + "bottomLevel", l.bottomLevel);
     for (const k of LAYER_FIELDS[l.kind]) put(p + k, l[k]);
   });
+  if (draft.ponded && draft.fields.waterLevel?.trim()) q.set("pond", "1");
   for (const g of groups.filter((g) => g.toggle && draft.on.includes(g.id))) {
     q.set(g.id, "on");
     for (const k of g.keys) put(spec.short[k] ?? k, draft.fields[k]);
@@ -272,11 +301,12 @@ export function fromQuery(search: string): Draft {
   const count = Math.max(1, Math.min(12, Math.floor(Number(q.get("layers"))) || 1));
   draft.layers = Array.from({ length: count }, (_, i) => {
     const p = `layer${i + 1}.`;
-    const kind = LAYER_KINDS.find((k) => k.kind === q.get(p + "kind"))?.kind ?? "undrained";
+    const kind = KIND_ALIASES[q.get(p + "kind") ?? ""] ?? "undrained";
     const layer: LayerDraft = { ...emptyLayer(get(p + "bottomLevel")), name: get(p + "name"), kind };
     for (const k of LAYER_FIELDS[kind]) layer[k] = get(p + k);
     return layer;
   });
+  draft.ponded = q.get("pond") === "1";
   if (q.get("values") === "design") {
     draft.basis = "design";
     for (const k of VALUE_KEYS) draft[k] = get(k);
@@ -287,8 +317,13 @@ export function fromQuery(search: string): Draft {
   return draft;
 }
 
+/** The app's material model of a template's layer material. */
+function modelOf(m: LayerMaterial): LayerModel {
+  return m.kind === "drained" ? "mohr-coulomb" : m.kind === "undrained-increasing" ? "undrained" : m.kind;
+}
+
 /** The draft of a template's parameter set (the form filled in with it). */
-export function draftOf(template: TemplateId, params: { layers: Layer[]; values: Values }): Draft {
+export function draftOf(template: TemplateId, params: { layers: Layer[]; values: Values; ponded?: boolean }): Draft {
   const t = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
   const v = params.values;
   const { fields, on } = specOf(template).toFields(params);
@@ -301,15 +336,15 @@ export function draftOf(template: TemplateId, params: { layers: Layer[]; values:
       return {
         ...emptyLayer(t(l.bottomLevel)),
         name: l.name ?? "",
-        kind: m.kind,
+        kind: modelOf(m),
         gamma: t(m.gamma),
-        gammaSat: m.kind === "drained" ? t(m.gammaSat) : "",
         su: m.kind === "undrained" || m.kind === "undrained-increasing" ? t(m.su) : "",
         suRate: m.kind === "undrained-increasing" ? t(m.suRate) : "",
         c: m.kind === "drained" ? t(m.c) : "",
         phi: m.kind === "drained" ? t(m.phi) : "",
       };
     }),
+    ponded: params.ponded === true,
     basis: v.basis,
     safetyClass: v.basis === "design" ? t(v.safetyClass) : "",
     etaCu: v.basis === "design" ? t(v.etaCu) : "",

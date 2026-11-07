@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * The excavation template: the geometry rules, the ten named sets against
+ * The excavation template: the geometry rules, the thirteen named sets against
  * their pinned F and their committed fixtures, and the monotonic checks
  * (F falls with a deeper excavation, a lower Su and the road).
  */
@@ -53,13 +53,6 @@ describe("the geometry rules", () => {
     expect(excavationDocument(base).definition.analysisLimits).toEqual({ entryLeftX: -30, entryRightX: 0, exitLeftX: 0, exitRightX: 40 });
   });
 
-  it("models the bottom as wide as asked when that is wider than the model needs, and says when it is wider", () => {
-    expect(geometry({ ...base, bottomWidth: 4 }).right).toBe(40);
-    expect(excavationNotes({ ...base, bottomWidth: 4 })).toEqual(["The bottom is modelled 30 m wide, not 4 m: the model needs that width."]);
-    expect(geometry({ ...base, bottomWidth: 60 }).right).toBe(70);
-    expect(excavationNotes({ ...base, bottomWidth: 60 })).toEqual([]);
-  });
-
   it("ends at the last layer's bottom as firm ground, says so when that is less than 3H below the ground, and refuses it above the excavation bottom", () => {
     expect(excavationNotes(base)).toEqual([]);
     expect(excavationNotes(withLayers(base, { name: "Clay", bottomLevel: -5, material: { kind: "undrained", gamma: 16, su: 25 } }))).toEqual([]);
@@ -105,6 +98,64 @@ describe("the geometry rules", () => {
     expect(validateDefinition(excavationDocument(base)).filter((i) => i.severity === "error")).toEqual([]);
   });
 
+  it("models a trench with a bottom width: the opposite side 1:n up to the ground, exits within the bottom", () => {
+    const trench = { ...base, bottomWidth: 1 };
+    // The bottom from x = 10 to 11, the opposite crest at 11 + 2 × 5 = 21, the edge 30 m beyond it.
+    expect(geometry(trench)).toMatchObject({ toeX: 10, left: -30, right: 51, trench: { bottomEnd: 11, farCrest: 21 } });
+    const def = excavationDocument(trench).definition;
+    expect(def.coordinates).toEqual([
+      [-30, -10],
+      [-30, 10],
+      [0, 10],
+      [10, 5],
+      [11, 5],
+      [21, 10],
+      [51, 10],
+      [51, -10],
+    ]);
+    expect(def.analysisLimits).toEqual({ entryLeftX: -30, entryRightX: 0, exitLeftX: 0, exitRightX: 11 });
+    expect(def.waterTable).toEqual({ mode: "height", value: 9, freeWater: false });
+    expect(excavationNotes(trench)).toEqual([]);
+    expect(excavationFieldProblems({ ...base, bottomWidth: 0.2 })).toEqual([{ field: "bottomWidth", message: "Must be from 0.5 to 50 m.", general: "Bottom width must be from 0.5 to 50 m." }]);
+  });
+
+  it("ends a trench's layer boundaries on vertices of both faces and the right edge, a layer above the bottom a region on each side", () => {
+    const def = excavationDocument(
+      withLayers(
+        { ...base, bottomWidth: 1 },
+        { bottomLevel: 8, material: { kind: "drained", gamma: 18, c: 2, phi: 30 } },
+        { bottomLevel: 2, material: { kind: "undrained", gamma: 16, su: 20 } },
+        { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 40 } },
+      ),
+    ).definition;
+    // y = 8 is 3 m above the bottom: the opposite face 1:2 is at x = 11 + 6.
+    expect(def.coordinates).toEqual([
+      [-30, -10],
+      [-30, 2],
+      [-30, 8],
+      [-30, 10],
+      [0, 10],
+      [4, 8],
+      [10, 5],
+      [11, 5],
+      [17, 8],
+      [21, 10],
+      [51, 10],
+      [51, 8],
+      [51, 2],
+      [51, -10],
+    ]);
+    expect(def.materialBoundaries).toEqual([{ coordinates: [[-30, 8], [4, 8]] }, { coordinates: [[17, 8], [51, 8]] }, { coordinates: [[-30, 2], [51, 2]] }]);
+    expect(def.regionAssignments).toEqual([
+      { point: [-29, 9], materialName: "Layer 1" },
+      { point: [-29, 5], materialName: "Layer 2" },
+      { point: [-29, -4], materialName: "Layer 3" },
+      { point: [50, 9], materialName: "Layer 1" },
+    ]);
+    expect(validateDefinition(def).filter((i) => i.severity === "error")).toEqual([]);
+    expect(regionCount(def)).toBe(4);
+  });
+
   it("splits a 5 cm crust as its own region", () => {
     const params = withLayers(
       base,
@@ -117,16 +168,16 @@ describe("the geometry rules", () => {
     expect(regionCount(def)).toBe(2);
   });
 
-  it("names the layers, gives Su growing with depth by elevation from the layer's top, and γsat to drained layers", () => {
+  it("names the layers, gives Su growing with depth by elevation from the layer's top, and γ above and below the water", () => {
     const def = excavationDocument(
       withLayers(
         base,
-        { name: "Crust", bottomLevel: 8, material: { kind: "drained", gamma: 18, gammaSat: 19, c: 2, phi: 30 } },
+        { name: "Crust", bottomLevel: 8, material: { kind: "drained", gamma: 18, c: 2, phi: 30 } },
         { name: "Clay", bottomLevel: -10, material: { kind: "undrained-increasing", gamma: 16, su: 15, suRate: 1.5 } },
       ),
     ).definition;
     expect(def.materials).toEqual([
-      { name: "Crust", model: { kind: "mohr-coulomb", unitWeight: 18, unitWeightSat: 19, cohesion: 2, frictionAngle: 30 } },
+      { name: "Crust", model: { kind: "mohr-coulomb", unitWeight: 18, unitWeightSat: 18, cohesion: 2, frictionAngle: 30 } },
       { name: "Clay", model: { kind: "s-f-datum", unitWeight: 16, unitWeightSat: 16, suRef: 15, yRef: 8, rate: 1.5 } },
     ]);
   });
@@ -183,23 +234,20 @@ describe("the geometry rules", () => {
     expect(geometry({ ...base, road: { ...road, distanceFromCrest: 1.3 } }).road?.nearToe).toBeCloseTo(-0.1, 9);
   });
 
-  it("uses the app's options, with the partial factors of the safety class on design values and the tension crack", () => {
+  it("uses the app's options without a tension crack, with the partial factors of the safety class on design values", () => {
     const doc = excavationDocument(EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
     expect(doc.options).toEqual({
       ...APP_OPTIONS,
       partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.183, basis: { safetyClass: 2, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 } },
     });
     expect(excavationDocument(base).options).toEqual(APP_OPTIONS);
-    expect(excavationDocument({ ...base, tensionCrackDepth: 0 }).options).toEqual(APP_OPTIONS);
-    expect(excavationDocument({ ...base, tensionCrackDepth: 1.5 }).options).toEqual({ ...APP_OPTIONS, tensionCrackDepth: 1.5 });
     expect(doc.format).toBe("cslope-analysis");
     expect(doc.formatVersion).toBe(1);
   });
 
   it("refuses what it cannot build, with a sentence each", () => {
     expect(excavationProblems(base)).toEqual([]);
-    expect(excavationProblems({ ...base, excavationDepth: 0 })).toEqual(["Excavation depth H (m) must be from 0.5 to 20 m."]);
-    expect(excavationProblems({ ...base, tensionCrackDepth: -1 })).toEqual(["Tension crack depth (m) must be from 0 to 10 m."]);
+    expect(excavationProblems({ ...base, excavationDepth: 0 })).toEqual(["Excavation depth H must be from 0.5 to 20 m."]);
     expect(excavationProblems(withLayers(base))).toEqual(["The ground needs at least one layer."]);
     expect(
       excavationProblems(
@@ -207,15 +255,15 @@ describe("the geometry rules", () => {
           base,
           { bottomLevel: 9.97, material: { kind: "undrained", gamma: 16, su: 20 } },
           { bottomLevel: 5.03, material: { kind: "undrained", gamma: 16, su: 20 } },
-          { bottomLevel: -10, material: { kind: "drained", gamma: 16, gammaSat: 30, c: 1, phi: 30 } },
+          { bottomLevel: -10, material: { kind: "drained", gamma: 16, c: 1, phi: 90 } },
         ),
       ),
     ).toEqual([
       "Layer 1: the bottom level 9.97 must be at least 0.05 m below the ground (10).",
       "Layer 2: the bottom level 5.03 is within 0.05 m of the excavation bottom; move it.",
-      "Layer 3: Saturated unit weight γsat (kN/m³) must be from 10 to 25 kN/m³.",
+      "Layer 3: φ′ must be at least 0° and less than 90°.",
     ]);
-    expect(excavationProblems({ ...base, values: { basis: "design", safetyClass: 2, etaCu: 2, etaDrained: 1, variableLoadBase: 1.3 } })).toEqual(["η undrained must be from 0.5 to 1.2."]);
+    expect(excavationProblems({ ...base, values: { basis: "design", safetyClass: 2, etaCu: 0, etaDrained: 1, variableLoadBase: 1.3 } })).toEqual(["η undrained must be at least 0.1."]);
     expect(() => excavationDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
   });
 
@@ -223,8 +271,8 @@ describe("the geometry rules", () => {
     const params: ExcavationParams = {
       ...withLayers(
         base,
-        { name: "Road fill", bottomLevel: 9.97, material: { kind: "undrained", gamma: 16, su: 0 } },
-        { bottomLevel: -10, material: { kind: "drained", gamma: 16, c: 1, phi: 60 } },
+        { name: "Road fill", bottomLevel: 9.97, material: { kind: "undrained", gamma: 16, su: -1 } },
+        { bottomLevel: -10, material: { kind: "drained", gamma: 16, c: 1, phi: 90 } },
       ),
       road: { distanceFromCrest: 2, width: 1, height: 1, fill: { gamma: 19, c: 0, phi: 35 }, trafficLoad: null },
       values: { basis: "design", safetyClass: 4 as never, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 },
@@ -237,7 +285,13 @@ describe("the geometry rules", () => {
       "road.width",
       "values.safetyClass",
     ]);
-    expect(excavationFieldProblems(params).map((p) => p.message)).toEqual(excavationProblems(params));
+    expect(excavationFieldProblems(params).map((p) => p.general ?? p.message)).toEqual(excavationProblems(params));
+    // At the field, the bounds alone: the field's label and layer are beside it.
+    expect(excavationFieldProblems(params).find((p) => p.field === "layers.1.phi")).toEqual({
+      field: "layers.1.phi",
+      message: "Must be at least 0° and less than 90°.",
+      general: "Layer 2: φ′ must be at least 0° and less than 90°.",
+    });
   });
 
   it("is listed with its parameters", () => {
@@ -270,10 +324,10 @@ describe("the engine's defaults, computed here", () => {
   });
 });
 
-describe("the ten named sets", () => {
+describe("the thirteen named sets", () => {
   const names = Object.keys(EXCAVATION_EXAMPLES);
-  it("are ten, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(10);
+  it("are thirteen, with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(13);
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 
@@ -400,6 +454,21 @@ describe("monotonic checks", () => {
 
   it("F falls with a lower Su", async () => {
     expect(await F(withLayers(base, { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 18 } }))).toBeLessThan(await F(base));
+  });
+
+  it("F with ponded water in the excavation is at least F with the level cut at the ground: the water's weight holds the slope", async () => {
+    const water = { ...base, waterLevel: 8 };
+    expect(excavationDocument(water).definition.waterTable).toEqual({ mode: "height", value: 8, freeWater: false });
+    expect(excavationDocument({ ...water, ponded: true }).definition.waterTable).toEqual({ mode: "height", value: 8, freeWater: true });
+    expect(await F({ ...water, ponded: true })).toBeGreaterThanOrEqual(await F(water));
+    const pinned = EXCAVATION_EXAMPLES["clay-5m-ponded"];
+    expect(await F(pinned)).toBeGreaterThanOrEqual(await F({ ...pinned, ponded: undefined }));
+  });
+
+  it("F of a 1 m trench is at least F of the wide excavation", async () => {
+    for (const params of [base, EXCAVATION_EXAMPLES["clay-road"], EXCAVATION_EXAMPLES["crust-over-clay"]]) {
+      expect(await F({ ...params, bottomWidth: 1 })).toBeGreaterThanOrEqual((await F({ ...params, bottomWidth: null })) - 1e-9);
+    }
   });
 
   it("F falls when the road is added, and more with its traffic", async () => {

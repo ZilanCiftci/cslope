@@ -36,7 +36,19 @@
     "fosLabel": "factor of safety"
   },
   "three-layers-wide": {
-    "fos": 0.7129637355335344,
+    "fos": 0.7129952632888124,
     "fosLabel": "over-design factor"
+  },
+  "trench-1m": {
+    "fos": 2.3220399093429926,
+    "fosLabel": "factor of safety"
+  },
+  "trench-2m-road": {
+    "fos": 1.2399829983247495,
+    "fosLabel": "factor of safety"
+  },
+  "clay-5m-ponded": {
+    "fos": 2.2731401923343473,
+    "fosLabel": "factor of safety"
   }
 }

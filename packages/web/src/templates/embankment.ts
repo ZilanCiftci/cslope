@@ -25,7 +25,8 @@
  *   vertically over the crest's width.
  * - Water: a level, cut at the ground and the embankment (no free water):
  *   a level above the ground seeps out of the embankment's faces, and one
- *   above the crest is refused.
+ *   above the crest is refused. With `ponded`, free water stands on the
+ *   ground beside the embankment instead (the engine's freeWater).
  * - Surfaces enter on the embankment (its crest, and its far side, where a
  *   deep circle under a narrow crest enters) and exit anywhere from the
  *   crest's edge to the right edge: in the face (a shallow slide in the
@@ -48,7 +49,6 @@ import {
   partialFactorsOf,
   Problems,
   SLOPE,
-  TENSION_CRACK_DEPTH,
   WATER_LEVEL,
   type FieldProblem,
   type Fill,
@@ -74,9 +74,9 @@ export interface EmbankmentParams {
   layers: Layer[];
   /** The ground-water level (m), not above the crest; null: dry. */
   waterLevel: number | null;
+  /** Water above the ground stands beside the embankment as ponded (free) water; not set: it seeps out of the faces. */
+  ponded?: boolean;
   values: Values;
-  /** The depth of a tension crack (m), an analysis option; not set: 0, as in the excavation. */
-  tensionCrackDepth?: number;
 }
 
 /** The parameters, with their bounds: the form renders from these. */
@@ -85,8 +85,7 @@ export const EMBANKMENT_PARAMETERS = {
   embankmentHeight: p("embankmentHeight", "Embankment height h (m)", "m", 0.5, 15, 0.1, "From the ground to the crest."),
   crestWidth: p("crestWidth", "Crest width B (m)", "m", 1, 60, 0.5, "The width of the embankment's top; a load on the crest acts over it."),
   slope: { ...SLOPE, description: `${SLOPE.description} Both sides of the embankment.` },
-  tensionCrackDepth: TENSION_CRACK_DEPTH,
-  crestLoad: p("crestLoad", "Load on the crest q (kPa)", "kPa", 0, 100, 1, "A vertical load over the crest's width, a variable load (traffic, a stockpile); leave out for none."),
+  crestLoad: p("crestLoad", "Load on the crest q (kPa)", "kPa", 0, Infinity, 1, "A vertical load over the crest's width, a variable load (traffic, a stockpile); leave out for none.", { typical: [0, 100] }),
   waterLevel: WATER_LEVEL,
   fill: FILL_PARAMETERS,
   layer: LAYER_PARAMETERS,
@@ -161,14 +160,13 @@ export function embankmentFieldProblems(params: EmbankmentParams): FieldProblem[
     const crest = params.groundLevel + params.embankmentHeight;
     if (params.waterLevel > crest) out.add("waterLevel", `The ground-water level must not be above the crest (${fmt(crest)} m).`);
   }
-  if (params.tensionCrackDepth !== undefined) out.check("tensionCrackDepth", params.tensionCrackDepth, P.tensionCrackDepth);
   out.layers(params.layers, params.groundLevel, { reserved: { name: EMBANKMENT_FILL_NAME, what: "the embankment's material" } });
   out.values(params.values);
   return out.list;
 }
 
 export function embankmentProblems(params: EmbankmentParams): string[] {
-  return embankmentFieldProblems(params).map((x) => x.message);
+  return embankmentFieldProblems(params).map((x) => x.general ?? x.message);
 }
 
 /** The note on a ground-water level above the ground. */
@@ -180,7 +178,7 @@ export function embankmentNotes(params: EmbankmentParams): string[] {
   const out: string[] = [];
   const note = shallowBaseNote(embankmentGeometry(params).base, params.groundLevel - modelDepth(params));
   if (note) out.push(note);
-  if (params.waterLevel !== null && params.waterLevel > params.groundLevel) out.push(WATER_ABOVE_GROUND);
+  if (params.waterLevel !== null && params.waterLevel > params.groundLevel && !params.ponded) out.push(WATER_ABOVE_GROUND);
   return out;
 }
 
@@ -222,14 +220,11 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   ]);
   d.assign(fill, [g.crestLeft / 2, g.ground + params.embankmentHeight / 2]);
   if (params.crestLoad) d.addDistributedLoad([g.crestLeft, 0], params.crestLoad);
-  if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel);
+  if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel, params.ponded === true);
   // Entry on the embankment, from the far toe to the crest's edge; exit from the crest's edge on: the face, the toe, the ground.
   d.searchLimits([g.farToe, 0], [0, g.right]);
   const factors = partialFactorsOf(params.values);
-  return d.toDocument({
-    ...(factors ? { partialFactors: factors } : {}),
-    ...(params.tensionCrackDepth ? { tensionCrackDepth: params.tensionCrackDepth } : {}),
-  });
+  return d.toDocument(factors ? { partialFactors: factors } : {});
 }
 
 export const embankmentTemplate: Template<EmbankmentParams> = {

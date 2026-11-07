@@ -39,13 +39,14 @@ function randomParams(rnd: () => number): EmbankmentParams {
     embankmentHeight,
     crestWidth,
     slope,
-    fill: { gamma: value(rnd, P.fill.gamma), gammaSat: rnd() < 0.5 ? value(rnd, P.fill.gammaSat) : undefined, c: value(rnd, P.fill.c), phi: value(rnd, P.fill.phi) },
+    fill: { gamma: value(rnd, P.fill.gamma), c: value(rnd, P.fill.c), phi: value(rnd, P.fill.phi) },
     crestLoad: rnd() < 0.6 ? value(rnd, P.crestLoad) : null,
     layers: [...levels, deepest].map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
     // The water anywhere from well below the base to the crest.
     waterLevel: rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * embankmentHeight, groundLevel + embankmentHeight) : null,
     values: randomValues(rnd),
-    ...(rnd() < 0.3 ? { tensionCrackDepth: value(rnd, P.tensionCrackDepth, 0, 3) } : {}),
+    // Now and then ponded water beside the embankment (nothing without water).
+    ...(rnd() < 0.3 ? { ponded: true } : {}),
   };
 }
 
