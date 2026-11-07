@@ -1,0 +1,172 @@
+/**
+ * The result card: F with the engine's own label and basis (one value at a
+ * time, decision B4), the method, the critical surface's entry and exit,
+ * the surfaces searched, and the engine's warnings as it gives them; then
+ * the commands (run, cancel, the link, the downloads) and a note that this
+ * is a template calculation, not a design.
+ */
+import type { ResultSummary, ValidationIssue } from "@cslope/engine";
+import type { ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { ErrorText } from "@/form/Form";
+import { DOWNLOAD_URL, LIMITATIONS_URL } from "@/links";
+
+/** What the card shows. */
+export type CardState =
+  | { kind: "loading" }
+  | { kind: "engine-failed"; message: string }
+  /** The form cannot be built yet. */
+  | { kind: "incomplete"; missing: number; errors: number }
+  | { kind: "waiting" }
+  | { kind: "running"; surfaces: number }
+  | { kind: "cancelled" }
+  | { kind: "failed"; message: string }
+  /** The engine refused the model: the issues it could not put at a field. */
+  | { kind: "invalid"; general: ValidationIssue[] }
+  | { kind: "complete"; summary: ResultSummary; warnings: ValidationIssue[] };
+
+export interface ResultCardProps {
+  state: CardState;
+  /** The last result, shown dimmed while the next one runs. */
+  previous: ResultSummary | null;
+  canRun: boolean;
+  onRun: () => void;
+  onCancel: () => void;
+  onDownload: () => void;
+  onCopyLink: () => void;
+  /** A short message after a command ("Link copied."). */
+  notice: string | null;
+}
+
+function statusText(state: CardState): string {
+  switch (state.kind) {
+    case "loading":
+      return "Loading the engine";
+    case "engine-failed":
+      return `The engine could not load: ${state.message}`;
+    case "incomplete": {
+      const parts: string[] = [];
+      if (state.errors) parts.push(state.errors === 1 ? "correct the field marked in red" : `correct the ${state.errors} fields marked in red`);
+      if (state.missing) parts.push(state.missing === 1 ? "fill in 1 empty field" : `fill in ${state.missing} empty fields`);
+      const text = parts.join(" and ");
+      return `To get F, ${text}.`;
+    }
+    case "waiting":
+      return "Engine ready";
+    case "running":
+      return state.surfaces ? `Analyzing · ${state.surfaces} surfaces` : "Analyzing";
+    case "cancelled":
+      return "The analysis was cancelled. Run it again with Run.";
+    case "failed":
+      return `The analysis failed: ${state.message}`;
+    case "invalid":
+      return "The engine found errors in the model. Correct the fields marked in red.";
+    case "complete":
+      return "";
+  }
+}
+
+function Row({ term, children }: { term: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[7.5rem_1fr] gap-2">
+      <dt className="text-muted-foreground">{term}</dt>
+      <dd className="min-w-0 break-words">{children}</dd>
+    </div>
+  );
+}
+
+function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
+  const classText = summary.partialFactors?.basis ? `, safety class ${summary.partialFactors.basis.safetyClass}` : "";
+  const cs = summary.criticalSurface;
+  return (
+    <div className={dim ? "opacity-50" : undefined}>
+      <p className="text-4xl font-semibold tracking-tight tabular">
+        F {summary.fosText}
+      </p>
+      <p className="mt-1 text-sm">
+        {summary.fosHeading}
+        {classText}
+      </p>
+      <dl className="mt-3 space-y-1 text-sm">
+        <Row term="Method">{summary.method}</Row>
+        {cs && <Row term="Entry, exit">{cs.entryExitText.replace(" / ", " and ")}</Row>}
+        {cs && <Row term="Surface">{cs.text}</Row>}
+        <Row term="Surfaces">
+          {summary.surfacesText} searched
+          {summary.nonConvergedText ? `; ${summary.nonConvergedText}` : ""}
+        </Row>
+      </dl>
+    </div>
+  );
+}
+
+export function ResultCard({ state, previous, canRun, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
+  const status = statusText(state);
+  const complete = state.kind === "complete" ? state : null;
+  const warnings = complete ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)] : [];
+  return (
+    <section aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
+      <h2 id="result-heading" className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+        Result
+      </h2>
+      {complete && <Value summary={complete.summary} />}
+      {!complete && previous && state.kind === "running" && <Value summary={previous} dim />}
+      <p role="status" className="mt-2 min-h-5 text-sm text-muted-foreground">
+        {status}
+      </p>
+      {state.kind === "invalid" && state.general.length > 0 && (
+        <ul className="mt-1 space-y-1">
+          {state.general.map((issue, i) => (
+            <li key={i}>
+              <ErrorText>{issue.message}</ErrorText>
+            </li>
+          ))}
+        </ul>
+      )}
+      {warnings.length > 0 && (
+        <div className="mt-3 rounded-md border border-signal/40 bg-signal/10 p-3 text-sm">
+          <p className="font-medium">{warnings.length === 1 ? "Warning from the engine" : "Warnings from the engine"}</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {warnings.map((w) => (
+              <li key={w}>{w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {state.kind === "running" ? (
+          <Button key="cancel" size="sm" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : (
+          <Button key="run" size="sm" onClick={onRun} disabled={!canRun} title={canRun ? "Run the analysis now; it also runs by itself when a value changes." : "Fill in the form to run."}>
+            Run
+          </Button>
+        )}
+        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canRun} title={canRun ? "The analysis document, which cslope analyse runs." : "Fill in the form to download it."}>
+          Download JSON
+        </Button>
+        <Button size="sm" variant="outline" disabled title="Not available yet: the engine in the browser cannot write cSlope projects.">
+          Download .cslp
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCopyLink} title="Copy the address of this section: the parameters are in it, nothing is stored.">
+          Copy link
+        </Button>
+        <Button size="sm" variant="link" asChild>
+          <a href={DOWNLOAD_URL}>Open in cSlope</a>
+        </Button>
+      </div>
+      <p className="mt-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
+        {notice ?? "The .cslp download comes when the engine in the browser can write cSlope projects."}
+      </p>
+      <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
+        A template calculation, not a design: check the model and the result before you use them. See the{" "}
+        <a href={LIMITATIONS_URL} className="text-primary underline underline-offset-2">
+          limitations
+        </a>
+        .
+      </p>
+    </section>
+  );
+}

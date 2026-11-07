@@ -3,13 +3,15 @@
  * preview.ts, with the content security policy) and opens the page in
  * Chromium, in the light and the dark theme. It fails on a console error
  * (a script, a font or the WebAssembly the policy blocks), an uncaught
- * exception, a failed request or an accessibility violation (axe-core).
- * Then it runs T-ACADS Simple through the worker (window.cslopeWeb, the
- * developer check of main.tsx) and expects F 0.984, so that a policy that
- * blocks the engine, or a worker that does not start, fails the build. It
- * also checks that the engine is served as a hashed asset with a long
- * cache, and that a phone shows the page without scrolling sideways.
- * The website's scripts/smoke.ts, for one page.
+ * exception, a failed request or an accessibility violation (axe-core, on
+ * the empty form and on a result). It opens a filled-in section from its
+ * link, waits for F with its label, changes a parameter and waits for the
+ * new F. Then it runs T-ACADS Simple through the worker (window.cslopeWeb,
+ * the developer check of main.tsx) and expects F 0.984, so that a policy
+ * that blocks the engine, or a worker that does not start, fails the
+ * build. It also checks that the engine is served as a hashed asset with a
+ * long cache, and that a phone shows the page, with a result, without
+ * scrolling sideways. The website's scripts/smoke.ts, for one page.
  *
  * Usage: bun run build && bun scripts/smoke.ts   (bun run smoke)
  * CHROMIUM_PATH points Playwright at an installed Chromium instead of its own.
@@ -20,6 +22,19 @@ import { chromium, devices, type Browser, type Page } from "playwright";
 import { startPreview } from "./preview";
 
 const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.min.js"), "utf8");
+
+/**
+ * A filled-in section, as its link gives it (the address holds the
+ * parameters): a crust over clay with a working road, on design values.
+ */
+export const FILLED =
+  "ground=0&H=4&slope=2&water=-1&layers=2&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
+  "&layer2.name=Clay&layer2.kind=undrained-increasing&layer2.bottomLevel=-20&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
+  "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
+  "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
+
+/** The value F of the result card, once it shows one ("F 0.872"). */
+const fValue = (page: Page) => page.getByText(/^F \d+\.\d{3}$/);
 
 /** T-ACADS Simple (the app's first example), as the worker's protocol test runs it: F 0.984. */
 const T_ACADS_SIMPLE = {
@@ -58,7 +73,7 @@ async function axeViolations(page: Page): Promise<AxeViolation[]> {
   });
 }
 
-/** Opens the page and returns what is wrong with it. */
+/** Opens the page, empty and then filled in, and returns what is wrong with it. */
 async function checkPage(page: Page, base: string): Promise<string[]> {
   const problems: string[] = [];
   const responses: { url: string; headers: Record<string, string> }[] = [];
@@ -69,17 +84,42 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
   const onResponse = (r: { url(): string; headers(): Record<string, string> }) => responses.push({ url: r.url(), headers: r.headers() });
   const onFailed = (r: { url(): string; failure(): { errorText: string } | null }) =>
     problems.push(`request failed: ${r.url()} (${r.failure()?.errorText})`);
+  const axe = async (where: string) => {
+    for (const v of await axeViolations(page)) {
+      problems.push(`axe ${v.id} (${v.impact}) ${where}: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
+    }
+  };
   page.on("console", onConsole);
   page.on("pageerror", onError);
   page.on("response", onResponse);
   page.on("requestfailed", onFailed);
   try {
+    // The empty form: no strengths, so it asks for them and does not run.
     const res = await page.goto(base + "/", { waitUntil: "networkidle" });
     if (res?.status() !== 200) problems.push(`status ${res?.status()}, expected 200`);
+    const status = page.getByRole("status").first();
+    if (!/fill in \d+ empty fields/.test((await status.textContent()) ?? "")) problems.push(`the empty form says "${await status.textContent()}"`);
+    await axe("on the empty form");
+
+    // A link to a filled-in section: F within about a second, then a change and the new F.
+    const started = Date.now();
+    await page.goto(`${base}/?${FILLED}`, { waitUntil: "load" });
     try {
-      await page.getByRole("status").filter({ hasText: "Engine ready" }).waitFor({ timeout: 30_000 });
-    } catch {
-      problems.push(`the engine did not get ready: "${await page.getByRole("status").textContent()}"`);
+      await fValue(page).waitFor({ timeout: 30_000 });
+      const first = await fValue(page).textContent();
+      const label = await page.getByText("Over-design factor (design values), safety class 2").count();
+      if (!label) problems.push("F shows without its label");
+      console.log(`  ${first} after ${Date.now() - started} ms (loading the page and the engine)`);
+      await page.getByLabel("Excavation depth H (m)").fill("3");
+      await page.waitForFunction((before) => {
+        const el = [...document.querySelectorAll("p")].find((p) => /^F \d+\.\d{3}$/.test(p.textContent ?? ""));
+        return el && el.textContent !== before && !el.closest(".opacity-50");
+      }, first, { timeout: 30_000 });
+      const second = await fValue(page).textContent();
+      console.log(`  H 4 m → 3 m: ${first} → ${second}`);
+      if (!new URL(page.url()).searchParams.get("H")?.startsWith("3")) problems.push(`the address did not follow the change: ${page.url()}`);
+    } catch (e) {
+      problems.push(`no result: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
     }
     const wasm = responses.find((r) => new URL(r.url).pathname.endsWith(".wasm"));
     if (!wasm) problems.push("the page did not load the engine's .wasm");
@@ -88,9 +128,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!/^\/assets\/[\w-]+-[\w-]{8}\.wasm$/.test(path)) problems.push(`the engine is served as ${path}, not as a hashed asset`);
       if (!/immutable/.test(wasm.headers["cache-control"] ?? "")) problems.push(`the engine's cache-control is "${wasm.headers["cache-control"]}", not immutable`);
     }
-    for (const v of await axeViolations(page)) {
-      problems.push(`axe ${v.id} (${v.impact}): ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
-    }
+    await axe("with a result");
   } finally {
     page.off("console", onConsole);
     page.off("pageerror", onError);
@@ -128,7 +166,8 @@ async function checkPhone(browser: Browser, base: string): Promise<string[]> {
   const problems: string[] = [];
   const context = await browser.newContext({ ...devices["iPhone 13"] });
   const page = await context.newPage();
-  await page.goto(base + "/", { waitUntil: "networkidle" });
+  await page.goto(`${base}/?${FILLED}`, { waitUntil: "load" });
+  await fValue(page).waitFor({ timeout: 30_000 }).catch(() => problems.push("no result on the phone"));
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) problems.push(`the page is ${overflow} px wider than the phone`);
   await context.close();
