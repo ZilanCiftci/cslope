@@ -683,3 +683,117 @@ fn needs_both_a_shallow_surface_and_most_of_its_base_in_cohesionless_soil() {
     )
     .is_none());
 }
+
+// ── critical surface on the edge of the search limits ─────────────
+
+/// A 2:1 slope 10 m high, crest at x = 20, toe at x = 40, in a c′–φ′ soil
+/// (a synthetic example), with the given search limits.
+fn edge_def(orientation: &str, limits: [f64; 4]) -> Value {
+    let mut coordinates = vec![
+        [0.0, 0.0],
+        [0.0, 15.0],
+        [20.0, 15.0],
+        [40.0, 5.0],
+        [60.0, 5.0],
+        [60.0, 0.0],
+    ];
+    let mut limits = limits;
+    if orientation == "rtl" {
+        // the same slope mirrored about x = 30, sliding to the left
+        for p in &mut coordinates {
+            p[0] = 60.0 - p[0];
+        }
+        coordinates.reverse();
+        limits = [
+            60.0 - limits[1],
+            60.0 - limits[0],
+            60.0 - limits[3],
+            60.0 - limits[2],
+        ];
+    }
+    json!({
+        "orientation": orientation,
+        "coordinates": coordinates,
+        "materials": [{ "name": "Clay", "model": mc(19.0, 8.0, 28.0) }],
+        "materialBoundaries": [],
+        "regionAssignments": [{ "point": [30.0, 1.0], "materialName": "Clay" }],
+        "analysisLimits": {
+            "entryLeftX": limits[0], "entryRightX": limits[1],
+            "exitLeftX": limits[2], "exitRightX": limits[3],
+        },
+    })
+}
+
+fn edge_warning(def: Value) -> Option<AnalysisWarning> {
+    let (fos, slope) = run_verification(def, "Bishop", json!({}));
+    assert!(fos.is_some());
+    find(&slope, AnalysisWarningCode::SearchEdge)
+}
+
+#[test]
+fn warns_when_the_critical_circle_exits_at_the_end_of_its_range() {
+    // The toe circle exits at the toe (x = 40); the exit range starts 2 m
+    // beyond it, so the best circle exits at the range's upslope end.
+    let w = edge_warning(edge_def("ltr", [5.0, 19.0, 42.0, 55.0])).expect("a warning");
+    assert_eq!(
+        w.message,
+        "The critical surface lies on the edge of the search limits (exit at the left end of its range); the minimum may lie outside. Widen the search limits."
+    );
+    assert_eq!(w.count, None);
+    // The same model sliding to the left: the end is on the right.
+    let w = edge_warning(edge_def("rtl", [5.0, 19.0, 42.0, 55.0])).expect("a warning");
+    assert!(
+        w.message.contains("(exit at the right end of its range)"),
+        "{}",
+        w.message
+    );
+}
+
+#[test]
+fn no_edge_warning_with_wide_limits_or_at_physical_ends() {
+    // Limits around the critical circle: it lies inside both ranges.
+    assert_eq!(edge_warning(edge_def("ltr", [2.0, 19.0, 30.0, 55.0])), None);
+    // The whole ground (the model's edges), and a range ending at the toe:
+    // a vertex of the ground, where the critical circle often lies.
+    assert_eq!(edge_warning(edge_def("ltr", [0.0, 20.0, 20.0, 60.0])), None);
+    assert_eq!(edge_warning(edge_def("ltr", [2.0, 19.0, 40.0, 55.0])), None);
+    // An exit fixed at one point is not widened.
+    assert_eq!(edge_warning(edge_def("ltr", [2.0, 19.0, 42.0, 42.0])), None);
+    // No limits: the search covers the whole ground.
+    let mut d = edge_def("ltr", [0.0; 4]);
+    d.as_object_mut().unwrap().remove("analysisLimits");
+    assert_eq!(edge_warning(d), None);
+}
+
+#[test]
+fn no_edge_warning_for_custom_surfaces() {
+    let mut d = edge_def("ltr", [5.0, 19.0, 42.0, 55.0]);
+    // a circle exiting at x = 42, analysed alone
+    d["customSearchPlanes"] = json!([{ "cx": 41.0, "cy": 30.0, "radius": 25.02 }]);
+    d["customPlanesOnly"] = json!(true);
+    let (fos, slope) = run_verification(d, "Bishop", json!({}));
+    assert!(fos.is_some());
+    assert!(find(&slope, AnalysisWarningCode::SearchEdge).is_none());
+}
+
+#[test]
+fn warns_when_a_block_surface_is_on_the_edge_of_its_angle_range() {
+    let mut d = edge_def("ltr", [0.0, 20.0, 20.0, 60.0]);
+    d["blockSearchObjects"] =
+        json!([{ "points": [[12.0, 6.0], [24.0, 6.0]] }, { "points": [[30.0, 6.0], [38.0, 5.5]] }]);
+    let block = |o: Value| {
+        let (fos, slope) = run_verification(d.clone(), "Bishop", o);
+        assert!(fos.is_some());
+        find(&slope, AnalysisWarningCode::SearchEdge).map(|w| w.message)
+    };
+    // The Rankine active angle is 45° + 28°/2 = 59°: a range of 30–35°
+    // holds the best upslope end at 35°.
+    let narrow = block(json!({ "searchMethod": "block", "blockActiveAngle": [30, 35] })).unwrap();
+    assert!(
+        narrow.contains("upslope end angle at the upper end of its range")
+            && narrow.contains("Widen the end angle ranges"),
+        "{narrow}"
+    );
+    let wide = block(json!({ "searchMethod": "block", "blockActiveAngle": [30, 80] }));
+    assert!(!wide.is_some_and(|w| w.contains("angle")));
+}

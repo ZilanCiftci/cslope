@@ -54,7 +54,8 @@
         "frictional-surface-slide",
         "shallow-cohesionless-surface",
         "steep-entry-no-equilibrium",
-        "steep-entry-tension"
+        "steep-entry-tension",
+        "search-edge"
       ],
       "type": "string"
     },

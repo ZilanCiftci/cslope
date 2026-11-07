@@ -406,7 +406,8 @@ export type AnalysisWarningCode =
   | "frictional-surface-slide"
   | "shallow-cohesionless-surface"
   | "steep-entry-no-equilibrium"
-  | "steep-entry-tension";
+  | "steep-entry-tension"
+  | "search-edge";
 
 /**
  * Something about the input or the critical surface that the factor of
