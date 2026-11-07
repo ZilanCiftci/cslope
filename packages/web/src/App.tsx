@@ -4,11 +4,12 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { CancelledError, type AnalysisClient, type RunOutcome } from "@/engine/client";
 import { dumps, type AnalysisDocument } from "@/engine/document";
-import { draftFields, formState, fromQuery, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
+import { draftFields, formState, fromQuery, headerIdOf, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
 import { Choices, Form } from "@/form/Form";
 import { issuesByField } from "@/form/issues";
 import { SPECS, specOf, type AnySpec } from "@/form/specs";
-import { ResultCard, type CardState } from "@/result/ResultCard";
+import { ResultBar } from "@/result/ResultBar";
+import { ResultCard, type CardState, type Notice } from "@/result/ResultCard";
 import { Section } from "@/section/Section";
 
 /** The engine's state, shown while it loads. */
@@ -26,6 +27,13 @@ const LAYER_GEOMETRY = /^layers(\.\d+\.thickness)?$/;
 
 /** How long the form waits after a change before it runs (ms). */
 const RUN_DELAY = 300;
+
+/** How long a message shows (ms); one with Undo, longer. */
+const NOTICE_TIME = 4000;
+const UNDO_TIME = 8000;
+
+/** The form's first field, which gets the focus after a reset is undone. */
+const firstField = () => document.querySelector<HTMLElement>('form[aria-label="Parameters"] :is(input, select)');
 
 /** The parameters to draw, or null when a field of the geometry is empty or wrong. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,17 +75,40 @@ export function App({ client }: { client: AnalysisClient }) {
     drafts.current[draft.template] = draft;
     setDraft(drafts.current[id] ?? initialDraft(id));
     setPrevious(null);
+    // An Undo would bring back the other template's draft.
+    setNoticeState(null);
   };
+  const [run, setRun] = useState<Run | null>(null);
+  const [previous, setPrevious] = useState<ResultSummary | null>(null);
+  const [notice, setNoticeState] = useState<Notice | null>(null);
+  const notices = useRef(0);
+  const setNotice = (text: string, onUndo?: () => void) => setNoticeState({ id: ++notices.current, text, onUndo });
+  const runs = useRef(0);
+
+  // Undo of the last structural change (a removed layer, a reset): the draft before it comes back whole, and the focus goes where the change was.
+  const focusAfterUndo = useRef<(() => HTMLElement | null) | null>(null);
+  const offerUndo = (text: string, before: Draft, focus: () => HTMLElement | null) =>
+    setNotice(text, () => {
+      setDraft(before);
+      setNoticeState(null);
+      focusAfterUndo.current = focus;
+    });
+  useEffect(() => {
+    const focus = focusAfterUndo.current;
+    if (!focus) return;
+    focusAfterUndo.current = null;
+    focus()?.focus();
+  });
   // Back to the template's defaults (the first visit's values).
   const resetDraft = () => {
     setDraft(initialDraft(draft.template));
     setPrevious(null);
-    setNotice("Reset to the template's defaults.");
+    offerUndo("Reset to the template's defaults.", draft, firstField);
   };
-  const [run, setRun] = useState<Run | null>(null);
-  const [previous, setPrevious] = useState<ResultSummary | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const runs = useRef(0);
+  const onRemoveLayer = (index: number, before: Draft) => {
+    const layer = before.layers[index];
+    offerUndo(`Removed ${layer.name.trim() || `Layer ${index + 1}`}.`, before, () => document.getElementById(headerIdOf(layer)));
+  };
 
   // The tab's title names the template.
   useEffect(() => {
@@ -163,7 +194,7 @@ export function App({ client }: { client: AnalysisClient }) {
 
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 4000);
+    const timer = setTimeout(() => setNoticeState(null), notice.onUndo ? UNDO_TIME : NOTICE_TIME);
     return () => clearTimeout(timer);
   }, [notice]);
 
@@ -204,7 +235,7 @@ export function App({ client }: { client: AnalysisClient }) {
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 sm:px-6 lg:pb-6">
+      <main className="mx-auto max-w-6xl px-4 pt-6 pb-[calc(4.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:pb-6">
         <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2">
           <span id="template-label" className="text-xs text-muted-foreground">
             Template
@@ -219,7 +250,7 @@ export function App({ client }: { client: AnalysisClient }) {
           {spec.template.description} F is computed on your own computer by the cSlope engine.
         </p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-          <Form key={draft.template} spec={spec} draft={draft} onChange={setDraft} errors={errors} missing={form.missing} notes={notes} />
+          <Form key={draft.template} spec={spec} draft={draft} onChange={setDraft} errors={errors} missing={form.missing} notes={notes} onRemoveLayer={onRemoveLayer} />
           <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <figure className="rounded-lg border bg-card p-3">
               {drawn ? (
@@ -251,17 +282,12 @@ export function App({ client }: { client: AnalysisClient }) {
           </div>
         </div>
       </main>
-      {/* On a phone the result card is below the form: a bar keeps F in view. */}
+      {/* On a phone the result card is below the form: a bar keeps F and a picture of the section in view. */}
       {state.kind === "complete" && (
-        <aside aria-label="Result summary" className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur lg:hidden">
-          <div className="mx-auto flex h-11 max-w-6xl items-center gap-3 px-4 text-sm">
-            <span className="font-semibold tabular">F {state.summary.fosText}</span>
-            <span className="min-w-0 truncate text-muted-foreground">{state.summary.fosHeading}</span>
-            <a href="#result" className="ml-auto text-primary underline-offset-4 hover:underline">
-              Result
-            </a>
-          </div>
-        </aside>
+        <ResultBar
+          summary={state.summary}
+          section={drawn && !outlineOnly ? { shapes: spec.shapes(drawn), layers: drawn.layers, slices, label: sectionLabel, caption: spec.caption } : null}
+        />
       )}
     </>
   );

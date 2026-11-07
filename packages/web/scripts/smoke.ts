@@ -14,7 +14,9 @@
  * that blocks the engine, or a worker that does not start, fails the
  * build. It also checks that the engine is served as a hashed asset with a
  * long cache, and that a phone shows the page, with a result, without
- * scrolling sideways. The website's scripts/smoke.ts, for one page.
+ * scrolling sideways, and that the bar's picture of the section opens the
+ * drawing across the screen and closes with Escape; on the first visit, that
+ * a removed layer comes back with Undo. The website's scripts/smoke.ts, for one page.
  *
  * Usage: bun run build && bun scripts/smoke.ts   (bun run smoke)
  * CHROMIUM_PATH points Playwright at an installed Chromium instead of its own.
@@ -120,6 +122,19 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (f !== pinned("defaults")) problems.push(`the first visit gave ${f}, expected ${pinned("defaults")}`);
       console.log(`  first visit: ${f}`);
       await axe("on the first visit");
+      // A removed layer comes back with Undo, in its place, with the focus on its header.
+      await page.waitForFunction(() => new URLSearchParams(location.search).get("layers") === "3", null, { timeout: 5_000 });
+      const address = new URL(page.url()).search;
+      await page.getByRole("button", { name: "Remove Clay" }).click();
+      const undo = page.locator("#result").getByRole("button", { name: "Undo" });
+      await undo.waitFor({ timeout: 5_000 });
+      const said = await page.locator("#result [aria-live]").textContent();
+      if (said !== "Removed Clay. Undo") problems.push(`after a remove the card says "${said}", expected "Removed Clay. Undo"`);
+      await axe("with Undo after a removed layer");
+      await undo.click();
+      const focused = await page.evaluate(() => document.activeElement?.textContent ?? "");
+      if (!focused.startsWith("Clay")) problems.push(`after Undo the focus is on "${focused}", expected the header of Clay`);
+      await page.waitForFunction((a) => location.search === a, address, { timeout: 5_000 }).catch(() => problems.push(`after Undo the address is ${new URL(page.url()).search}, expected ${address}`));
     } catch (e) {
       problems.push(`the first visit: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
     }
@@ -261,6 +276,24 @@ async function checkPhone(browser: Browser, base: string, colorScheme: "light" |
   if (!(await bar.isVisible())) problems.push("the result bar does not show on the phone");
   else if (!/^F \d+\.\d{3}/.test((await bar.textContent()) ?? "")) problems.push(`the result bar says "${await bar.textContent()}"`);
   for (const v of await axeViolations(page)) problems.push(`axe ${v.id} (${v.impact}) on the phone: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
+  // The bar's picture of the section opens the drawing across the screen; Escape closes it and the focus goes back to the picture.
+  try {
+    const thumb = bar.getByRole("button", { name: "Show the section" });
+    await thumb.click();
+    const sheet = page.getByRole("dialog", { name: "Section" });
+    await sheet.waitFor({ timeout: 5_000 });
+    const box = await sheet.getByRole("img").boundingBox();
+    const width = page.viewportSize()?.width ?? 0;
+    if (!box || box.width < width - 60) problems.push(`the drawing in the sheet is ${box?.width} px wide on a ${width} px phone`);
+    for (const v of await axeViolations(page)) problems.push(`axe ${v.id} (${v.impact}) with the section open on the phone: ${v.help} at ${v.nodes.slice(0, 3).map((n) => n.target.join(" ")).join(", ")}`);
+    await page.keyboard.press("Tab");
+    if ((await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) !== "Close") problems.push("Tab leaves the open section");
+    await page.keyboard.press("Escape");
+    await sheet.waitFor({ state: "detached", timeout: 5_000 });
+    if ((await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) !== "Show the section") problems.push("after Escape the focus is not back on the section's picture");
+  } catch (e) {
+    problems.push(`the section's picture: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+  }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) problems.push(`the page is ${overflow} px wider than the phone`);
   await context.close();

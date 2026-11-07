@@ -27,6 +27,15 @@ export type CardState =
   | { kind: "invalid"; general: ValidationIssue[] }
   | { kind: "complete"; summary: ResultSummary };
 
+/** A short message after a command ("Link copied."); after a removed layer or a reset, with Undo. */
+export interface Notice {
+  /** A new id for each message, so that the same text is announced again. */
+  id: number;
+  text: string;
+  /** Puts the draft back as it was before the change. */
+  onUndo?: () => void;
+}
+
 export interface ResultCardProps {
   state: CardState;
   /** The last result, shown dimmed while the next one runs. */
@@ -38,8 +47,8 @@ export interface ResultCardProps {
   onCancel: () => void;
   onDownload: () => void;
   onCopyLink: () => void;
-  /** A short message after a command ("Link copied."). */
-  notice: string | null;
+  /** A short message after a command ("Link copied."), with Undo after a structural change. */
+  notice: Notice | null;
 }
 
 function statusText(state: CardState): string {
@@ -147,7 +156,19 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
         </Button>
       </div>
       <p className="mt-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
-        {notice}
+        {notice && (
+          <span key={notice.id}>
+            {notice.text}
+            {notice.onUndo && (
+              <>
+                {" "}
+                <button type="button" onClick={notice.onUndo} className="inline-flex min-h-6 items-center font-medium text-primary underline underline-offset-2 hover:no-underline">
+                  Undo
+                </button>
+              </>
+            )}
+          </span>
+        )}
       </p>
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         {TEMPLATE_NOTE} See the{" "}
