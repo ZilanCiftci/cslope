@@ -6,7 +6,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./verification": "./src/verification/index.ts",
-    "./wasm": "./src/wasm/cslope_wasm_bg.wasm"
+    "./project": "./src/project.ts",
+    "./wasm": "./src/wasm/cslope_wasm_bg.wasm",
+    "./project-wasm": "./src/wasm-project/cslope_project_wasm_bg.wasm"
   },
   "sideEffects": false,
   "scripts": {

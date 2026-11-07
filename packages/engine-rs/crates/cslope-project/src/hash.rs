@@ -11,7 +11,9 @@
 use crate::canonical::canonical_json;
 use crate::convert::model_to_definition;
 use crate::model::ModelEntry;
+use crate::options::AnalysisOptions;
 use cslope_engine::model::canonical::to_canonical_slope_definition;
+use cslope_engine::types::SlopeDefinition;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 
@@ -28,12 +30,22 @@ pub fn analysis_input_json(model: &ModelEntry) -> Result<String, String> {
         },
     )
     .map_err(|e| e.0)?;
-    let definition =
-        to_canonical_slope_definition(&model_to_definition(model), None).map_err(|e| e.message)?;
+    definition_input_json(&model_to_definition(model), &model.options)
+}
+
+/// The text that is hashed for an analysis of `definition` (in model
+/// coordinates) with `options`: what [`analysis_input_json`] gives for a
+/// model whose definition and options these are. A result computed for
+/// them is current in a model only when the two agree.
+pub fn definition_input_json(
+    definition: &SlopeDefinition,
+    options: &AnalysisOptions,
+) -> Result<String, String> {
+    let definition = to_canonical_slope_definition(definition, None).map_err(|e| e.message)?;
     let definition = serde_json::to_value(definition).map_err(|e| e.to_string())?;
     Ok(canonical_json(&json!({
         "definition": definition,
-        "options": model.options.to_map(),
+        "options": options.to_map(),
     })))
 }
 

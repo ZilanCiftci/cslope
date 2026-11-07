@@ -1,0 +1,9 @@
+{
+  "flavour": "project",
+  "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
+  "wasmBindgen": "0.2.130",
+  "sourceHash": "768c12299a4e048b5e71fade5e8e25f91c884133e8294c11c6d160ee13aaf1d2",
+  "wasmSha256": "c1272c3bf09f743d35da829e17beb615d0d8aac2de1085598b0c535c8e6ee857",
+  "bytes": 2171311,
+  "brotliBytes": 439562
+}

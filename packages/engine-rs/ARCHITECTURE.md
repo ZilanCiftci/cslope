@@ -227,6 +227,9 @@ packages/engine-rs/
     cslope-wasm/                cdylib: wasm-bindgen + serde-wasm-bindgen
       src/lib.rs registry.rs slope.rs analysis.rs fem.rs reliability.rs
           errors.rs panic.rs clock.rs testing.rs (feature "testing")
+    cslope-project-wasm/        cdylib: the .cslp writer (cslope-project, feature
+                                "write") for the browser page's project download
+                                (#107), a second module loaded on demand (§3.5)
     cslope-py/                  cdylib: pyo3 (+ pythonize), maturin
       pyproject.toml python/cslope/{__init__.py,__init__.pyi,py.typed}
   tools/
@@ -240,6 +243,9 @@ packages/engine/                becomes the FACADE, still "@cslope/engine"
   src/wasm/                     COMMITTED product build: cslope_wasm.js, .d.ts,
                                 cslope_wasm_bg.wasm, BUILD-INFO.json
   src/wasm-testing/             testing build (gitignored, built by pretest)
+  src/wasm-project/             COMMITTED project writer build (cslope-project-wasm),
+                                "@cslope/engine/project-wasm"; src/project.ts its facade
+                                ("@cslope/engine/project")
   src/{types,math,model,fem}/*.ts  shims: TS types + re-exports from wasm
   src/verification/*            unchanged TS data + runners over the facade
 ```
@@ -429,6 +435,7 @@ export class Slope {
   - Today: `clarabel.wasm` is 814 kB.
   - Expected product engine: 2–3.5 MB raw (LTO, `codegen-units = 1`, `opt-level = 3`, `strip = true`), about 0.8–1.3 MB brotli. Base64 inlining adds 33 % to the main chunk. That is fine from local disk in Electron.
   - CI fails above a 4 MB budget.
+  - The `.cslp` writer for the browser page (#107) is not in the engine: with the app's model, its strict reading and the ZIP writer it added 2.4 MB (5.8 MB in all). It is a second module, `cslope-project-wasm` (profile `wasm-project`: `opt-level = "z"`, no name section; 2.1 MB, 0.4 MB brotli), which the page loads only when a project is downloaded.
   - `wasm-opt` is left out in v1, for the toolchain cost; revisit with a pinned `binaryen`.
   - `simd128` is off in v1. Without fast-math LLVM does not reassociate float reductions, so it would be result-safe, but there is no evidence yet that it is needed.
 - **Time.** In WASM, `Clock` reads `performance.now()` through `js_sys::Reflect` on the global object, which works in a worker and in the main thread. Clarabel is built with its `wasm` feature (web-time), as `packages/engine/clarabel` does today.
@@ -644,7 +651,7 @@ pub struct Serial;                                         // default; wasm
 ### 8.2 Build script
 
 `tools/build-wasm.ts`:
-- Build: `cargo build -p cslope-wasm --target wasm32-unknown-unknown --profile wasm-release [--features testing]`, then `wasm-bindgen --target web --omit-default-module-path --out-dir packages/engine/src/wasm[-testing]`.
+- Build: `cargo build -p cslope-wasm --target wasm32-unknown-unknown --profile wasm-release [--features testing]`, then `wasm-bindgen --target web --omit-default-module-path --out-dir packages/engine/src/wasm[-testing]`. The third flavour, `project`, builds `cslope-project-wasm` with the profile `wasm-project` into `packages/engine/src/wasm-project` (also committed, checked for freshness and reproduced by CI as the product build is).
 - The `wasm-release` profile is release with `panic = "abort"` and `strip = true`.
 - Reproducibility: `RUSTFLAGS="--remap-path-prefix=$PWD=/cslope --remap-path-prefix=$CARGO_HOME=/cargo"`, so panic locations carry no machine paths.
 - It writes `BUILD-INFO.json`: `{ rustc, wasmBindgen, sourceHash: sha256(crates/** + Cargo.lock + Cargo.toml), wasmSha256, bytes }`.
