@@ -7,6 +7,8 @@ import { AnalysisClient, type WorkerLike } from "./engine/client";
 import type { WorkerRequest, WorkerResponse } from "./engine/messages";
 import { dumps } from "./engine/document";
 import { draftOf, toQuery } from "./form/draft";
+import { embankmentDocument } from "./templates/embankment";
+import { EMBANKMENT_EXAMPLES } from "./templates/embankment-examples";
 import { excavationDocument } from "./templates/excavation";
 import { EXCAVATION_EXAMPLES } from "./templates/excavation-examples";
 
@@ -126,7 +128,7 @@ describe("App", () => {
   });
 
   it("opens the section of a shared link, and switches to the over-design factor", async () => {
-    window.history.replaceState(null, "", "/?" + toQuery(draftOf(EXCAVATION_EXAMPLES["clay-road"])));
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])));
     const { requests } = renderApp();
     expect(screen.getByRole("checkbox", { name: "Working road behind the crest" })).toBeChecked();
     expect(field("Traffic load q (kPa)").value).toBe("20");
@@ -222,7 +224,7 @@ describe("App", () => {
   it("links to the website's download and limitations pages; the .cslp download waits", () => {
     renderApp({ loadEngine: () => new Promise(() => {}) });
     expect(screen.getByRole("link", { name: "Open in cSlope" })).toHaveAttribute("href", "https://cslope.com/download");
-    expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/limitations");
+    expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/browser#limitations");
     expect(screen.getByRole("button", { name: "Download .cslp" })).toBeDisabled();
   });
 
@@ -233,6 +235,72 @@ describe("App", () => {
     expect(localStorage.getItem("cslope-ui-theme")).toBe("dark");
     fireEvent.click(screen.getByRole("button", { name: "Switch to light theme" }));
     expect(document.documentElement.classList.contains("dark")).toBe(false);
+  });
+
+  it("lists the two templates, the excavation active, and switches to the embankment and back", async () => {
+    const { requests } = renderApp();
+    const picker = screen.getByRole("group", { name: "Template" });
+    const excavation = within(picker).getByRole("button", { name: "Excavation in clay with a working road" });
+    const embankment = within(picker).getByRole("button", { name: "Embankment on clay" });
+    expect(excavation).toHaveAttribute("aria-pressed", "true");
+    expect(embankment).toHaveAttribute("aria-pressed", "false");
+    expect(document.title).toBe("Excavation in clay with a working road — cSlope");
+    type("Excavation depth H (m)", "4");
+    fireEvent.click(embankment);
+    expect(screen.getByRole("heading", { level: 1, name: "Embankment on clay" })).toBeInTheDocument();
+    expect(embankment).toHaveAttribute("aria-pressed", "true");
+    expect(document.title).toBe("Embankment on clay — cSlope");
+    expect(screen.getByText("Elevation, and distance from the crest's right edge (m).")).toBeInTheDocument();
+    expect(picker).toHaveAttribute("aria-labelledby");
+    expect(screen.queryByLabelText("Excavation depth H (m)")).toBeNull();
+    expect(field("Embankment height h (m)").value).toBe("3");
+    await flush();
+    expect(screen.getByRole("status")).toHaveTextContent("To get F, fill in 5 empty fields.");
+    await act(() => new Promise<void>((r) => setTimeout(r, 400)));
+    expect(new URLSearchParams(window.location.search).get("t")).toBe("embankment");
+    type("Fill unit weight γ (kN/m³)", "19");
+    type("Fill c′ (kPa)", "0");
+    type("Fill φ′ (°)", "35");
+    type("Load on the crest q (kPa)", "10");
+    fill("15");
+    await waitFor(() => expect(requests).toHaveLength(1));
+    const def = requests[0].document.definition;
+    expect(def.materials.map((m) => m.name)).toEqual(["Clay", "Embankment"]);
+    expect(def.udls).toEqual([{ magnitude: 10, x1: -6, x2: 0 }]);
+    expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /^Section of the embankment: 1 layer, a load of 10 kPa on the crest, and the critical surface of F 1.234\.$/ })).toBeInTheDocument();
+    // Back to the excavation as it was left.
+    fireEvent.click(within(picker).getByRole("button", { name: "Excavation in clay with a working road" }));
+    expect(field("Excavation depth H (m)").value).toBe("4");
+  });
+
+  it("opens an embankment from its shared link, and downloads its document", async () => {
+    let blob: Blob | null = null;
+    URL.createObjectURL = vi.fn((b: Blob) => ((blob = b), "blob:x"));
+    URL.revokeObjectURL = vi.fn();
+    let name = "";
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      name = this.download;
+    });
+    const params = EMBANKMENT_EXAMPLES["crust-over-clay"];
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("embankment", params)));
+    const { requests } = renderApp();
+    expect(screen.getByRole("heading", { level: 1, name: "Embankment on clay" })).toBeInTheDocument();
+    expect(field("Crest width B (m)").value).toBe("10");
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].document).toEqual(embankmentDocument(params));
+    fireEvent.click(screen.getByRole("button", { name: "Download JSON" }));
+    expect(name).toBe("cslope-embankment.json");
+    expect(await blob!.text()).toBe(dumps(embankmentDocument(params)));
+  });
+
+  it("opens an older link without the template on the excavation", async () => {
+    const query = toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])).replace(/^t=excavation&/, "");
+    window.history.replaceState(null, "", "/?" + query);
+    const { requests } = renderApp();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a working road" })).toBeInTheDocument();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_EXAMPLES["clay-road"]));
   });
 
   it("links the wordmark to the website", () => {

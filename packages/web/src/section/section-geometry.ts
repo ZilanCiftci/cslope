@@ -1,11 +1,14 @@
 /**
  * What the section drawing draws, in model coordinates (m): the layers as
- * polygons (the outline clipped to each layer's band), the road's fill,
- * the water line (cut at the ground), the critical surface and the
- * slices from the result, and the ticks of the axes. Pure TypeScript.
+ * polygons (the outline clipped to each layer's band), the fill (the
+ * excavation's road, the embankment), the water line (cut at the ground),
+ * the critical surface and the slices from the result, and the ticks of
+ * the axes. Pure TypeScript.
  */
 import type { SliceData } from "@cslope/engine";
-import { exteriorOf, geometry, type ExcavationGeometry, type ExcavationParams } from "../templates/excavation";
+import type { Layer } from "../templates/common";
+import { embankmentExterior, embankmentGeometry, type EmbankmentParams } from "../templates/embankment";
+import { exteriorOf, geometry, type ExcavationParams } from "../templates/excavation";
 
 export type Point = [number, number];
 
@@ -66,40 +69,102 @@ export function lineAt(line: Point[], x: number): number | null {
   return null;
 }
 
+/** What the drawing draws of a template's section. */
 export interface SectionShapes {
-  g: ExcavationGeometry;
   exterior: Point[];
   /** One polygon per layer, from the top down. */
   layers: Point[][];
-  road: Point[] | null;
+  /** The lines between materials: the layer levels and the fill's foot on the ground. */
+  boundaries: [Point, Point][];
+  /** The fill above the ground (the road, the embankment). */
+  fill: Point[] | null;
   /** The water line, cut at the ground. */
   water: Point[];
-  /** The traffic load's span, when there is one. */
-  load: { x1: number; x2: number; y: number } | null;
+  /** A distributed load: its span, the ground it stands on and q (kPa). */
+  load: { x1: number; x2: number; y: number; q: number } | null;
+  /** The model's extent. */
+  extent: { left: number; right: number; base: number; top: number };
+  /**
+   * The part the drawing shows at least (`x0` to `x1`, down to `y0`), and
+   * the margin it adds around that and the critical surface.
+   */
+  focus: { x0: number; x1: number; y0: number; margin: number };
 }
 
-/** The shapes of a parameter set whose geometry fields are valid (the materials may be empty). */
-export function sectionShapes(params: ExcavationParams): SectionShapes {
-  const g = geometry(params);
-  const exterior = exteriorOf(params, g);
-  const layers: Point[][] = [];
-  let top = g.ground;
-  params.layers.forEach((layer, i) => {
-    const bottom = i === params.layers.length - 1 ? g.base : layer.bottomLevel;
-    layers.push(clipBand(exterior, bottom, top));
+/** Each layer's band of the outline, from the top down (the last one's down to the base). */
+function layerBands(exterior: Point[], layers: Layer[], ground: number, base: number): Point[][] {
+  const out: Point[][] = [];
+  let top = ground;
+  layers.forEach((layer, i) => {
+    const bottom = i === layers.length - 1 ? base : layer.bottomLevel;
+    out.push(clipBand(exterior, bottom, top));
     top = layer.bottomLevel;
   });
+  return out;
+}
+
+/** The shapes of an excavation whose geometry fields are valid (the materials may be empty). */
+export function excavationShapes(params: ExcavationParams): SectionShapes {
+  const g = geometry(params);
+  const exterior = exteriorOf(params, g);
   const r = g.road;
-  const road: Point[] | null = r && [
+  const fill: Point[] | null = r && [
     [r.farToe, g.ground],
     [r.topLeft, r.top],
     [r.topRight, r.top],
     [r.nearToe, g.ground],
   ];
-  const water = params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel);
+  const boundaries: [Point, Point][] = g.levels.map((level) => [
+    [g.left, level],
+    [level > g.bottom ? params.slope * (g.ground - level) : g.right, level],
+  ]);
+  if (r) boundaries.push([
+    [r.farToe, g.ground],
+    [r.nearToe, g.ground],
+  ]);
   const q = params.road?.trafficLoad;
-  const load = r && q ? { x1: r.topLeft, x2: r.topRight, y: r.top } : null;
-  return { g, exterior, layers, road, water, load };
+  const H = params.excavationDepth;
+  return {
+    exterior,
+    layers: layerBands(exterior, params.layers, g.ground, g.base),
+    boundaries,
+    fill,
+    water: params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel),
+    load: r && q ? { x1: r.topLeft, x2: r.topRight, y: r.top, q } : null,
+    extent: { left: g.left, right: g.right, base: g.base, top: r ? r.top : g.ground },
+    focus: { x0: Math.min(r?.farToe ?? 0, -2 * H), x1: g.toeX + 2 * H, y0: g.bottom - 1.5 * H, margin: H },
+  };
+}
+
+/** The shapes of an embankment whose geometry fields are valid. */
+export function embankmentShapes(params: EmbankmentParams): SectionShapes {
+  const g = embankmentGeometry(params);
+  const exterior = embankmentExterior(g);
+  const h = params.embankmentHeight;
+  return {
+    exterior,
+    layers: layerBands(exterior, params.layers, g.ground, g.base),
+    boundaries: [
+      ...g.levels.map((level): [Point, Point] => [
+        [g.left, level],
+        [g.right, level],
+      ]),
+      [
+        [g.farToe, g.ground],
+        [g.toeX, g.ground],
+      ],
+    ],
+    fill: [
+      [g.farToe, g.ground],
+      [g.crestLeft, g.crest],
+      [0, g.crest],
+      [g.toeX, g.ground],
+    ],
+    water: params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel),
+    load: params.crestLoad ? { x1: g.crestLeft, x2: 0, y: g.crest, q: params.crestLoad } : null,
+    extent: { left: g.left, right: g.right, base: g.base, top: g.crest },
+    focus: { x0: g.farToe, x1: g.toeX + 2 * h, y0: g.ground - 1.5 * h, margin: h },
+  };
 }
 
 /** The base of a slice at x, from its middle and its base angle (the slope slides to the right). */
@@ -153,15 +218,16 @@ export function ticks(lo: number, hi: number, count = 6): number[] {
 }
 
 /**
- * The part of the model the drawing shows: the slope, the road and the
+ * The part of the model the drawing shows: the slope, the fill and the
  * critical surface with some ground around them, not the whole width the
  * search needs (which would make the slope small, on a phone tiny).
  */
-export function viewOf(g: ExcavationGeometry, depth: number, surface: Point[] | null): { x0: number; x1: number; y0: number; y1: number } {
+export function viewOf(s: Pick<SectionShapes, "extent" | "focus">, surface: Point[] | null): { x0: number; x1: number; y0: number; y1: number } {
   const xs = surface?.map((p) => p[0]) ?? [];
   const ys = surface?.map((p) => p[1]) ?? [];
-  const x0 = Math.max(g.left, Math.min(g.road?.farToe ?? 0, -2 * depth, ...xs) - depth);
-  const x1 = Math.min(g.right, Math.max(g.toeX + 2 * depth, ...xs) + depth);
-  const y0 = Math.max(g.base, Math.min(g.bottom - 1.5 * depth, ...ys) - 1);
-  return { x0, x1, y0, y1: g.road ? g.road.top : g.ground };
+  const { extent: e, focus: f } = s;
+  const x0 = Math.max(e.left, Math.min(f.x0, ...xs) - f.margin);
+  const x1 = Math.min(e.right, Math.max(f.x1, ...xs) + f.margin);
+  const y0 = Math.max(e.base, Math.min(f.y0, ...ys) - 1);
+  return { x0, x1, y0, y1: e.top };
 }

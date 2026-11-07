@@ -1,0 +1,78 @@
+---
+title: cSlope in the browser
+description: The templates at app.cslope.com, what they model and what they do not, how to read F, and what to do with the JSON download.
+section: Getting started
+order: 1.5
+---
+
+[app.cslope.com](https://app.cslope.com) analyzes a slope from a template, in the browser, without installing anything. You fill in a form; the page draws the section and computes F with the cSlope engine on your own computer. The analysis runs in your browser. The parameters travel only in the page's address, so a link you share carries them and opens the same section.
+
+<Callout type="warning">
+  A template calculation, not a design: check the model and the result before you use them.
+</Callout>
+
+## The templates
+
+Choose the template at the top of the page. The address carries its name (`t=excavation` or `t=embankment`); a link without it opens the excavation.
+
+- **Excavation in clay with a working road.** An excavation of depth H with a slope 1:n and a flat bottom, in level ground. Behind the crest an optional working road: a fill with sides 1:1.5, its own drained material and a traffic load q over its top. - **Embankment on clay.** An embankment of height h with a crest of width B and both sides 1:n, on level ground, of a drained fill. An optional load q over the crest.
+
+Both have:
+
+- **Layers**, from the ground down, each with its bottom level (an elevation, not a depth) and a material: Su constant, Su increasing with depth, drained c′ and φ′, or rock (impenetrable). A layer is at least 0.05 m thick.
+- **A ground-water level**, a horizontal line cut at the ground: there is no free water above the ground. Empty for a dry slope. Under an embankment the level may stand above the ground, up to the crest: the water above the ground seeps out of the embankment's faces; no free water stands beside it. A level above the crest is refused.
+- **An optional tension crack depth**: a dry crack at the top of each slip surface.
+- **Safety**: characteristic or design values (see [Reading the result](#reading-the-result)).
+
+No strength or unit weight has a default: the fields stay empty until you fill them in, and F is computed once every required field is. The page runs the analysis by itself a moment after each change, and the section drawing follows as you type.
+
+### What the template decides for you
+
+- **The model's extent.** Each side reaches 1.5 times the model's depth beyond the slope, and at least 3 times its height.
+- **The model's base** is the last layer's bottom, exactly as you type it, treated as firm ground; it is never extended. When it is less deep than recommended (3H below the ground for the excavation; 3h, or half the embankment's width at its foot B + 2nh, for the embankment), a note under the form says so: if the soil continues deeper, enter its real bottom, since a deeper base can give a lower F. In a uniform clay under a flat slope, F keeps falling as the clay gets deeper. In the excavation the last layer must end below the excavation bottom.
+- **The search limits.** In the excavation, slip surfaces enter on the ground (and the road) behind the crest and exit anywhere from the crest to the model's right edge, in the face or the bottom. On the embankment, they enter on the embankment (its crest and its far side) and exit anywhere from the crest's edge to the right edge: in the face, at the toe or on the ground beyond it. A fill with a low φ′ and no cohesion can govern by a shallow slide in the slope, with F close to tan φ′/tan β; the engine's warning says so.
+- **The options** of a new model in the app: Morgenstern-Price with a half-sine interslice function, 30 slices, the circular search with composite surfaces along rock ([Analysis options](/docs/analysis), [Slip surface search](/docs/search)).
+- **The direction.** The slope slides to the right, as drawn. The embankment is symmetric, so its left side has the same F.
+
+## Limitations
+
+The templates model only the sections above. They do not do what the app does beyond that:
+
+- **No free geometry**: no other outline, no sloping ground or layers, no second slope, berm or ditch, no imported drawings.
+- **No reinforcement**: no anchors, nails, geosynthetics or piles.
+- **No finite element analysis**, no probabilistic or sensitivity analysis, no 3D correction, no seismic coefficients.
+- **Water only as a level**, cut at the ground: no piezometric lines per material, no pore pressure ratio, no free water, no drawdown.
+- **Loads only where the template puts them**: the road's traffic load, the load on the crest.
+- **One value at a time**: F on characteristic values or on design values, not both.
+
+The [limitations](/docs/limitations) of the program apply too: a two-dimensional limit equilibrium analysis per meter run, which finds the lowest F among the surfaces it tries.
+
+## Reading the result
+
+The result card shows F with three decimals and what it is:
+
+- **Minimum factor of safety**, on characteristic values: the strengths as you typed them, without partial factors.
+- **Over-design factor (design values), safety class n**, on design values: the strengths divided by the Swedish partial factors of the safety class and η, and the variable loads (the traffic load, the load on the crest) multiplied by theirs. F is then not a factor of safety but how much further the design values could be reduced before failure: 1.0 or more means the design is satisfied, and the partial factors already provide the margin. The factors are $\gamma_{cu} = 1.5/\eta$ on Su, $\gamma_{c'} = \gamma_{\varphi'} = 1.3/\eta$ on c′ and tan φ′, and $\gamma_Q = k \cdot \gamma_d$ on the variable loads, with $k$ the field γQ / γd and $\gamma_d$ = 0.83, 0.91 and 1.0 in safety class 1, 2 and 3 ([Partial factors](/docs/tutorials/partial-factors)).
+
+Under F: the method, the critical surface's entry and exit points, the surface (a circle's center and radius) and the number of surfaces searched. The drawing shows the critical surface in red with its slices.
+
+**Warnings from the engine** are listed under the result, in the engine's own words; they are the warnings of the app's result summary, and [Troubleshooting](/docs/troubleshooting) explains each. Read them before you use F. Common ones on these sections:
+
+- a shallow slide in the face of a cohesionless fill or crust, where F approaches tan φ′/tan β ([Shallow slides in cohesionless soil](/docs/troubleshooting#shallow-slides-in-cohesionless-soil));
+- a steep entry or slices with a small $m_\alpha$ near the crest, which a tension crack (the tension crack depth) usually removes ([Warnings about the slices](/docs/troubleshooting#warnings-about-the-slices-of-the-critical-surface)).
+
+While a new analysis runs, the last result stays in view, dimmed and marked *Previous result*. A field marked in red says what is wrong with it; the status line says how many fields are still empty. On a phone, a bar at the bottom keeps F in view.
+
+## The JSON download and the link
+
+**Copy link** copies the page's address, which holds the template and every field you filled in.
+
+**Download JSON** saves the analysis document of the section (`cslope-excavation.json` or `cslope-embankment.json`): the model and the options in the engine's own format (`"format": "cslope-analysis"`). It runs with the command line of the `cslope` Python package and gives the same F as the page:
+
+```
+cslope analyze cslope-embankment.json
+```
+
+The Python package is not yet published on PyPI; until it is, build it from its source in the [repository](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine-rs/crates/cslope-py).
+
+The cSlope app cannot open the JSON file: it opens project files (`.cslp`). Its **Open** dialog also offers `.json`, for projects saved by older versions; the analysis document is not one, and opening it there ends with the message *Unable to open project: File must include at least one model.* To go on in the app, for example to add reinforcement or another analysis, build the section there from the same values. **Download .cslp** is shown but not available yet; **Open in cSlope** leads to the [download page](/download).

@@ -1,10 +1,10 @@
 {
   "clay-3m": {
-    "fos": 2.312838367086363,
+    "fos": 2.312767467906795,
     "fosLabel": "factor of safety"
   },
   "clay-5m-water": {
-    "fos": 1.7486113536537875,
+    "fos": 1.7486358352974525,
     "fosLabel": "factor of safety"
   },
   "clay-increasing": {

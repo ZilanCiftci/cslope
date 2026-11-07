@@ -9,24 +9,30 @@ import type { ExcavationParams } from "./excavation";
 const characteristic = { basis: "characteristic" } as const;
 
 export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {
-  /** One clay, dry, no road. */
+  /** One clay on rock 15 m down, dry, no road. */
   "clay-3m": {
     groundLevel: 10,
     excavationDepth: 3,
     slope: 1.5,
     bottomWidth: null,
-    layers: [{ bottomLevel: -5, material: { kind: "undrained", gamma: 16, su: 20 } }],
+    layers: [
+      { bottomLevel: -5, material: { kind: "undrained", gamma: 16, su: 20 } },
+      { bottomLevel: -15, material: { kind: "impenetrable", gamma: 24 } },
+    ],
     waterLevel: null,
     road: null,
     values: characteristic,
   },
-  /** One clay with the water 1 m below the ground. */
+  /** One clay on rock 20 m down, with the water 1 m below the ground. */
   "clay-5m-water": {
     groundLevel: 10,
     excavationDepth: 5,
     slope: 2,
     bottomWidth: null,
-    layers: [{ bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 25 } }],
+    layers: [
+      { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 25 } },
+      { bottomLevel: -20, material: { kind: "impenetrable", gamma: 24 } },
+    ],
     waterLevel: 9,
     road: null,
     values: characteristic,
