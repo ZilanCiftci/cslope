@@ -44,6 +44,10 @@
       "destination": "/changelog/index.html"
     },
     {
+      "source": "/docs/agents",
+      "destination": "/docs/agents/index.html"
+    },
+    {
       "source": "/docs/analysis",
       "destination": "/docs/analysis/index.html"
     },
@@ -122,6 +126,10 @@
     {
       "source": "/docs/limitations",
       "destination": "/docs/limitations/index.html"
+    },
+    {
+      "source": "/docs/python",
+      "destination": "/docs/python/index.html"
     },
     {
       "source": "/docs/troubleshooting",

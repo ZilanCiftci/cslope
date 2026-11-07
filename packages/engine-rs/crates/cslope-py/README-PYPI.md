@@ -17,8 +17,26 @@ CPython 3.9 and later, with no dependencies.
 
 ## Install
 
+Not on PyPI yet. Until it is, install a wheel from the repository's builds:
+on GitHub, *Actions › Python wheels*, a finished run, the artifact of your
+platform (`wheel-windows-x64`, `wheel-macos-universal2`,
+`wheel-linux-x86_64`, `wheel-linux-aarch64`); unzip it and install the
+`.whl` in it:
+
 ```
-pip install cslope            # numpy optional: pip install "cslope[numpy]"
+pip install ./cslope-0.1.0-*.whl          # numpy optional, for the finite element arrays
+cslope info                                # versions of the package, the engine and the schemas
+```
+
+Or build it from the source, with Rust installed (the version in
+`packages/engine-rs/rust-toolchain.toml`):
+
+```
+git clone https://github.com/ZilanCiftci/cslope
+cd cslope/packages/engine-rs/crates/cslope-py
+pip install maturin==1.15.0
+maturin build --release --out dist
+pip install dist/cslope-*.whl
 ```
 
 ## Use
@@ -61,7 +79,45 @@ limits, Custom surfaces, Options (`m.options.method = "Bishop"`). Units: m,
 kPa, kN/m, kN/m³ and degrees. `m.definition` and `m.save_definition(path)`
 give the model as an analysis document, the JSON below.
 
-### The engine's JSON
+A result whose model changed since it was computed is out of date
+(`m.result_is_current` is `False`, and the app marks it so); `save` leaves
+it out unless the model was run again, so a file never shows an F for a
+model it was not computed for.
+
+The examples in the repository
+([examples/](https://github.com/ZilanCiftci/cslope/tree/main/packages/engine-rs/crates/cslope-py/examples))
+build a project, change and run it again, and read its results; the tests
+run each of them.
+
+### Analysis documents, for agents and scripts
+
+An analysis document is one model and its options as JSON:
+`{"format": "cslope-analysis", "formatVersion": 1, "definition": {...},
+"options": {...}}`. The builder `cslope.build.Definition` writes one with
+the same names and checks each value as it is given; the `cslope` command
+validates and runs it:
+
+```python
+from cslope.build import Definition
+
+d = Definition(orientation="ltr")            # slides to the right
+d.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
+d.add_material("Silty sand", c=5, phi=30, gamma=19, gamma_sat=20)
+d.search_limits(entry=(2, 15), exit=(30, 48))
+d.save("slope.json")                         # validates, then writes
+```
+
+```
+cslope validate slope.json                   # each issue with its path in the document
+cslope analyze slope.json --json             # the summary and the full result
+```
+
+The skill for AI agents
+([skills/cslope](https://github.com/ZilanCiftci/cslope/tree/main/skills/cslope))
+follows this path: it asks for the soil parameters, the safety class and η
+rather than assuming them, and forwards the summary unchanged.
+
+### The engine's functions
 
 Models and options are plain dicts, in the JSON shape the cSlope app saves
 (camelCase keys); results come back as dicts the same way. Lengths in m,
@@ -167,15 +223,15 @@ The mesh and field arrays of `fem_summary` and `Slope.fem` are
 ### Command line
 
 ```
-cslope analyse slope.json [--json] [--threads N]
-cslope analyse site.cslp [--model NAME | --all] [--write] [--json] [--threads N]
+cslope analyze slope.json [--json] [--threads N]           # (or analyse)
+cslope analyze site.cslp [--model NAME | --all] [--write] [--json] [--threads N]
 cslope validate slope.json
 cslope export site.cslp [--model NAME | --all] [-o PATH]
 cslope schema [name]
 cslope info
 ```
 
-`cslope analyse site.cslp` analyses models of a project file as the app
+`cslope analyze site.cslp` analyzes models of a project file as the app
 runs them (the active model by default); with `--write` it saves the results
 to the project, each with the hash of its model's input, so the app shows
 them as current. `cslope export` writes a model of a project file saved by

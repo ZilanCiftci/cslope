@@ -133,6 +133,31 @@ export function Pre(props: ComponentProps<"pre">) {
   return <pre tabIndex={0} {...props} />;
 }
 
+/** Where the repository's files are shown on GitHub. */
+const REPOSITORY_FILES = "https://github.com/ZilanCiftci/cslope/blob/main/";
+
+/**
+ * A file of the repository shown whole, with its path as the caption, linked
+ * to it on GitHub: the examples are tested files, included as they are rather
+ * than copied into a page. In a page:
+ * `import code from "../../../engine-rs/crates/cslope-py/examples/new_project.py?raw";`
+ * then `<CodeFile path="packages/engine-rs/crates/cslope-py/examples/new_project.py" code={code} />`.
+ */
+export function CodeFile({ path, code }: { path: string; code: string }) {
+  return (
+    <figure className="my-6">
+      <figcaption className="mb-1 font-mono text-xs text-muted-foreground">
+        <a href={REPOSITORY_FILES + path} target="_blank" rel="noopener noreferrer">
+          {path}
+        </a>
+      </figcaption>
+      <pre tabIndex={0} aria-label={path} className="mt-0">
+        <code>{code.trimEnd()}</code>
+      </pre>
+    </figure>
+  );
+}
+
 /** The text of a React node (an MDX table's cells). */
 function textOf(node: ReactNode): string {
   if (typeof node === "string" || typeof node === "number") return String(node);

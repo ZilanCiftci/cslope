@@ -15,8 +15,8 @@ crates/cslope-py/
   pyproject.toml        maturin (pinned), package metadata
   python/cslope/        __init__.py (wrappers, FE arrays), __init__.pyi (TypedDicts), py.typed, examples.py,
                         model.py and project.py (Model, Project), result.py (Result), build.py, cli.py
-  tests/                pytest: test_api.py, test_schema.py (self-contained; the wheels' smoke test)
-  examples/parameter_study.py
+  tests/                pytest (the wheels' smoke test runs them all; those that need other parts of the repository skip)
+  examples/             new_project.py, change_and_rerun.py, read_results.py (shown on the website), parameter_study.py
 ```
 
 ## Build and install
@@ -299,6 +299,13 @@ against the engine's schema. `test_project.py` opens and saves the app's project
 (packages/desktop/src/features/project/fixtures) and `tests/data/app-results.cslp`
 (made by the app's writer, `packages/desktop/scripts/make-export-fixture.ts`).
 
+`test_examples.py` runs every file in `examples/` as a script, in the
+order a reader follows (new_project.py writes the project the next two
+open), and each of the skill's examples (`skills/cslope/examples`) as
+`python <example>.py`. The website's Python and agent pages
+(`packages/website/src/docs/python.mdx`, `agents.mdx`) include these files
+as they are, so a new example there needs an entry in the test.
+
 `test_api.py` needs only the installed package: the demo models against
 pinned factors of safety (within 1e-6), thread counts giving identical
 results, progress and cancellation, error mapping, the `Slope` class and
@@ -308,7 +315,18 @@ verification problems (PORTING.md, Python binding).
 
 ## Wheels
 
-`.github/workflows/python.yml` builds the wheels on a tag `py-v*` (Linux
-x86_64 and aarch64 manylinux, macOS universal2, Windows x64) and runs
-`tests/test_api.py` against each. Publishing to PyPI is written out but
-disabled until trusted publishing is configured.
+`.github/workflows/python.yml` builds the wheels on a tag `py-v*` or by
+hand (Linux x86_64 and aarch64 manylinux, macOS universal2, Windows x64)
+and runs the tests, with the crate's and the skill's examples, against
+each on Python 3.9 and 3.13. The wheels are the run's artifacts
+(`wheel-<platform>`); until the package is on PyPI, that is how it is
+installed (README-PYPI.md, Install).
+
+Publishing to PyPI is written out but off (`if: false` on the `publish`
+job): no trusted publisher is configured yet (issue #61). Enabling it is
+the project on PyPI with this workflow as its trusted publisher
+(environment `pypi`) and removing that one line; no secrets are needed.
+Then a release is the tag `py-v<version>`, the version being the
+workspace's (`packages/engine-rs/Cargo.toml`, now 0.1.0), and the Install
+sections of README-PYPI.md, the skill and the website's Python page change
+to `pip install cslope`.
