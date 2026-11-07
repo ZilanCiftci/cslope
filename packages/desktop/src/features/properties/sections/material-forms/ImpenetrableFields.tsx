@@ -38,7 +38,7 @@ export function ImpenetrableFields({
         className="text-[10px] italic"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
-        Bedrock — slip surfaces cannot enter this material.
+        Bedrock: slip surfaces cannot enter this material.
       </p>
     </div>
   );

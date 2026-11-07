@@ -43,7 +43,7 @@ export function HighStrengthFields({
         className="col-span-2 text-[10px] italic"
         style={{ color: "var(--color-vsc-text-muted)" }}
       >
-        Infinite strength — slip surfaces passing through this material are
+        Infinite strength: slip surfaces passing through this material are
         skipped.
       </p>
     </div>

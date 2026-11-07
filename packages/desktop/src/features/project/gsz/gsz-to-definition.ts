@@ -453,7 +453,7 @@ function materialModel(
   // no strength in the plain fields (it is in a function): a placeholder the model accepts
   const placeholder = !(c > 0) && !(phi > 0);
   notes.push(
-    `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is NOT the same strength. Enter it by hand. The file gives: ${params}.`,
+    `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is not the same strength. Enter it by hand. The file gives: ${params}.`,
   );
   return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
 }
