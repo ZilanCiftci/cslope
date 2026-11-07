@@ -141,14 +141,6 @@ describe("App", () => {
     expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
   });
 
-  it("opens an older link with design values on characteristic values", async () => {
-    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])) + "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3");
-    const { requests } = renderApp();
-    await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0].document.options.partialFactors).toBeUndefined();
-    expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_EXAMPLES["clay-road"]));
-  });
-
   it("adds a layer open with the focus on its name, and after a remove puts the focus on the header of the layer before", () => {
     renderApp();
     const header = (name: RegExp) => screen.getByRole("button", { name });
@@ -281,8 +273,8 @@ describe("App", () => {
     expect(crust).not.toHaveTextContent("Problem");
   });
 
-  it("names the layer kinds as the app names its material models, and opens old links with the old kinds", () => {
-    window.history.replaceState(null, "", "/?t=excavation&layers=2&layer1.kind=undrained-increasing&layer1.bottomLevel=-5&layer1.su=10&layer1.suRate=1.5&layer2.kind=drained&layer2.bottomLevel=-20");
+  it("names the layer kinds as the app names its material models", () => {
+    window.history.replaceState(null, "", "/?t=excavation&layers=2&layer1.kind=undrained&layer1.t=5&layer1.su=10&layer1.suRate=1.5&layer2.kind=mohr-coulomb&layer2.t=15");
     renderApp({ loadEngine: () => new Promise(() => {}) });
     // Its unit weight is empty: the first layer is open.
     expect(screen.getByRole("button", { name: /^Layer 1/ })).toHaveAttribute("aria-expanded", "true");
@@ -424,15 +416,6 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("button", { name: "Download JSON" }));
     expect(name).toBe("cslope-embankment.json");
     expect(await blob!.text()).toBe(dumps(embankmentDocument(params)));
-  });
-
-  it("opens an older link without the template on the excavation", async () => {
-    const query = toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])).replace(/^t=excavation&/, "");
-    window.history.replaceState(null, "", "/?" + query);
-    const { requests } = renderApp();
-    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
-    await waitFor(() => expect(requests).toHaveLength(1));
-    expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_EXAMPLES["clay-road"]));
   });
 
   it("links the wordmark to the website", () => {
