@@ -210,6 +210,128 @@ describe("App", () => {
     expect(screen.queryByRole("button", { name: "Move Clay up" })).toBeNull();
   });
 
+  it("undoes a removed layer: back in its place with its values and its color, the focus on its header", async () => {
+    const { requests } = renderApp();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    const names = () => screen.getAllByRole("button", { name: /^(Dry crust|Clay|Sand and gravel)/ }).map((b) => /^(Dry crust|Clay|Sand and gravel)/.exec(b.textContent ?? "")?.[0]);
+    // The clay, open, gets its own color and strength.
+    fireEvent.click(screen.getByRole("button", { name: /^Clay/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Color" }));
+    fireEvent.click(screen.getByRole("option", { name: "Sienna" }));
+    type("Su (kPa)", "17");
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("layer2.su")).toBe("17"));
+    const address = window.location.search;
+    fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
+    expect(names()).toEqual(["Dry crust", "Sand and gravel"]);
+    // The message names the layer, with Undo, in the card's live region.
+    const live = within(card()).getByText("Removed Clay.").closest("[aria-live]")!;
+    expect(live).toHaveAttribute("aria-live", "polite");
+    expect(live).toHaveTextContent("Removed Clay. Undo");
+    fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
+    expect(names()).toEqual(["Dry crust", "Clay", "Sand and gravel"]);
+    const clay = screen.getByRole("button", { name: /^Clay/ });
+    expect(clay).toHaveTextContent("Undrained · 3 m (−1 to −4 m) · Su 17 kPa");
+    expect(clay).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Color" })).toHaveTextContent("Sienna");
+    expect(document.activeElement).toBe(clay);
+    expect(within(card()).queryByRole("button", { name: "Undo" })).toBeNull();
+    // The exact draft: the same address as before the remove.
+    await waitFor(() => expect(window.location.search).toBe(address));
+  });
+
+  it("has one live region and one Undo for the message, also while the phone's bar shows", async () => {
+    renderApp();
+    await screen.findByRole("complementary", { name: "Result summary" });
+    fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
+    // The card's line is the phone's toast too (placed by CSS): not a second copy.
+    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+    expect([...document.querySelectorAll("[aria-live]")].filter((e) => e.textContent?.includes("Removed Clay."))).toHaveLength(1);
+    // The bar, back with the new F, does not repeat it.
+    expect(within(await screen.findByRole("complementary", { name: "Result summary" })).queryByText(/Removed Clay/)).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Undo" })).toHaveLength(1);
+  });
+
+  it("undoes a reset to the template's defaults, with the focus on the first field", async () => {
+    const { requests } = renderApp();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    type("Excavation depth H (m)", "3.5");
+    fireEvent.click(screen.getByRole("checkbox", { name: "Haul road behind the crest" }));
+    fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
+    expect(field("Excavation depth H (m)").value).toBe("2.5");
+    expect(screen.queryByRole("button", { name: /^Layer 4/ })).toBeNull();
+    expect(within(card()).getByText("Reset to the template's defaults.").closest("[aria-live]")).toHaveTextContent("Reset to the template's defaults. Undo");
+    fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
+    expect(field("Excavation depth H (m)").value).toBe("3.5");
+    expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /^Layer 4/ })).toBeInTheDocument();
+    expect(document.activeElement).toBe(field("Ground level (m)"));
+  });
+
+  it("keeps Undo for about 8 seconds, and only for the last change", () => {
+    vi.useFakeTimers();
+    try {
+      window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"])));
+      renderApp({ loadEngine: () => new Promise(() => {}) });
+      fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
+      fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
+      fireEvent.click(screen.getByRole("button", { name: "Remove Layer 2" }));
+      // Undo brings back the last one removed only, within 8 s.
+      expect(within(card()).getByText("Removed Layer 2.")).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(7900));
+      fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
+      expect(screen.getByRole("button", { name: /^Layer 2/ })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Clay/ })).toBeNull();
+      // After 8 s the message and its Undo are gone.
+      fireEvent.click(screen.getByRole("button", { name: "Remove Layer 2" }));
+      act(() => vi.advanceTimersByTime(7900));
+      expect(within(card()).getByRole("button", { name: "Undo" })).toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(200));
+      expect(within(card()).queryByRole("button", { name: "Undo" })).toBeNull();
+      expect(within(card()).queryByText("Removed Layer 2.")).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("shows a picture of the section in the phone's bar, which opens the drawing across the screen and closes with the keyboard", async () => {
+    // A critical surface of three slices, from the crest down to the toe.
+    const slices = [-2, 1, 4].map((x) => ({ x, xLeft: x - 1.5, xRight: x + 1.5, yTop: 0, yBottom: -2 + x / 4, alpha: -0.3 }));
+    renderApp({ answer: (r) => ({ ...(complete(r) as Extract<WorkerResponse, { type: "complete" }>), result: { criticalSlices: slices } as unknown as AnalysisResult }) });
+    const bar = await screen.findByRole("complementary", { name: "Result summary" });
+    expect(bar).toHaveTextContent("F 1.234");
+    const thumb = within(bar).getByRole("button", { name: "Show the section" });
+    expect(thumb).toHaveAttribute("aria-haspopup", "dialog");
+    expect(thumb).toHaveAttribute("aria-expanded", "false");
+    // The picture is the drawing scaled down, hidden from screen readers (the button names it).
+    expect(thumb.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
+    thumb.focus();
+    fireEvent.click(thumb);
+    const sheet = screen.getByRole("dialog", { name: "Section" });
+    expect(thumb).toHaveAttribute("aria-expanded", "true");
+    expect(within(sheet).getByRole("img")).toHaveAccessibleName(/^Section of the excavation: .*, and the critical surface of F 1\.234\.$/);
+    expect(within(sheet).getByText("F 1.234")).toBeInTheDocument();
+    // The focus is on Close and stays in the sheet; Escape closes it and gives the focus back to the picture.
+    const close = within(sheet).getByRole("button", { name: "Close" });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(document.activeElement!, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(document.activeElement!, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(thumb);
+    expect(thumb).toHaveAttribute("aria-expanded", "false");
+    // Close, and a tap on the drawing, close it too.
+    fireEvent.click(thumb);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Section" })).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(thumb);
+    fireEvent.click(thumb);
+    fireEvent.click(within(screen.getByRole("dialog", { name: "Section" })).getByRole("img"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("moves a layer up and down with the focus kept on its button, and inserts one above another, open with the focus on its name", async () => {
     window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"])));
     renderApp({ loadEngine: () => new Promise(() => {}) });
