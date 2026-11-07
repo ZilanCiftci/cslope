@@ -13,7 +13,8 @@ crates/cslope-py/
   src/slope.rs          the Slope class
   src/errors.rs         EngineError / AnalysisCancelled, error mapping
   pyproject.toml        maturin (pinned), package metadata
-  python/cslope/        __init__.py (wrappers, FE arrays), __init__.pyi (TypedDicts), py.typed, examples.py
+  python/cslope/        __init__.py (wrappers, FE arrays), __init__.pyi (TypedDicts), py.typed, examples.py,
+                        model.py and project.py (Model, Project), result.py (Result), build.py, cli.py
   tests/                pytest: test_api.py, test_schema.py (self-contained; the wheels' smoke test)
   examples/parameter_study.py
 ```
@@ -132,37 +133,110 @@ Notes:
 
 ## Project files
 
-`cslope.project` opens, changes and saves the app's `.cslp` project files
-with the engine's reader and writer (the crate `cslope-project`, feature
-`native`; issue #58):
+Two ways in, one model underneath (the app's `ModelEntry`, read and written
+by the crate `cslope-project`):
+
+- **Objects, for people** (issue #59): `cslope.Project`, `cslope.Model` and
+  `cslope.Result` build a model from nothing or open a `.cslp`, change it,
+  run it and save a project the app opens, with the results current.
+- **JSON, for agents and scripts**: the analysis document (`cslope.build`,
+  `cslope validate`, `cslope analyse doc.json`, `cslope export site.cslp`).
+  `model.definition` and `Model.from_definition` cross between the two.
 
 ```python
 import cslope
-from cslope import project
-from cslope.cli import export_document
 
-p = project.open("slope.cslp")
-for m in p.models:
-    print(m.id, m.name, m.min_fos, m.result_is_current)   # None without a saved result
-m = p.model_named("Section A")
-m.data["materials"][0]["model"]["undrainedShearStrength"] = 35
-doc = export_document(m.data)     # the analysis document, as the app runs the model
-m.set_result(cslope.analyse(doc))            # the result, with the hash of the model's input
-p.save("slope.cslp")                          # what the app would write
+p = cslope.Project.open("site.cslp")
+m = p.model("Section A")
+print(m.result.fos, m.result_is_current)       # the saved result, without a run
+m.material("Clay").su = 35                      # now out of date
+r = m.analyse(threads=4)                        # run as the app runs it; kept on the model
+print(r.fos, r.fos_label, r.critical_surface["text"])
+r.to_csv("section-a-slices.csv")                # the app's slice table
+p.save()                                        # the app shows the new result as current
+
+for m in p.models:                              # every model of a project
+    m.analyse()
+
+p = cslope.Project()                            # a project from nothing
+m = p.add_model("Section B")
+m.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
+sand = m.add_material("Sand", c=0, phi=32, gamma=19, gamma_sat=20)
+clay = m.add_material("Clay", su=25, gamma=17, gamma_sat=18)
+m.add_interior_boundary([(0, 8), (50, 8)])
+m.assign(sand, at=(5, 12))
+m.assign(clay, at=(25, 3))
+m.add_piezometric_line([(0, 12), (15, 11), (35, 5), (50, 5)])
+m.add_distributed_load(x=(3, 10), q=20)
+m.search_limits(entry=(2, 14), exit=(20, 45))
+m.options.partial_factors = cslope.swedish_partial_factors(
+    safety_class=2, eta_cu=1.0, eta_drained=1.0, variable_load_base=1.3)
+m.analyse()
+p.save("site-b.cslp")
+m.save_definition("section-b.json")             # the JSON an agent or `cslope analyse` runs
 ```
 
+### Names
+
+The builder's names (`cslope.build`, #56) carry over; the app's labels are
+in brackets. A **property** is state read or set at no cost; a **method**
+adds, removes, runs or writes. Units: m, kPa, kN/m (line loads,
+reinforcement), kN/m³, degrees (also a slice's base angle). Points are
+`(x, y)`, x to the right and y up, in the model's own direction;
+`orientation` is `"ltr"` (the slope slides to the right) or `"rtl"`.
+
+| | |
+|---|---|
+| `Project()`, `Project.open(path)` | a new project; open a `.cslp` (`cslope.project.open` too) |
+| `project.models`, `project.model(name)` | the models in the app's order; one by name (`model_named` is an alias) |
+| `project.add_model(name, orientation="ltr")`, `add_model(model)`, `remove_model(model)` | the first model added is the active one |
+| `project.active_model`, `project.save(path=None)` | the path defaults to the file opened; the save policy below |
+| `Model(name, orientation="ltr")`, `Model.from_definition(doc_or_path, name=)` | a standalone model; one from an analysis document |
+| `name`, `orientation`, `exterior` | [Exterior] |
+| `add_interior_boundary(points)` → `InteriorBoundary` | [Interior boundaries]; ends on the exterior or an earlier boundary |
+| `add_material(name, *, gamma, c=, phi=, su=, gamma_sat=, model=, color=, depth_range=)` → `Material`; `material(name)` | [Materials]; `model=` takes any engine material model |
+| `assign(material, at=(x, y))`, `assignments` | [Assign]; replaces the region's earlier assignment |
+| `add_piezometric_line(points, *, name=, materials=, free_water=True)` → `PiezometricLine` | [Piezometric lines]; the first is the main line; `free_water` holds for every line |
+| `add_distributed_load(x=(x1, x2), q, direction="vertical", *, excess_pore_pressure=)` → `DistributedLoad` | [Distributed loads] |
+| `add_line_load(x, p, angle=0, y=None)` → `LineLoad` | [Line loads] |
+| `add_reinforcement(start, end, kind="anchor", **fields)` → `Reinforcement`, `add_pile(start, end, kind="pile", **fields)` → `Pile` | [Reinforcement]; the fields are the app's, snake_case; the app's presets fill the rest |
+| `search_limits(entry=(x1, x2), exit=(x1, x2))`, `search_limits(None)` | [Search limits] |
+| `add_custom_surface(center=, radius=)` / `add_custom_surface(points=)` → `CustomSurface`, `custom_surfaces_only` | [Custom surfaces] |
+| `add_block_search_object(points)` → `BlockSearchObject` | block search |
+| `options` | [Options] the builder's `Options`, with all of the app's options (snake_case of the app's keys); the app's defaults (D-23) |
+| `analyse(*, threads=, progress=, cancel=)` → `Result` | runs as the app runs it, keeps the result; raises on an engine error and keeps nothing |
+| `result`, `error`, `result_is_current`, `input_hash` | the saved result (read without a run), the last run's error |
+| `definition`, `save_definition(path)` | the analysis document (JSON, the agents' path) |
+| `data` | the model's dict (the app's JSON shape): the way to what has no method (title block, waternet, earlier stage, rapid drawdown, parameters) |
+| `Result`: `fos`, `fos_label`, `method`, `critical_surface`, `warnings`, `summary`, `slices`, `to_csv(path=None, decimal_comma=False)`, `data`, `saved`, `is_current` | `slices` are dicts with the slice table's columns |
+
+The lists `materials`, `interior_boundaries`, `piezometric_lines`,
+`distributed_loads`, `line_loads`, `reinforcements`, `piles`,
+`custom_surfaces` and `block_search_objects` hold items whose properties
+change the model in place (`m.material("Clay").c = 12`); `item.remove()`
+removes one (a model keeps at least one material, as in the app). After
+each change, also before the model has an exterior or a material, the
+model is read as the app reads it when it opens the project, so the model holds what the app will show: a value
+the app would not keep (a negative seismic coefficient, say) is refused
+with a `ValueError` that says what the app takes, and a field the app's Parameters drive by an
+expression is not overwritten. `tests/test_objects.py` builds each of the
+app's examples with these names and gets the app's F within 1e-6, and
+checks that the names reach every field of the engine's definition (a field
+added to the engine fails it until it gets a name or is listed on purpose).
+
+### The project as dicts
+
 `open(path)` gives a `Project`: `manifest`, `version` (the project schema
-version, 3), `active_model_id`, `units`, `models` (each a `Model` with `id`,
-`data`, `result`, `backgrounds`, `min_fos`, `input_hash`,
-`result_is_current`, `set_result(result)`, `set_error(message)`), `assets`
-(the attachments; `read_asset(id)`, checked against its SHA-256 when the
-file was opened), `placements(model)` (the drawings placed under a model:
-each a `Placement` with its attachment, page, crop, calibration and affine
-`transform`; `to_model(u, v)` maps a point of the drawing to the model),
-`thumbnail()` and `save(path)`. A model's dict is the model as the app holds
-it after opening the file (missing members filled, values out of range
-clamped, as the app's `parseProjectData` does), in the app's shape with
-camelCase keys.
+version, 3), `active_model_id`, `units`, `models` (each `Model` also has
+`id`, `data`, `backgrounds`, `set_result(result)` and `set_error(message)`),
+`assets` (the attachments; `read_asset(id)`, checked against its SHA-256
+when the file was opened), `placements(model)` (the drawings placed under a
+model: each a `Placement` with its attachment, page, crop, calibration and
+affine `transform`; `to_model(u, v)` maps a point of the drawing to the
+model), `thumbnail()` and `save(path)`. A model's dict is the model as the
+app holds it after opening the file (missing members filled, values out of
+range clamped, as the app's `parseProjectData` does), in the app's shape
+with camelCase keys; it can be changed directly too.
 
 The reader is strict where the app is lenient: it reads files the app saved
 with this layout and schema version (`project.FORMAT_VERSION`,
@@ -218,7 +292,10 @@ maturin develop --release
 pytest tests
 ```
 
-`test_project.py` opens and saves the app's project fixtures
+`test_objects.py` builds the app's examples with `Project` and `Model` and
+compares F with the app's (the results saved in `tests/data/app-results.cslp`),
+changes one model of that project, runs and saves it, and checks the names
+against the engine's schema. `test_project.py` opens and saves the app's project fixtures
 (packages/desktop/src/features/project/fixtures) and `tests/data/app-results.cslp`
 (made by the app's writer, `packages/desktop/scripts/make-export-fixture.ts`).
 

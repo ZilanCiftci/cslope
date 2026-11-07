@@ -359,6 +359,45 @@ fn assign_unassigned_regions<'py>(
     to_py(py, &def)
 }
 
+/// An app model (a ``model.json`` dict) from an engine definition, in
+/// model coordinates: the app's ``modelFromDefinition``, ported to Rust in
+/// the crate cslope-project. ``options`` are analysis options over the
+/// app's defaults. Without ``projectInfo`` and ``resultViewSettings``,
+/// which ``normalize_model`` fills as the app does when it opens a model.
+#[pyfunction]
+#[pyo3(signature = (definition, *, id, name, options=None))]
+fn definition_to_model<'py>(
+    py: Python<'py>,
+    definition: &Bound<'py, PyAny>,
+    id: String,
+    name: String,
+    options: Option<&Bound<'py, PyAny>>,
+) -> PyResult<Bound<'py, PyAny>> {
+    let def = self::definition(definition)?;
+    let options = match options {
+        Some(o) if !o.is_none() => Some(from_py(o, "analysis options")?),
+        _ => None,
+    };
+    let info = cslope_project::DefinitionModelInfo { id, name, options };
+    let model =
+        cslope_project::definition_to_model(&def, &info).map_err(|e| PyValueError::new_err(e.0))?;
+    to_py(py, &model.to_json())
+}
+
+/// For each of ``points``, the index of the region of ``definition`` that
+/// holds it (the outline cut by the boundaries, as the validation splits
+/// it, split once), or None.
+#[pyfunction]
+fn region_indices(
+    definition: &Bound<'_, PyAny>,
+    points: Vec<[f64; 2]>,
+) -> PyResult<Vec<Option<usize>>> {
+    Ok(cslope_project::region_indices(
+        &self::definition(definition)?,
+        &points,
+    ))
+}
+
 #[pymodule]
 #[pyo3(name = "_native")]
 fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -387,6 +426,8 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(model_to_definition, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_model, m)?)?;
     m.add_function(wrap_pyfunction!(assign_unassigned_regions, m)?)?;
+    m.add_function(wrap_pyfunction!(definition_to_model, m)?)?;
+    m.add_function(wrap_pyfunction!(region_indices, m)?)?;
     m.add_function(wrap_pyfunction!(project::project_read, m)?)?;
     m.add_function(wrap_pyfunction!(project::project_write, m)?)?;
     m.add_function(wrap_pyfunction!(project::input_hash_of, m)?)?;

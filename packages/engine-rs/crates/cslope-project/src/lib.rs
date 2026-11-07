@@ -31,7 +31,7 @@ pub use hash::{analysis_input_json, input_hash};
 pub use model::ModelEntry;
 pub use normalize::{normalize_for_run, normalize_model_json, read_model, ReadOptions};
 pub use options::{app_default_options, AnalysisOptions};
-pub use regions::assign_unassigned_regions;
+pub use regions::{assign_unassigned_regions, region_index, region_indices};
 
 /// The definition of a model as saved in a project, as JSON (the shape the
 /// engine reads), with the model first read as the app opens it

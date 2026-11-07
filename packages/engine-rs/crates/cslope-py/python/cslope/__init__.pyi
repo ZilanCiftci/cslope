@@ -14,6 +14,11 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 # (typing_extensions is always available to type checkers in a stub)
 from typing_extensions import NotRequired, TypedDict
 
+# The objects (typed in their modules).
+from .model import Model as Model
+from .project import Project as Project
+from .result import Result as Result
+
 Point = Tuple[float, float]
 ArrayKind = Literal["array", "numpy", "list"]
 NumberArray = Union["array.array[float]", List[float], Any]

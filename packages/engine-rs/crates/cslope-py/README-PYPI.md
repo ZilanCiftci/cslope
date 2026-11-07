@@ -23,6 +23,46 @@ pip install cslope            # numpy optional: pip install "cslope[numpy]"
 
 ## Use
 
+### Projects and models, as objects
+
+Open a project saved by the cSlope app, or build one from nothing; change,
+run and save it, and the app opens it with the results current:
+
+```python
+import cslope
+
+p = cslope.Project.open("site.cslp")
+m = p.model("Section A")
+print(m.result.fos, m.result_is_current)        # the saved result, no run needed
+m.material("Clay").su = 35
+r = m.analyse()                                 # as the app runs it
+print(r.fos, r.fos_label, r.critical_surface["text"])
+r.to_csv("slices.csv")                          # the app's slice table
+p.save()
+
+p = cslope.Project()
+m = p.add_model("Section B")                    # the app's defaults (Morgenstern-Price, 30 slices)
+m.exterior = [(0, 0), (0, 15), (15, 15), (35, 5), (50, 5), (50, 0)]
+sand = m.add_material("Sand", c=0, phi=32, gamma=19, gamma_sat=20)
+clay = m.add_material("Clay", su=25, gamma=17, gamma_sat=18)
+m.add_interior_boundary([(0, 8), (50, 8)])
+m.assign(sand, at=(5, 12))
+m.assign(clay, at=(25, 3))
+m.add_piezometric_line([(0, 12), (15, 11), (35, 5), (50, 5)])
+m.add_distributed_load(x=(3, 10), q=20)
+m.search_limits(entry=(2, 14), exit=(20, 45))
+print(m.analyse().fos)
+p.save("site-b.cslp")
+```
+
+The names are the app's: Exterior, Interior boundaries, Materials, Assign,
+Piezometric lines, Distributed loads, Line loads, Reinforcement, Search
+limits, Custom surfaces, Options (`m.options.method = "Bishop"`). Units: m,
+kPa, kN/m, kN/m³ and degrees. `m.definition` and `m.save_definition(path)`
+give the model as an analysis document, the JSON below.
+
+### The engine's JSON
+
 Models and options are plain dicts, in the JSON shape the cSlope app saves
 (camelCase keys); results come back as dicts the same way. Lengths in m,
 forces in kN, stresses in kPa, angles in degrees.
@@ -85,7 +125,7 @@ for phi in range(20, 41, 5):
 | `to_canonical(definition)` | The definition turned to slide towards +x |
 | `model_to_definition(model, *, normalize=True)` | The engine's definition of a model of a project file (`cslope.project`), as the app makes it after opening the file |
 | `normalize_model(model)` | A model of a project file as the app reads it on open (the fields the analysis takes, and complete options) |
-| `project.open(path)`, `Project.save(path)` | A `.cslp` project file opened, its models as dicts, changed and saved as the app saves it; a result whose model changed since is dropped on save |
+| `Project.open(path)`, `Project()`, `Project.save(path)` | A `.cslp` project file opened (or a new one), its models (`Model`) changed, run and saved as the app saves it; a result whose model changed since is dropped on save |
 | `validate(doc_or_definition, options=None)` | The issues of a model: `[{"path", "code", "message", "severity"}]`, JSON pointers such as `/materials/1/model/undrainedShearStrength` |
 | `summarize(result, options=None)` | What a result means: `fos`, `fosLabel`, `valueBasis`, `partialFactors`, `method`, `criticalSurface`, `warnings`, `nonConverged`, `bothDirections`, `engineBuild` |
 | `swedish_partial_factors(safety_class, eta_cu, eta_drained, variable_load_base)` | The `partialFactors` of the options in Swedish practice |

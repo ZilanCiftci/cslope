@@ -19,7 +19,7 @@ import math
 import os
 import re
 import sys
-from typing import Any, Dict, List, Optional, Sequence, TextIO
+from typing import Any, Dict, List, Optional, Sequence, TextIO, cast
 
 EXIT_OK = 0
 EXIT_ANALYSIS = 1
@@ -140,17 +140,17 @@ def _cmd_analyse(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     if args.write or args.all or args.model is not None:
         raise _Invalid([{"path": "", "message": "--model, --all and --write are for a project file (.cslp)."}])
     doc = _read(args.document)
-    errors = _errors(cslope.validate(doc))
+    errors = _errors(cast(Any, cslope.validate(doc)))
     if errors:
         raise _Invalid(errors)
     try:
-        result = cslope.analyse(doc, threads=args.threads)
+        result = cast(Any, cslope.analyse(cast(Any, doc), threads=args.threads))
     except cslope.EngineError as e:
         err.write("The analysis failed: {}\n".format(e))
         return EXIT_ANALYSIS
     except (TypeError, ValueError) as e:  # the engine could not read the input
         raise _Invalid([{"path": "", "message": str(e)}]) from None
-    summary = cslope.summarize(result, doc)
+    summary = cast(Any, cslope.summarize(result, cast(Any, doc)))
     if args.json:
         json.dump(_finite({"summary": summary, "result": result}), out, ensure_ascii=False, allow_nan=False)
         out.write("\n")
@@ -162,7 +162,7 @@ def _cmd_analyse(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
 def _cmd_validate(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
     import cslope
 
-    issues = cslope.validate(_read(args.document))
+    issues: List[Dict[str, Any]] = cast(Any, cslope.validate(_read(args.document)))
     _print_issues(issues, out)
     if _errors(issues):
         return EXIT_INVALID
@@ -197,7 +197,7 @@ def export_document(model: Dict[str, Any]) -> Dict[str, Any]:
 
     from .build import DOCUMENT_FORMAT, DOCUMENT_FORMAT_VERSION
 
-    from . import _native
+    from . import _native  # type: ignore[attr-defined]
 
     opened = cslope.normalize_model(model)
     definition = cslope.model_to_definition(opened, normalize=False)
@@ -267,19 +267,19 @@ def _analyse_project(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
             doc = export_document(m.data)
         except ValueError as e:
             raise _Invalid([{"path": "", "message": "Model {!r}: {}".format(m.name, e)}]) from None
-        errors = _errors(cslope.validate(doc))
+        errors = _errors(cast(Any, cslope.validate(doc)))
         if errors:
             raise _Invalid([dict(i, message="Model {!r}: {}".format(m.name, i.get("message"))) for i in errors])
         fem = (doc["options"].get("fem") or {}).get("enabled") is True
         try:
-            result = cslope.analyse(doc, threads=args.threads)
+            result = cast(Any, cslope.analyse(cast(Any, doc), threads=args.threads))
         except cslope.EngineError as e:
             err.write("Model {!r}: the analysis failed: {}\n".format(m.name, e))
             status = EXIT_ANALYSIS
             if args.write and not fem:
                 m.set_error(str(e))
             continue
-        summary = cslope.summarize(result, doc)
+        summary = cast(Any, cslope.summarize(result, cast(Any, doc)))
         if args.json:
             listed.append({"id": m.id, "name": m.name, "summary": summary, "result": result})
         else:
@@ -303,7 +303,7 @@ def _analyse_project(args: argparse.Namespace, out: TextIO, err: TextIO) -> int:
         except ValueError as e:
             raise _Invalid([{"path": "", "message": "{}: {}".format(args.document, e)}]) from None
         for model_id in report["droppedResults"]:
-            err.write("Model {!r}: its saved result was for other input; dropped.\n".format(p.model(model_id).name))
+            err.write("Model {!r}: its saved result was for other input; dropped.\n".format(p._by_id(model_id).name))
         out_stream = err if args.json else out
         out_stream.write("Saved {}.\n".format(args.document))
     return status
