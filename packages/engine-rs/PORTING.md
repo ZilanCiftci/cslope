@@ -188,7 +188,7 @@ types, data and docs and calls the engine), and the steps below apply to
    its own `tools/fixtures/<area>.ts` and `tests/<area>_*.rs`. Shared files
    (`lib.rs`, `mod.rs`, `Cargo.toml`, `error.rs`) get one-line additions
    only; the integrator resolves conflicts.
-10. **Customer data** in the scratchpad (Lovö, Teodoliten, SVOA) is never
+10. **Customer data** in the scratchpad (client projects) is never
    used, copied or referenced.
 
 ## Status

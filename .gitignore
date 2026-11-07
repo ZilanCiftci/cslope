@@ -38,9 +38,9 @@ coverage-final.json
 !/docs/file-format.md
 !/docs/design-rules.md
 
-# Client project data: kept on the developer's machine only
-packages/desktop/src/store/lovo.local.ts
-/lovo-*.json
+# Local files (project data and the like): kept on the developer's machine only
+*.local.ts
+/*.local.json
 
 # Agent files
 .github/*.md

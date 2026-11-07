@@ -8,7 +8,6 @@ import { MenuBar } from "./MenuBar";
 import { markProjectClean, useAppStore } from "../../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../../test/fake-bridge";
 import { readProjectBytes } from "../../../features/project/cslp";
-import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
 import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 import { PICK_LINES_HIDDEN, PICK_LINES_NO_DRAWING } from "../../../features/drawings/pick-lines-target";
 import { DWG_MIME } from "../../../features/drawings/sources";
@@ -328,25 +327,9 @@ describe("Dev ribbon (development builds)", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MenuBar />);
     await userEvent.click(tab("Dev"));
-    // The local project models are not in the repository: no button for them.
-    if (!HAS_LOCAL_LOVO_MODELS) expect(screen.queryByTitle("Lovö")).toBeNull();
     await userEvent.click(screen.getByTitle("Reset"));
     await waitFor(() => expect(store().models).toHaveLength(1));
     expect(confirm).toHaveBeenCalledTimes(1);
-  });
-
-  it.runIf(import.meta.env.DEV && HAS_LOCAL_LOVO_MODELS)("resets the store and loads the local Lovö models after confirmation", async () => {
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<MenuBar />);
-    await userEvent.click(tab("Dev"));
-    await userEvent.click(screen.getByTitle("Lovö"));
-    await waitFor(() =>
-      expect(store().models.some((m) => /Lov/.test(m.name))).toBe(true),
-    );
-    await userEvent.click(screen.getByTitle("Reset"));
-    await waitFor(() => expect(store().models).toHaveLength(1));
-    expect(confirm).toHaveBeenCalledTimes(2);
-    expect(bridge.callNames().filter((n) => n === "menuNew")).toHaveLength(2);
   });
 });
 

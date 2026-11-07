@@ -96,15 +96,13 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
         # The app bundle must not carry other programs' names (the
-        # verification data, which cites them, is not part of it) nor the
-        # developer's local project data. Bash stops at the first failing
-        # command; pwsh would carry on.
+        # verification data, which cites them, is not part of it). Bash stops
+        # at the first failing command; pwsh would carry on.
         shell: bash
         run: |
           bunx tsc -b
           bunx vite build
           bun ../website/scripts/check-names.ts dist dist-electron
-          bun scripts/check-local-data.ts dist dist-electron
           bunx electron-builder --win --publish never
       - name: Check the signature
         shell: pwsh

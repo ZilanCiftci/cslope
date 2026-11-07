@@ -1,6 +1,5 @@
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
-import { HAS_LOCAL_LOVO_MODELS } from "../../../store/local-models";
 import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
 import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 
@@ -13,7 +12,7 @@ async function confirmReplace(question: string): Promise<boolean> {
   return window.confirm(question);
 }
 import { isElectron } from "../../../utils/is-electron";
-import { Mountain, RefreshCw, RotateCcw, ScrollText, SquareCode } from "lucide-react";
+import { RefreshCw, RotateCcw, ScrollText, SquareCode } from "lucide-react";
 import { RibbonGroup, RibbonSep, RibbonSmallButton, RibbonStack } from "./RibbonParts";
 import { SMALL_ICON } from "./icon-props";
 
@@ -41,17 +40,6 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     if (!ok) return;
     adoptProjectAssets([]);
     useAppStore.getState().newProject();
-    if (isElectron) window.cslope.menuNew();
-  };
-
-  const handleLoadLovo = async () => {
-    const ok = await confirmReplace(
-      "Open the Lovö models as a new project? The current project will be closed.",
-    );
-    if (!ok) return;
-    adoptProjectAssets([]);
-    await useAppStore.getState().loadLovoModels();
-    useAppStore.temporal.getState().clear();
     if (isElectron) window.cslope.menuNew();
   };
 
@@ -105,20 +93,6 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
               </RibbonStack>
             </RibbonGroup>
             <RibbonSep />
-            {HAS_LOCAL_LOVO_MODELS && (
-              <>
-                <RibbonGroup label="Models">
-                  <RibbonStack>
-                    <RibbonSmallButton
-                      icon={<Mountain {...SMALL_ICON} />}
-                      label="Lovö"
-                      onClick={handleLoadLovo}
-                    />
-                  </RibbonStack>
-                </RibbonGroup>
-                <RibbonSep />
-              </>
-            )}
             <RibbonGroup label="Store">
               <RibbonStack>
                 <RibbonSmallButton
