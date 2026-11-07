@@ -425,12 +425,13 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
     set("layers", layers);
     setFocus(headerIdOf(layers[Math.max(0, i - 1)]));
   };
-  // A moved layer keeps the focus on the same button, so that it can be pressed again; on its header once that button is disabled at the end.
+  // A moved layer keeps the focus on the same button, so that it can be pressed again; on its other move button once that one is disabled at the end (never lost to the page).
   const move = (i: number, by: -1 | 1) => {
     const layer = draft.layers[i];
     const to = i + by;
     set("layers", moveLayer(draft.layers, i, to));
-    setFocus(to === 0 || to === draft.layers.length - 1 ? headerIdOf(layer) : actionIdOf(layer, by < 0 ? "up" : "down"));
+    const atEnd = to === 0 || to === draft.layers.length - 1;
+    setFocus(actionIdOf(layer, (by < 0) !== atEnd ? "up" : "down"));
   };
   const layersError = errors.get("layers");
   const levels = draftLevels(draft);

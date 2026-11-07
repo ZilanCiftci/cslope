@@ -2,7 +2,7 @@
  * Ten named parameter sets of the embankment template, with F pinned by
  * the tests (embankment.test.ts) and saved as analysis documents under
  * fixtures/embankment/ (scripts/write-fixtures.ts). The soil values are
- * illustrative, never defaults (B5).
+ * illustrative, never defaults.
  */
 import type { EmbankmentParams } from "./embankment";
 

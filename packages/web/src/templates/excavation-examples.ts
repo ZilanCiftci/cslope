@@ -1,12 +1,35 @@
 /**
- * Twelve named parameter sets of the excavation template, with F pinned by
+ * The named parameter sets of the excavation template, with F pinned by
  * the tests (excavation.test.ts) and saved as analysis documents under
  * fixtures/ (scripts/write-fixtures.ts), so that Python's tests can run
- * the same files. The soil values are illustrative, never defaults (B5).
+ * the same files. The soil values are illustrative; "defaults" is the
+ * form's first visit (EXCAVATION_DEFAULTS).
  */
 import type { ExcavationParams } from "./excavation";
 
+/**
+ * The first visit of the excavation: a complete section, so that the page
+ * computes F at once. Typical values: a 2.5 m cut at 1:2 through a dry
+ * crust and a soft clay into sand and gravel, which reaches below 3H
+ * (no shallow-base note), and a low haul road with traffic 1 m
+ * behind the crest; dry.
+ */
+export const EXCAVATION_DEFAULTS: ExcavationParams = {
+  groundLevel: 0,
+  excavationDepth: 2.5,
+  slope: 2,
+  bottomWidth: null,
+  layers: [
+    { name: "Dry crust", bottomLevel: -1, material: { kind: "undrained", gamma: 17, su: 30 } },
+    { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 15 } },
+    { name: "Sand and gravel", bottomLevel: -9, material: { kind: "drained", gamma: 22, c: 0, phi: 35 } },
+  ],
+  waterLevel: null,
+  road: { distanceFromCrest: 1, width: 4, height: 0.3, fill: { gamma: 18, c: 0, phi: 39 }, trafficLoad: 15 },
+};
+
 export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {
+  defaults: EXCAVATION_DEFAULTS,
   /** One clay on rock 15 m down, dry, no road. */
   "clay-3m": {
     groundLevel: 10,

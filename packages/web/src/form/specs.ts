@@ -7,6 +7,7 @@
  */
 import { embankmentTemplate, type EmbankmentParams } from "../templates/embankment";
 import { excavationTemplate, type ExcavationParams } from "../templates/excavation";
+import { EXCAVATION_DEFAULTS } from "../templates/excavation-examples";
 import type { Fill, Layer } from "../templates/common";
 import type { ParameterDescription, Template } from "../templates/types";
 import { embankmentShapes, excavationShapes, type SectionShapes } from "../section/section-geometry";
@@ -46,8 +47,10 @@ export interface FormSpec<P> {
   after: GroupSpec[];
   /** Shorter keys in the address ("H" for excavationDepth). */
   short: Record<string, string>;
-  /** The first visit's fields: a plain section the drawing can show, without strengths (B5). */
+  /** The first visit's fields when there are no `defaults`: a plain section the drawing can show, without strengths. */
   initial: Record<string, string>;
+  /** The first visit's parameter set, complete, so that the page computes F at once; not set: `initial` and one empty clay layer. */
+  defaults?: P;
   /** The file name of the JSON download. */
   fileName: string;
   /** The drawing's caption: what its axes measure. */
@@ -102,12 +105,14 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
       toggle: {
         label: "Haul road behind the crest",
         title: "A fill on the ground behind the crest, with its own material and an optional traffic load.",
-        initial: { "road.distanceFromCrest": "2", "road.width": "4", "road.height": "0.5" },
+        // The first visit's road (EXCAVATION_DEFAULTS).
+        initial: { "road.distanceFromCrest": "1", "road.width": "4", "road.height": "0.3", "road.gamma": "18", "road.c": "0", "road.phi": "39", "road.trafficLoad": "15" },
       },
     },
   ],
   short: { groundLevel: "ground", excavationDepth: "H", waterLevel: "water" },
-  initial: { groundLevel: "0", excavationDepth: "3", slope: "1.5" },
+  initial: { groundLevel: "0", excavationDepth: "2.5", slope: "2" },
+  defaults: EXCAVATION_DEFAULTS,
   fileName: "cslope-excavation.json",
   caption: "Elevation and distance from the crest (m).",
   params(read) {

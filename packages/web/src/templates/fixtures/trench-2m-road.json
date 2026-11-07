@@ -4,13 +4,13 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-29.25, -15],
-      [-29.25, -1.5],
-      [-29.25, 0],
-      [-6.75, 0],
+      [-29.75, -15],
+      [-29.75, -1.5],
+      [-29.75, 0],
+      [-7.25, 0],
       [-6, 0.5],
       [-2, 0.5],
-      [-1.25, 0],
+      [-0.75, 0],
       [0, 0],
       [2.25, -1.5],
       [6, -4],
@@ -57,7 +57,7 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-29.25, -1.5],
+          [-29.75, -1.5],
           [2.25, -1.5]
         ]
       },
@@ -69,18 +69,18 @@
       },
       {
         "coordinates": [
-          [-6.75, 0],
-          [-1.25, 0]
+          [-7.25, 0],
+          [-0.75, 0]
         ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-28.25, -0.75],
+        "point": [-28.75, -0.75],
         "materialName": "Crust"
       },
       {
-        "point": [-28.25, -8.25],
+        "point": [-28.75, -8.25],
         "materialName": "Clay"
       },
       {
@@ -105,7 +105,7 @@
       }
     ],
     "analysisLimits": {
-      "entryLeftX": -29.25,
+      "entryLeftX": -29.75,
       "entryRightX": 0,
       "exitLeftX": 0,
       "exitRightX": 8
@@ -124,6 +124,8 @@
     "tensionCrackDepth": 0,
     "seismicHorizontal": 0,
     "seismicVertical": 0,
-    "bothDirections": false
+    "bothDirections": false,
+    "tensionCrackAuto": true,
+    "tensionCrackAngle": 65
   }
 }

@@ -1,9 +1,11 @@
 /**
  * The result card: F, a factor of safety on characteristic values, with
  * the engine's own label, the method, the critical surface's entry and exit,
- * the surfaces searched, and the engine's warnings as it gives them; then
- * the commands (run, cancel, the link, the downloads) and a note that this
- * is a template calculation, not a design.
+ * the surfaces searched; then the commands (run, cancel, the link, the
+ * downloads) and a note that this is a template calculation, not a design.
+ * The engine's warnings are not shown: the page's users cannot act on them
+ * (the geometry and the options are the template's), and the templates
+ * avoid what they are about (TEMPLATE_OPTIONS); the app shows them.
  */
 import type { ResultSummary, ValidationIssue } from "@cslope/engine";
 import type { ReactNode } from "react";
@@ -22,8 +24,8 @@ export type CardState =
   | { kind: "cancelled" }
   | { kind: "failed"; message: string }
   /** The engine refused the model: the issues it could not put at a field. */
-  | { kind: "invalid"; general: ValidationIssue[]; warnings: ValidationIssue[] }
-  | { kind: "complete"; summary: ResultSummary; warnings: ValidationIssue[] };
+  | { kind: "invalid"; general: ValidationIssue[] }
+  | { kind: "complete"; summary: ResultSummary };
 
 export interface ResultCardProps {
   state: CardState;
@@ -102,11 +104,6 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
 export function ResultCard({ state, previous, canRun, canDownload, onRun, onCancel, onDownload, onCopyLink, notice }: ResultCardProps) {
   const status = statusText(state);
   const complete = state.kind === "complete" ? state : null;
-  const warnings = complete
-    ? [...complete.summary.warnings.map((w) => w.message), ...complete.warnings.map((w) => w.message)]
-    : state.kind === "invalid"
-      ? state.warnings.map((w) => w.message)
-      : [];
   return (
     <section id="result" aria-labelledby="result-heading" className="rounded-lg border bg-card p-4">
       <h2 id="result-heading" className="mb-2 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
@@ -128,16 +125,6 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
           ))}
         </ul>
       )}
-      {warnings.length > 0 && (
-        <div className="mt-3 rounded-md border bg-muted/60 p-3 text-sm">
-          <p className="font-medium">{warnings.length === 1 ? "Warning from the engine" : "Warnings from the engine"}</p>
-          <ul className="mt-1 list-disc space-y-1 pl-5">
-            {warnings.map((w) => (
-              <li key={w}>{w}</li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {state.kind === "running" ? (
@@ -149,21 +136,18 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
             Run
           </Button>
         )}
-        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyse runs." : "Fill in the form to download it."}>
+        <Button size="sm" variant="outline" onClick={onDownload} disabled={!canDownload} title={canDownload ? "The analysis document, which cslope analyze runs." : "Fill in the form to download it."}>
           Download JSON
-        </Button>
-        <Button size="sm" variant="outline" disabled title="Not available yet: the engine in the browser cannot write cSlope projects.">
-          Download .cslp
         </Button>
         <Button size="sm" variant="outline" onClick={onCopyLink} title="Copy the address of this section: the parameters are in it, nothing is stored.">
           Copy link
         </Button>
         <Button size="sm" variant="link" asChild>
-          <a href={DOWNLOAD_URL}>Open in cSlope</a>
+          <a href={DOWNLOAD_URL}>Get the cSlope app</a>
         </Button>
       </div>
       <p className="mt-2 min-h-4 text-xs text-muted-foreground" aria-live="polite">
-        {notice ?? "The .cslp download comes when the engine in the browser can write cSlope projects."}
+        {notice}
       </p>
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
         {TEMPLATE_NOTE} See the{" "}

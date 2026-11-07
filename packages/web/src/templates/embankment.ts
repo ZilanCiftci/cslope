@@ -4,7 +4,7 @@
  * fill of height h with a crest of width B and both sides 1:n; the ground
  * water is a level; a load may stand on the crest. F is a factor of safety
  * on characteristic values (design values with partial factors are for the
- * app and Python). No strength has a default (B5).
+ * app and Python). No strength has a default: the form starts them empty.
  *
  * Geometry (x to the right, y up, m; the slope slides to the right):
  *
@@ -30,7 +30,9 @@
  *   deep circle under a narrow crest enters) and exit anywhere from the
  *   crest's edge to the right edge: in the face (a shallow slide in the
  *   fill, which can govern), at the toe or on the ground beyond it; the
- *   app's options (D-23).
+ *   app's options (D-23), without a tension crack: in the cohesionless fill a
+ *   crack at a base angle cuts off a wedge that drives more than it resists,
+ *   and F would rise (by up to 1.9 % on the examples), on the unsafe side.
  */
 import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";

@@ -8,6 +8,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initEngine, publicDefaultOptions, validateDefinition } from "@cslope/engine";
 import { dumps } from "../engine/document";
 import { APP_OPTIONS } from "./builder";
+import { TEMPLATE_OPTIONS } from "./common";
 import { EXCAVATION_EXAMPLES } from "./excavation-examples";
 import { excavationDocument, excavationFieldProblems, excavationNotes, excavationProblems, excavationTemplate, geometry, type ExcavationParams } from "./excavation";
 import { regionCount } from "./regions";
@@ -181,29 +182,29 @@ describe("the geometry rules", () => {
     ]);
   });
 
-  it("builds the road as a fill region with 1:1.5 sides, its own material and the traffic load over its top", () => {
+  it("builds the road as a fill region with 1:2.5 sides, its own material and the traffic load over its top", () => {
     const params = EXCAVATION_EXAMPLES["clay-road"];
     const g = geometry(params);
-    // The top's near edge 3 m behind the crest, 0.8 m high with 1:1.5 sides, a 4 m top.
-    const road = { farToe: -8.2, topLeft: -7, topRight: -3, nearToe: -1.8, top: 0.8 };
+    // The top's near edge 3 m behind the crest, 0.8 m high with 1:2.5 sides, a 4 m top.
+    const road = { farToe: -9, topLeft: -7, topRight: -3, nearToe: -1, top: 0.8 };
     for (const [k, v] of Object.entries(road)) expect(g.road![k as keyof typeof road], k).toBeCloseTo(v, 9);
     // 2H below the bottom is −12, the clay goes to −20: 20 m deep, each side 30 m.
-    expect(g.left).toBeCloseTo(-8.2 - 30, 9);
+    expect(g.left).toBeCloseTo(-9 - 30, 9);
     const def = excavationDocument(params).definition;
     expect(r9(def.coordinates.slice(1, 8))).toEqual(
       r9([
         [g.left, 0],
-        [-8.2, 0],
+        [-9, 0],
         [-7, 0.8],
         [-3, 0.8],
-        [-1.8, 0],
+        [-1, 0],
         [0, 0],
         [8, -4],
       ]),
     );
     expect(def.materials.map((m) => m.name)).toEqual(["Layer 1", "Road fill"]);
     expect(def.materials[1].model).toEqual({ kind: "mohr-coulomb", unitWeight: 20, unitWeightSat: 20, cohesion: 0, frictionAngle: 38 });
-    expect(r9(def.materialBoundaries![0].coordinates)).toEqual([[-8.2, 0], [-1.8, 0]]);
+    expect(r9(def.materialBoundaries![0].coordinates)).toEqual([[-9, 0], [-1, 0]]);
     expect(def.materialBoundaries).toHaveLength(1);
     const fill = def.regionAssignments!.find((a) => a.materialName === "Road fill")!;
     expect(r9([fill.point])).toEqual([[-5, 0.4]]);
@@ -213,33 +214,41 @@ describe("the geometry rules", () => {
 
   it("cuts the fill's side at the crest when the road is closer than its side reaches", () => {
     const params = EXCAVATION_EXAMPLES["steep-road-at-crest"];
-    // The top 1.5 m behind the crest, 1 m high: the side just reaches the crest.
+    // The top 1.5 m behind the crest, 1 m high: the side (2.5 m wide) is cut at the crest.
     expect(geometry(params).road).toMatchObject({ nearToe: 0, topRight: -1.5 });
     const def = excavationDocument(params).definition;
     expect(def.coordinates.slice(2, 6)).toEqual([
-      [-8, 20],
+      [-9, 20],
       [-6.5, 21],
       [-1.5, 21],
       [0, 20],
     ]);
-    expect(def.materialBoundaries).toEqual([{ coordinates: [[-8, 20], [0, 20]] }]);
+    expect(def.materialBoundaries).toEqual([{ coordinates: [[-9, 20], [0, 20]] }]);
     const atCrest = geometry({ ...params, road: { ...params.road!, distanceFromCrest: 0 } }).road!;
     expect(atCrest).toMatchObject({ nearToe: 0, topRight: -0 });
   });
 
   it("snaps a near toe within 5 cm of the crest to it", () => {
-    const road = { distanceFromCrest: 1.24, width: 4, height: 0.8, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: null };
+    const road = { distanceFromCrest: 1.98, width: 4, height: 0.8, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: null };
     expect(geometry({ ...base, road }).road?.nearToe).toBe(0);
-    expect(geometry({ ...base, road: { ...road, distanceFromCrest: 1.3 } }).road?.nearToe).toBeCloseTo(-0.1, 9);
+    expect(geometry({ ...base, road: { ...road, distanceFromCrest: 2.1 } }).road?.nearToe).toBeCloseTo(-0.1, 9);
   });
 
-  it("uses the app's options without a tension crack, on characteristic values (no partial factors)", () => {
+  it("uses the app's options with the automatic tension crack, on characteristic values (no partial factors)", () => {
     const doc = excavationDocument(EXCAVATION_EXAMPLES["clay-road"]);
-    expect(doc.options).toEqual(APP_OPTIONS);
+    expect(doc.options).toEqual({ ...APP_OPTIONS, ...TEMPLATE_OPTIONS });
+    expect(doc.options).toMatchObject({ tensionCrackAuto: true, tensionCrackAngle: 65 });
     expect(doc.options).not.toHaveProperty("partialFactors");
-    expect(excavationDocument(base).options).toEqual(APP_OPTIONS);
+    expect(excavationDocument(base).options).toEqual({ ...APP_OPTIONS, ...TEMPLATE_OPTIONS });
     expect(doc.format).toBe("cslope-analysis");
     expect(doc.formatVersion).toBe(1);
+  });
+
+  it("refuses an undrained Su of 0 (the bound is exclusive), constant or at the top of a rate, and takes any Su above it", () => {
+    const withSu = (su: number, suRate?: number) => withLayers(base, { bottomLevel: -10, material: suRate === undefined ? { kind: "undrained", gamma: 16, su } : { kind: "undrained-increasing", gamma: 16, su, suRate } });
+    expect(excavationFieldProblems(withSu(0))).toEqual([{ field: "layers.0.su", message: "Must be more than 0 kPa.", general: "Layer 1: Su must be more than 0 kPa." }]);
+    expect(excavationProblems(withSu(0, 2))).toEqual(["Layer 1: Su must be more than 0 kPa."]);
+    expect(excavationProblems(withSu(0.5))).toEqual([]);
   });
 
   it("refuses what it cannot build, with a sentence each", () => {
@@ -306,8 +315,9 @@ describe("the engine's defaults, computed here", () => {
 
 describe("the twelve named sets", () => {
   const names = Object.keys(EXCAVATION_EXAMPLES);
-  it("are twelve, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(12);
+  it("are thirteen (the first visit's defaults and twelve more), with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(13);
+    expect(names).toContain("defaults");
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 

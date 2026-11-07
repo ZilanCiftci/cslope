@@ -1,6 +1,7 @@
 // @vitest-environment node
 /**
- * The form's state: empty strengths keep it from running (B5), each
+ * The form's state: the excavation's first visit is complete, empty
+ * strengths keep a form from running, each
  * problem is at its field, and the address round-trips every example.
  */
 import { describe, expect, it } from "vitest";
@@ -8,17 +9,36 @@ import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
 import type { Layer } from "../templates/common";
 import { EMBANKMENT_EXAMPLES } from "../templates/embankment-examples";
 import { embankmentDocument } from "../templates/embankment";
-import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
+import { EXCAVATION_DEFAULTS, EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
 import { excavationDocument } from "../templates/excavation";
 import { LAYER_COLORS } from "../templates/colors";
-import { draftOf, draftLevels, LAYER_KINDS, moveLayer, strengthSummary, formState, fromQuery, initialDraft, parseNumber, toQuery, withGroup, withNewLayer, type Draft } from "./draft";
+import { draftOf, draftLevels, emptyLayer, LAYER_KINDS, moveLayer, strengthSummary, formState, fromQuery, initialDraft, parseNumber, toQuery, withGroup, withNewLayer, type Draft } from "./draft";
 import { bottomLevels, rangeText, thicknesses } from "./layers";
 
 const filled = (): Draft => draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"]);
+/** A plain excavation: one clay layer without strengths, no road. */
+const plain = (): Draft => ({ template: "excavation", fields: { groundLevel: "0", excavationDepth: "3", slope: "1.5" }, on: [], layers: [{ ...emptyLayer("15"), name: "Clay" }], ponded: false });
 
 describe("the form's state", () => {
-  it("starts with the geometry and without strengths: not ready, nothing marked red", () => {
-    const s = formState(initialDraft());
+  it("starts the excavation complete with its defaults, the road on: ready, nothing missing", () => {
+    const first = initialDraft();
+    expect(first.on).toEqual(["road"]);
+    expect(first.layers.map((l) => [l.name, l.kind, l.thickness])).toEqual([
+      ["Dry crust", "undrained", "1"],
+      ["Clay", "undrained", "3"],
+      ["Sand and gravel", "mohr-coulomb", "5"],
+    ]);
+    const f = formState(first);
+    expect(f.missing).toEqual([]);
+    expect(f.errors.size).toBe(0);
+    expect(f.ready).toBe(true);
+    expect(f.params).toEqual(EXCAVATION_DEFAULTS);
+    // An address without the road has it off.
+    expect(fromQuery("?" + toQuery(plain())).on).toEqual([]);
+  });
+
+  it("asks for the strengths of a section without them: not ready, nothing marked red", () => {
+    const s = formState(plain());
     expect(s.ready).toBe(false);
     expect(s.errors.size).toBe(0);
     expect(s.missing).toEqual(["layers.0.gamma", "layers.0.su"]);
@@ -66,13 +86,13 @@ describe("the form's state", () => {
   });
 
   it("switches the road on with its size and off again", () => {
-    const on = withGroup(initialDraft(), "road", true);
+    const on = withGroup(plain(), "road", true);
     expect(on.on).toEqual(["road"]);
-    expect(formState(on).params.road).toMatchObject({ distanceFromCrest: 2, width: 4, height: 0.5, trafficLoad: null });
-    expect(formState(on).missing).toContain("road.gamma");
+    // The first visit's road.
+    expect(formState(on).params.road).toEqual(EXCAVATION_DEFAULTS.road);
     const off = withGroup(on, "road", false);
     expect(formState(off).params.road).toBeNull();
-    expect(toQuery(off)).toBe(toQuery(initialDraft()));
+    expect(toQuery(off)).toBe(toQuery(plain()));
   });
 
   it("gives back every example of both templates through the address, to the same document", () => {
@@ -103,7 +123,7 @@ describe("the form's state", () => {
     expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained", gamma: 16, su: 25 });
     d.layers[0].suRate = "1.5";
     expect(formState(d).params.layers[0].material).toEqual({ kind: "undrained-increasing", gamma: 16, su: 25, suRate: 1.5 });
-    expect(strengthSummary(d.layers[0])).toBe("Su 25 kPa, +1.5 kPa/m");
+    expect(strengthSummary(d.layers[0])).toBe("Su\u00a025\u00a0kPa, +1.5\u00a0kPa/m");
     expect(toQuery(d)).toContain("layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25&layer1.suRate=1.5");
   });
 
@@ -119,7 +139,7 @@ describe("the form's state", () => {
   });
 
   it("adds a layer 5 m thick at the bottom and inserts one 1 m thick, within the lowest level, each with the next free color", () => {
-    const d = initialDraft();
+    const d = plain();
     const added = withNewLayer(d, 1);
     expect(added.layers.map((l) => l.thickness)).toEqual(["15", "5"]);
     expect(added.layer).toBe(added.layers[1]);
@@ -138,9 +158,9 @@ describe("the form's state", () => {
     expect(bottomLevels(0, [1, NaN, 2])).toEqual([-1, NaN, NaN]);
     expect(thicknesses(30.2, [29.8, 29.7, 29.5])).toEqual([0.4, 0.1, 0.2]);
     expect(thicknesses(0, [-1.5, -15])).toEqual([1.5, 13.5]);
-    expect(rangeText(13.5, -1.5, -15)).toBe("13.5 m (−1.5 to −15 m)");
-    expect(rangeText(1.5, 0, -1.5)).toBe("1.5 m (0 to −1.5 m)");
-    expect(rangeText(2, NaN, NaN)).toBe("2 m");
+    expect(rangeText(13.5, -1.5, -15)).toBe("13.5\u00a0m (−1.5 to −15\u00a0m)");
+    expect(rangeText(1.5, 0, -1.5)).toBe("1.5\u00a0m (0 to −1.5\u00a0m)");
+    expect(rangeText(2, NaN, NaN)).toBe("2\u00a0m");
     const d = draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"]);
     expect(d.layers.map((l) => l.thickness)).toEqual(["1.5", "18.5"]);
     expect(draftLevels(d)).toEqual(EXCAVATION_EXAMPLES["crust-over-clay"].layers.map((l) => l.bottomLevel));

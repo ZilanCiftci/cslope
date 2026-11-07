@@ -6,8 +6,9 @@
  * template's fields are is in specs.ts; the layers are the same for every
  * template. The values are characteristic: F is a factor of safety.
  *
- * Strengths and unit weights start empty (decision B5). The geometry
- * starts at a plain section that the drawing can show.
+ * The excavation starts at a complete section (its defaults), so that the
+ * page computes F at once; the embankment's strengths and unit weights
+ * start empty, its geometry at a plain section that the drawing can show.
  */
 import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
 import { LAYER_PARAMETERS, type Layer, type LayerMaterial } from "../templates/common";
@@ -66,14 +67,14 @@ export const LAYER_FIELDS: Record<LayerModel, Exclude<keyof typeof LAYER_PARAMET
   impenetrable: ["gamma"],
 };
 
-/** A layer's strength in a few words, from the text typed: "Su 18 kPa, +1.2 kPa/m", "c′ 3 kPa, φ′ 30°"; empty values are left out. */
+/** A layer's strength in a few words, from the text typed: "Su 18 kPa, +1.2 kPa/m", "c′ 3 kPa, φ′ 30°", each part with no-break spaces (it never wraps inside); empty values are left out. */
 export function strengthSummary(layer: LayerDraft): string {
   const v = (t: string) => t.trim();
   switch (layer.kind) {
     case "undrained":
-      return [v(layer.su) && `Su ${v(layer.su)} kPa`, v(layer.su) && v(layer.suRate) && `+${v(layer.suRate)} kPa/m`].filter(Boolean).join(", ");
+      return [v(layer.su) && `Su\u00a0${v(layer.su)}\u00a0kPa`, v(layer.su) && v(layer.suRate) && `+${v(layer.suRate)}\u00a0kPa/m`].filter(Boolean).join(", ");
     case "mohr-coulomb":
-      return [v(layer.c) && `c′ ${v(layer.c)} kPa`, v(layer.phi) && `φ′ ${v(layer.phi)}°`].filter(Boolean).join(", ");
+      return [v(layer.c) && `c′\u00a0${v(layer.c)}\u00a0kPa`, v(layer.phi) && `φ′\u00a0${v(layer.phi)}°`].filter(Boolean).join(", ");
     case "impenetrable":
       return "";
   }
@@ -137,6 +138,7 @@ export function emptyLayer(thickness = "", color: string = defaultLayerColor(0))
 /** The form on a first visit of a template. */
 export function initialDraft(template: TemplateId = "excavation"): Draft {
   const spec = specOf(template);
+  if (spec.defaults) return draftOf(spec.template.id as TemplateId, spec.defaults);
   return {
     template: spec.template.id as TemplateId,
     fields: { ...spec.initial },
@@ -295,7 +297,9 @@ export function fromQuery(search: string): Draft {
   const draft = initialDraft(spec.template.id as TemplateId);
   if (!q.has("layers")) return draft;
   const get = (key: string) => (q.get(key) ?? "").slice(0, 40);
+  // The address says everything: the first visit's groups (the excavation's road) are on only when it says so.
   draft.fields = {};
+  draft.on = [];
   for (const g of groupsOf(spec)) {
     if (g.toggle) {
       if (q.get(g.id) !== "on") continue;
