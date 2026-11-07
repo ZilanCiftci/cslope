@@ -16,16 +16,12 @@ The Python package `cslope` is the cSlope app's engine, compiled from the same R
 
 Python 3.10 or later, on Windows (x64), macOS and Linux (x86_64, aarch64); no other dependencies.
 
-<Callout title="Not on PyPI yet">
-  The package is not published yet, so `pip install cslope` does not work. Until it is, install a wheel from the repository's builds or build it from the source.
-</Callout>
-
-**From a wheel.** On GitHub, open *Actions › Python wheels*, a finished run, and download the artifact of your platform (`wheel-windows-x64`, `wheel-macos-universal2`, `wheel-linux-x86_64` or `wheel-linux-aarch64`). Unzip it and install the `.whl` file in it:
-
 ```
-pip install ./cslope-0.1.0-*.whl              # numpy too, for the finite element arrays: pip install numpy
+pip install cslope                             # or "cslope[numpy]" for the finite element arrays as numpy arrays
 cslope info                                    # the package version, the engine build and the schema version
 ```
+
+With [uv](https://docs.astral.sh/uv/), it runs without an install step: `uvx cslope info`, or `uv run --with cslope python my_slope.py` for a script.
 
 **From the source.** With Rust (the version in `packages/engine-rs/rust-toolchain.toml`) installed:
 

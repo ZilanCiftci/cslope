@@ -17,16 +17,12 @@ CPython 3.10 and later, with no dependencies.
 
 ## Install
 
-Not on PyPI yet. Until it is, install a wheel from the repository's builds:
-on GitHub, *Actions › Python wheels*, a finished run, the artifact of your
-platform (`wheel-windows-x64`, `wheel-macos-universal2`,
-`wheel-linux-x86_64`, `wheel-linux-aarch64`); unzip it and install the
-`.whl` in it:
-
 ```
-pip install ./cslope-0.1.0-*.whl          # numpy optional, for the finite element arrays
+pip install cslope                         # or "cslope[numpy]" for the finite element arrays as numpy arrays
 cslope info                                # versions of the package, the engine and the schemas
 ```
+
+Or run it without installing, with uv: `uvx cslope info`.
 
 Or build it from the source, with Rust installed (the version in
 `packages/engine-rs/rust-toolchain.toml`):
