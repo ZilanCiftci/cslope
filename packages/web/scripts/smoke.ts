@@ -26,13 +26,12 @@ const AXE = readFileSync(createRequire(import.meta.url).resolve("axe-core/axe.mi
 
 /**
  * A filled-in section, as its link gives it (the address holds the
- * parameters): a crust over clay with a haul road, on design values.
+ * parameters): a crust over clay with a haul road.
  */
 export const FILLED =
   "ground=0&H=4&slope=2&water=-1&layers=2&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
   "&layer2.name=Clay&layer2.kind=undrained-increasing&layer2.bottomLevel=-20&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
-  "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
-  "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
+  "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20";
 
 /** A filled-in embankment, as its link gives it ("t=embankment"): a crust over clay with a load on the crest. */
 export const EMBANKMENT =
@@ -45,7 +44,7 @@ export const PONDED =
   "t=excavation&ground=10&H=5&slope=2&water=7&pond=1&layers=2&layer1.kind=undrained&layer1.bottomLevel=-10&layer1.gamma=16&layer1.su=25" +
   "&layer2.kind=impenetrable&layer2.bottomLevel=-20&layer2.gamma=24";
 
-/** The value F of the result card, once it shows one ("F 0.872"). */
+/** The value F of the result card, once it shows one ("F 1.234"). */
 const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
 
 /** T-ACADS Simple (the app's first example), as the worker's protocol test runs it: F 0.984. */
@@ -119,7 +118,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
     try {
       await fValue(page).waitFor({ timeout: 30_000 });
       const first = await fValue(page).textContent();
-      const label = await page.getByText("Over-design factor (design values), safety class 2").count();
+      const label = await page.locator("#result").getByText("Minimum factor of safety", { exact: true }).count();
       if (!label) problems.push("F shows without its label");
       console.log(`  ${first} after ${Date.now() - started} ms (loading the page and the engine)`);
       await page.getByLabel("Excavation depth H (m)").fill("3");

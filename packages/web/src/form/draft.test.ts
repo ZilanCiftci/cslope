@@ -5,7 +5,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
-import type { Layer, Values } from "../templates/common";
+import type { Layer } from "../templates/common";
 import { EMBANKMENT_EXAMPLES } from "../templates/embankment-examples";
 import { embankmentDocument } from "../templates/embankment";
 import { EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
@@ -14,7 +14,7 @@ import { LAYER_COLORS } from "../templates/colors";
 import { draftOf, draftLevels, LAYER_KINDS, moveLayer, strengthSummary, formState, fromQuery, initialDraft, parseNumber, toQuery, withGroup, withNewLayer, type Draft } from "./draft";
 import { bottomLevels, rangeText, thicknesses } from "./layers";
 
-const filled = (): Draft => draftOf("excavation", EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
+const filled = (): Draft => draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"]);
 
 describe("the form's state", () => {
   it("starts with the geometry and without strengths: not ready, nothing marked red", () => {
@@ -41,27 +41,21 @@ describe("the form's state", () => {
     d.fields.excavationDepth = "30";
     d.layers[0].thickness = "0.01";
     d.fields["road.width"] = "1";
-    d.etaCu = "0";
     const s = formState(d);
     expect(Object.fromEntries(s.errors)).toEqual({
       excavationDepth: "Must be from 0.5 to 20 m.",
       "layers.0.thickness": "Must be at least 0.05 m.",
       "road.width": "Must be from 2 to 20 m.",
-      "values.etaCu": "Must be at least 0.1.",
     });
     expect(s.ready).toBe(false);
   });
 
-  it("leaves optional fields empty without a problem, and needs the safety class on design values", () => {
+  it("leaves optional fields empty without a problem", () => {
     const d = filled();
     d.fields.waterLevel = "";
     d.fields["road.trafficLoad"] = "";
     expect(formState(d).ready).toBe(true);
     expect(formState(d).params.road!.trafficLoad).toBeNull();
-    d.safetyClass = "";
-    expect(formState(d).missing).toEqual(["values.safetyClass"]);
-    d.basis = "characteristic";
-    expect(formState(d).ready).toBe(true);
   });
 
   it("starts the embankment with its geometry and without the fill's and the clay's strengths", () => {
@@ -118,7 +112,7 @@ describe("the form's state", () => {
       ["excavation", EXCAVATION_EXAMPLES],
       ["embankment", EMBANKMENT_EXAMPLES],
     ] as const) {
-      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[]; values: Values; ponded?: boolean }>)) {
+      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[]; ponded?: boolean }>)) {
         const query = toQuery(draftOf(template, params));
         // The kinds as older links wrote them: Su increasing a kind of its own, Mohr-Coulomb "drained".
         const old = new URLSearchParams(query);
@@ -224,7 +218,7 @@ describe("the form's state", () => {
       ["excavation", EXCAVATION_EXAMPLES],
       ["embankment", EMBANKMENT_EXAMPLES],
     ] as const) {
-      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[]; values: Values }>)) {
+      for (const [name, params] of Object.entries(examples as Record<string, { groundLevel: number; layers: Layer[] }>)) {
         const q = new URLSearchParams(toQuery(draftOf(template, params)));
         params.layers.forEach((l, i) => {
           expect(q.has(`layer${i + 1}.t`), name).toBe(true);
@@ -244,16 +238,25 @@ describe("the form's state", () => {
   it("opens an older link without the template as the excavation, and an unknown template as the excavation", () => {
     const old = toQuery(filled()).replace(/^t=excavation&/, "");
     expect(fromQuery("?" + old)).toEqual({ ...filled(), layers: expect.any(Array) });
-    expect(formState(fromQuery("?" + old)).params).toEqual(EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
+    expect(formState(fromQuery("?" + old)).params).toEqual(EXCAVATION_EXAMPLES["clay-road"]);
     expect(fromQuery("?t=nonsense&layers=1").template).toBe("excavation");
+  });
+
+  it("opens an older link with design values on characteristic values: the design keys are ignored", () => {
+    const q = toQuery(filled());
+    const old = "?" + q + "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
+    expect(fromQuery(old)).toEqual({ ...filled(), layers: expect.any(Array) });
+    expect(formState(fromQuery(old)).params).toEqual(EXCAVATION_EXAMPLES["clay-road"]);
+    expect(excavationDocument(formState(fromQuery(old)).params).options).not.toHaveProperty("partialFactors");
+    // And the address it writes again has no design keys.
+    expect(toQuery(fromQuery(old))).toBe(q);
   });
 
   it("writes a readable address with only the filled fields", () => {
     const q = toQuery(filled());
     expect(q).toBe(
       "t=excavation&ground=0&H=4&slope=2&water=-1&layers=1&layer1.kind=undrained&layer1.t=20&layer1.gamma=16&layer1.su=25" +
-        "&road=on&road.distanceFromCrest=3&road.width=4&road.height=0.8&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
-        "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3",
+        "&road=on&road.distanceFromCrest=3&road.width=4&road.height=0.8&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20",
     );
     expect(toQuery(fromQuery(""))).toEqual(toQuery(initialDraft()));
     expect(toQuery(fromQuery("?t=embankment"))).toEqual(toQuery(initialDraft("embankment")));
@@ -261,7 +264,6 @@ describe("the form's state", () => {
       "t=embankment&ground=0&h=3&B=6&slope=2.5&fill.gamma=19&fill.c=0&fill.phi=35&q=20&water=-1" +
         "&layers=1&layer1.name=Clay&layer1.kind=undrained&layer1.t=15&layer1.gamma=16&layer1.su=15",
     );
-    expect(fromQuery("?layers=1&values=design&safetyClass=2.0").safetyClass).toBe("2");
     expect(fromQuery("?layers=99&layer1.kind=nonsense").layers).toHaveLength(12);
     expect(fromQuery("?layers=1&layer1.kind=nonsense").layers[0].kind).toBe("undrained");
   });

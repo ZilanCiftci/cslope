@@ -27,14 +27,6 @@ const MATERIAL_KEYS: Record<string, string> = {
   frictionAngle: "phi",
 };
 
-const FACTOR_KEYS: Record<string, string> = {
-  cu: "values.etaCu",
-  cohesion: "values.etaDrained",
-  tanPhi: "values.etaDrained",
-  variableLoad: "values.variableLoadBase",
-  basis: "values.safetyClass",
-};
-
 /**
  * The field of a material's issue that the engine reports on the model as
  * a whole ("/materials/0/model"), from the quantity its message names.
@@ -56,10 +48,6 @@ function materialKey(message: string): string | undefined {
 export function issueField(path: string, targets: IssueTargets, message = ""): string | null {
   const parts = path.split("/").slice(1);
   const [root, list, index, model, key] = parts;
-  if (root === "options") {
-    if (list === "partialFactors") return FACTOR_KEYS[index ?? ""] ?? "values.safetyClass";
-    return null;
-  }
   if (root !== "definition") return null;
   const i = Number(index);
   switch (list) {

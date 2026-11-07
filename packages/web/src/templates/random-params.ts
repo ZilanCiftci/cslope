@@ -3,7 +3,7 @@
  * (excavation-property.test.ts, embankment-property.test.ts): a seeded
  * generator, so that a failure can be rerun.
  */
-import { DESIGN_PARAMETERS as D, LAYER_PARAMETERS as L, type LayerMaterial, type ParameterDescriptionLike, type Values } from "./common";
+import { LAYER_PARAMETERS as L, type LayerMaterial, type ParameterDescriptionLike } from "./common";
 
 /** mulberry32: a small seeded generator, so that a failure can be rerun. */
 export function random(seed: number): () => number {
@@ -41,17 +41,4 @@ export function material(rnd: () => number): LayerMaterial {
     case "impenetrable":
       return { kind: "impenetrable", gamma };
   }
-}
-
-/** Characteristic values half of the time, design values in a random safety class the other half. */
-export function randomValues(rnd: () => number): Values {
-  return rnd() < 0.5
-    ? { basis: "characteristic" }
-    : {
-        basis: "design",
-        safetyClass: pick(rnd, [1, 2, 3] as const),
-        etaCu: value(rnd, D.etaCu),
-        etaDrained: value(rnd, D.etaDrained),
-        variableLoadBase: value(rnd, D.variableLoadBase),
-      };
 }

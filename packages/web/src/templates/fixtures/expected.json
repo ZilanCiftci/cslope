@@ -27,17 +27,13 @@
     "fos": 1.8882402031601329,
     "fosLabel": "factor of safety"
   },
-  "clay-road-design-sk2": {
-    "fos": 1.0196859172240649,
-    "fosLabel": "over-design factor"
-  },
   "steep-road-at-crest": {
     "fos": 1.2008738091910158,
     "fosLabel": "factor of safety"
   },
   "three-layers-wide": {
-    "fos": 0.7129952632888124,
-    "fosLabel": "over-design factor"
+    "fos": 1.1847160912342858,
+    "fosLabel": "factor of safety"
   },
   "trench-1m": {
     "fos": 2.3220399093429926,

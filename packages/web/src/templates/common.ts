@@ -1,13 +1,13 @@
 /**
  * What the templates share: the ground in horizontal layers under a level
  * ground surface, a drained fill (the excavation's road, the embankment),
- * characteristic or design values (B4), the model's extent, and the checks
- * of these, each problem with its field. No strength has a default (B5).
+ * the model's extent, and the checks of these, each problem with its
+ * field. The values are characteristic: F is a factor of safety (design
+ * values with partial factors are for the app and Python). No strength
+ * has a default (B5).
  */
-import type { PartialFactors, SafetyClass } from "@cslope/engine";
 import type { Definition, Point, Strength } from "./builder";
 import { appMaterialColor, defaultLayerColor } from "./colors";
-import { swedishPartialFactors } from "./partial-factors";
 import type { ParameterDescription } from "./types";
 
 /** A parameter's bounds (the tests draw values within them). */
@@ -52,18 +52,12 @@ export interface Fill {
   phi: number;
 }
 
-/** Characteristic values (F a factor of safety) or design values (F an over-design factor). */
-export type Values =
-  | { basis: "characteristic" }
-  | { basis: "design"; safetyClass: SafetyClass; etaCu: number; etaDrained: number; variableLoadBase: number };
-
 /** A problem of a parameter set, with the field it is about. */
 export interface FieldProblem {
   /**
    * The field: a key of the parameters ("excavationDepth"), of a layer
    * ("layers.0.su"), of a group ("road.width", the road's fill
-   * "road.gamma", the embankment's "fill.c") or of the design values
-   * ("values.etaCu"); "layers" for the list.
+   * "road.gamma", the embankment's "fill.c"); "layers" for the list.
    */
   field: string;
   /** The sentence the form shows under the field. */
@@ -116,14 +110,6 @@ export const FILL_PARAMETERS = {
   gamma: p("gamma", "Fill γ (kN/m³)", "kN/m³", 0, 500, 0.1, "The fill's unit weight, above and below the water. The fill is a Mohr-Coulomb material (drained).", { minExclusive: true, typical: [15, 24] }),
   c: p("c", "Fill c′ (kPa)", "kPa", 0, Infinity, 0.5, "The effective cohesion of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { typical: [0, 20] }),
   phi: p("phi", "Fill φ′ (°)", "°", 0, 90, 0.5, "The effective friction angle of the fill (Mohr-Coulomb). c′ and φ′ cannot both be 0.", { maxExclusive: true, typical: [25, 45] }),
-};
-
-/** The design values' fields. */
-export const DESIGN_PARAMETERS = {
-  // η as the app's options take it (0.1 or more); γQ / γd from 1 to 1.5 (the app offers 1.3, 1.4 and 1.5).
-  etaCu: p("etaCu", "η undrained", null, 0.1, Infinity, 0.05, "The conversion factor on Su: γcu = 1.5 / η.", { typical: [0.5, 1.2] }),
-  etaDrained: p("etaDrained", "η drained", null, 0.1, Infinity, 0.05, "The conversion factor on c′ and tan φ′: γc′ = γφ′ = 1.3 / η.", { typical: [0.5, 1.2] }),
-  variableLoadBase: p("variableLoadBase", "γQ / γd", null, 1, 1.5, 0.1, "γQ = this factor × γd: variable loads Q_d = γQ γd Q_k, γd = 0.83, 0.91, 1.0 in safety class 1, 2, 3. The governing document decides γQ."),
 };
 
 /** A layer is at least this thick, and no level comes closer than this to an excavation bottom (m). */
@@ -210,15 +196,6 @@ export class Problems {
     this.check(`${group}.c`, fill.c, P.c, where);
     this.check(`${group}.phi`, fill.phi, P.phi, where);
   }
-
-  /** The design values: the safety class and the factors. */
-  values(values: Values): void {
-    if (values.basis !== "design") return;
-    if (![1, 2, 3].includes(values.safetyClass)) this.add("values.safetyClass", "The safety class must be 1, 2 or 3.");
-    this.check("values.etaCu", values.etaCu, DESIGN_PARAMETERS.etaCu);
-    this.check("values.etaDrained", values.etaDrained, DESIGN_PARAMETERS.etaDrained);
-    this.check("values.variableLoadBase", values.variableLoadBase, DESIGN_PARAMETERS.variableLoadBase);
-  }
 }
 
 export const fmt = (v: number) => String(Math.round(v * 100) / 100);
@@ -267,11 +244,4 @@ export function addLayers(d: Definition, layers: Layer[], ground: number, x: num
     top = layer.bottomLevel;
   }
   return names;
-}
-
-/** The partial factors of a parameter set, or null on characteristic values. */
-export function partialFactorsOf(values: Values): PartialFactors | null {
-  if (values.basis !== "design") return null;
-  const { safetyClass, etaCu, etaDrained, variableLoadBase } = values;
-  return swedishPartialFactors({ safetyClass, etaCu, etaDrained, variableLoadBase });
 }

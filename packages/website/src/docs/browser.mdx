@@ -22,7 +22,6 @@ Both have:
 
 - **Layers**, from the ground down, each with its thickness and a material model, named as in the app: **Undrained** (Su, constant, or increasing with depth when you fill in the Su increase rate), **Mohr-Coulomb** (c′ and φ′) or **Impenetrable (bedrock)**. The layers stack down from the ground level: the first starts at the ground, each one at the bottom of the one above, and the model's base is the ground level less all the thicknesses. A layer is at least 0.05 m thick; in the excavation no layer but the last ends within 0.05 m of the excavation bottom, and the last ends at least 0.05 m below it (the message says how thick the layers must be in all). Each layer's header shows its model, its thickness with its levels ("13.5 m (−1.5 to −15 m)") and its strength, and has buttons to move the layer up or down and to insert a new layer above it (1 m thick); since the layers are thicknesses, the layers below follow. **+ Add layer** adds one 5 m thick at the bottom. Each layer has a **Color**, one of 14 swatches (the first six are the app's material colors), used in the drawing and written into the analysis document, so that the app shows the same colors.
 - **A ground-water level**, a horizontal line. Empty for a dry slope. By default it is cut at the ground: where the level is above the ground, the water follows the ground surface and seeps out of the slope, and no free water stands on it. With **Free water above ground (ponding)** checked, the water above the ground stands as ponded water up to the level (in the excavation, or beside the embankment) and its weight acts on the ground. Under an embankment the level may stand above the ground, up to the crest; a level above the crest is refused.
-- **Safety**: characteristic or design values (see [Reading the result](#reading-the-result)).
 
 One unit weight γ per material applies above and below the water. The values are checked against the same limits as in the app's Materials window (for example γ above 0, φ′ from 0 to below 90°, c′ and φ′ not both 0). No strength or unit weight has a default: the fields stay empty until you fill them in, and F is computed once every required field is. The page runs the analysis by itself a moment after each change, and the section drawing follows as you type.
 
@@ -43,16 +42,13 @@ The templates model only the sections above. They do not do what the app does be
 - **No finite element analysis**, no probabilistic or sensitivity analysis, no 3D correction, no seismic coefficients.
 - **Water only as a level**, cut at the ground: no piezometric lines per material, no pore pressure ratio, no free water, no drawdown.
 - **Loads only where the template puts them**: the haul road's traffic load, the load on the crest.
-- **One value at a time**: F on characteristic values or on design values, not both.
+- **Characteristic values only**: no partial factors, so F is always a factor of safety. For a check on design values, with partial factors on the strength and the loads, use the [app](/docs/analysis#partial-factors) or the [Python package](/docs/python).
 
 The [limitations](/docs/limitations) of the program apply too: a two-dimensional limit equilibrium analysis per meter run, which finds the lowest F among the surfaces it tries.
 
 ## Reading the result
 
-The result card shows F with three decimals and what it is:
-
-- **Minimum factor of safety**, on characteristic values: the strengths as you typed them, without partial factors.
-- **Over-design factor (design values), safety class n**, on design values: the strengths divided by the Swedish partial factors of the safety class and η, and the variable loads (the traffic load, the load on the crest) multiplied by theirs. F is then not a factor of safety but how much further the design values could be reduced before failure: 1.0 or more means the design is satisfied, and the partial factors already provide the margin. The factors are $\gamma_{cu} = 1.5/\eta$ on Su, $\gamma_{c'} = \gamma_{\varphi'} = 1.3/\eta$ on c′ and tan φ′, and $\gamma_Q = k \cdot \gamma_d$ on the variable loads, with $k$ the field γQ / γd and $\gamma_d$ = 0.83, 0.91 and 1.0 in safety class 1, 2 and 3 ([Partial factors](/docs/tutorials/partial-factors)).
+The result card shows F with three decimals, labeled **Minimum factor of safety**. The page computes F on characteristic values: the strengths and the loads as you typed them, without partial factors. Design values with partial factors are for the [app](/docs/analysis#partial-factors) and the [Python package](/docs/python).
 
 Under F: the method, the critical surface's entry and exit points, the surface (a circle's center and radius) and the number of surfaces searched. The drawing shows the critical surface in red with its slices.
 

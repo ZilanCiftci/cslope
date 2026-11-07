@@ -11,10 +11,6 @@
     "fos": 1.1289472196752508,
     "fosLabel": "factor of safety"
   },
-  "clay-3m-design-sk2": {
-    "fos": 0.7264745931477797,
-    "fosLabel": "over-design factor"
-  },
   "clay-increasing": {
     "fos": 1.0967299049730723,
     "fosLabel": "factor of safety"
@@ -35,9 +31,9 @@
     "fos": 1.151655174429099,
     "fosLabel": "factor of safety"
   },
-  "three-layers-design-sk3": {
-    "fos": 0.7017334280942565,
-    "fosLabel": "over-design factor"
+  "three-layers": {
+    "fos": 1.1263194259080052,
+    "fosLabel": "factor of safety"
   },
   "clay-3m-ponded": {
     "fos": 1.6507927799434192,

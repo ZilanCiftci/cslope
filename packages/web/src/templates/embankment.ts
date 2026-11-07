@@ -3,9 +3,8 @@
  * horizontal layers (as in the excavation); the embankment is a drained
  * fill of height h with a crest of width B and both sides 1:n; the ground
  * water is a level; a load may stand on the crest. F is a factor of safety
- * on characteristic values, or an over-design factor on design values with
- * Swedish partial factors from the safety class (B4). No strength has a
- * default (B5).
+ * on characteristic values (design values with partial factors are for the
+ * app and Python). No strength has a default (B5).
  *
  * Geometry (x to the right, y up, m; the slope slides to the right):
  *
@@ -37,7 +36,6 @@ import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";
 import {
   addLayers,
-  DESIGN_PARAMETERS,
   EXTENT_FACTOR,
   FILL_PARAMETERS,
   fmt,
@@ -46,14 +44,12 @@ import {
   MIN_LAYER_THICKNESS,
   shallowBaseNote,
   p,
-  partialFactorsOf,
   Problems,
   SLOPE,
   WATER_LEVEL,
   type FieldProblem,
   type Fill,
   type Layer,
-  type Values,
 } from "./common";
 import type { Template } from "./types";
 
@@ -76,7 +72,6 @@ export interface EmbankmentParams {
   waterLevel: number | null;
   /** Water above the ground stands beside the embankment as ponded (free) water; not set: it seeps out of the faces. */
   ponded?: boolean;
-  values: Values;
 }
 
 /** The parameters, with their bounds: the form renders from these. */
@@ -89,7 +84,6 @@ export const EMBANKMENT_PARAMETERS = {
   waterLevel: WATER_LEVEL,
   fill: FILL_PARAMETERS,
   layer: LAYER_PARAMETERS,
-  design: DESIGN_PARAMETERS,
 } satisfies Template<EmbankmentParams>["params"];
 
 export const EMBANKMENT_FILL_NAME = "Embankment";
@@ -161,7 +155,6 @@ export function embankmentFieldProblems(params: EmbankmentParams): FieldProblem[
     if (params.waterLevel > crest) out.add("waterLevel", `The ground-water level must not be above the crest (${fmt(crest)} m).`);
   }
   out.layers(params.layers, params.groundLevel, { reserved: { name: EMBANKMENT_FILL_NAME, what: "the embankment's material" } });
-  out.values(params.values);
   return out.list;
 }
 
@@ -223,8 +216,7 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel, params.ponded === true);
   // Entry on the embankment, from the far toe to the crest's edge; exit from the crest's edge on: the face, the toe, the ground.
   d.searchLimits([g.farToe, 0], [0, g.right]);
-  const factors = partialFactorsOf(params.values);
-  return d.toDocument(factors ? { partialFactors: factors } : {});
+  return d.toDocument();
 }
 
 export const embankmentTemplate: Template<EmbankmentParams> = {

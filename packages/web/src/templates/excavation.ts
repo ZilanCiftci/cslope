@@ -3,9 +3,9 @@
  * ground is level, in horizontal layers; the excavation has a slope 1:n
  * and a flat bottom; the ground water is a level; a haul road (a fill
  * with an optional traffic load, decision B3) may stand behind the crest.
- * F is a factor of safety on characteristic values, or an over-design
- * factor on design values with Swedish partial factors from the safety
- * class (B4). No strength has a default (B5).
+ * F is a factor of safety on characteristic values (design values with
+ * partial factors are for the app and Python). No strength has a default
+ * (B5).
  *
  * Geometry (x to the right, y up, m; the slope slides to the right):
  *
@@ -46,7 +46,6 @@ import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";
 import {
   addLayers,
-  DESIGN_PARAMETERS,
   EXTENT_FACTOR,
   FILL_PARAMETERS,
   fmt,
@@ -55,19 +54,17 @@ import {
   MIN_LAYER_THICKNESS,
   shallowBaseNote,
   p,
-  partialFactorsOf,
   Problems,
   SLOPE,
   WATER_LEVEL,
   type FieldProblem,
   type Fill,
   type Layer,
-  type Values,
 } from "./common";
 import type { Template } from "./types";
 
-export type { FieldProblem, Fill, Layer, LayerKind, LayerMaterial, ParameterDescriptionLike, Values } from "./common";
-export { EXTENT_FACTOR, MIN_LAYER_THICKNESS, partialFactorsOf } from "./common";
+export type { FieldProblem, Fill, Layer, LayerKind, LayerMaterial, ParameterDescriptionLike } from "./common";
+export { EXTENT_FACTOR, MIN_LAYER_THICKNESS } from "./common";
 
 export interface Road {
   /** From the crest to the near edge of the road's top, where the load starts (m). */
@@ -102,7 +99,6 @@ export interface ExcavationParams {
   /** Water above the ground stands in the excavation as ponded (free) water; not set: the level is cut at the ground. */
   ponded?: boolean;
   road: Road | null;
-  values: Values;
 }
 
 /** The parameters, with their bounds: the form renders from these. */
@@ -131,7 +127,6 @@ export const EXCAVATION_PARAMETERS = {
     ...FILL_PARAMETERS,
     trafficLoad: p("trafficLoad", "Traffic load q (kPa)", "kPa", 0, Infinity, 1, "A vertical load over the road's width, a variable load; leave out for none.", { typical: [0, 50] }),
   },
-  design: DESIGN_PARAMETERS,
 } satisfies Template<ExcavationParams>["params"];
 
 /** The sides of the road's fill: horizontal per vertical. */
@@ -211,7 +206,6 @@ export function excavationFieldProblems(params: ExcavationParams): FieldProblem[
     out.fill(r.fill, "road", where);
     if (r.trafficLoad !== null) out.check("road.trafficLoad", r.trafficLoad, P.road.trafficLoad, where);
   }
-  out.values(params.values);
   return out.list;
 }
 
@@ -346,8 +340,7 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   // Entry behind the crest, exit from the crest on: the face or the bottom (in a trench, up to its far end).
   d.searchLimits([left, 0], [0, trench ? trench.bottomEnd : right]);
 
-  const factors = partialFactorsOf(params.values);
-  return d.toDocument(factors ? { partialFactors: factors } : {});
+  return d.toDocument();
 }
 
 export const excavationTemplate: Template<ExcavationParams> = {

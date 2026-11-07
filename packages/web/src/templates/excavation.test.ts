@@ -1,17 +1,16 @@
 // @vitest-environment node
 /**
- * The excavation template: the geometry rules, the thirteen named sets against
+ * The excavation template: the geometry rules, the twelve named sets against
  * their pinned F and their committed fixtures, and the monotonic checks
  * (F falls with a deeper excavation, a lower Su and the road).
  */
 import { beforeAll, describe, expect, it } from "vitest";
-import { initEngine, publicDefaultOptions, swedishPartialFactors as engineFactors, validateDefinition } from "@cslope/engine";
+import { initEngine, publicDefaultOptions, validateDefinition } from "@cslope/engine";
 import { dumps } from "../engine/document";
 import { APP_OPTIONS } from "./builder";
 import { EXCAVATION_EXAMPLES } from "./excavation-examples";
 import { excavationDocument, excavationFieldProblems, excavationNotes, excavationProblems, excavationTemplate, geometry, type ExcavationParams } from "./excavation";
 import { regionCount } from "./regions";
-import { swedishPartialFactors } from "./partial-factors";
 import { runDocument } from "./run-document";
 import type { AnalysisDocument } from "../engine/document";
 
@@ -234,12 +233,10 @@ describe("the geometry rules", () => {
     expect(geometry({ ...base, road: { ...road, distanceFromCrest: 1.3 } }).road?.nearToe).toBeCloseTo(-0.1, 9);
   });
 
-  it("uses the app's options without a tension crack, with the partial factors of the safety class on design values", () => {
-    const doc = excavationDocument(EXCAVATION_EXAMPLES["clay-road-design-sk2"]);
-    expect(doc.options).toEqual({
-      ...APP_OPTIONS,
-      partialFactors: { cu: 1.5, cohesion: 1.3, tanPhi: 1.3, variableLoad: 1.183, basis: { safetyClass: 2, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 } },
-    });
+  it("uses the app's options without a tension crack, on characteristic values (no partial factors)", () => {
+    const doc = excavationDocument(EXCAVATION_EXAMPLES["clay-road"]);
+    expect(doc.options).toEqual(APP_OPTIONS);
+    expect(doc.options).not.toHaveProperty("partialFactors");
     expect(excavationDocument(base).options).toEqual(APP_OPTIONS);
     expect(doc.format).toBe("cslope-analysis");
     expect(doc.formatVersion).toBe(1);
@@ -263,7 +260,6 @@ describe("the geometry rules", () => {
       "Layer 2: the bottom level 5.03 is within 0.05 m of the excavation bottom; move it.",
       "Layer 3: φ′ must be at least 0° and less than 90°.",
     ]);
-    expect(excavationProblems({ ...base, values: { basis: "design", safetyClass: 2, etaCu: 0, etaDrained: 1, variableLoadBase: 1.3 } })).toEqual(["η undrained must be at least 0.1."]);
     expect(() => excavationDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
   });
 
@@ -275,7 +271,6 @@ describe("the geometry rules", () => {
         { bottomLevel: -10, material: { kind: "drained", gamma: 16, c: 1, phi: 90 } },
       ),
       road: { distanceFromCrest: 2, width: 1, height: 1, fill: { gamma: 19, c: 0, phi: 35 }, trafficLoad: null },
-      values: { basis: "design", safetyClass: 4 as never, etaCu: 1, etaDrained: 1, variableLoadBase: 1.3 },
     };
     expect(excavationFieldProblems(params).map((p) => p.field)).toEqual([
       "layers.0.bottomLevel",
@@ -283,7 +278,6 @@ describe("the geometry rules", () => {
       "layers.1.phi",
       "layers.0.name",
       "road.width",
-      "values.safetyClass",
     ]);
     expect(excavationFieldProblems(params).map((p) => p.general ?? p.message)).toEqual(excavationProblems(params));
     // At the field, the bounds alone: the field's label and layer are beside it.
@@ -308,26 +302,12 @@ describe("the engine's defaults, computed here", () => {
     const pub = publicDefaultOptions();
     for (const [k, v] of Object.entries(pub)) expect(APP_OPTIONS[k as keyof typeof APP_OPTIONS], k).toEqual(v);
   });
-
-  it("forms the Swedish partial factors as the engine does", async () => {
-    await initEngine();
-    for (const safetyClass of [1, 2, 3] as const) {
-      for (const [etaCu, etaDrained, variableLoadBase] of [
-        [1, 1, 1.3],
-        [0.9, 1.1, 1.4],
-        [0.75, 0.85, 1],
-      ]) {
-        const basis = { safetyClass, etaCu, etaDrained, variableLoadBase };
-        expect(swedishPartialFactors(basis)).toEqual(engineFactors(basis));
-      }
-    }
-  });
 });
 
-describe("the thirteen named sets", () => {
+describe("the twelve named sets", () => {
   const names = Object.keys(EXCAVATION_EXAMPLES);
-  it("are thirteen, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(13);
+  it("are twelve, with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(12);
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 
@@ -347,10 +327,8 @@ describe("the thirteen named sets", () => {
     });
   }
 
-  it("say what F is: a factor of safety on characteristic values, an over-design factor on design values", () => {
-    expect(expected["clay-road"].fosLabel).toBe("factor of safety");
-    expect(expected["clay-road-design-sk2"].fosLabel).toBe("over-design factor");
-    expect(expected["clay-road-design-sk2"].fos).toBeLessThan(expected["clay-road"].fos);
+  it("say what F is: a factor of safety on characteristic values, for every set", () => {
+    for (const name of names) expect(expected[name].fosLabel, name).toBe("factor of safety");
   });
 });
 
@@ -434,7 +412,6 @@ describe("a weak layer in the face", () => {
       ],
       waterLevel: null,
       road: null,
-      values: { basis: "characteristic" },
     };
     const { result, summary } = await runDocument(excavationDocument(params));
     expect(summary.fos!).toBeLessThan(1.4);

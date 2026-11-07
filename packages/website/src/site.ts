@@ -11,16 +11,15 @@ export const SITE = {
   app: "https://app.cslope.com",
   /**
    * A filled-in section on app.cslope.com, opened from the home page: the
-   * excavation template, a crust over clay with a haul road, on design
-   * values (the web app's smoke test, FILLED in packages/web/scripts/smoke.ts).
+   * excavation template, a crust over clay with a haul road (the web app's
+   * smoke test, FILLED in packages/web/scripts/smoke.ts).
    * The page's screenshot is captured at this link (scripts/capture-web.ts).
    */
   appExample:
     "https://app.cslope.com/?ground=0&H=4&slope=2&water=-1&layers=2" +
     "&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.c=2&layer1.phi=32" +
     "&layer2.name=Clay&layer2.kind=undrained-increasing&layer2.bottomLevel=-20&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
-    "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
-    "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3",
+    "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20",
   company: { name: "Ibirico", url: "https://ibirico.se" },
   licence: "MIT",
 } as const;

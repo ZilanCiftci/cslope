@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { regionCount } from "./regions";
 import { EXCAVATION_PARAMETERS as P, MIN_LAYER_THICKNESS, RECOMMENDED_DEPTH, excavationDocument, excavationNotes, excavationProblems, type ExcavationParams, type Layer } from "./excavation";
-import { material, random, randomValues, value } from "./random-params";
+import { material, random, value } from "./random-params";
 import { bottomLevels } from "../form/layers";
 
 /**
@@ -46,7 +46,6 @@ function randomParams(rnd: () => number): ExcavationParams {
     layers: [{ bottomLevel: deepest, material: material(rnd) }],
     waterLevel: null,
     road,
-    values: { basis: "characteristic" },
   };
   const thin = MIN_LAYER_THICKNESS;
   const cm = (v: number) => Math.ceil(Number((v * 100).toFixed(6))) / 100;
@@ -68,8 +67,7 @@ function randomParams(rnd: () => number): ExcavationParams {
   const layers: Layer[] = bottomLevels(groundLevel, ts).map((bottomLevel, i) => (i === ts.length - 1 ? { ...shape.layers[0], bottomLevel } : { bottomLevel, material: material(rnd) }));
   // The water anywhere from well below the base to above the ground (and the road).
   const waterLevel = rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * excavationDepth, groundLevel + 3) : null;
-  const values = randomValues(rnd);
-  return { ...shape, layers, waterLevel, values, ...(waterLevel !== null && rnd() < 0.3 ? { ponded: true } : {}) };
+  return { ...shape, layers, waterLevel, ...(waterLevel !== null && rnd() < 0.3 ? { ponded: true } : {}) };
 }
 
 describe("random parameter sets within the bounds", () => {
@@ -77,7 +75,7 @@ describe("random parameter sets within the bounds", () => {
     await initEngine();
     const seed = 20261106;
     const rnd = random(seed);
-    const seen = { trench: 0, road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
+    const seen = { trench: 0, road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, warnings: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -102,7 +100,6 @@ describe("random parameter sets within the bounds", () => {
       else seen.deepBase++;
       if (params.waterLevel !== null && params.waterLevel > params.groundLevel) seen.waterAboveGround++;
       if (params.layers.some((l, k) => (k === 0 ? params.groundLevel : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
-      if (params.values.basis === "design") seen.design++;
     }
     // The cases the issue names all came up.
     for (const [what, count] of Object.entries(seen)) expect(count, what).toBeGreaterThan(what === "warnings" ? -1 : 10);

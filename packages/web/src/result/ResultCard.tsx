@@ -1,6 +1,6 @@
 /**
- * The result card: F with the engine's own label and basis (one value at a
- * time, decision B4), the method, the critical surface's entry and exit,
+ * The result card: F, a factor of safety on characteristic values, with
+ * the engine's own label, the method, the critical surface's entry and exit,
  * the surfaces searched, and the engine's warnings as it gives them; then
  * the commands (run, cancel, the link, the downloads) and a note that this
  * is a template calculation, not a design.
@@ -78,7 +78,6 @@ function Row({ term, children }: { term: string; children: ReactNode }) {
 }
 
 function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
-  const classText = summary.partialFactors?.basis ? `, safety class ${summary.partialFactors.basis.safetyClass}` : "";
   const cs = summary.criticalSurface;
   return (
     <div className={dim ? "opacity-50" : undefined}>
@@ -86,10 +85,7 @@ function Value({ summary, dim }: { summary: ResultSummary; dim?: boolean }) {
       <p className="text-4xl font-semibold tracking-tight tabular">
         F {summary.fosText}
       </p>
-      <p className="mt-1 text-sm">
-        {summary.fosHeading}
-        {classText}
-      </p>
+      <p className="mt-1 text-sm">{summary.fosHeading}</p>
       <dl className="mt-3 space-y-1 text-sm">
         <Row term="Method">{summary.method}</Row>
         {cs && <Row term="Entry, exit">{cs.entryExitText.replace(" / ", " and ")}</Row>}
