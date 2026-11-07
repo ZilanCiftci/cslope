@@ -1,22 +1,20 @@
 /**
- * The form's state: the excavation template's parameters as the user typed
- * them (text), turned into a parameter set with the problems of each field,
- * and written to and read from the page's address, so that a link opens the
- * same section. Pure TypeScript, without React.
+ * The form's state: a template's parameters as the user typed them (text),
+ * turned into a parameter set with the problems of each field, and written
+ * to and read from the page's address, so that a link opens the same
+ * section of the same template. Pure TypeScript, without React. What each
+ * template's fields are is in specs.ts; the layers and the safety values
+ * are the same for every template.
  *
  * Strengths and unit weights start empty (decision B5); so do the safety
  * class and η (they are the engineer's choice). The geometry starts at a
  * plain section that the drawing can show.
  */
-import {
-  excavationFieldProblems,
-  EXCAVATION_PARAMETERS,
-  type ExcavationParams,
-  type Layer,
-  type LayerKind,
-  type LayerMaterial,
-} from "../templates/excavation";
 import type { SafetyClass } from "@cslope/engine";
+import { LAYER_PARAMETERS, type Layer, type LayerKind, type LayerMaterial, type Values } from "../templates/common";
+import { groupsOf, specOf, type GroupSpec, type TemplateId } from "./specs";
+
+export type { TemplateId } from "./specs";
 
 export interface LayerDraft {
   /** A key that stays with the layer while others are added or removed (not a parameter). */
@@ -32,28 +30,16 @@ export interface LayerDraft {
   phi: string;
 }
 
-export interface RoadDraft {
-  distanceFromCrest: string;
-  width: string;
-  height: string;
-  gamma: string;
-  gammaSat: string;
-  c: string;
-  phi: string;
-  trafficLoad: string;
-}
-
 export type Basis = "characteristic" | "design";
 
 export interface Draft {
-  groundLevel: string;
-  excavationDepth: string;
-  slope: string;
-  bottomWidth: string;
-  tensionCrackDepth: string;
-  waterLevel: string;
+  /** The template's id: "excavation", "embankment". */
+  template: TemplateId;
+  /** The template's own fields, by the keys its problems use ("groundLevel", "road.width", "fill.c"). */
+  fields: Record<string, string>;
+  /** The optional groups switched on ("road"). */
+  on: string[];
   layers: LayerDraft[];
-  road: RoadDraft | null;
   basis: Basis;
   safetyClass: string;
   etaCu: string;
@@ -70,23 +56,36 @@ export const LAYER_KINDS: { kind: LayerKind; label: string }[] = [
 ];
 
 /** The fields of a layer of each kind, in the form's order. */
-export const LAYER_FIELDS: Record<LayerKind, (keyof typeof EXCAVATION_PARAMETERS.layer)[]> = {
+export const LAYER_FIELDS: Record<LayerKind, (keyof typeof LAYER_PARAMETERS)[]> = {
   undrained: ["gamma", "su"],
   "undrained-increasing": ["gamma", "su", "suRate"],
   drained: ["gamma", "gammaSat", "c", "phi"],
   impenetrable: ["gamma"],
 };
 
+const VALUE_KEYS = ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const;
+
 /** A new layer's bottom: 5 m below the last one's, within the bounds; empty when that one has none. */
 export function nextBottomLevel(layers: LayerDraft[]): string {
   const last = parseNumber(layers[layers.length - 1]?.bottomLevel ?? "");
   if (last === null || !Number.isFinite(last)) return "";
-  const { min, max } = EXCAVATION_PARAMETERS.layer.bottomLevel;
+  const { min, max } = LAYER_PARAMETERS.bottomLevel;
   return String(Math.min(max, Math.max(min, Math.round((last - 5) * 10) / 10)));
 }
 
-/** Fields that may be left empty (and what empty means is in their description). */
-export const OPTIONAL_FIELDS = new Set(["bottomWidth", "tensionCrackDepth", "waterLevel", "gammaSat", "trafficLoad"]);
+/** Fields that may be left empty, by their last key, with what empty means (the placeholder). */
+export const OPTIONAL_FIELDS: Record<string, string> = {
+  bottomWidth: "As needed",
+  tensionCrackDepth: "None",
+  waterLevel: "Dry",
+  gammaSat: "As γ",
+  trafficLoad: "None",
+  crestLoad: "None",
+};
+
+const lastKey = (field: string) => field.slice(field.lastIndexOf(".") + 1);
+/** What an empty optional field means, or undefined for a required field. */
+export const emptyText = (field: string): string | undefined => OPTIONAL_FIELDS[lastKey(field)];
 
 let layerKeys = 0;
 
@@ -94,28 +93,29 @@ export function emptyLayer(bottomLevel = ""): LayerDraft {
   return { key: `layer-${++layerKeys}`, name: "", kind: "undrained", bottomLevel, gamma: "", gammaSat: "", su: "", suRate: "", c: "", phi: "" };
 }
 
-/** A road as it appears when switched on: its size, without the fill's strength. */
-export function newRoad(): RoadDraft {
-  return { distanceFromCrest: "2", width: "4", height: "0.5", gamma: "", gammaSat: "", c: "", phi: "", trafficLoad: "" };
-}
-
-/** The form on a first visit. */
-export function initialDraft(): Draft {
+/** The form on a first visit of a template. */
+export function initialDraft(template: TemplateId = "excavation"): Draft {
+  const spec = specOf(template);
   return {
-    groundLevel: "0",
-    excavationDepth: "3",
-    slope: "1.5",
-    bottomWidth: "",
-    tensionCrackDepth: "",
-    waterLevel: "",
+    template: spec.template.id as TemplateId,
+    fields: { ...spec.initial },
+    on: [],
     layers: [{ ...emptyLayer("-15"), name: "Clay" }],
-    road: null,
     basis: "characteristic",
     safetyClass: "",
     etaCu: "",
     etaDrained: "",
     variableLoadBase: "",
   };
+}
+
+/** The draft with an optional group switched on (its fields from their start) or off. */
+export function withGroup(draft: Draft, id: string, on: boolean): Draft {
+  const group = groupsOf(specOf(draft.template)).find((g) => g.id === id);
+  if (!group?.toggle) return draft;
+  const fields = { ...draft.fields };
+  for (const k of group.keys) fields[k] = on ? (group.toggle.initial[k] ?? "") : "";
+  return { ...draft, fields, on: on ? [...new Set([...draft.on, id])] : draft.on.filter((g) => g !== id) };
 }
 
 /** A typed number: null when empty, NaN when not a number. A decimal comma is read as a point. */
@@ -127,8 +127,9 @@ export function parseNumber(text: string): number | null {
 
 /** What the form makes of a draft. */
 export interface FormState {
-  /** The parameter set (empty fields are NaN in it): to build when `ready`. */
-  params: ExcavationParams;
+  /** The template's parameter set (empty fields are NaN in it): to build when `ready`. */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  params: any;
   /** The problems of fields the user filled in, by field ("layers.0.su"). */
   errors: Map<string, string>;
   /** Fields that must be filled in and are empty. */
@@ -137,82 +138,76 @@ export interface FormState {
   ready: boolean;
 }
 
-/** The fields of a draft, as the keys `excavationFieldProblems` uses, with their text. */
+const shownGroup = (draft: Draft) => (g: GroupSpec) => !g.toggle || draft.on.includes(g.id);
+
+/** The fields the form shows, as the keys of the template's problems, with their text. */
 export function draftFields(draft: Draft): [string, string][] {
+  const spec = specOf(draft.template);
   const out: [string, string][] = [];
-  for (const k of ["groundLevel", "excavationDepth", "slope", "bottomWidth", "tensionCrackDepth", "waterLevel"] as const) out.push([k, draft[k]]);
+  const group = (g: GroupSpec) => g.keys.forEach((k) => out.push([k, draft.fields[k] ?? ""]));
+  spec.before.filter(shownGroup(draft)).forEach(group);
   draft.layers.forEach((layer, i) => {
     out.push([`layers.${i}.bottomLevel`, layer.bottomLevel]);
     for (const k of LAYER_FIELDS[layer.kind]) out.push([`layers.${i}.${k}`, layer[k]]);
   });
-  if (draft.road) for (const [k, v] of Object.entries(draft.road)) out.push([`road.${k}`, v]);
-  if (draft.basis === "design") for (const k of ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const) out.push([`values.${k}`, draft[k]]);
+  spec.after.filter(shownGroup(draft)).forEach(group);
+  if (draft.basis === "design") for (const k of VALUE_KEYS) out.push([`values.${k}`, draft[k]]);
   return out;
 }
 
-const lastKey = (field: string) => field.slice(field.lastIndexOf(".") + 1);
+const required = (text: string) => parseNumber(text) ?? NaN;
+
+function layerOf(l: LayerDraft): Layer {
+  const gamma = required(l.gamma);
+  let material: LayerMaterial;
+  switch (l.kind) {
+    case "undrained":
+      material = { kind: "undrained", gamma, su: required(l.su) };
+      break;
+    case "undrained-increasing":
+      material = { kind: "undrained-increasing", gamma, su: required(l.su), suRate: required(l.suRate) };
+      break;
+    case "drained": {
+      const gammaSat = parseNumber(l.gammaSat);
+      material = { kind: "drained", gamma, c: required(l.c), phi: required(l.phi), ...(gammaSat === null ? {} : { gammaSat }) };
+      break;
+    }
+    case "impenetrable":
+      material = { kind: "impenetrable", gamma };
+      break;
+  }
+  return { ...(l.name.trim() ? { name: l.name.trim() } : {}), bottomLevel: required(l.bottomLevel), material };
+}
+
+function valuesOf(draft: Draft): Values {
+  return draft.basis === "design"
+    ? {
+        basis: "design",
+        safetyClass: required(draft.safetyClass) as SafetyClass,
+        etaCu: required(draft.etaCu),
+        etaDrained: required(draft.etaDrained),
+        variableLoadBase: required(draft.variableLoadBase),
+      }
+    : { basis: "characteristic" };
+}
 
 export function formState(draft: Draft): FormState {
-  const num = (text: string) => parseNumber(text) ?? NaN;
-  const opt = (text: string) => parseNumber(text);
-  const layers: Layer[] = draft.layers.map((l) => {
-    const gamma = num(l.gamma);
-    let material: LayerMaterial;
-    switch (l.kind) {
-      case "undrained":
-        material = { kind: "undrained", gamma, su: num(l.su) };
-        break;
-      case "undrained-increasing":
-        material = { kind: "undrained-increasing", gamma, su: num(l.su), suRate: num(l.suRate) };
-        break;
-      case "drained": {
-        const gammaSat = opt(l.gammaSat);
-        material = { kind: "drained", gamma, c: num(l.c), phi: num(l.phi), ...(gammaSat === null ? {} : { gammaSat }) };
-        break;
-      }
-      case "impenetrable":
-        material = { kind: "impenetrable", gamma };
-        break;
-    }
-    return { ...(l.name.trim() ? { name: l.name.trim() } : {}), bottomLevel: num(l.bottomLevel), material };
+  const spec = specOf(draft.template);
+  const params = spec.params({
+    num: (k) => required(draft.fields[k] ?? ""),
+    opt: (k) => parseNumber(draft.fields[k] ?? ""),
+    on: new Set(draft.on),
+    layers: draft.layers.map(layerOf),
+    values: valuesOf(draft),
   });
-  const r = draft.road;
-  const tension = opt(draft.tensionCrackDepth);
-  const params: ExcavationParams = {
-    groundLevel: num(draft.groundLevel),
-    excavationDepth: num(draft.excavationDepth),
-    slope: num(draft.slope),
-    bottomWidth: opt(draft.bottomWidth),
-    layers,
-    waterLevel: opt(draft.waterLevel),
-    road: r && {
-      distanceFromCrest: num(r.distanceFromCrest),
-      width: num(r.width),
-      height: num(r.height),
-      fill: { gamma: num(r.gamma), c: num(r.c), phi: num(r.phi), ...(opt(r.gammaSat) === null ? {} : { gammaSat: opt(r.gammaSat)! }) },
-      trafficLoad: opt(r.trafficLoad),
-    },
-    values:
-      draft.basis === "design"
-        ? {
-            basis: "design",
-            safetyClass: num(draft.safetyClass) as SafetyClass,
-            etaCu: num(draft.etaCu),
-            etaDrained: num(draft.etaDrained),
-            variableLoadBase: num(draft.variableLoadBase),
-          }
-        : { basis: "characteristic" },
-    ...(tension === null ? {} : { tensionCrackDepth: tension }),
-  };
-
   const errors = new Map<string, string>();
   const missing: string[] = [];
   for (const [field, text] of draftFields(draft)) {
     const v = parseNumber(text);
-    if (v === null && !OPTIONAL_FIELDS.has(lastKey(field))) missing.push(field);
+    if (v === null && emptyText(field) === undefined) missing.push(field);
     else if (v !== null && Number.isNaN(v)) errors.set(field, "Enter a number, such as 1.5.");
   }
-  for (const p of excavationFieldProblems(params)) {
+  for (const p of spec.template.fieldProblems(params)) {
     if (missing.includes(p.field) || errors.has(p.field)) continue;
     errors.set(p.field, p.message);
   }
@@ -222,18 +217,20 @@ export function formState(draft: Draft): FormState {
 // ── The address ────────────────────────────────────────────────────────
 
 /**
- * The draft as the query of the page's address: one key per field that is
- * filled in ("H=4&slope=1.5&layer1.kind=undrained&layer1.su=20"), so that a
- * link is readable and opens the same section. Nothing is sent anywhere.
+ * The draft as the query of the page's address: the template ("t") and
+ * one key per field that is filled in ("t=excavation&H=4&slope=1.5&
+ * layer1.kind=undrained&layer1.su=20"), so that a link is readable and
+ * opens the same section. Nothing is sent anywhere.
  */
-const SHORT: Record<string, string> = { groundLevel: "ground", excavationDepth: "H", waterLevel: "water", tensionCrackDepth: "crack" };
-
 export function toQuery(draft: Draft): string {
+  const spec = specOf(draft.template);
   const q = new URLSearchParams();
-  const put = (key: string, value: string) => {
-    if (value.trim()) q.set(key, value.trim());
+  const put = (key: string, value: string | undefined) => {
+    if (value?.trim()) q.set(key, value.trim());
   };
-  for (const k of ["groundLevel", "excavationDepth", "slope", "bottomWidth", "tensionCrackDepth", "waterLevel"] as const) put(SHORT[k] ?? k, draft[k]);
+  q.set("t", spec.template.id);
+  const groups = groupsOf(spec);
+  for (const g of groups.filter((g) => !g.toggle)) for (const k of g.keys) put(spec.short[k] ?? k, draft.fields[k]);
   q.set("layers", String(draft.layers.length));
   draft.layers.forEach((l, i) => {
     const p = `layer${i + 1}.`;
@@ -242,24 +239,36 @@ export function toQuery(draft: Draft): string {
     put(p + "bottomLevel", l.bottomLevel);
     for (const k of LAYER_FIELDS[l.kind]) put(p + k, l[k]);
   });
-  if (draft.road) {
-    q.set("road", "on");
-    for (const [k, v] of Object.entries(draft.road)) put(`road.${k}`, v);
+  for (const g of groups.filter((g) => g.toggle && draft.on.includes(g.id))) {
+    q.set(g.id, "on");
+    for (const k of g.keys) put(spec.short[k] ?? k, draft.fields[k]);
   }
   if (draft.basis === "design") {
     q.set("values", "design");
-    for (const k of ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const) put(k, draft[k]);
+    for (const k of VALUE_KEYS) put(k, draft[k]);
   }
   return q.toString();
 }
 
-/** The draft of an address's query; the first visit's draft when it has none. Unknown keys are ignored. */
+/**
+ * The draft of an address's query; the template's first visit when it has
+ * no fields. A query without "t" (an older link) is the excavation's.
+ * Unknown keys are ignored.
+ */
 export function fromQuery(search: string): Draft {
   const q = new URLSearchParams(search);
-  const draft = initialDraft();
+  const spec = specOf(q.get("t"));
+  const draft = initialDraft(spec.template.id as TemplateId);
   if (!q.has("layers")) return draft;
   const get = (key: string) => (q.get(key) ?? "").slice(0, 40);
-  for (const k of ["groundLevel", "excavationDepth", "slope", "bottomWidth", "tensionCrackDepth", "waterLevel"] as const) draft[k] = get(SHORT[k] ?? k);
+  draft.fields = {};
+  for (const g of groupsOf(spec)) {
+    if (g.toggle) {
+      if (q.get(g.id) !== "on") continue;
+      draft.on.push(g.id);
+    }
+    for (const k of g.keys) draft.fields[k] = get(spec.short[k] ?? k);
+  }
   const count = Math.max(1, Math.min(12, Math.floor(Number(q.get("layers"))) || 1));
   draft.layers = Array.from({ length: count }, (_, i) => {
     const p = `layer${i + 1}.`;
@@ -268,14 +277,9 @@ export function fromQuery(search: string): Draft {
     for (const k of LAYER_FIELDS[kind]) layer[k] = get(p + k);
     return layer;
   });
-  if (q.get("road") === "on") {
-    const road = newRoad();
-    for (const k of Object.keys(road) as (keyof RoadDraft)[]) road[k] = get(`road.${k}`);
-    draft.road = road;
-  }
   if (q.get("values") === "design") {
     draft.basis = "design";
-    for (const k of ["safetyClass", "etaCu", "etaDrained", "variableLoadBase"] as const) draft[k] = get(k);
+    for (const k of VALUE_KEYS) draft[k] = get(k);
     // "2.0" is class 2, which the form's buttons show as "2".
     const c = parseNumber(draft.safetyClass);
     if (c !== null && Number.isFinite(c)) draft.safetyClass = String(c);
@@ -283,17 +287,15 @@ export function fromQuery(search: string): Draft {
   return draft;
 }
 
-/** The draft of a parameter set (the form filled in with it). */
-export function draftOf(params: ExcavationParams): Draft {
+/** The draft of a template's parameter set (the form filled in with it). */
+export function draftOf(template: TemplateId, params: { layers: Layer[]; values: Values }): Draft {
   const t = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
   const v = params.values;
+  const { fields, on } = specOf(template).toFields(params);
   return {
-    groundLevel: t(params.groundLevel),
-    excavationDepth: t(params.excavationDepth),
-    slope: t(params.slope),
-    bottomWidth: t(params.bottomWidth),
-    tensionCrackDepth: t(params.tensionCrackDepth),
-    waterLevel: t(params.waterLevel),
+    template,
+    fields,
+    on,
     layers: params.layers.map((l) => {
       const m = l.material;
       return {
@@ -308,16 +310,6 @@ export function draftOf(params: ExcavationParams): Draft {
         phi: m.kind === "drained" ? t(m.phi) : "",
       };
     }),
-    road: params.road && {
-      distanceFromCrest: t(params.road.distanceFromCrest),
-      width: t(params.road.width),
-      height: t(params.road.height),
-      gamma: t(params.road.fill.gamma),
-      gammaSat: t(params.road.fill.gammaSat),
-      c: t(params.road.fill.c),
-      phi: t(params.road.fill.phi),
-      trafficLoad: t(params.road.trafficLoad),
-    },
     basis: v.basis,
     safetyClass: v.basis === "design" ? t(v.safetyClass) : "",
     etaCu: v.basis === "design" ? t(v.etaCu) : "",

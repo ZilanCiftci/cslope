@@ -4,12 +4,14 @@
   "definition": {
     "orientation": "ltr",
     "coordinates": [
-      [-30, -10],
-      [-30, 10],
+      [-45, -20],
+      [-45, -10],
+      [-45, 10],
       [0, 10],
       [10, 5],
-      [40, 5],
-      [40, -10]
+      [55, 5],
+      [55, -10],
+      [55, -20]
     ],
     "materials": [
       {
@@ -20,12 +22,31 @@
           "unitWeightSat": 16,
           "undrainedShearStrength": 25
         }
+      },
+      {
+        "name": "Layer 2",
+        "model": {
+          "kind": "impenetrable",
+          "unitWeight": 24
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-45, -10],
+          [55, -10]
+        ]
       }
     ],
     "regionAssignments": [
       {
-        "point": [-29, 0],
+        "point": [-44, 0],
         "materialName": "Layer 1"
+      },
+      {
+        "point": [-44, -15],
+        "materialName": "Layer 2"
       }
     ],
     "waterTable": {
@@ -34,10 +55,10 @@
       "freeWater": false
     },
     "analysisLimits": {
-      "entryLeftX": -30,
+      "entryLeftX": -45,
       "entryRightX": 0,
       "exitLeftX": 0,
-      "exitRightX": 40
+      "exitRightX": 55
     }
   },
   "options": {

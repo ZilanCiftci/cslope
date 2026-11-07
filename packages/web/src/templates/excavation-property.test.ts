@@ -1,58 +1,15 @@
 // @vitest-environment node
 /**
  * Random parameter sets within the bounds (thin layers, a road at the
- * crest, an excavation deeper than every layer, water above the ground):
+ * crest, a base shallower than recommended, water above the ground):
  * every set `excavationProblems` accepts gives a document the engine
  * validates without an error. A failure prints the seed and the set.
  */
 import { describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { regionCount } from "./regions";
-import {
-  EXCAVATION_PARAMETERS as P,
-  MIN_LAYER_THICKNESS,
-  excavationDocument,
-  excavationProblems,
-  type ExcavationParams,
-  type Layer,
-  type LayerMaterial,
-  type ParameterDescriptionLike,
-} from "./excavation";
-
-/** mulberry32: a small seeded generator, so that a failure can be rerun. */
-function random(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** A value within a parameter's bounds, on its step. */
-function value(rnd: () => number, d: ParameterDescriptionLike, min = d.min, max = d.max): number {
-  const steps = Math.floor((max - min) / d.step);
-  const v = min + Math.floor(rnd() * (steps + 1)) * d.step;
-  return Number(Math.min(max, v).toFixed(6));
-}
-
-const pick = <T>(rnd: () => number, items: readonly T[]): T => items[Math.floor(rnd() * items.length)];
-
-function material(rnd: () => number): LayerMaterial {
-  const gamma = value(rnd, P.layer.gamma);
-  switch (pick(rnd, ["undrained", "undrained-increasing", "drained", "impenetrable"] as const)) {
-    case "undrained":
-      return { kind: "undrained", gamma, su: value(rnd, P.layer.su) };
-    case "undrained-increasing":
-      return { kind: "undrained-increasing", gamma, su: value(rnd, P.layer.su), suRate: value(rnd, P.layer.suRate) };
-    case "drained":
-      return { kind: "drained", gamma, gammaSat: rnd() < 0.5 ? value(rnd, P.layer.gammaSat) : undefined, c: value(rnd, P.layer.c), phi: value(rnd, P.layer.phi) };
-    case "impenetrable":
-      return { kind: "impenetrable", gamma };
-  }
-}
+import { EXCAVATION_PARAMETERS as P, MIN_LAYER_THICKNESS, RECOMMENDED_DEPTH, excavationDocument, excavationNotes, excavationProblems, type ExcavationParams, type Layer } from "./excavation";
+import { material, random, randomValues, value } from "./random-params";
 
 /**
  * A parameter set within the bounds. The geometry is drawn first (the
@@ -60,7 +17,7 @@ function material(rnd: () => number): LayerMaterial {
  * the ground and the deepest layer, at least 5 cm apart
  * (MIN_LAYER_THICKNESS), mostly thin ones near the excavation.
  */
-export function randomParams(rnd: () => number): ExcavationParams {
+function randomParams(rnd: () => number): ExcavationParams {
   const groundLevel = value(rnd, P.groundLevel, -20, 100);
   const excavationDepth = value(rnd, P.excavationDepth);
   const bottom = groundLevel - excavationDepth;
@@ -75,8 +32,10 @@ export function randomParams(rnd: () => number): ExcavationParams {
           trafficLoad: rnd() < 0.7 ? value(rnd, P.road.trafficLoad) : null,
         }
       : null;
-  // The deepest layer: above the bottom now and then (an excavation deeper than every layer).
-  const deepest = Math.max(P.layer.bottomLevel.min, Number((groundLevel - Math.max(0.5, rnd() * 5 * excavationDepth)).toFixed(1)));
+  // The last layer's bottom (the model's base): mostly at or below the recommended 3H, now and then
+  // shallower (a note), but always below the excavation bottom.
+  const depth = rnd() < 0.85 ? RECOMMENDED_DEPTH * excavationDepth * (1 + rnd()) : excavationDepth + 0.1 + rnd() * (RECOMMENDED_DEPTH - 1) * excavationDepth;
+  const deepest = Math.max(P.layer.bottomLevel.min, Math.floor((groundLevel - depth) * 10) / 10);
   const shape: ExcavationParams = {
     groundLevel,
     excavationDepth,
@@ -104,16 +63,7 @@ export function randomParams(rnd: () => number): ExcavationParams {
   const layers: Layer[] = [...levels.map((bottomLevel) => ({ bottomLevel, material: material(rnd) })), shape.layers[0]];
   // The water anywhere from well below the base to above the ground (and the road).
   const waterLevel = rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * excavationDepth, groundLevel + 3) : null;
-  const values: ExcavationParams["values"] =
-    rnd() < 0.5
-      ? { basis: "characteristic" }
-      : {
-          basis: "design",
-          safetyClass: pick(rnd, [1, 2, 3] as const),
-          etaCu: value(rnd, P.design.etaCu),
-          etaDrained: value(rnd, P.design.etaDrained),
-          variableLoadBase: value(rnd, P.design.variableLoadBase),
-        };
+  const values = randomValues(rnd);
   const tensionCrackDepth = rnd() < 0.3 ? value(rnd, P.tensionCrackDepth, 0, 3) : undefined;
   return { ...shape, layers, waterLevel, values, tensionCrackDepth };
 }
@@ -123,7 +73,7 @@ describe("random parameter sets within the bounds", () => {
     await initEngine();
     const seed = 20261106;
     const rnd = random(seed);
-    const seen = { road: 0, roadAtCrest: 0, deeperThanLayers: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
+    const seen = { road: 0, roadAtCrest: 0, shallowBase: 0, deepBase: 0, waterAboveGround: 0, thin: 0, design: 0, warnings: 0 };
     for (let i = 0; i < 500; i++) {
       const params = randomParams(rnd);
       const where = `set ${i} of seed ${seed}: ${JSON.stringify(params)}`;
@@ -139,7 +89,10 @@ describe("random parameter sets within the bounds", () => {
       if (issues.length) seen.warnings++;
       if (params.road) seen.road++;
       if (params.road && params.road.distanceFromCrest === 0) seen.roadAtCrest++;
-      if (params.layers.every((l) => l.bottomLevel > params.groundLevel - params.excavationDepth)) seen.deeperThanLayers++;
+      const shallow = params.layers[params.layers.length - 1].bottomLevel > params.groundLevel - RECOMMENDED_DEPTH * params.excavationDepth + 1e-9;
+      expect(excavationNotes(params).some((n) => n.startsWith("The model ends")), where).toBe(shallow);
+      if (shallow) seen.shallowBase++;
+      else seen.deepBase++;
       if (params.waterLevel !== null && params.waterLevel > params.groundLevel) seen.waterAboveGround++;
       if (params.layers.some((l, k) => (k === 0 ? params.groundLevel : params.layers[k - 1].bottomLevel) - l.bottomLevel < 0.1)) seen.thin++;
       if (params.values.basis === "design") seen.design++;

@@ -33,6 +33,12 @@ export const FILLED =
   "&road=on&road.distanceFromCrest=2&road.width=4&road.height=0.5&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20" +
   "&values=design&safetyClass=2&etaCu=1&etaDrained=1&variableLoadBase=1.3";
 
+/** A filled-in embankment, as its link gives it ("t=embankment"): a crust over clay with a load on the crest. */
+export const EMBANKMENT =
+  "t=embankment&ground=0&h=3&B=10&slope=2&fill.gamma=20&fill.c=0&fill.phi=38&q=10&water=-1&layers=2" +
+  "&layer1.name=Crust&layer1.kind=drained&layer1.bottomLevel=-1.5&layer1.gamma=18&layer1.gammaSat=19&layer1.c=3&layer1.phi=30" +
+  "&layer2.name=Clay&layer2.kind=undrained&layer2.bottomLevel=-20&layer2.gamma=16&layer2.su=14";
+
 /** The value F of the result card, once it shows one ("F 0.872"). */
 const fValue = (page: Page) => page.locator("#result").getByText(/^F \d+\.\d{3}$/);
 
@@ -135,6 +141,23 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!/immutable/.test(wasm.headers["cache-control"] ?? "")) problems.push(`the engine's cache-control is "${wasm.headers["cache-control"]}", not immutable`);
     }
     await axe("with a result");
+
+    // The embankment from its link: its template is chosen, F shows with its label.
+    await page.goto(`${base}/?${EMBANKMENT}`, { waitUntil: "load" });
+    try {
+      if (!(await page.getByRole("heading", { level: 1, name: "Embankment on clay" }).count())) problems.push("the embankment's link does not open the embankment");
+      if ((await page.getByRole("button", { name: "Embankment on clay" }).getAttribute("aria-pressed")) !== "true") problems.push("the picker does not show the embankment as chosen");
+      await fValue(page).waitFor({ timeout: 30_000 });
+      const f = await fValue(page).textContent();
+      if (!(await page.locator("#result").getByText("Minimum factor of safety").count())) problems.push("the embankment's F shows without its label");
+      console.log(`  embankment: ${f}`);
+      await axe("on the embankment with a result");
+      await page.getByRole("button", { name: "Excavation in clay with a working road" }).click();
+      await page.getByRole("heading", { level: 1, name: "Excavation in clay with a working road" }).waitFor({ timeout: 5_000 });
+      await page.waitForFunction(() => new URLSearchParams(location.search).get("t") === "excavation", null, { timeout: 5_000 });
+    } catch (e) {
+      problems.push(`the embankment: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+    }
   } finally {
     page.off("console", onConsole);
     page.off("pageerror", onError);
@@ -168,11 +191,11 @@ async function checkAnalysis(page: Page, base: string): Promise<string[]> {
 }
 
 /** On a phone, the page does not scroll sideways. */
-async function checkPhone(browser: Browser, base: string, colorScheme: "light" | "dark"): Promise<string[]> {
+async function checkPhone(browser: Browser, base: string, colorScheme: "light" | "dark", query: string): Promise<string[]> {
   const problems: string[] = [];
   const context = await browser.newContext({ ...devices["iPhone 13"], colorScheme });
   const page = await context.newPage();
-  await page.goto(`${base}/?${FILLED}`, { waitUntil: "load" });
+  await page.goto(`${base}/?${query}`, { waitUntil: "load" });
   await fValue(page).waitFor({ timeout: 30_000 }).catch(() => problems.push("no result on the phone"));
   const bar = page.getByRole("complementary", { name: "Result summary" });
   if (!(await bar.isVisible())) problems.push("the result bar does not show on the phone");
@@ -212,7 +235,10 @@ async function main() {
     report("analysis", await checkAnalysis(await context.newPage(), server.url));
     report("/no-such-page", await checkNotFound(await context.newPage(), server.url));
     await context.close();
-    for (const colorScheme of ["light", "dark"] as const) report(`phone (${colorScheme})`, await checkPhone(browser, server.url, colorScheme));
+    for (const colorScheme of ["light", "dark"] as const) {
+      report(`phone (${colorScheme})`, await checkPhone(browser, server.url, colorScheme, FILLED));
+      report(`phone, embankment (${colorScheme})`, await checkPhone(browser, server.url, colorScheme, EMBANKMENT));
+    }
   } finally {
     await browser.close();
     await server.close();

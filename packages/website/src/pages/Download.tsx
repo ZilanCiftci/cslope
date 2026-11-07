@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Apple, Download as DownloadIcon, Monitor, Terminal } from "lucide-react";
+import { Apple, ArrowRight, Download as DownloadIcon, Globe, Monitor, Terminal } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { Section, SectionHeading } from "@/components/Section";
@@ -67,6 +67,25 @@ export function Download() {
             </div>
           </div>
           <div className="flex flex-col gap-4">
+            <div className="rounded-lg border bg-card p-5">
+              <div className="flex items-center gap-3">
+                <Globe className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+                <h2 className="font-medium">In the browser</h2>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Two templates, an excavation in clay with a working road and an embankment on clay, analyzed on
+                your own computer without installing anything.
+              </p>
+              <a
+                href={SITE.app}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center text-sm font-medium text-primary hover:underline"
+              >
+                Try in the browser
+                <ArrowRight className="ml-1 h-4 w-4" aria-hidden="true" />
+              </a>
+            </div>
             {[
               { icon: <Apple className="h-5 w-5" />, name: "macOS" },
               { icon: <Terminal className="h-5 w-5" />, name: "Linux" },
