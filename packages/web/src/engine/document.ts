@@ -16,3 +16,9 @@ export interface AnalysisDocument {
   /** The options of the run, over the public defaults (D-23). */
   options: Partial<AnalysisOptions>;
 }
+
+/** A document as indented JSON, with each point on one line (as Python's `cslope.build.dumps`). */
+export function dumps(doc: unknown): string {
+  const text = JSON.stringify(doc, null, 2);
+  return text.replace(/\[\s*(-?[0-9][0-9.eE+-]*(?:,\s*-?[0-9][0-9.eE+-]*)*)\s*\]/g, (_, list: string) => `[${list.split(",").map((v) => v.trim()).join(", ")}]`) + "\n";
+}

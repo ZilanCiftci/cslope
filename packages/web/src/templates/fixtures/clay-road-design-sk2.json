@@ -1,0 +1,103 @@
+{
+  "format": "cslope-analysis",
+  "formatVersion": 1,
+  "definition": {
+    "orientation": "ltr",
+    "coordinates": [
+      [-21.4, -20],
+      [-21.4, 0],
+      [-9.399999999999999, 0],
+      [-8.2, 0.8],
+      [-4.2, 0.8],
+      [-3, 0],
+      [0, 0],
+      [8, -4],
+      [20, -4],
+      [20, -20]
+    ],
+    "materials": [
+      {
+        "name": "Layer 1",
+        "model": {
+          "kind": "undrained",
+          "unitWeight": 16,
+          "unitWeightSat": 16,
+          "undrainedShearStrength": 25
+        }
+      },
+      {
+        "name": "Road fill",
+        "model": {
+          "kind": "mohr-coulomb",
+          "unitWeight": 20,
+          "unitWeightSat": 20,
+          "cohesion": 0,
+          "frictionAngle": 38
+        }
+      }
+    ],
+    "materialBoundaries": [
+      {
+        "coordinates": [
+          [-9.399999999999999, 0],
+          [-3, 0]
+        ]
+      }
+    ],
+    "regionAssignments": [
+      {
+        "point": [-20.4, -10],
+        "materialName": "Layer 1"
+      },
+      {
+        "point": [-6.199999999999999, 0.4],
+        "materialName": "Road fill"
+      }
+    ],
+    "waterTable": {
+      "mode": "height",
+      "value": -1,
+      "freeWater": false
+    },
+    "udls": [
+      {
+        "magnitude": 20,
+        "x1": -8.2,
+        "x2": -4.2
+      }
+    ],
+    "analysisLimits": {
+      "entryLeftX": -21.4,
+      "entryRightX": 0,
+      "exitLeftX": 8,
+      "exitRightX": 20
+    }
+  },
+  "options": {
+    "method": "Morgenstern-Price",
+    "slices": 30,
+    "iterations": 1000,
+    "refinedIterations": 500,
+    "compositeSurfaces": true,
+    "searchMethod": "circular",
+    "intersliceFunction": "half-sine",
+    "tolerance": 0.001,
+    "minSlipDepth": 0,
+    "tensionCrackDepth": 0,
+    "seismicHorizontal": 0,
+    "seismicVertical": 0,
+    "bothDirections": false,
+    "partialFactors": {
+      "cu": 1.5,
+      "cohesion": 1.3,
+      "tanPhi": 1.3,
+      "variableLoad": 1.183,
+      "basis": {
+        "safetyClass": 2,
+        "etaCu": 1,
+        "etaDrained": 1,
+        "variableLoadBase": 1.3
+      }
+    }
+  }
+}

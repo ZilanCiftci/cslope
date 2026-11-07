@@ -1,0 +1,42 @@
+{
+  "clay-3m": {
+    "fos": 2.3419769373320984,
+    "fosLabel": "factor of safety"
+  },
+  "clay-5m-water": {
+    "fos": 1.769879830056904,
+    "fosLabel": "factor of safety"
+  },
+  "clay-increasing": {
+    "fos": 1.822769007026639,
+    "fosLabel": "factor of safety"
+  },
+  "crust-over-clay": {
+    "fos": 1.4452939213922344,
+    "fosLabel": "factor of safety"
+  },
+  "clay-over-rock": {
+    "fos": 1.53006593885904,
+    "fosLabel": "factor of safety"
+  },
+  "clay-road": {
+    "fos": 1.6108658024239384,
+    "fosLabel": "factor of safety"
+  },
+  "clay-road-no-traffic": {
+    "fos": 1.8982676698592404,
+    "fosLabel": "factor of safety"
+  },
+  "clay-road-design-sk2": {
+    "fos": 1.0429209539175799,
+    "fosLabel": "over-design factor"
+  },
+  "steep-road-at-crest": {
+    "fos": 1.2008330499791429,
+    "fosLabel": "factor of safety"
+  },
+  "three-layers-wide": {
+    "fos": 0.7558121575289498,
+    "fosLabel": "over-design factor"
+  }
+}
