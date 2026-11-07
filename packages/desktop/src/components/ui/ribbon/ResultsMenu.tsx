@@ -58,6 +58,7 @@ import { surfaceYAtX } from "../../../features/view/surface";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
 import type { AppState, SurfaceDisplayMode } from "../../../store/types";
 import { pdfUnderlays, type PdfUnderlay } from "../../../features/drawings/pdf-underlay";
+import { isResultOutOfDate } from "../../../store/out-of-date";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
 import { buildAnalysisSummary } from "../../../features/export/analysisSummary";
 import { APP_VERSION } from "../../../utils/app-version";
@@ -217,6 +218,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
           modelName: state.models.find((m) => m.id === state.activeModelId)?.name,
           version: APP_VERSION,
           date: new Date().toISOString().slice(0, 10),
+          outOfDate: isResultOutOfDate(state.result),
         },
       },
       underlays,
@@ -731,6 +733,7 @@ function exportSliceData(format: "xlsx" | "csv" | "csv-se"): void {
     modelName,
     date: new Date().toISOString().slice(0, 10),
     partialFactors: state.options.partialFactors ?? null,
+    outOfDate: isResultOutOfDate(result),
   });
   const base = `${modelName} slices`;
   if (format === "xlsx") {

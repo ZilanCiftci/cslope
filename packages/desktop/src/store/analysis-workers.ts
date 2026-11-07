@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * Analysis workers and how many threads an analysis uses.
  *

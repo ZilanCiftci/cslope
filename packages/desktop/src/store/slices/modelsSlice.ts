@@ -1,7 +1,6 @@
 import { MODEL_NAME_PREFIX } from "../../constants";
 import { BENCHMARK_MODELS } from "../benchmarks";
 import { verificationModels } from "../verification-models";
-import { loadLocalLovoModels } from "../local-models";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
   DEFAULT_ANALYSIS_LIMITS,
@@ -566,24 +565,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
     forgetErrorInputs();
     const models = BENCHMARK_MODELS.map(cloneModelEntry);
     if (models.length === 0) return;
-    const first = models[0];
-    set({
-      models,
-      activeModelId: first.id,
-      projectCreated: null,
-      ...mapModelToState(first),
-      runAll: null,
-      _pendingFitToScreen: true,
-    });
-    clearUndoHistory(api);
-    markProjectClean(get());
-  },
-
-  loadLovoModels: async () => {
-    const models = (await loadLocalLovoModels()).map(cloneModelEntry);
-    if (models.length === 0) return;
-    abortAllAnalyses();
-    forgetErrorInputs();
     const first = models[0];
     set({
       models,

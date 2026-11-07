@@ -70,7 +70,7 @@ The toolbar on the canvas holds the mode buttons, **▶ Run** (with *Run all*, *
 A project holds one or more **models**, listed in the **Models** panel. Each model is a complete analysis with its own geometry, materials, options and result.
 
 - Click a model to make it active; its name is shown in semibold and its row is highlighted, as every selected row. A model that has a result opens in result mode.
-- The dot before each model shows its run state: green analyzed, red failed, hollow gray not analyzed; a gray spinner while it runs.
+- The dot before each model shows its run state: green analyzed, red failed, hollow gray not analyzed; a gray spinner while it runs. An amber ring marks a result that is out of date: it was computed for a different version of the model (the project file was changed outside cSlope). The result stays viewable; the result summary, the PDF and the slice data say that it is out of date. Run the analysis again to update it.
 - Double-click a model to rename it.
 - Drag models to reorder them.
 - <Kbd>Ctrl</Kbd>+click or <Kbd>Shift</Kbd>+click to select several models; right-click them for *Delete selected*.

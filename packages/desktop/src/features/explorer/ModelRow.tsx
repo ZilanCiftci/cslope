@@ -1,6 +1,7 @@
 import { Box, LoaderCircle } from "lucide-react";
 import type React from "react";
 import { FoldChevron } from "../../components/ui/Section";
+import { RESULT_OUT_OF_DATE_TOOLTIP } from "../../store/out-of-date";
 import type { ModelEntry } from "../../store/types";
 
 interface Props {
@@ -66,15 +67,17 @@ export function ModelRow({
   drawingsOpen,
   onToggleDrawings,
 }: Props) {
-  const state: { label: string; title?: string; fill: string | null } = isRunning
+  // `ring`: a colored ring instead of a dot, so the state does not rest on its color alone.
+  const state: { label: string; title?: string; fill: string | null; ring?: string } = isRunning
     ? { label: "Analyzing", fill: null }
     : hasError
       ? { label: "Analysis failed", fill: "var(--color-vsc-error)" }
       : hasResult && outOfDate
         ? {
             label: "Result out of date",
-            title: "The model was changed after this result was computed. Run the analysis again to update it.",
-            fill: "var(--color-vsc-warning)",
+            title: RESULT_OUT_OF_DATE_TOOLTIP,
+            fill: null,
+            ring: "var(--color-vsc-warning)",
           }
         : hasResult
         ? { label: "Analyzed", fill: "var(--color-vsc-success)" }
@@ -149,8 +152,8 @@ export function ModelRow({
           <FoldChevron open={drawingsOpen} />
         </button>
       )}
-      {/* The run state as a dot before the box: green analyzed, amber a
-          result out of date (computed for other input), red failed,
+      {/* The run state as a dot before the box: green analyzed, an amber
+          ring a result out of date (computed for other input), red failed,
           hollow grey not run; a running model has a grey spinner
           (the accent is for selection, not status). Selection is shown by
           the row background only. */}
@@ -170,10 +173,15 @@ export function ModelRow({
           role="img"
           aria-label={state.label}
           title={state.title ?? state.label}
+          data-shape={state.ring ? "ring" : state.fill ? "dot" : "hollow"}
           className="w-[7px] h-[7px] rounded-full shrink-0 box-border"
           style={{
             background: state.fill ?? "transparent",
-            border: state.fill ? undefined : "1px solid var(--color-vsc-text-muted)",
+            border: state.ring
+              ? `2px solid ${state.ring}`
+              : state.fill
+                ? undefined
+                : "1px solid var(--color-vsc-text-muted)",
           }}
         />
       )}

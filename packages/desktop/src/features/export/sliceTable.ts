@@ -1,6 +1,7 @@
 import type { AnalysisResult, PartialFactors } from "@cslope/engine";
 import type { XlsxCell } from "../../utils/xlsx";
 import { sliceShearStrength } from "../annotations/slicePlotData";
+import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 
 export interface SliceTableMeta {
   modelName: string;
@@ -11,6 +12,8 @@ export interface SliceTableMeta {
    * strengths divided and surface loads multiplied by the factors.
    */
   partialFactors?: PartialFactors | null;
+  /** The result was computed for other input (store/out-of-date.ts): the table starts with a note. */
+  outOfDate?: boolean;
 }
 
 const HEADERS = [
@@ -37,7 +40,8 @@ const HEADERS = [
 
 /**
  * Slice data of the critical surface as a table (header block, blank
- * row, column headers, one row per slice), for CSV and Excel export.
+ * row, column headers, one row per slice), for CSV and Excel export. A
+ * result out of date starts the header block with a note saying so.
  */
 export function buildSliceTable(
   result: AnalysisResult,
@@ -46,6 +50,7 @@ export function buildSliceTable(
   const cs = result.criticalSurface;
   const pf = meta.partialFactors ?? null;
   const rows: XlsxCell[][] = [
+    ...(meta.outOfDate ? [[RESULT_OUT_OF_DATE_NOTE]] : []),
     ["Model", meta.modelName],
     ["Method", result.method],
     [pf ? "Over-design factor (design values)" : "Min F", round(result.minFOS, 4)],

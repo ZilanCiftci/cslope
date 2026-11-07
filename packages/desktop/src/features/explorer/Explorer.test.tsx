@@ -10,6 +10,7 @@ import { serializeProject } from "../../store/persistence";
 import { APP_DEFAULT_ANALYSIS_OPTIONS } from "../../store/defaults";
 import { buildProjectArchive, readProject, writeProjectArchive } from "../project/cslp";
 import { readZip, writeZip } from "../../utils/zip";
+import { RESULT_OUT_OF_DATE_TOOLTIP } from "../../store/out-of-date";
 
 const store = () => useAppStore.getState();
 const names = () => store().models.map((m) => m.name);
@@ -437,7 +438,10 @@ describe("Explorer — results out of date", () => {
     render(<Explorer />);
     expect(dot("Alpha")).toHaveAccessibleName("Analyzed");
     expect(dot("Beta")).toHaveAccessibleName("Result out of date");
-    expect(dot("Beta")).toHaveAttribute("title", expect.stringContaining("Run the analysis again"));
+    expect(dot("Beta")).toHaveAttribute("title", RESULT_OUT_OF_DATE_TOOLTIP);
+    // a ring, not a filled dot: the state does not rest on its color alone
+    expect(dot("Beta")).toHaveAttribute("data-shape", "ring");
+    expect(dot("Alpha")).toHaveAttribute("data-shape", "dot");
     expect(dot("Gamma")).toHaveAccessibleName("Analyzed");
     // the result is still there, also once the model is the active one
     act(() => store().switchModel(store().models[1].id));

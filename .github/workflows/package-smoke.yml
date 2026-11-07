@@ -36,7 +36,6 @@ jobs:
           bunx tsc -b
           bunx vite build
           bun ../website/scripts/check-names.ts dist dist-electron
-          bun scripts/check-local-data.ts dist dist-electron
           bunx electron-builder --win --dir --publish never
       - name: The app starts, and refuses a changed archive
         shell: pwsh

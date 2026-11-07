@@ -3,7 +3,6 @@ import { useAppStore } from "./app-store";
 import { parseProjectFile, serializeProject } from "./persistence";
 import { isProjectDirty, markProjectClean } from "./unsaved";
 import type { ModelEntry } from "./types";
-import { HAS_LOCAL_LOVO_MODELS } from "./local-models";
 
 const store = () => useAppStore.getState();
 const entry = (id: string) => store().models.find((m) => m.id === id)!;
@@ -256,20 +255,5 @@ describe("model list actions", () => {
     store().loadProject(file);
     expect(store()._pendingFitToScreen).toBe(false);
     expect(store().editViewScale).toBe(2);
-  });
-
-  it("leaves the project alone without the local Lovö models", async () => {
-    if (HAS_LOCAL_LOVO_MODELS) return;
-    const before = store().models;
-    await store().loadLovoModels();
-    expect(store().models).toBe(before);
-  });
-
-  it.skipIf(!HAS_LOCAL_LOVO_MODELS)("loads the local Lovö models as a clean project", async () => {
-    await store().loadLovoModels();
-    expect(store().models.length).toBeGreaterThan(0);
-    expect(store().activeModelId).toBe(store().models[0].id);
-    expect(store()._pendingFitToScreen).toBe(true);
-    expect(dirty()).toBe(false);
   });
 });

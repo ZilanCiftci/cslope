@@ -40,6 +40,7 @@ import { isNoSlipSurfaceError } from "../analysis/analysis-error";
 import { modelViewLock } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import { fosStatusColor } from "../../utils/fos-color";
+import { isResultOutOfDate, RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import type { FemResultSummary } from "@cslope/engine";
 import type {
   Annotation,
@@ -570,6 +571,20 @@ export function ResultSidebar() {
       >
         {result ? (
           <div className="space-y-1 text-[12px]">
+            {isResultOutOfDate(result) && (
+              // A result read from a file whose model was changed after the run.
+              <p
+                role="status"
+                className="mb-1.5 px-2 py-1.5 rounded-xs text-[11px]"
+                style={{
+                  background: "color-mix(in srgb, var(--color-vsc-warning) 12%, transparent)",
+                  border: "1px solid var(--color-vsc-warning)",
+                  color: "var(--color-vsc-text)",
+                }}
+              >
+                {RESULT_OUT_OF_DATE_NOTE}
+              </p>
+            )}
             <div className="flex justify-between">
               <Label
                 title={

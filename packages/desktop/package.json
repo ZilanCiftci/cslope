@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "package": "tsc -b && vite build && bun scripts/check-local-data.ts && dotenv -e .env.trustedsigning -- electron-builder",
+    "package": "tsc -b && vite build && dotenv -e .env.trustedsigning -- electron-builder",
     "lint": "eslint .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",

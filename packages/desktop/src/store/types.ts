@@ -754,7 +754,6 @@ export interface ModelsSlice {
   loadBenchmarks: () => void;
   /** The bundled example models (tutorials and the website's images). */
   loadExamples: () => void;
-  loadLovoModels: () => Promise<void>;
   /** Set after loadProject / loadBenchmarks so the canvas auto-fits. */
   _pendingFitToScreen: boolean;
   clearPendingFitToScreen: () => void;
