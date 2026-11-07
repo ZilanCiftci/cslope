@@ -1,7 +1,7 @@
 /** Site-wide facts and links, in one place. */
 export const SITE = {
   name: "cSlope",
-  tagline: "Slope stability analysis you can verify",
+  tagline: "Slope stability analysis, checked against published problems",
   description:
     "Open source limit equilibrium software for slope stability analysis, verified against published solutions.",
   github: "https://github.com/ZilanCiftci/cslope",

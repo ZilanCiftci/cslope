@@ -10,20 +10,19 @@ export function About() {
       <PageHeader
         eyebrow="About"
         title="Who makes cSlope"
-        lead={`cSlope is developed by ${SITE.company.name}, for geotechnical engineers who want an analysis tool they can inspect, verify and rely on.`}
+        lead={`cSlope is developed by ${SITE.company.name} and released as open source under the MIT license.`}
       />
       <Section>
         <div className="grid max-w-5xl gap-12 md:grid-cols-2">
           <div className="space-y-4 leading-relaxed text-muted-foreground">
             <h2 className="text-xl font-semibold text-foreground">Why open source</h2>
             <p>
-              A factor of safety is only as trustworthy as the method behind it. With cSlope, every equation, every
-              search step and every verification problem is in a public repository, where anyone can read it, run it
-              and check it.
+              The equations, the search and the verification problems are in a public repository, where anyone can read
+              and run them and check a result against its source.
             </p>
             <p>
-              Open source also means the program belongs to its users: no license server, no subscription that ends,
-              and the version a project was approved with stays available.
+              There is no license server and no subscription, and the version a project was approved with stays
+              available.
             </p>
           </div>
           <div className="space-y-4 leading-relaxed text-muted-foreground">
