@@ -224,7 +224,7 @@ describe("App", () => {
   it("links to the website's download and limitations pages; the .cslp download waits", () => {
     renderApp({ loadEngine: () => new Promise(() => {}) });
     expect(screen.getByRole("link", { name: "Open in cSlope" })).toHaveAttribute("href", "https://cslope.com/download");
-    expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/limitations");
+    expect(screen.getByRole("link", { name: "limitations" })).toHaveAttribute("href", "https://cslope.com/docs/browser#limitations");
     expect(screen.getByRole("button", { name: "Download .cslp" })).toBeDisabled();
   });
 

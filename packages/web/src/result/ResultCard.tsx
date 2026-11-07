@@ -9,7 +9,7 @@ import type { ResultSummary, ValidationIssue } from "@cslope/engine";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { ErrorText } from "@/form/Form";
-import { DOWNLOAD_URL, LIMITATIONS_URL } from "@/links";
+import { DOWNLOAD_URL, LIMITATIONS_URL, TEMPLATE_NOTE } from "@/links";
 
 /** What the card shows. */
 export type CardState =
@@ -170,7 +170,7 @@ export function ResultCard({ state, previous, canRun, canDownload, onRun, onCanc
         {notice ?? "The .cslp download comes when the engine in the browser can write cSlope projects."}
       </p>
       <p className="mt-3 border-t pt-3 text-xs text-muted-foreground">
-        A template calculation, not a design: check the model and the result before you use them. See the{" "}
+        {TEMPLATE_NOTE} See the{" "}
         <a href={LIMITATIONS_URL} className="text-primary underline underline-offset-2">
           limitations
         </a>

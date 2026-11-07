@@ -73,8 +73,8 @@ export function Download() {
                 <h2 className="font-medium">In the browser</h2>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
-                One template, an excavation in clay with a working road, analyzed on your own computer without
-                installing anything.
+                Two templates, an excavation in clay with a working road and an embankment on clay, analyzed on
+                your own computer without installing anything.
               </p>
               <a
                 href={SITE.app}
