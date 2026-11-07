@@ -368,6 +368,31 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "models-out-of-date",
+    title: "Models panel: a result out of date (the file was edited after the run) beside current ones",
+    area: "sidebar",
+    data: "example",
+    open: async (ctx) => {
+      // Results on the second and third models, saved and opened again:
+      // the third model's input as opened is not the one its result was
+      // computed for (the examples' sparse options are filled on opening),
+      // the second's (complete options) is.
+      await ctx.result();
+      await ctx.store(`async (s, store) => {
+        const complete = { slices: 30, iterations: 1000, refinedIterations: 500, minFailureDist: 0, tolerance: 0.001, maxIterations: 15, method: "Morgenstern-Price", janbuCorrection: false, intersliceFunction: "half-sine", intersliceDataPoints: [], porePressureHead: "vertical", tensionCrackDepth: 0, tensionCrackWater: 0, nonCircularOptimization: false, minSlipDepth: 0, minSlipArea: 0, compositeSurfaces: true };
+        const r = s.result;
+        const ms = s.models.slice();
+        ms[1] = { ...ms[1], options: { ...complete, ...ms[1].options, compositeSurfaces: true }, runState: "done", progress: 1, result: r, errorMessage: null };
+        ms[2] = { ...ms[2], runState: "done", progress: 1, result: r, errorMessage: null };
+        store.setState({ models: ms });
+        const bytes = await window.__CSLOPE_PROJECT_FILE__.save();
+        await window.__CSLOPE_PROJECT_FILE__.open(bytes);
+        store.getState().setMode("edit");
+      }`);
+      return { focus: explorer(ctx) };
+    },
+  },
+  {
     id: "models-multi-selected",
     title: "Models panel with three models selected (Ctrl+click)",
     area: "sidebar",

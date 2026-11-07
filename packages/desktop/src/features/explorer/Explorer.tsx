@@ -7,6 +7,7 @@ import { ModelRow } from "./ModelRow";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
 import { AttachmentsPanel, ModelDrawings } from "../drawings/DrawingsPanel";
 import type { ModelEntry } from "../../store/types";
+import { isResultOutOfDate } from "../../store/out-of-date";
 
 type DropPosition = "before" | "after";
 
@@ -46,6 +47,7 @@ export function Explorer() {
   // The active model's result and error are in the flat state too.
   const activeHasResult = useAppStore((s) => !!s.result);
   const activeFailed = useAppStore((s) => s.runState === "error");
+  const activeResult = useAppStore((s) => s.result);
   const activeDrawingCount = useAppStore((s) => s.backgrounds.length);
   // A drawing (of the active model) is selected: it is the tree's selection,
   // and no model row is shown selected (the active one stays semibold).
@@ -336,6 +338,7 @@ export function Explorer() {
                 isEditing={isEditing}
                 hasResult={isActive ? activeHasResult : !!model.result}
                 hasError={isActive ? activeFailed : model.runState === "error"}
+                outOfDate={isResultOutOfDate(isActive ? activeResult : model.result)}
                 isRunning={model.runState === "running" || (isActive && activeRunning)}
                 editName={editName}
                 onChangeName={setEditName}

@@ -43,6 +43,7 @@ import { analysisInputHash, sha256Hex } from "./input-hash";
 import { adoptProjectAssets, openedProjectAssets, type ProjectAsset } from "../drawings/asset-registry";
 import { isLegacyEntry, normalizeBackgrounds } from "../drawings/placement";
 import { imageSize } from "../drawings/image-size";
+import { markResultOutOfDate } from "../../store/out-of-date";
 
 export { adoptProjectAssets, openedProjectAssets, normalizeBackgrounds, type ProjectAsset };
 
@@ -355,6 +356,14 @@ export interface ReadProject {
  */
 export async function readProject(bytes: Uint8Array, limits: ProjectZipLimits = PROJECT_ZIP_LIMITS): Promise<ReadProject> {
   const opened = await openProject(bytes, limits);
+  // A result computed for other input than its model's (the file was
+  // edited after the run) stays, marked as out of date.
+  for (const model of opened.file.models) {
+    const saved = opened.results.get(model.id);
+    if (model.runState === "done" && model.result && saved && saved.inputHash !== (await analysisInputHash(model))) {
+      markResultOutOfDate(model.result);
+    }
+  }
   const assets = opened.assets.map((a) => {
     // An attachment read once is kept (a stored one is a view of the
     // file's bytes, held anyway): a later save never depends on reading it again.

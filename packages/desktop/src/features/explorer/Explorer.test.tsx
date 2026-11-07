@@ -6,6 +6,10 @@ import type { AnalysisResult } from "@cslope/engine";
 import { Explorer } from "./Explorer";
 import { ProjectInfoDialog } from "./ProjectInfoDialog";
 import { useAppStore, type ProjectInfo } from "../../store/app-store";
+import { serializeProject } from "../../store/persistence";
+import { APP_DEFAULT_ANALYSIS_OPTIONS } from "../../store/defaults";
+import { readProject, writeProjectArchive } from "../project/cslp";
+import { readZip, writeZip } from "../../utils/zip";
 
 const store = () => useAppStore.getState();
 const names = () => store().models.map((m) => m.name);
@@ -390,6 +394,66 @@ describe("Explorer — drag and drop", () => {
     fireEvent.dragEnd(row("Beta"));
     expect(names()).toEqual(["Alpha", "Beta", "Gamma"]);
     expect(row("Beta").style.opacity).toBe("1");
+  });
+});
+
+describe("Explorer — results out of date", () => {
+  /** A saved project whose models have results; `edit` changes model.json of the second model after the run. */
+  async function savedAndEdited(edit: (model: Record<string, unknown>) => void): Promise<Uint8Array> {
+    const result = { minFOS: 1.3, maxFOS: 2, criticalSurface: null, allSurfaces: [], criticalSlices: [], method: "Bishop", elapsedMs: 1 };
+    const file = serializeProject(store());
+    // (complete options, as the app holds them after opening a file: the
+    // starter model's are sparse, and opening fills them)
+    const models = file.models.map((m) => ({
+      ...m,
+      options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, ...m.options },
+      runState: "done" as const,
+      progress: 1,
+      result: result as unknown as AnalysisResult,
+      errorMessage: null,
+    }));
+    const bytes = await writeProjectArchive({ ...file, models });
+    const id = models[1].id;
+    const entries = [...(await readZip(bytes))].map(([name, data]) => {
+      if (name !== `models/${id}/model.json`) return { name, data };
+      const model = JSON.parse(new TextDecoder().decode(data)) as Record<string, unknown>;
+      edit(model);
+      return { name, data: JSON.stringify(model) };
+    });
+    return writeZip(entries);
+  }
+
+  const dot = (name: string) => within(row(name)).getByRole("img");
+
+  it("marks a result whose model was edited in the file after the run, and keeps it viewable", async () => {
+    act(() => store().saveCurrentModel());
+    const bytes = await savedAndEdited((model) => {
+      // the first material's undrained strength, edited by hand
+      const materials = model.materials as { model: Record<string, unknown> }[];
+      materials[0].model = { kind: "undrained", unitWeight: 18, undrainedShearStrength: 45 };
+    });
+    const read = await readProject(bytes);
+    act(() => store().loadProject(read.file));
+    render(<Explorer />);
+    expect(dot("Alpha")).toHaveAccessibleName("Analyzed");
+    expect(dot("Beta")).toHaveAccessibleName("Result out of date");
+    expect(dot("Beta")).toHaveAttribute("title", expect.stringContaining("Run the analysis again"));
+    expect(dot("Gamma")).toHaveAccessibleName("Analyzed");
+    // the result is still there, also once the model is the active one
+    act(() => store().switchModel(store().models[1].id));
+    expect(store().result?.minFOS).toBe(1.3);
+    expect(dot("Beta")).toHaveAccessibleName("Result out of date");
+  });
+
+  it("does not mark a result whose model changed only outside its input (its name)", async () => {
+    act(() => store().saveCurrentModel());
+    const bytes = await savedAndEdited((model) => {
+      model.name = "Beta renamed";
+    });
+    const read = await readProject(bytes);
+    act(() => store().loadProject(read.file));
+    render(<Explorer />);
+    expect(dot("Beta renamed")).toHaveAccessibleName("Analyzed");
   });
 });
 

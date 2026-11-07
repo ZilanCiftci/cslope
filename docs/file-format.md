@@ -1,6 +1,6 @@
 # The cSlope project file (.cslp)
 
-This is the specification of the `.cslp` project file, format version 1. The reader and writer the app uses are `packages/desktop/src/features/project/cslp.ts` (with `zip.ts`, `canonical-json.ts` and `input-hash.ts` beside it); `packages/desktop/scripts/check-project.ts` opens a file and prints what it holds, and the Python package reads one with `cslope.project.read` (no engine needed). The user documentation is `packages/website/src/docs/file-format.mdx`.
+This is the specification of the `.cslp` project file, format version 1. The reader and writer the app uses are `packages/desktop/src/features/project/cslp.ts` (with `zip.ts`, `canonical-json.ts` and `input-hash.ts` beside it); `packages/desktop/scripts/check-project.ts` opens a file and prints what it holds. The Python package opens, changes and saves one with `cslope.project.open` and `Project.save`, on the reader and writer of the Rust crate `cslope-project` (`packages/engine-rs/crates/cslope-project`, `project.rs` and `archive.rs`): a strict reader of this version's files (a member, entry or value it does not know is an error naming it; earlier versions are refused with a message to open them in the app and save them) and a writer that writes what the app writes. The user documentation is `packages/website/src/docs/file-format.mdx`.
 
 The words *must*, *must not* and *may* are used in their usual normative sense. A *reader* is any program that opens a project file; a *writer* any program that saves one.
 
@@ -50,6 +50,8 @@ So the same project saved twice, with the same `modified`, is byte for byte the 
 A reader must ignore any member it does not know, in any JSON entry, and must not carry it over to a file it writes. A reader must ignore entries it does not know (other names, other folders). A writer must not write members or entries that this document does not define under the format version it declares.
 
 ## 3. Versioning
+
+The format version and the project schema version are constants in three places that must move together: `CSLP_FORMAT_VERSION` (`cslp.ts`), `PROJECT_FILE_VERSION` (`persistence.ts`) and `FORMAT_VERSION` / `PROJECT_SCHEMA_VERSION` in `crates/cslope-project/src/project.rs`. CI fails when they differ (`packages/engine-rs/tools/check-format-versions.ts`). A release of the app that raises either is followed by a release of the Python package the same day: a released `cslope` refuses files of a newer version.
 
 `manifest.json` carries two integers:
 
@@ -155,7 +157,9 @@ The outcome of the model's last analysis. Absent when the model has no outcome (
 | `inputHash` | string, 64 lowercase hex digits | The hash of the model's analysis input the result was computed for (section 5). |
 | `engine` | object | The engine that computed it: `version` (the engine package's version) and `sourceHash` (the SHA-256 of the engine's sources, `packages/engine/src/wasm/BUILD-INFO.json`); empty strings when unknown. |
 
-The outcome is read from `result.json` only: run fields in `model.json` are ignored. A reader keeps a result whose `inputHash` differs from the model's current input (the file may have been edited by hand, or the hash's definition may have changed between versions); it may show it as out of date. `check-project.ts` reports it.
+The outcome is read from `result.json` only: run fields in `model.json` are ignored. A reader keeps a result whose `inputHash` differs from the model's current input (the file may have been edited by hand, or the hash's definition may have changed between versions); it may show it as out of date. The app does (an amber run-state dot in the Models panel, "Result out of date", the result still viewable); `check-project.ts` reports it.
+
+A writer that changes a model without running it again must not write the model's old result with a new hash: it writes no `result.json` for that model, and leaves `thumbnail.png` out (it shows a result). The Python writer applies this policy on every save; `cslope analyse site.cslp --write` runs models again and writes their results with the current hash and `engine: { "version": <the cslope version>, "sourceHash": "" }`.
 
 ### 4.5 models/\<id\>/backgrounds.json
 
@@ -202,6 +206,7 @@ The drawings placed under the model: each an attachment of the file (an image, a
 | `order` | number | Drawing order among the model's drawings, lowest first (drawn first); default the entry's position. |
 | `showInResults` | boolean | Also drawn in the result view and the PDF export. Default false. |
 | `hiddenLayers` | array of strings | A DWG or DXF drawing: the names of its layers that are not shown (nor snapped to, nor picked). Absent: all shown. A reader drops entries that are not strings and repeated names; names of layers the drawing does not have are kept (and do nothing). |
+| `invertInDark` | boolean | An image or PDF drawing: drawn with its colours inverted in the dark theme. Default true; written only as `false`. |
 
 Whether a placement is locked on the canvas is part of the model: `locks.backgrounds` in `model.json` (an array of placement ids); a reader drops ids of placements the model does not have.
 
@@ -250,6 +255,8 @@ A PNG of the active model's result sheet, about 320 px wide, stored. Written whe
 ```
 
 where `definition` is the engine's `SlopeDefinition` of the model in canonical orientation, exactly as the app sends it to the engine (`buildSlopeDTOFromModel` in `packages/desktop/src/store/helpers.ts`: the ground surface, the materials with their engine names, the water, loads, reinforcement, piles, boundaries and region assignments, the search limits, an earlier stage), and `options` is the model's `options` as saved. Nothing else of the model (its name, views, annotations, result settings) is in it. The one implementation is `analysisInputJson` / `analysisInputHash` in `packages/desktop/src/features/project/input-hash.ts`.
+
+The canonical JSON's numbers are those of ECMAScript's `Number.prototype.toString`; the Rust implementation (`ryu-js`, `crates/cslope-project/src/canonical.rs`) is checked against Bun's `JSON.stringify` on a sample of random doubles in the golden corpus, and `input_hash` against `analysisInputHash` for every model of the corpus and every verification problem.
 
 ## 6. Model ids
 
