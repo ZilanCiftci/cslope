@@ -67,7 +67,12 @@ pub struct ReadOptions<'a> {
 }
 
 /// Today's date (UTC) as YYYY-MM-DD, as `new Date().toISOString()` starts.
+/// In WebAssembly (no clock without JavaScript) 1970-01-01: it dates only a
+/// title block a model lacks, which no analysis reads.
 pub fn today() -> String {
+    if cfg!(target_arch = "wasm32") {
+        return "1970-01-01".into();
+    }
     let secs = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
