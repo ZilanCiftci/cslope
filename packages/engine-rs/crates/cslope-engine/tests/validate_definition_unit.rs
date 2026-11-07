@@ -4,6 +4,7 @@
 //! code.
 #![allow(clippy::disallowed_methods)]
 
+use cslope_engine::model::geometry_ops::polygonize_regions;
 use cslope_engine::types::validate_definition::{validate, Issue, Severity};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -98,6 +99,55 @@ fn the_base_model_is_valid() {
     assert!(issues.is_empty(), "{}", show(&issues));
     let issues = validate(&base(), Some(&json!({"method": "Bishop", "slices": 30})));
     assert!(issues.is_empty(), "{}", show(&issues));
+}
+
+/// The two definitions of issue #93: a boundary ending past or exactly on
+/// the outline split the regions it should (each assignment in a region of
+/// its own).
+#[test]
+fn boundaries_ending_past_or_exactly_on_the_outline_split_the_regions() {
+    let undrained = |name: &str, su: f64| json!({"name": name, "model": {"kind": "undrained", "unitWeight": 17.0, "unitWeightSat": 17.0, "undrainedShearStrength": su}});
+    // (a) a 5 cm layer between two boundaries 0.5 m past both edges
+    let thin = json!({
+        "orientation": "ltr",
+        "coordinates": [[0.0, 0.0], [0.0, 20.0], [40.0, 20.0], [60.0, 10.0], [100.0, 10.0], [100.0, 0.0]],
+        "materials": [undrained("Top", 30.0), undrained("Thin", 1.0), undrained("Bottom", 30.0)],
+        "materialBoundaries": [
+            {"coordinates": [[-0.5, 5.05], [100.5, 5.05]]},
+            {"coordinates": [[-0.5, 5.0], [100.5, 5.0]]}
+        ],
+        "regionAssignments": [
+            {"point": [5.0, 15.0], "materialName": "Top"},
+            {"point": [5.0, 5.025], "materialName": "Thin"},
+            {"point": [5.0, 2.0], "materialName": "Bottom"}
+        ]
+    });
+    // (b) a level ending on the face 1:3.2, at x = 3.2 · (10 − 8.2)
+    let face = json!({
+        "orientation": "ltr",
+        "coordinates": [[-6.0, 4.0], [-6.0, 10.0], [0.0, 10.0], [6.4, 8.0], [12.4, 8.0], [12.4, 4.0]],
+        "materials": [undrained("Upper", 30.0), undrained("Lower", 10.0)],
+        "materialBoundaries": [{"coordinates": [[-6.1, 8.2], [5.7600000000000025, 8.2]]}],
+        "regionAssignments": [
+            {"point": [-5.0, 9.0], "materialName": "Upper"},
+            {"point": [-5.0, 6.0], "materialName": "Lower"}
+        ]
+    });
+    for (def, regions) in [(thin, 3), (face, 2)] {
+        let issues = validate(&def, None);
+        assert!(errors(&issues).is_empty(), "{}", show(&issues));
+        let pts: Vec<[f64; 2]> = serde_json::from_value(def["coordinates"].clone()).unwrap();
+        let lines: Vec<Vec<[f64; 2]>> = def["materialBoundaries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| serde_json::from_value(b["coordinates"].clone()).unwrap())
+            .collect();
+        let px: Vec<f64> = pts.iter().map(|p| p[0]).collect();
+        let py: Vec<f64> = pts.iter().map(|p| p[1]).collect();
+        let faces = polygonize_regions(&px, &py, &lines).unwrap();
+        assert_eq!(faces.len(), regions);
+    }
 }
 
 #[test]
