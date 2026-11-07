@@ -21,7 +21,7 @@ export const EXCAVATION_DEFAULTS: ExcavationParams = {
   bottomWidth: null,
   layers: [
     { name: "Dry crust", bottomLevel: -1, material: { kind: "undrained", gamma: 17, su: 30 } },
-    { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 9.5 } },
+    { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 15 } },
     { name: "Sand and gravel", bottomLevel: -9, material: { kind: "drained", gamma: 22, c: 0, phi: 35 } },
   ],
   waterLevel: null,

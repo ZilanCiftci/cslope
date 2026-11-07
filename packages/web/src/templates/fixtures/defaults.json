@@ -35,7 +35,7 @@
           "kind": "undrained",
           "unitWeight": 17,
           "unitWeightSat": 17,
-          "undrainedShearStrength": 9.5
+          "undrainedShearStrength": 15
         }
       },
       {
