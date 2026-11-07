@@ -62,7 +62,7 @@
     "analysisLimits": {
       "entryLeftX": -8.5,
       "entryRightX": 0,
-      "exitLeftX": 4.5,
+      "exitLeftX": 0,
       "exitRightX": 31.5
     }
   },

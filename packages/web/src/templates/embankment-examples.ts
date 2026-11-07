@@ -85,7 +85,7 @@ export const EMBANKMENT_EXAMPLES: Record<string, EmbankmentParams> = {
     waterLevel: -1,
     values: characteristic,
   },
-  /** Thin clay over rock 4 m down: the surfaces stay above the rock. */
+  /** Thin clay over rock 5 m down: the critical surface runs along the rock. */
   "clay-over-rock": {
     groundLevel: 0,
     embankmentHeight: 4,
@@ -94,7 +94,7 @@ export const EMBANKMENT_EXAMPLES: Record<string, EmbankmentParams> = {
     fill: { gamma: 19, c: 3, phi: 35 },
     crestLoad: null,
     layers: [
-      { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 14 } },
+      { name: "Clay", bottomLevel: -5, material: { kind: "undrained", gamma: 17, su: 14 } },
       { name: "Rock", bottomLevel: -20, material: { kind: "impenetrable", gamma: 24 } },
     ],
     waterLevel: -0.5,

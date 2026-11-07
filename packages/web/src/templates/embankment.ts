@@ -24,8 +24,10 @@
  *   vertically over the crest's width.
  * - Water: a level, cut at the ground and the embankment (no free water).
  * - Surfaces enter on the embankment (its crest, and its far side, where a
- *   deep circle under a narrow crest enters) and exit on the ground beyond
- *   the toe, to the right edge; the app's options (D-23).
+ *   deep circle under a narrow crest enters) and exit anywhere from the
+ *   crest's edge to the right edge: in the face (a shallow slide in the
+ *   fill, which can govern), at the toe or on the ground beyond it; the
+ *   app's options (D-23).
  */
 import type { AnalysisDocument } from "../engine/document";
 import { Definition, type Point } from "./builder";
@@ -188,8 +190,8 @@ export function embankmentDocument(params: EmbankmentParams): AnalysisDocument {
   d.assign(fill, [g.crestLeft / 2, g.ground + params.embankmentHeight / 2]);
   if (params.crestLoad) d.addDistributedLoad([g.crestLeft, 0], params.crestLoad);
   if (params.waterLevel !== null) d.setWaterLevel(params.waterLevel);
-  // Entry on the embankment, from the far toe to the crest's edge; exit on the ground from the toe to the right edge.
-  d.searchLimits([g.farToe, 0], [g.toeX, g.right]);
+  // Entry on the embankment, from the far toe to the crest's edge; exit from the crest's edge on: the face, the toe, the ground.
+  d.searchLimits([g.farToe, 0], [0, g.right]);
   const factors = partialFactorsOf(params.values);
   return d.toDocument(factors ? { partialFactors: factors } : {});
 }

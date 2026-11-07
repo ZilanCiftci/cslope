@@ -53,8 +53,8 @@ describe("the geometry rules", () => {
     expect(embankmentGeometry({ ...base, embankmentHeight: 1, layers: [clay(15, -0.5)] })).toMatchObject({ base: -2, left: -6 - 2.5 - 4.5, right: 2.5 + 4.5 });
   });
 
-  it("lets surfaces enter on the embankment (the crest and the far side) and exit on the ground from the toe to the edge", () => {
-    expect(embankmentDocument(base).definition.analysisLimits).toEqual({ entryLeftX: -13.5, entryRightX: 0, exitLeftX: 7.5, exitRightX: 34.5 });
+  it("lets surfaces enter on the embankment (the crest and the far side) and exit from the crest's edge on: the face, the toe, the ground", () => {
+    expect(embankmentDocument(base).definition.analysisLimits).toEqual({ entryLeftX: -13.5, entryRightX: 0, exitLeftX: 0, exitRightX: 34.5 });
   });
 
   it("makes the embankment its own region, of its own material, with the load over the crest", () => {
@@ -206,6 +206,21 @@ describe("the model's extent and the search limits", () => {
       const crest = (await runDocument(doc)).summary.fos!;
       expect(crest, name).toBeGreaterThan(own - 2e-3);
     }
+  });
+});
+
+describe("a shallow slide in the face", () => {
+  it("is found in a steep sand fill on stiff clay: F is tan φ′ / tan β, the exit in the face, with the engine's warning", async () => {
+    // 1:1.5 and φ′ 32°: tan φ′ / tan β = 0.6249 × 1.5 = 0.937 (the infinite slope).
+    const params: EmbankmentParams = { ...base, embankmentHeight: 4, slope: 1.5, fill: { gamma: 19, c: 0, phi: 32 }, layers: [{ ...clay(80), material: { kind: "undrained", gamma: 18, su: 80 } }] };
+    const { result, summary } = await runDocument(embankmentDocument(params));
+    const infinite = Math.tan((32 * Math.PI) / 180) * 1.5;
+    expect(summary.fos!).toBeGreaterThan(infinite * 0.99);
+    expect(summary.fos!).toBeLessThan(infinite * 1.01);
+    const [x, y] = result.criticalSurface!.exitPoint;
+    expect(x).toBeLessThan(embankmentGeometry(params).toeX);
+    expect(y).toBeGreaterThan(0);
+    expect(summary.warnings.map((w) => w.code)).toContain("frictional-surface-slide");
   });
 });
 

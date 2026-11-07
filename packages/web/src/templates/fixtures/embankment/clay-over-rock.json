@@ -5,14 +5,14 @@
     "orientation": "ltr",
     "coordinates": [
       [-50, -20],
-      [-50, -4],
+      [-50, -5],
       [-50, 0],
       [-14, 0],
       [-6, 4],
       [0, 4],
       [8, 0],
       [44, 0],
-      [44, -4],
+      [44, -5],
       [44, -20]
     ],
     "materials": [
@@ -46,8 +46,8 @@
     "materialBoundaries": [
       {
         "coordinates": [
-          [-50, -4],
-          [44, -4]
+          [-50, -5],
+          [44, -5]
         ]
       },
       {
@@ -59,11 +59,11 @@
     ],
     "regionAssignments": [
       {
-        "point": [-49, -2],
+        "point": [-49, -2.5],
         "materialName": "Clay"
       },
       {
-        "point": [-49, -12],
+        "point": [-49, -12.5],
         "materialName": "Rock"
       },
       {
@@ -79,7 +79,7 @@
     "analysisLimits": {
       "entryLeftX": -14,
       "entryRightX": 0,
-      "exitLeftX": 8,
+      "exitLeftX": 0,
       "exitRightX": 44
     }
   },
