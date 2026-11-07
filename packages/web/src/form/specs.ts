@@ -111,7 +111,7 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
     },
   ],
   short: { groundLevel: "ground", excavationDepth: "H", waterLevel: "water" },
-  initial: { groundLevel: "0", excavationDepth: "3", slope: "1.5" },
+  initial: { groundLevel: "0", excavationDepth: "2.5", slope: "2" },
   defaults: EXCAVATION_DEFAULTS,
   fileName: "cslope-excavation.json",
   caption: "Elevation and distance from the crest (m).",

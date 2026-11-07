@@ -114,7 +114,8 @@ export const FILL_PARAMETERS = {
 };
 
 /**
- * The templates' options over the app's: the engine's automatic tension
+ * The excavation's options over the app's (not the embankment's, where a
+ * crack in the cohesionless fill raised F): the engine's automatic tension
  * crack, its depth from the soil at each surface's entry (2c/(γ√Ka) − q/γ;
  * 2Su/γ − q/γ in clay) and at a base steeper than 65°, so that a steep
  * entry relying on tension at the base (N′ < 0, a low m_α) is cut off

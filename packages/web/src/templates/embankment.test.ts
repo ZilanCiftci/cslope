@@ -9,7 +9,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { initEngine, validateDefinition } from "@cslope/engine";
 import { dumps, type AnalysisDocument } from "../engine/document";
 import { APP_OPTIONS } from "./builder";
-import { TEMPLATE_OPTIONS } from "./common";
 import { EMBANKMENT_EXAMPLES } from "./embankment-examples";
 import {
   embankmentDocument,
@@ -122,9 +121,10 @@ describe("the geometry rules", () => {
     expect(embankmentFieldProblems({ ...base, waterLevel: 3.1 })).toEqual([{ field: "waterLevel", message: "The ground-water level must not be above the crest (3 m)." }]);
   });
 
-  it("uses the app's options with the automatic tension crack, on characteristic values (no partial factors)", () => {
-    expect(embankmentDocument(base).options).toEqual({ ...APP_OPTIONS, ...TEMPLATE_OPTIONS });
-    expect(embankmentDocument(base).options).toMatchObject({ tensionCrackAuto: true, tensionCrackAngle: 65 });
+  it("uses the app's options without a tension crack (unlike the excavation), on characteristic values (no partial factors)", () => {
+    expect(embankmentDocument(base).options).toEqual(APP_OPTIONS);
+    expect(embankmentDocument(base).options).not.toHaveProperty("tensionCrackAuto");
+    expect(embankmentDocument(base).options).not.toHaveProperty("tensionCrackAngle");
     expect(embankmentDocument(EMBANKMENT_EXAMPLES["clay-3m-traffic"]).options).not.toHaveProperty("partialFactors");
   });
 

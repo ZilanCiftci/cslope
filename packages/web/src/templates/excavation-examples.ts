@@ -9,15 +9,15 @@ import type { ExcavationParams } from "./excavation";
 
 /**
  * The first visit of the excavation: a complete section, so that the page
- * computes F at once. Typical values: a 3 m cut at 1:1.5 through a dry
- * crust and a soft clay into sand and gravel, which reaches 3H below the
- * ground (no shallow-base note), and a low haul road with traffic 1 m
+ * computes F at once. Typical values: a 2.5 m cut at 1:2 through a dry
+ * crust and a soft clay into sand and gravel, which reaches below 3H
+ * (no shallow-base note), and a low haul road with traffic 1 m
  * behind the crest; dry.
  */
 export const EXCAVATION_DEFAULTS: ExcavationParams = {
   groundLevel: 0,
-  excavationDepth: 3,
-  slope: 1.5,
+  excavationDepth: 2.5,
+  slope: 2,
   bottomWidth: null,
   layers: [
     { name: "Dry crust", bottomLevel: -1, material: { kind: "undrained", gamma: 17, su: 30 } },

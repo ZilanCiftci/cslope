@@ -87,6 +87,8 @@ describe("App", () => {
     expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
     expect(screen.getByRole("button", { name: /^Dry crust/ })).toHaveTextContent("Undrained · 1 m (0 to −1 m) · Su 30 kPa");
     expect(screen.getByRole("button", { name: /^Sand and gravel/ })).toHaveTextContent("Mohr-Coulomb · 5 m (−4 to −9 m) · c′ 0 kPa, φ′ 35°");
+    expect(field("Excavation depth H (m)").value).toBe("2.5");
+    expect(field("Slope 1:n").value).toBe("2");
     // No field is empty: it runs by itself, with the defaults' document.
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_DEFAULTS));
