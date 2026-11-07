@@ -887,15 +887,22 @@ fn is_closed_line(l: &[Pt]) -> bool {
 }
 
 /// Put each boundary end within `tol` of the outline or of another boundary
-/// on the nearest point of it. Ends nearest the outline are snapped first,
-/// then ends nearest a boundary, onto the boundaries as already snapped (a
-/// T-junction then meets the line it ends on where that line now runs).
+/// on the nearest point of it. Ends within `tol` of the outline are snapped
+/// to the outline first, even when another boundary is nearer; then ends
+/// farther from the outline but within `tol` of a boundary, onto the
+/// boundaries as already snapped (a T-junction then meets the line it ends
+/// on where that line now runs). An end snapped onto a neighbouring
+/// boundary near the edge instead made two boundaries one: a layer thinner
+/// than `tol` whose ends stop just short of the edge, or two boundaries
+/// pinching out together just above the outline, merged the regions on
+/// both sides (the mirror image of issue #93 a).
 ///
 /// Only ends strictly inside the polygon are snapped. An end outside it (or
 /// on it) already crosses or meets the outline, and noding cuts the line
 /// there; snapping it could put it on a neighbouring boundary instead, and
 /// a layer thinner than `tol` between two boundaries drawn past the edge
-/// then vanished (issue #93 a).
+/// then vanished (issue #93 a). A boundary entirely outside the outline is
+/// so left as drawn, and ignored by the split.
 ///
 /// An end snapped to the outline is put on the outline exactly: the point
 /// is inserted into the ring as a vertex (the same pair of numbers as the
@@ -937,16 +944,14 @@ fn snap_boundary_ends(
             }
             let (p, d, seg) = nearest_on_ring_segment(ring, x, y);
             let on_line = nearest_on_lines(lines, k, which);
-            if d <= on_line.1 {
-                if d <= tol {
-                    // a point this close to a vertex of the outline is that vertex
-                    let p = [ring[seg], ring[seg + 1]]
-                        .into_iter()
-                        .find(|v| js::math::hypot(&[v[0] - p[0], v[1] - p[1]]) <= same)
-                        .unwrap_or(p);
-                    set(&mut out, k, which, p);
-                    on_outline.push((seg, p));
-                }
+            if d <= tol {
+                // a point this close to a vertex of the outline is that vertex
+                let p = [ring[seg], ring[seg + 1]]
+                    .into_iter()
+                    .find(|v| js::math::hypot(&[v[0] - p[0], v[1] - p[1]]) <= same)
+                    .unwrap_or(p);
+                set(&mut out, k, which, p);
+                on_outline.push((seg, p));
             } else if on_line.1 > 0.0 && on_line.1 <= tol {
                 to_lines.push((k, which));
             }
@@ -972,13 +977,20 @@ fn insert_ring_vertices(ring: &[Pt], points: &[(usize, Pt)]) -> Vec<Pt> {
     for i in 0..ring.len() - 1 {
         let (a, b) = (ring[i], ring[i + 1]);
         result.push(a);
-        let dist2 = |p: &Pt| (p[0] - a[0]) * (p[0] - a[0]) + (p[1] - a[1]) * (p[1] - a[1]);
+        // in order along the segment (its parameter t), then by x and y,
+        // so that equal points are adjacent and kept once
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let t = |p: &Pt| (p[0] - a[0]) * dx + (p[1] - a[1]) * dy;
         let mut on_segment: Vec<Pt> = points
             .iter()
             .filter(|(seg, p)| *seg == i && *p != a && *p != b)
             .map(|&(_, p)| p)
             .collect();
-        on_segment.sort_by(|p, q| dist2(p).total_cmp(&dist2(q)));
+        on_segment.sort_by(|p, q| {
+            t(p).total_cmp(&t(q))
+                .then(p[0].total_cmp(&q[0]))
+                .then(p[1].total_cmp(&q[1]))
+        });
         on_segment.dedup();
         result.extend(on_segment);
     }

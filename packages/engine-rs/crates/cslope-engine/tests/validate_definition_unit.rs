@@ -4,6 +4,7 @@
 //! code.
 #![allow(clippy::disallowed_methods)]
 
+use cslope_engine::model::geometry_ops::polygonize_regions;
 use cslope_engine::types::validate_definition::{validate, Issue, Severity};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -132,9 +133,20 @@ fn boundaries_ending_past_or_exactly_on_the_outline_split_the_regions() {
             {"point": [-5.0, 6.0], "materialName": "Lower"}
         ]
     });
-    for def in [thin, face] {
+    for (def, regions) in [(thin, 3), (face, 2)] {
         let issues = validate(&def, None);
         assert!(errors(&issues).is_empty(), "{}", show(&issues));
+        let pts: Vec<[f64; 2]> = serde_json::from_value(def["coordinates"].clone()).unwrap();
+        let lines: Vec<Vec<[f64; 2]>> = def["materialBoundaries"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|b| serde_json::from_value(b["coordinates"].clone()).unwrap())
+            .collect();
+        let px: Vec<f64> = pts.iter().map(|p| p[0]).collect();
+        let py: Vec<f64> = pts.iter().map(|p| p[1]).collect();
+        let faces = polygonize_regions(&px, &py, &lines).unwrap();
+        assert_eq!(faces.len(), regions);
     }
 }
 

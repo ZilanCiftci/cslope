@@ -837,7 +837,9 @@ fn splits_at_a_level_ending_exactly_on_a_sloping_face() {
 
 /// Issue #93 (b) as a sweep (608 levels): a level from outside the left
 /// edge to the sloping face 1:n of a slope of height H, ending exactly on
-/// the face (x = n · (10 − level) in floating point) or `past` beyond it.
+/// the face (x = n · (10 − level) in floating point) or `past` beyond it
+/// (short of it when negative: the end is then snapped to the face, which
+/// tilts the line, so the area is compared to |past| × the model width).
 fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
     let mut total = 0;
     let mut fails = Vec::new();
@@ -869,7 +871,8 @@ fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
                 let ok = !r.failed
                     && r.dangling_boundaries.is_empty()
                     && r.faces.len() == 2
-                    && upper.is_some_and(|a| (a - expected).abs() < 1e-6);
+                    && upper
+                        .is_some_and(|a| (a - expected).abs() < 1e-6 + past.abs() * (right - left));
                 if !ok {
                     fails.push(format!(
                         "n {n}, H {h}, level {level}, end {x_end}: {} faces",
@@ -884,7 +887,7 @@ fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
 
 #[test]
 fn property_levels_ending_on_or_past_a_sloping_face_split() {
-    for past in [0., 0.01, 0.5] {
+    for past in [0., 0.01, 0.5, -1e-6, -0.01] {
         let (total, fails) = level_on_face_failures(past);
         assert_eq!(total, 608);
         assert!(
@@ -893,5 +896,136 @@ fn property_levels_ending_on_or_past_a_sloping_face_split() {
             fails.len(),
             fails.join("\n")
         );
+    }
+}
+
+// ── ends just short of the outline (the mirror image of #93 a) ────
+
+#[test]
+fn a_thin_layer_whose_ends_stop_just_short_of_the_edge_is_kept() {
+    // Each end is 0.06 m from the outline and 0.05 m from the other
+    // boundary (tolerance 0.1 m): the ends were snapped onto each other and
+    // the layer vanished without an error.
+    let split = |lines: Vec<Vec<Pt>>| {
+        polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap()
+    };
+    for lines in [
+        vec![
+            vec![[0.06, 5.05], [99.94, 5.05]],
+            vec![[0.06, 5.], [99.94, 5.]],
+        ],
+        // the lower boundary inset, the upper one past the edges
+        vec![
+            vec![[-0.5, 5.05], [100.5, 5.05]],
+            vec![[0.08, 5.], [99.92, 5.]],
+        ],
+    ] {
+        let r = split(lines.clone());
+        assert!(!r.failed, "{lines:?}");
+        assert!(r.dangling_boundaries.is_empty(), "{lines:?}");
+        assert_eq!(r.faces.len(), 3, "{lines:?}");
+        let thin = area_of_face_at(&r.faces, 50., 5.025).unwrap();
+        assert!(close(thin, 5., 9), "{lines:?}: thin layer {thin} m²");
+        check_faces(&r.faces, ring_area(&RING100), &format!("{lines:?}"));
+    }
+}
+
+#[test]
+fn a_pinch_out_just_above_the_outline_keeps_three_regions() {
+    // Two boundaries meeting at one end, just above the bottom: the ends lie
+    // on each other, so neither was snapped to the outline, and the wedge
+    // between them merged with its neighbours.
+    let total = ring_area(&BOX);
+    for gap in [0., 1e-12, 1e-6, 1e-3, 0.009] {
+        let lines = vec![vec![[5., gap], [2., 10.]], vec![[5., gap], [8., 10.]]];
+        let r = polygonize_regions_detailed(&xs(&BOX), &ys(&BOX), &lines).unwrap();
+        let case = format!("gap {gap}");
+        assert!(!r.failed, "{case}");
+        assert!(r.dangling_boundaries.is_empty(), "{case}");
+        assert_eq!(r.faces.len(), 3, "{case}");
+        check_faces(&r.faces, total, &case);
+    }
+}
+
+#[test]
+fn property_thin_layers_survive_any_inset() {
+    // Ends from 0 to the tolerance (0.1 m) inside the edges, on one or both
+    // sides, and one boundary inset with the other past the edges.
+    let total = ring_area(&RING100);
+    let mut cases = 0;
+    for t in [0.002, 0.005, 0.01, 0.03, 0.05, 0.08, 0.099, 0.1, 0.15] {
+        for inset in [0., 1e-12, 1e-9, 0.001, 0.01, 0.05, 0.06, 0.08, 0.099] {
+            for y in [1., 5.] {
+                for (upper, lower) in [(inset, inset), (inset, 0.), (0., inset), (-0.5, inset)] {
+                    let lines = vec![
+                        vec![[upper, y + t], [100. - upper, y + t]],
+                        vec![[lower, y], [100. - lower, y]],
+                    ];
+                    let case = format!("t {t}, inset {upper}/{lower}, y {y}");
+                    let r =
+                        polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap();
+                    assert!(!r.failed, "{case}");
+                    assert!(r.dangling_boundaries.is_empty(), "{case}");
+                    assert_eq!(r.faces.len(), 3, "{case}");
+                    let thin = area_of_face_at(&r.faces, 50., y + t / 2.).unwrap();
+                    assert!((thin - 100. * t).abs() < 1e-6, "{case}: {thin} m²");
+                    check_faces(&r.faces, total, &case);
+                    cases += 1;
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 648);
+}
+
+/// The face of RING40 from (10, 10) to (30, 0) at parameter t, 1e-7 inside
+/// the slope (to the left of the face), so that the end is snapped to it.
+fn just_inside_the_face(t: f64) -> Pt {
+    [10. + 20. * t - 1e-7, 10. - 10. * t]
+}
+
+#[test]
+fn two_ends_snapped_to_one_segment_in_either_order() {
+    let total = ring_area(&RING40);
+    let a = vec![[0., 7.], just_inside_the_face(0.3)];
+    let b = vec![[0., 2.], just_inside_the_face(0.6)];
+    for lines in [vec![a.clone(), b.clone()], vec![b, a]] {
+        let r = polygonize_regions_detailed(&xs(&RING40), &ys(&RING40), &lines).unwrap();
+        assert!(!r.failed);
+        assert!(r.dangling_boundaries.is_empty());
+        assert_eq!(r.faces.len(), 3);
+        check_faces(&r.faces, total, "two ends on the face");
+    }
+    // both ends at the same point of the face: they meet there
+    let lines = vec![
+        vec![[0., 7.], just_inside_the_face(0.3)],
+        vec![[0., 2.], just_inside_the_face(0.3)],
+    ];
+    let r = polygonize_regions_detailed(&xs(&RING40), &ys(&RING40), &lines).unwrap();
+    assert_eq!(r.faces.len(), 3);
+    check_faces(&r.faces, total, "two ends at one point");
+}
+
+#[test]
+fn ends_snapped_to_the_closing_segment_and_on_a_clockwise_ring() {
+    let total = ring_area(&RING40);
+    let line = vec![[0., 2.], just_inside_the_face(0.45)];
+    // the ring started at the toe: the face is its closing segment
+    let rotated: Vec<Pt> = RING40[3..].iter().chain(&RING40[..3]).copied().collect();
+    // the ring reversed (clockwise)
+    let mut reversed: Vec<Pt> = RING40.to_vec();
+    reversed.reverse();
+    // the bottom (the closing segment of RING40) too
+    let bottom = vec![[0., 2.], [20., -10. + 1e-7]];
+    for (ring, line, case) in [
+        (rotated, line.clone(), "closing segment"),
+        (reversed, line, "clockwise"),
+        (RING40.to_vec(), bottom, "bottom"),
+    ] {
+        let r = polygonize_regions_detailed(&xs(&ring), &ys(&ring), &[line]).unwrap();
+        assert!(!r.failed, "{case}");
+        assert!(r.dangling_boundaries.is_empty(), "{case}");
+        assert_eq!(r.faces.len(), 2, "{case}");
+        check_faces(&r.faces, total, case);
     }
 }
