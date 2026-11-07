@@ -40,7 +40,7 @@ function Hero() {
             {s.problems} verification problems, {s.publishedValues} published values
           </p>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Slope stability analysis you can verify
+            Slope stability analysis, checked against published problems
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
             cSlope is limit equilibrium software for geotechnical engineers. Bishop, Janbu and Morgenstern-Price on
@@ -116,10 +116,10 @@ function WebApp() {
       <div className="grid items-center gap-8 overflow-hidden rounded-xl border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1.4fr] lg:gap-12">
         <div>
           <p className="text-sm font-semibold text-primary">In the browser</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Try it in your browser</h2>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Two templates to try without installing</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
-            Two templates, an excavation in clay with a haul road and an embankment on clay. Fill in the form and the
-            cSlope engine computes F on your own computer, with nothing to install.
+            An excavation in clay with a haul road, and an embankment on clay. Fill in the form and the cSlope engine
+            computes F on your own computer.
           </p>
           <Button asChild size="lg" className="mt-6">
             <a {...link}>
@@ -143,12 +143,12 @@ function WebApp() {
 const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <BarChart3 className="h-5 w-5" />,
-    title: "Three methods, one model",
+    title: "Methods",
     text: "Bishop simplified, Janbu with the f₀ correction and Morgenstern-Price with constant (Spencer), half-sine, clipped-sine, trapezoidal or user-defined interslice functions.",
   },
   {
     icon: <Spline className="h-5 w-5" />,
-    title: "Circular and non-circular",
+    title: "Slip surfaces",
     text: "Search by entry and exit ranges, custom circles and polylines, non-circular optimization, minimum slip depth and analysis in both slip directions.",
   },
   {
@@ -178,8 +178,8 @@ function Capabilities() {
     <Section id="capabilities">
       <SectionHeading
         eyebrow="Capabilities"
-        title="Everything a slope stability review needs"
-        lead="One desktop application for the whole job: model the section, run the search, check the result and produce the report."
+        title="What the desktop application does"
+        lead="Model the section, search for the critical surface, check the result and print the report, in one program."
       />
       <div className="mt-12 grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-3">
         {CAPABILITIES.map((c) => (
@@ -320,7 +320,7 @@ const GALLERY = [
 function Gallery() {
   return (
     <Section id="screenshots">
-      <SectionHeading eyebrow="The application" title="Built for daily engineering work" />
+      <SectionHeading eyebrow="The application" title="Screenshots" />
       <div className="mt-12 grid gap-6 md:grid-cols-2">
         {GALLERY.map((g) => (
           <Screenshot
@@ -337,9 +337,9 @@ function Gallery() {
 }
 
 const OPEN_SOURCE = [
-  ["Transparent", "The solvers, the search and every verification problem are in the public repository."],
-  ["Reproducible", "Deterministic solvers and an open project file (JSON in a ZIP archive): the same model gives the same answer."],
-  ["Maintained", `Developed by ${SITE.company.name}, with automated tests and verification on every change.`],
+  ["The code is public", "The solvers, the search and every verification problem are in the public repository."],
+  ["The same model gives the same answer", "The solvers are deterministic. A project is a .cslp file: JSON in a ZIP archive."],
+  ["Tested on every change", `Developed by ${SITE.company.name}. The automated tests and the verification problems run on every change.`],
 ] as const;
 
 function OpenSource() {
@@ -348,8 +348,8 @@ function OpenSource() {
       <div className="grid gap-10 md:grid-cols-2 md:items-center">
         <SectionHeading
           eyebrow="Open source"
-          title="Yours to inspect, run and keep"
-          lead="cSlope is MIT licensed. There is no license server, no subscription and no lock-in: install it on every machine in the office, read the solver code behind any result, and keep the version your project was approved with."
+          title="No license server, no subscription"
+          lead="cSlope is MIT licensed. You can install it on every computer in the office, read the solver code behind a result, and keep using the version a project was approved with."
         />
         <ul className="grid gap-4 text-sm">
           {OPEN_SOURCE.map(([title, text]) => (
@@ -372,10 +372,9 @@ function DownloadBand() {
     <Section id="download">
       <div className="flex flex-col items-start justify-between gap-8 rounded-xl border bg-card p-8 sm:p-12 md:flex-row md:items-center">
         <div className="max-w-xl">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Try it on your next section</h2>
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Download cSlope</h2>
           <p className="mt-3 text-muted-foreground">
-            Install cSlope on Windows and open one of the example models from Help › Examples to see a
-            complete analysis in a minute.
+            Install it on Windows, then open an example model from Help › Examples.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
