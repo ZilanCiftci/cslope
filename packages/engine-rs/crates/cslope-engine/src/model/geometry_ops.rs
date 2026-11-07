@@ -787,8 +787,9 @@ pub fn polygonize_regions(
 
 /// Relative tolerances of the region split (fractions of the model size).
 ///
-/// END_SNAP_TOLERANCE: a boundary end this close to the outline or to
-/// another boundary is put on the nearest point of it. An end short of the
+/// END_SNAP_TOLERANCE: a boundary end inside the model this close to the
+/// outline or to another boundary is put on the nearest point of it (an end
+/// outside the model crosses the outline and is cut there). An end short of the
 /// model edge or of the boundary it meets (by a rounding error, or a
 /// millimetre in a hand-edited or imported file) left the boundary
 /// dangling, and the layer below it was silently not split off: one
@@ -808,7 +809,14 @@ const COVERAGE_TOLERANCE: f64 = 1e-6;
 
 /// The point of the ring nearest to (x, y), and its distance.
 fn nearest_on_ring(ring: &[Pt], x: f64, y: f64) -> (Pt, f64) {
-    let mut best: (Pt, f64) = ([x, y], f64::INFINITY);
+    let (p, d, _) = nearest_on_ring_segment(ring, x, y);
+    (p, d)
+}
+
+/// The point of the ring nearest to (x, y), its distance, and the index of
+/// the segment it lies on (the segment from ring[i] to ring[i + 1]).
+fn nearest_on_ring_segment(ring: &[Pt], x: f64, y: f64) -> (Pt, f64, usize) {
+    let mut best: (Pt, f64, usize) = ([x, y], f64::INFINITY, 0);
     let mut i = 0;
     while i + 1 < ring.len() {
         let [ax, ay] = ring[i];
@@ -827,7 +835,7 @@ fn nearest_on_ring(ring: &[Pt], x: f64, y: f64) -> (Pt, f64) {
         let p: Pt = [ax + t * dx, ay + t * dy];
         let d = js::math::hypot(&[x - p[0], y - p[1]]);
         if d < best.1 {
-            best = (p, d);
+            best = (p, d, i);
         }
         i += 1;
     }
@@ -879,10 +887,36 @@ fn is_closed_line(l: &[Pt]) -> bool {
 }
 
 /// Put each boundary end within `tol` of the outline or of another boundary
-/// on the nearest point of it. Ends nearest the outline are snapped first,
-/// then ends nearest a boundary, onto the boundaries as already snapped (a
-/// T-junction then meets the line it ends on where that line now runs).
-fn snap_boundary_ends(ring: &[Pt], lines: &[Vec<Pt>], tol: f64) -> Vec<Vec<Pt>> {
+/// on the nearest point of it. Ends within `tol` of the outline are snapped
+/// to the outline first, even when another boundary is nearer; then ends
+/// farther from the outline but within `tol` of a boundary, onto the
+/// boundaries as already snapped (a T-junction then meets the line it ends
+/// on where that line now runs). An end snapped onto a neighbouring
+/// boundary near the edge instead made two boundaries one: a layer thinner
+/// than `tol` whose ends stop just short of the edge, or two boundaries
+/// pinching out together just above the outline, merged the regions on
+/// both sides (the mirror image of issue #93 a).
+///
+/// Only ends strictly inside the polygon are snapped. An end outside it (or
+/// on it) already crosses or meets the outline, and noding cuts the line
+/// there; snapping it could put it on a neighbouring boundary instead, and
+/// a layer thinner than `tol` between two boundaries drawn past the edge
+/// then vanished (issue #93 a). A boundary entirely outside the outline is
+/// so left as drawn, and ignored by the split.
+///
+/// An end snapped to the outline is put on the outline exactly: the point
+/// is inserted into the ring as a vertex (the same pair of numbers as the
+/// end), so that noding meets it there whatever the rounding of the
+/// nearest point. Otherwise an end on a sloping face, off it by a rounding
+/// error, could leave the layer unsplit (issue #93 b). Returns the ring
+/// with the inserted vertices, and the lines.
+fn snap_boundary_ends(
+    polygon: &[Coord],
+    ring: &[Pt],
+    lines: &[Vec<Pt>],
+    tol: f64,
+    same: f64,
+) -> (Vec<Pt>, Vec<Vec<Pt>>) {
     let mut out: Vec<Vec<Pt>> = lines.to_vec();
     let set = |out: &mut Vec<Vec<Pt>>, k: usize, which: End, p: Pt| {
         let i = if which == End::First {
@@ -893,6 +927,8 @@ fn snap_boundary_ends(ring: &[Pt], lines: &[Vec<Pt>], tol: f64) -> Vec<Vec<Pt>> 
         out[k][i] = p;
     };
     let mut to_lines: Vec<(usize, End)> = Vec::new();
+    // (segment index, point) of the ends put on the outline
+    let mut on_outline: Vec<(usize, Pt)> = Vec::new();
     for k in 0..out.len() {
         if is_closed_line(&out[k]) {
             continue;
@@ -903,12 +939,19 @@ fn snap_boundary_ends(ring: &[Pt], lines: &[Vec<Pt>], tol: f64) -> Vec<Vec<Pt>> 
             } else {
                 out[k][out[k].len() - 1]
             };
-            let on_ring = nearest_on_ring(ring, x, y);
+            if !polygon_contains(polygon, &Some(Coord::new(x, y))) {
+                continue;
+            }
+            let (p, d, seg) = nearest_on_ring_segment(ring, x, y);
             let on_line = nearest_on_lines(lines, k, which);
-            if on_ring.1 <= on_line.1 {
-                if on_ring.1 > 0.0 && on_ring.1 <= tol {
-                    set(&mut out, k, which, on_ring.0);
-                }
+            if d <= tol {
+                // a point this close to a vertex of the outline is that vertex
+                let p = [ring[seg], ring[seg + 1]]
+                    .into_iter()
+                    .find(|v| js::math::hypot(&[v[0] - p[0], v[1] - p[1]]) <= same)
+                    .unwrap_or(p);
+                set(&mut out, k, which, p);
+                on_outline.push((seg, p));
             } else if on_line.1 > 0.0 && on_line.1 <= tol {
                 to_lines.push((k, which));
             }
@@ -920,7 +963,39 @@ fn snap_boundary_ends(ring: &[Pt], lines: &[Vec<Pt>], tol: f64) -> Vec<Vec<Pt>> 
             set(&mut out, k, which, p);
         }
     }
-    out
+    (insert_ring_vertices(ring, &on_outline), out)
+}
+
+/// The closed ring with the points inserted as vertices, each on the
+/// segment given with it (from ring[i] to ring[i + 1]), in order along it.
+/// A point equal to a vertex is not inserted again.
+fn insert_ring_vertices(ring: &[Pt], points: &[(usize, Pt)]) -> Vec<Pt> {
+    if points.is_empty() {
+        return ring.to_vec();
+    }
+    let mut result: Vec<Pt> = Vec::with_capacity(ring.len() + points.len());
+    for i in 0..ring.len() - 1 {
+        let (a, b) = (ring[i], ring[i + 1]);
+        result.push(a);
+        // in order along the segment (its parameter t), then by x and y,
+        // so that equal points are adjacent and kept once
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let t = |p: &Pt| (p[0] - a[0]) * dx + (p[1] - a[1]) * dy;
+        let mut on_segment: Vec<Pt> = points
+            .iter()
+            .filter(|(seg, p)| *seg == i && *p != a && *p != b)
+            .map(|&(_, p)| p)
+            .collect();
+        on_segment.sort_by(|p, q| {
+            t(p).total_cmp(&t(q))
+                .then(p[0].total_cmp(&q[0]))
+                .then(p[1].total_cmp(&q[1]))
+        });
+        on_segment.dedup();
+        result.extend(on_segment);
+    }
+    result.push(ring[ring.len() - 1]);
+    result
 }
 
 /// Indices of the lines with an end strictly inside the polygon and more
@@ -1043,7 +1118,13 @@ pub fn polygonize_regions_detailed(
     // Boundary ends near the outline or another boundary are put on it.
     let indices: Vec<usize> = (0..lines.len()).filter(|&i| lines[i].len() >= 2).collect();
     let selected: Vec<Vec<Pt>> = indices.iter().map(|&i| lines[i].clone()).collect();
-    let usable = snap_boundary_ends(&ring, &selected, END_SNAP_TOLERANCE * size);
+    let (snapped_ring, usable) = snap_boundary_ends(
+        &polygon,
+        &ring,
+        &selected,
+        END_SNAP_TOLERANCE * size,
+        DANGLE_TOLERANCE * size,
+    );
     let dangling: Vec<usize> = dangling_lines(&polygon, &ring, &usable, DANGLE_TOLERANCE * size)
         .into_iter()
         .map(|k| indices[k])
@@ -1069,7 +1150,9 @@ pub fn polygonize_regions_detailed(
     // Plain noding first: exact where it works (no dangles, the slope
     // covered).
     let mut plain: Option<Vec<RegionFace>> = None;
-    if let Ok((faces, dangles)) = polygonize_once(&polygon, &ring, &usable, None) {
+    // The ring with the boundary ends put on it as vertices.
+    let snapped_polygon = to_coords(&snapped_ring);
+    if let Ok((faces, dangles)) = polygonize_once(&snapped_polygon, &snapped_ring, &usable, None) {
         if covers(&faces) {
             if dangles == 0 {
                 return Ok(RegionFacesResult {
@@ -1098,7 +1181,7 @@ pub fn polygonize_regions_detailed(
                 .map(|&[x, y]| [x + ox, y + oy])
                 .collect::<Vec<Pt>>()
         };
-        let local_ring = local(&ring);
+        let local_ring = local(&snapped_ring);
         let local_polygon = to_coords(&local_ring);
         let local_lines: Vec<Vec<Pt>> = usable.iter().map(|l| local(l)).collect();
         if let Ok((faces, _)) = polygonize_once(

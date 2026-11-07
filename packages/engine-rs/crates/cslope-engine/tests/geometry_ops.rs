@@ -735,3 +735,297 @@ fn boundary_end_snapping() {
         assert_eq!(r.faces.len(), exact.faces.len());
     }
 }
+
+// ── issue #93: boundary ends past or exactly on the outline ───────
+
+/// The area of the face that contains (x, y).
+fn area_of_face_at(faces: &[RegionFace], x: f64, y: f64) -> Option<f64> {
+    faces
+        .iter()
+        .map(|f| keyhole_ring(&f.outer, &f.holes))
+        .find(|r| is_point_in_polygon(x, y, &xs(r), &ys(r)))
+        .map(|r| ring_area(&r))
+}
+
+/// The 100 × 20 m model of issue #93 (a).
+const RING100: [Pt; 6] = [
+    [0., 0.],
+    [0., 20.],
+    [40., 20.],
+    [60., 10.],
+    [100., 10.],
+    [100., 0.],
+];
+
+#[test]
+fn a_thin_layer_between_boundaries_past_the_outline_is_kept() {
+    // Issue #93 (a): two boundaries 5 cm apart, each 0.5 m past both edges.
+    // The ends outside the outline were snapped onto the neighbouring
+    // boundary (nearer than the outline), and the thin layer vanished.
+    let lines = vec![
+        vec![[-0.5, 5.05], [100.5, 5.05]],
+        vec![[-0.5, 5.], [100.5, 5.]],
+    ];
+    let r = polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap();
+    assert!(!r.failed);
+    assert!(r.dangling_boundaries.is_empty());
+    assert_eq!(r.faces.len(), 3);
+    let thin = area_of_face_at(&r.faces, 5., 5.025).unwrap();
+    assert!(close(thin, 5., 9), "thin layer {thin} m²");
+    check_faces(&r.faces, ring_area(&RING100), "issue 93 a");
+}
+
+#[test]
+fn property_thin_layers_survive_any_overshoot() {
+    // Issue #93 (a) as a sweep: a layer thinner than the snap tolerance
+    // (0.1 m here) merged when the overshoot was larger than its thickness.
+    let total = ring_area(&RING100);
+    let mut cases = 0;
+    for t in [0.002, 0.005, 0.01, 0.03, 0.05, 0.08, 0.099, 0.1, 0.15] {
+        for o in [0., 1e-9, 0.001, 0.01, 0.05, 0.099, 0.1, 0.5, 2.] {
+            for y in [1., 5., 9.8] {
+                for (left, right) in [(o, o), (o, 0.), (0., o)] {
+                    let lines = vec![
+                        vec![[-left, y + t], [100. + right, y + t]],
+                        vec![[-left, y], [100. + right, y]],
+                    ];
+                    let case = format!("t {t}, overshoot {left}/{right}, y {y}");
+                    let r =
+                        polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap();
+                    assert!(!r.failed, "{case}");
+                    assert!(r.dangling_boundaries.is_empty(), "{case}");
+                    assert_eq!(r.faces.len(), 3, "{case}");
+                    let thin = area_of_face_at(&r.faces, 50., y + t / 2.).unwrap();
+                    assert!((thin - 100. * t).abs() < 1e-6, "{case}: {thin} m²");
+                    check_faces(&r.faces, total, &case);
+                    cases += 1;
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 729);
+}
+
+#[test]
+fn splits_at_a_level_ending_exactly_on_a_sloping_face() {
+    // Issue #93 (b): face 1:3.2 from (0, 10) to (6.4, 8); the level 8.2
+    // ends at x = 3.2 · (10 − 8.2) in floating point, off the face by a
+    // rounding error.
+    let ring: [Pt; 6] = [
+        [-6., 4.],
+        [-6., 10.],
+        [0., 10.],
+        [6.4, 8.],
+        [12.4, 8.],
+        [12.4, 4.],
+    ];
+    for end in [5.7600000000000025, 5.77] {
+        let r =
+            polygonize_regions_detailed(&xs(&ring), &ys(&ring), &[vec![[-6.1, 8.2], [end, 8.2]]])
+                .unwrap();
+        assert!(!r.failed, "end {end}");
+        assert!(r.dangling_boundaries.is_empty(), "end {end}");
+        assert_eq!(r.faces.len(), 2, "end {end}");
+        let upper = area_of_face_at(&r.faces, -5., 9.).unwrap();
+        assert!(
+            close(upper, 6. * 1.8 + 5.76 * 1.8 / 2., 6),
+            "end {end}: {upper} m²"
+        );
+        check_faces(&r.faces, ring_area(&ring), &format!("end {end}"));
+    }
+}
+
+/// Issue #93 (b) as a sweep (608 levels): a level from outside the left
+/// edge to the sloping face 1:n of a slope of height H, ending exactly on
+/// the face (x = n · (10 − level) in floating point) or `past` beyond it
+/// (short of it when negative: the end is then snapped to the face, which
+/// tilts the line, so the area is compared to |past| × the model width).
+fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
+    let mut total = 0;
+    let mut fails = Vec::new();
+    for n in [1., 1.5, 2., 2.5, 3., 3.2, 3.7, 4.3] {
+        for h in [2., 3.3, 5., 7.7] {
+            for k in 1..20 {
+                let (g, bottom) = (10., 10. - h);
+                let level =
+                    cslope_engine::js::math::round((g - (h * k as f64) / 20.) * 100.) / 100.;
+                if level >= g || level <= bottom {
+                    continue;
+                }
+                let toe = n * h;
+                let (left, right, base) = (-3. * h, toe + 3. * h, g - 3. * h);
+                let ring: [Pt; 6] = [
+                    [left, base],
+                    [left, g],
+                    [0., g],
+                    [toe, bottom],
+                    [right, bottom],
+                    [right, base],
+                ];
+                let x_end = n * (g - level) + past;
+                let lines = vec![vec![[left - 0.1, level], [x_end, level]]];
+                total += 1;
+                let r = polygonize_regions_detailed(&xs(&ring), &ys(&ring), &lines).unwrap();
+                let upper = area_of_face_at(&r.faces, left + 0.5, (g + level) / 2.);
+                let expected = (n * (g - level) / 2. - left) * (g - level);
+                let ok = !r.failed
+                    && r.dangling_boundaries.is_empty()
+                    && r.faces.len() == 2
+                    && upper
+                        .is_some_and(|a| (a - expected).abs() < 1e-6 + past.abs() * (right - left));
+                if !ok {
+                    fails.push(format!(
+                        "n {n}, H {h}, level {level}, end {x_end}: {} faces",
+                        r.faces.len()
+                    ));
+                }
+            }
+        }
+    }
+    (total, fails)
+}
+
+#[test]
+fn property_levels_ending_on_or_past_a_sloping_face_split() {
+    for past in [0., 0.01, 0.5, -1e-6, -0.01] {
+        let (total, fails) = level_on_face_failures(past);
+        assert_eq!(total, 608);
+        assert!(
+            fails.is_empty(),
+            "past {past}: {} of {total} fail:\n{}",
+            fails.len(),
+            fails.join("\n")
+        );
+    }
+}
+
+// ── ends just short of the outline (the mirror image of #93 a) ────
+
+#[test]
+fn a_thin_layer_whose_ends_stop_just_short_of_the_edge_is_kept() {
+    // Each end is 0.06 m from the outline and 0.05 m from the other
+    // boundary (tolerance 0.1 m): the ends were snapped onto each other and
+    // the layer vanished without an error.
+    let split = |lines: Vec<Vec<Pt>>| {
+        polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap()
+    };
+    for lines in [
+        vec![
+            vec![[0.06, 5.05], [99.94, 5.05]],
+            vec![[0.06, 5.], [99.94, 5.]],
+        ],
+        // the lower boundary inset, the upper one past the edges
+        vec![
+            vec![[-0.5, 5.05], [100.5, 5.05]],
+            vec![[0.08, 5.], [99.92, 5.]],
+        ],
+    ] {
+        let r = split(lines.clone());
+        assert!(!r.failed, "{lines:?}");
+        assert!(r.dangling_boundaries.is_empty(), "{lines:?}");
+        assert_eq!(r.faces.len(), 3, "{lines:?}");
+        let thin = area_of_face_at(&r.faces, 50., 5.025).unwrap();
+        assert!(close(thin, 5., 9), "{lines:?}: thin layer {thin} m²");
+        check_faces(&r.faces, ring_area(&RING100), &format!("{lines:?}"));
+    }
+}
+
+#[test]
+fn a_pinch_out_just_above_the_outline_keeps_three_regions() {
+    // Two boundaries meeting at one end, just above the bottom: the ends lie
+    // on each other, so neither was snapped to the outline, and the wedge
+    // between them merged with its neighbours.
+    let total = ring_area(&BOX);
+    for gap in [0., 1e-12, 1e-6, 1e-3, 0.009] {
+        let lines = vec![vec![[5., gap], [2., 10.]], vec![[5., gap], [8., 10.]]];
+        let r = polygonize_regions_detailed(&xs(&BOX), &ys(&BOX), &lines).unwrap();
+        let case = format!("gap {gap}");
+        assert!(!r.failed, "{case}");
+        assert!(r.dangling_boundaries.is_empty(), "{case}");
+        assert_eq!(r.faces.len(), 3, "{case}");
+        check_faces(&r.faces, total, &case);
+    }
+}
+
+#[test]
+fn property_thin_layers_survive_any_inset() {
+    // Ends from 0 to the tolerance (0.1 m) inside the edges, on one or both
+    // sides, and one boundary inset with the other past the edges.
+    let total = ring_area(&RING100);
+    let mut cases = 0;
+    for t in [0.002, 0.005, 0.01, 0.03, 0.05, 0.08, 0.099, 0.1, 0.15] {
+        for inset in [0., 1e-12, 1e-9, 0.001, 0.01, 0.05, 0.06, 0.08, 0.099] {
+            for y in [1., 5.] {
+                for (upper, lower) in [(inset, inset), (inset, 0.), (0., inset), (-0.5, inset)] {
+                    let lines = vec![
+                        vec![[upper, y + t], [100. - upper, y + t]],
+                        vec![[lower, y], [100. - lower, y]],
+                    ];
+                    let case = format!("t {t}, inset {upper}/{lower}, y {y}");
+                    let r =
+                        polygonize_regions_detailed(&xs(&RING100), &ys(&RING100), &lines).unwrap();
+                    assert!(!r.failed, "{case}");
+                    assert!(r.dangling_boundaries.is_empty(), "{case}");
+                    assert_eq!(r.faces.len(), 3, "{case}");
+                    let thin = area_of_face_at(&r.faces, 50., y + t / 2.).unwrap();
+                    assert!((thin - 100. * t).abs() < 1e-6, "{case}: {thin} m²");
+                    check_faces(&r.faces, total, &case);
+                    cases += 1;
+                }
+            }
+        }
+    }
+    assert_eq!(cases, 648);
+}
+
+/// The face of RING40 from (10, 10) to (30, 0) at parameter t, 1e-7 inside
+/// the slope (to the left of the face), so that the end is snapped to it.
+fn just_inside_the_face(t: f64) -> Pt {
+    [10. + 20. * t - 1e-7, 10. - 10. * t]
+}
+
+#[test]
+fn two_ends_snapped_to_one_segment_in_either_order() {
+    let total = ring_area(&RING40);
+    let a = vec![[0., 7.], just_inside_the_face(0.3)];
+    let b = vec![[0., 2.], just_inside_the_face(0.6)];
+    for lines in [vec![a.clone(), b.clone()], vec![b, a]] {
+        let r = polygonize_regions_detailed(&xs(&RING40), &ys(&RING40), &lines).unwrap();
+        assert!(!r.failed);
+        assert!(r.dangling_boundaries.is_empty());
+        assert_eq!(r.faces.len(), 3);
+        check_faces(&r.faces, total, "two ends on the face");
+    }
+    // both ends at the same point of the face: they meet there
+    let lines = vec![
+        vec![[0., 7.], just_inside_the_face(0.3)],
+        vec![[0., 2.], just_inside_the_face(0.3)],
+    ];
+    let r = polygonize_regions_detailed(&xs(&RING40), &ys(&RING40), &lines).unwrap();
+    assert_eq!(r.faces.len(), 3);
+    check_faces(&r.faces, total, "two ends at one point");
+}
+
+#[test]
+fn ends_snapped_to_the_closing_segment_and_on_a_clockwise_ring() {
+    let total = ring_area(&RING40);
+    let line = vec![[0., 2.], just_inside_the_face(0.45)];
+    // the ring started at the toe: the face is its closing segment
+    let rotated: Vec<Pt> = RING40[3..].iter().chain(&RING40[..3]).copied().collect();
+    // the ring reversed (clockwise)
+    let mut reversed: Vec<Pt> = RING40.to_vec();
+    reversed.reverse();
+    // the bottom (the closing segment of RING40) too
+    let bottom = vec![[0., 2.], [20., -10. + 1e-7]];
+    for (ring, line, case) in [
+        (rotated, line.clone(), "closing segment"),
+        (reversed, line, "clockwise"),
+        (RING40.to_vec(), bottom, "bottom"),
+    ] {
+        let r = polygonize_regions_detailed(&xs(&ring), &ys(&ring), &[line]).unwrap();
+        assert!(!r.failed, "{case}");
+        assert!(r.dangling_boundaries.is_empty(), "{case}");
+        assert_eq!(r.faces.len(), 2, "{case}");
+        check_faces(&r.faces, total, case);
+    }
+}
