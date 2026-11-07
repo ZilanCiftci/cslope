@@ -129,7 +129,7 @@ The first public release.
 
 ### In the browser
 
-- cSlope in the browser at app.cslope.com, linked from the website's home and download pages: one template, an excavation in clay with a working road (ground level, depth and slope, horizontal layers (drained, or undrained with a constant strength or one increasing with depth), a ground-water level, a tension crack and an optional working road with a traffic load), analyzed by the same engine on the user's own computer as soon as the form is complete. It shows the section with the critical surface and F with its method, on characteristic values or on design values with the Swedish partial factors of a safety class; the address holds the parameters, so a link opens the same section, and the analysis downloads as JSON.
+- cSlope in the browser at app.cslope.com, linked from the website's home and download pages: one template, an excavation in clay with a haul road (ground level, depth and slope, a one-sided excavation or a trench of a given bottom width, horizontal layers with the app's material models (Undrained, with Su constant or increasing with depth; Mohr-Coulomb; Impenetrable (bedrock)), a ground-water level and an optional haul road with a traffic load), analyzed by the same engine on the user's own computer as soon as the form is complete. It shows the section with the critical surface and F with its method, on characteristic values or on design values with the Swedish partial factors of a safety class; the address holds the parameters, so a link opens the same section, and the analysis downloads as JSON.
 
 ### Verification
 

@@ -8,7 +8,7 @@
 import type { SliceData } from "@cslope/engine";
 import type { Layer } from "../templates/common";
 import { embankmentExterior, embankmentGeometry, type EmbankmentParams } from "../templates/embankment";
-import { exteriorOf, geometry, type ExcavationParams } from "../templates/excavation";
+import { exteriorOf, geometry, levelBoundaries, type ExcavationParams } from "../templates/excavation";
 
 export type Point = [number, number];
 
@@ -59,6 +59,26 @@ export function waterLine(exterior: Point[], level: number): Point[] {
   return out;
 }
 
+/**
+ * The water of a level: the line cut at the ground, or with `ponded` the
+ * level across the model and the area between the ground and the level
+ * (null where the ground is everywhere above the level).
+ */
+export function waterOf(exterior: Point[], level: number | null, ponded: boolean, lowestGround: number): { water: Point[]; pond: Point[] | null } {
+  if (level === null) return { water: [], pond: null };
+  const cut = waterLine(exterior, level);
+  if (!ponded || level <= lowestGround || !cut.length) return { water: cut, pond: null };
+  const left = cut[0][0];
+  const right = cut[cut.length - 1][0];
+  return {
+    water: [
+      [left, level],
+      [right, level],
+    ],
+    pond: [...cut, [right, level], [left, level]],
+  };
+}
+
 /** The height of a polyline (left to right) at x. */
 export function lineAt(line: Point[], x: number): number | null {
   for (let i = 1; i < line.length; i++) {
@@ -78,8 +98,10 @@ export interface SectionShapes {
   boundaries: [Point, Point][];
   /** The fill above the ground (the road, the embankment). */
   fill: Point[] | null;
-  /** The water line, cut at the ground. */
+  /** The water line: cut at the ground, or level across the model under ponded water. */
   water: Point[];
+  /** Ponded water: the area above the ground up to the level; null when there is none. */
+  pond: Point[] | null;
   /** A distributed load: its span, the ground it stands on and q (kPa). */
   load: { x1: number; x2: number; y: number; q: number } | null;
   /** The model's extent. */
@@ -114,10 +136,7 @@ export function excavationShapes(params: ExcavationParams): SectionShapes {
     [r.topRight, r.top],
     [r.nearToe, g.ground],
   ];
-  const boundaries: [Point, Point][] = g.levels.map((level) => [
-    [g.left, level],
-    [level > g.bottom ? params.slope * (g.ground - level) : g.right, level],
-  ]);
+  const boundaries = levelBoundaries(params, g);
   if (r) boundaries.push([
     [r.farToe, g.ground],
     [r.nearToe, g.ground],
@@ -129,10 +148,11 @@ export function excavationShapes(params: ExcavationParams): SectionShapes {
     layers: layerBands(exterior, params.layers, g.ground, g.base),
     boundaries,
     fill,
-    water: params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel),
+    ...waterOf(exterior, params.waterLevel, params.ponded === true, g.bottom),
     load: r && q ? { x1: r.topLeft, x2: r.topRight, y: r.top, q } : null,
     extent: { left: g.left, right: g.right, base: g.base, top: r ? r.top : g.ground },
-    focus: { x0: Math.min(r?.farToe ?? 0, -2 * H), x1: g.toeX + 2 * H, y0: g.bottom - 1.5 * H, margin: H },
+    // The whole trench, with its opposite crest.
+    focus: { x0: Math.min(r?.farToe ?? 0, -2 * H), x1: Math.max(g.toeX + 2 * H, g.trench ? g.trench.farCrest : 0), y0: g.bottom - 1.5 * H, margin: H },
   };
 }
 
@@ -160,7 +180,7 @@ export function embankmentShapes(params: EmbankmentParams): SectionShapes {
       [0, g.crest],
       [g.toeX, g.ground],
     ],
-    water: params.waterLevel === null ? [] : waterLine(exterior, params.waterLevel),
+    ...waterOf(exterior, params.waterLevel, params.ponded === true, g.ground),
     load: params.crestLoad ? { x1: g.crestLeft, x2: 0, y: g.crest, q: params.crestLoad } : null,
     extent: { left: g.left, right: g.right, base: g.base, top: g.crest },
     focus: { x0: g.farToe, x1: g.toeX + 2 * h, y0: g.ground - 1.5 * h, margin: h },

@@ -201,7 +201,7 @@ export function App({ client }: { client: AnalysisClient }) {
           {spec.template.description} F is computed on your own computer by the cSlope engine.
         </p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
-          <Form key={draft.template} spec={spec} draft={draft} onChange={setDraft} errors={errors} notes={notes} />
+          <Form key={draft.template} spec={spec} draft={draft} onChange={setDraft} errors={errors} missing={form.missing} notes={notes} />
           <div className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
             <figure className="rounded-lg border bg-card p-3">
               {drawn ? (

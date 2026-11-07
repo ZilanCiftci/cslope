@@ -33,7 +33,12 @@ export interface Read {
   on: ReadonlySet<string>;
   layers: Layer[];
   values: Values;
+  /** Water above the ground stands as ponded (free) water. */
+  ponded: boolean;
 }
+
+/** `ponded: true` when it is on and there is water; nothing otherwise (the parameter sets of the examples leave it out). */
+const pondedOf = (read: Read, water: number | null) => (read.ponded && water !== null ? { ponded: true } : {});
 
 export interface FormSpec<P> {
   template: Template<P>;
@@ -56,7 +61,11 @@ export interface FormSpec<P> {
   /** The parameters to draw, with the optional fields the drawing shows left out when `ok` says they are wrong. */
   drawable(params: P, ok: (field: string) => boolean): P;
   shapes(params: P): SectionShapes;
-  /** What the drawing shows, for screen readers: "the excavation: 1 layer, a working road". */
+  /** The lowest ground (m): ponded water matters only with the water above it. */
+  lowestGround(params: P): number;
+  /** What ponded water does in this template, for the checkbox's hint. */
+  pondedHint: string;
+  /** What the drawing shows, for screen readers: "the excavation: 1 layer, a haul road". */
   describe(params: P): string;
   targets(params: P): IssueTargets;
 }
@@ -64,12 +73,11 @@ export interface FormSpec<P> {
 const text = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
 
 function fillOf(read: Read, group: string): Fill {
-  const gammaSat = read.opt(`${group}.gammaSat`);
-  return { gamma: read.num(`${group}.gamma`), c: read.num(`${group}.c`), phi: read.num(`${group}.phi`), ...(gammaSat === null ? {} : { gammaSat }) };
+  return { gamma: read.num(`${group}.gamma`), c: read.num(`${group}.c`), phi: read.num(`${group}.phi`) };
 }
 
 function fillFields(fill: Fill, group: string): Record<string, string> {
-  return { [`${group}.gamma`]: text(fill.gamma), [`${group}.gammaSat`]: text(fill.gammaSat), [`${group}.c`]: text(fill.c), [`${group}.phi`]: text(fill.phi) };
+  return { [`${group}.gamma`]: text(fill.gamma), [`${group}.c`]: text(fill.c), [`${group}.phi`]: text(fill.phi) };
 }
 
 const layersText = (layers: Layer[], water: number | null) => `${layers.length === 1 ? "1 layer" : `${layers.length} layers`}${water !== null ? `, ground water at ${water} m` : ""}`;
@@ -79,31 +87,30 @@ const layerTargets = (layers: Layer[]) => ({
   regions: layers.map((_, i) => `layers.${i}.bottomLevel`),
 });
 
-const fillKeys = (group: string) => ["gamma", "gammaSat", "c", "phi"].map((k) => `${group}.${k}`);
+const fillKeys = (group: string) => ["gamma", "c", "phi"].map((k) => `${group}.${k}`);
 
 export const excavationSpec: FormSpec<ExcavationParams> = {
   template: excavationTemplate,
-  before: [{ id: "geometry", title: "Geometry", keys: ["groundLevel", "excavationDepth", "slope", "bottomWidth", "tensionCrackDepth"] }],
+  before: [{ id: "geometry", title: "Geometry", keys: ["groundLevel", "excavationDepth", "slope", "bottomWidth"] }],
   after: [
     { id: "water", title: "Water", keys: ["waterLevel"] },
     {
       id: "road",
-      title: "Working road",
+      title: "Haul road",
       keys: ["road.distanceFromCrest", "road.width", "road.height", ...fillKeys("road"), "road.trafficLoad"],
       toggle: {
-        label: "Working road behind the crest",
+        label: "Haul road behind the crest",
         title: "A fill on the ground behind the crest, with its own material and an optional traffic load.",
         initial: { "road.distanceFromCrest": "2", "road.width": "4", "road.height": "0.5" },
       },
     },
   ],
-  short: { groundLevel: "ground", excavationDepth: "H", waterLevel: "water", tensionCrackDepth: "crack" },
+  short: { groundLevel: "ground", excavationDepth: "H", waterLevel: "water" },
   initial: { groundLevel: "0", excavationDepth: "3", slope: "1.5" },
   fileName: "cslope-excavation.json",
   caption: "Elevation and distance from the crest (m).",
   params(read) {
     const { num, opt } = read;
-    const tension = opt("tensionCrackDepth");
     return {
       groundLevel: num("groundLevel"),
       excavationDepth: num("excavationDepth"),
@@ -115,7 +122,7 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
         ? { distanceFromCrest: num("road.distanceFromCrest"), width: num("road.width"), height: num("road.height"), fill: fillOf(read, "road"), trafficLoad: opt("road.trafficLoad") }
         : null,
       values: read.values,
-      ...(tension === null ? {} : { tensionCrackDepth: tension }),
+      ...pondedOf(read, opt("waterLevel")),
     };
   },
   toFields(p) {
@@ -124,7 +131,6 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
       excavationDepth: text(p.excavationDepth),
       slope: text(p.slope),
       bottomWidth: text(p.bottomWidth),
-      tensionCrackDepth: text(p.tensionCrackDepth),
       waterLevel: text(p.waterLevel),
     };
     if (p.road) {
@@ -145,7 +151,9 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
     road: p.road && { ...p.road, trafficLoad: ok("road.trafficLoad") ? p.road.trafficLoad : null },
   }),
   shapes: excavationShapes,
-  describe: (p) => `the excavation: ${layersText(p.layers, p.waterLevel)}${p.road ? ", a working road" : ""}`,
+  lowestGround: (p) => p.groundLevel - p.excavationDepth,
+  pondedHint: "Water above the ground stands in the excavation as ponded water. Off: the level follows the ground surface and seeps out of the slope.",
+  describe: (p) => `the excavation${p.bottomWidth !== null ? `, a trench ${p.bottomWidth} m wide at the bottom` : ""}: ${layersText(p.layers, p.waterLevel)}${p.road ? ", a haul road" : ""}`,
   targets: (p) => {
     const t = layerTargets(p.layers);
     return p.road ? { materials: [...t.materials, "road"], regions: [...t.regions, "road.height"], udl: "road.trafficLoad" } : { ...t, udl: null };
@@ -155,16 +163,15 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
 export const embankmentSpec: FormSpec<EmbankmentParams> = {
   template: embankmentTemplate,
   before: [
-    { id: "geometry", title: "Geometry", keys: ["groundLevel", "embankmentHeight", "crestWidth", "slope", "tensionCrackDepth"] },
+    { id: "geometry", title: "Geometry", keys: ["groundLevel", "embankmentHeight", "crestWidth", "slope"] },
     { id: "embankment", title: "Embankment", keys: [...fillKeys("fill"), "crestLoad"] },
   ],
   after: [{ id: "water", title: "Water", keys: ["waterLevel"] }],
-  short: { groundLevel: "ground", embankmentHeight: "h", crestWidth: "B", waterLevel: "water", crestLoad: "q", tensionCrackDepth: "crack" },
+  short: { groundLevel: "ground", embankmentHeight: "h", crestWidth: "B", waterLevel: "water", crestLoad: "q" },
   initial: { groundLevel: "0", embankmentHeight: "3", crestWidth: "6", slope: "2" },
   fileName: "cslope-embankment.json",
   caption: "Elevation, and distance from the crest's right edge (m).",
   params(read) {
-    const tension = read.opt("tensionCrackDepth");
     return {
       groundLevel: read.num("groundLevel"),
       embankmentHeight: read.num("embankmentHeight"),
@@ -175,7 +182,7 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
       layers: read.layers,
       waterLevel: read.opt("waterLevel"),
       values: read.values,
-      ...(tension === null ? {} : { tensionCrackDepth: tension }),
+      ...pondedOf(read, read.opt("waterLevel")),
     };
   },
   toFields: (p) => ({
@@ -184,7 +191,6 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
       embankmentHeight: text(p.embankmentHeight),
       crestWidth: text(p.crestWidth),
       slope: text(p.slope),
-      tensionCrackDepth: text(p.tensionCrackDepth),
       ...fillFields(p.fill, "fill"),
       crestLoad: text(p.crestLoad),
       waterLevel: text(p.waterLevel),
@@ -194,6 +200,8 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
   geometry: /^(groundLevel|embankmentHeight|crestWidth|slope|layers|layers\.\d+\.bottomLevel)$/,
   drawable: (p, ok) => ({ ...p, waterLevel: ok("waterLevel") ? p.waterLevel : null, crestLoad: ok("crestLoad") ? p.crestLoad : null }),
   shapes: embankmentShapes,
+  lowestGround: (p) => p.groundLevel,
+  pondedHint: "Water above the ground stands beside the embankment as ponded water. Off: the level follows the ground surface and seeps out of the slope.",
   describe: (p) => `the embankment: ${layersText(p.layers, p.waterLevel)}${p.crestLoad ? `, a load of ${p.crestLoad} kPa on the crest` : ""}`,
   targets: (p) => {
     const t = layerTargets(p.layers);

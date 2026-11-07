@@ -61,7 +61,7 @@ const type = (name: string, value: string, index = 0) => fireEvent.change(field(
 
 /** Fills in the two empty fields of the first visit: the form is ready. */
 const fill = (su = "20") => {
-  type("Unit weight γ (kN/m³)", "16");
+  type("γ (kN/m³)", "16");
   type("Su (kPa)", su);
 };
 const card = () => screen.getByRole("region", { name: "Result" });
@@ -77,7 +77,7 @@ beforeEach(() => {
 describe("App", () => {
   it("shows the template, and asks for the empty strengths without running", async () => {
     const { requests } = renderApp();
-    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a working road" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
     await flush();
     expect(screen.getByRole("status")).toHaveTextContent("To get F, fill in 2 empty fields.");
     expect(field("Su (kPa)").value).toBe("");
@@ -89,7 +89,7 @@ describe("App", () => {
 
   it("runs when the form is filled in and shows F with its label and the engine's warnings", async () => {
     const { requests } = renderApp();
-    type("Unit weight γ (kN/m³)", "16");
+    type("γ (kN/m³)", "16");
     type("Su (kPa)", "20");
     const card = await screen.findByRole("region", { name: "Result" });
     expect(await within(card).findByText("F 1.234")).toBeInTheDocument();
@@ -108,10 +108,11 @@ describe("App", () => {
 
   it("marks a value out of bounds at its field and does not run", async () => {
     const { requests } = renderApp();
-    type("Unit weight γ (kN/m³)", "16");
-    type("Su (kPa)", "900");
+    type("γ (kN/m³)", "16");
+    type("Su (kPa)", "-5");
     expect(field("Su (kPa)")).toHaveAttribute("aria-invalid", "true");
-    expect(screen.getByText("Layer 1: Su (kPa) must be from 1 to 500 kPa.")).toBeInTheDocument();
+    // At the field, the bounds alone: the field's label is beside them.
+    expect(screen.getByText("Must be at least 0 kPa.")).toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("To get F, correct the field marked in red.");
     await act(() => new Promise<void>((r) => setTimeout(r, 400)));
     expect(requests).toEqual([]);
@@ -120,17 +121,17 @@ describe("App", () => {
   it("puts the engine's issues at their fields", async () => {
     const issue: ValidationIssue = { path: "/definition/materials/0/model", code: "invalid-material-model", message: 'Material "Clay": Unit weight (γ) must be a positive number.', severity: "error" };
     renderApp({ answer: (r) => ({ type: "invalid", id: r.id, issues: [issue] }) });
-    type("Unit weight γ (kN/m³)", "16");
+    type("γ (kN/m³)", "16");
     type("Su (kPa)", "20");
     expect(await screen.findByText(issue.message)).toBeInTheDocument();
-    expect(field("Unit weight γ (kN/m³)")).toHaveAttribute("aria-invalid", "true");
+    expect(field("γ (kN/m³)")).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByRole("status")).toHaveTextContent("The engine found errors in the model.");
   });
 
   it("opens the section of a shared link, and switches to the over-design factor", async () => {
     window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])));
     const { requests } = renderApp();
-    expect(screen.getByRole("checkbox", { name: "Working road behind the crest" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
     expect(field("Traffic load q (kPa)").value).toBe("20");
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].document.options.partialFactors).toBeUndefined();
@@ -146,20 +147,70 @@ describe("App", () => {
     expect(requests[1].document.options.partialFactors).toMatchObject({ cu: 1.5, variableLoad: 1.183 });
   });
 
-  it("adds and removes layers, and puts the focus on a layer's name", () => {
+  it("adds a layer open with the focus on its name, and after a remove puts the focus on the header of the layer before", () => {
     renderApp();
+    const header = (name: RegExp) => screen.getByRole("button", { name });
+    // A first visit opens the first layer: its strengths are empty.
+    expect(header(/^Clay/)).toHaveAttribute("aria-expanded", "true");
     fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
-    expect(screen.getAllByLabelText("Bottom level (m)")[1]).toHaveValue("-20");
-    expect(document.activeElement).toBe(screen.getAllByLabelText("Name")[1]);
-    type("Name", "Sand", 1);
+    // The new layer opens, the first closes: one open at a time.
+    expect(header(/^Clay/)).toHaveAttribute("aria-expanded", "false");
+    expect(header(/^Layer 2/)).toHaveAttribute("aria-expanded", "true");
+    expect(field("Bottom level (m)")).toHaveValue("-20");
+    expect(document.activeElement).toBe(field("Name"));
+    type("Name", "Sand");
     fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
+    expect(header(/^Layer 3/)).toHaveTextContent("bottom -25 m");
     fireEvent.click(screen.getByRole("button", { name: "Remove layer 2" }));
-    // The third layer is now the second, with its own fields; the focus is on the first layer's name.
-    expect(screen.getAllByLabelText("Bottom level (m)").map((e) => (e as HTMLInputElement).value)).toEqual(["-15", "-25"]);
-    expect(document.activeElement).toBe(screen.getAllByLabelText("Name")[0]);
+    // The third layer is now the second; the focus is on the first layer's header.
+    expect(header(/^Layer 2/)).toHaveTextContent("bottom -25 m");
+    expect(document.activeElement).toBe(header(/^Clay/));
     fireEvent.click(screen.getByRole("button", { name: "Remove layer 2" }));
-    expect(screen.getAllByLabelText("Bottom level (m)")).toHaveLength(1);
     expect(screen.queryByRole("button", { name: "Remove layer 1" })).toBeNull();
+  });
+
+  it("shows the layers as an accordion: a summary in each header, one open at a time, problems and empty fields in the header", () => {
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"])));
+    renderApp({ loadEngine: () => new Promise(() => {}) });
+    const crust = screen.getByRole("button", { name: /^Crust/ });
+    const clay = screen.getByRole("button", { name: /^Clay/ });
+    // A filled-in link: all closed, the profile at a glance.
+    expect(crust).toHaveAttribute("aria-expanded", "false");
+    expect(clay).toHaveAttribute("aria-expanded", "false");
+    expect(crust).toHaveTextContent("Mohr-Coulomb · bottom -1.5 m · c′ 2 kPa, φ′ 32°");
+    expect(clay).toHaveTextContent("Undrained · bottom -20 m · Su 18 kPa");
+    expect(screen.queryByLabelText("Su (kPa)")).toBeNull();
+    fireEvent.click(clay);
+    expect(clay).toHaveAttribute("aria-expanded", "true");
+    expect(clay).toHaveAttribute("aria-controls", screen.getByRole("group", { name: /^Clay/ }).id);
+    type("Su increase rate (kPa/m)", "1.2");
+    expect(clay).toHaveTextContent("Su 18 kPa, +1.2 kPa/m");
+    fireEvent.click(crust);
+    expect(crust).toHaveAttribute("aria-expanded", "true");
+    expect(clay).toHaveAttribute("aria-expanded", "false");
+    type("c′ (kPa)", "-1");
+    expect(screen.getByText("Must be at least 0 kPa.")).toBeInTheDocument();
+    fireEvent.click(crust);
+    expect(crust).toHaveAttribute("aria-expanded", "false");
+    expect(crust).toHaveTextContent("Problem");
+    fireEvent.click(crust);
+    type("c′ (kPa)", "");
+    fireEvent.click(crust);
+    expect(crust).toHaveTextContent("Required");
+    expect(crust).not.toHaveTextContent("Problem");
+  });
+
+  it("names the layer kinds as the app names its material models, and opens old links with the old kinds", () => {
+    window.history.replaceState(null, "", "/?t=excavation&layers=2&layer1.kind=undrained-increasing&layer1.bottomLevel=-5&layer1.su=10&layer1.suRate=1.5&layer2.kind=drained&layer2.bottomLevel=-20");
+    renderApp({ loadEngine: () => new Promise(() => {}) });
+    // Its unit weight is empty: the first layer is open.
+    expect(screen.getByRole("button", { name: /^Layer 1/ })).toHaveAttribute("aria-expanded", "true");
+    const select = screen.getByRole("combobox", { name: "Material model" });
+    expect(within(select).getAllByRole("option").map((o) => o.textContent)).toEqual(["Undrained", "Mohr-Coulomb", "Impenetrable (bedrock)"]);
+    expect(select).toHaveValue("undrained");
+    expect(field("Su increase rate (kPa/m)").value).toBe("1.5");
+    fireEvent.click(screen.getByRole("button", { name: /^Layer 2/ }));
+    expect(screen.getByRole("combobox", { name: "Material model" })).toHaveValue("mohr-coulomb");
   });
 
   it("cancels a run", async () => {
@@ -240,11 +291,11 @@ describe("App", () => {
   it("lists the two templates, the excavation active, and switches to the embankment and back", async () => {
     const { requests } = renderApp();
     const picker = screen.getByRole("group", { name: "Template" });
-    const excavation = within(picker).getByRole("button", { name: "Excavation in clay with a working road" });
+    const excavation = within(picker).getByRole("button", { name: "Excavation in clay with a haul road" });
     const embankment = within(picker).getByRole("button", { name: "Embankment on clay" });
     expect(excavation).toHaveAttribute("aria-pressed", "true");
     expect(embankment).toHaveAttribute("aria-pressed", "false");
-    expect(document.title).toBe("Excavation in clay with a working road — cSlope");
+    expect(document.title).toBe("Excavation in clay with a haul road — cSlope");
     type("Excavation depth H (m)", "4");
     fireEvent.click(embankment);
     expect(screen.getByRole("heading", { level: 1, name: "Embankment on clay" })).toBeInTheDocument();
@@ -258,7 +309,7 @@ describe("App", () => {
     expect(screen.getByRole("status")).toHaveTextContent("To get F, fill in 5 empty fields.");
     await act(() => new Promise<void>((r) => setTimeout(r, 400)));
     expect(new URLSearchParams(window.location.search).get("t")).toBe("embankment");
-    type("Fill unit weight γ (kN/m³)", "19");
+    type("Fill γ (kN/m³)", "19");
     type("Fill c′ (kPa)", "0");
     type("Fill φ′ (°)", "35");
     type("Load on the crest q (kPa)", "10");
@@ -270,7 +321,7 @@ describe("App", () => {
     expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^Section of the embankment: 1 layer, a load of 10 kPa on the crest, and the critical surface of F 1.234\.$/ })).toBeInTheDocument();
     // Back to the excavation as it was left.
-    fireEvent.click(within(picker).getByRole("button", { name: "Excavation in clay with a working road" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Excavation in clay with a haul road" }));
     expect(field("Excavation depth H (m)").value).toBe("4");
   });
 
@@ -298,7 +349,7 @@ describe("App", () => {
     const query = toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["clay-road"])).replace(/^t=excavation&/, "");
     window.history.replaceState(null, "", "/?" + query);
     const { requests } = renderApp();
-    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a working road" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_EXAMPLES["clay-road"]));
   });

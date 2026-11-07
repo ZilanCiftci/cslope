@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * The embankment template: the geometry rules, the ten named sets against
+ * The embankment template: the geometry rules, the eleven named sets against
  * their pinned F and their committed fixtures, the model's extent, and the
  * monotonic checks (F falls with a higher embankment, a larger load on the
  * crest and a lower Su).
@@ -65,7 +65,7 @@ describe("the geometry rules", () => {
   it("makes the embankment its own region, of its own material, with the load over the crest", () => {
     const def = embankmentDocument(EMBANKMENT_EXAMPLES["clay-3m-traffic"]).definition;
     expect(def.materials.map((m) => m.name)).toEqual(["Clay", "Embankment"]);
-    expect(def.materials[1].model).toEqual({ kind: "mohr-coulomb", unitWeight: 19, unitWeightSat: 20, cohesion: 0, frictionAngle: 35 });
+    expect(def.materials[1].model).toEqual({ kind: "mohr-coulomb", unitWeight: 19, unitWeightSat: 19, cohesion: 0, frictionAngle: 35 });
     expect(def.materialBoundaries).toEqual([{ coordinates: [[-13.5, 0], [7.5, 0]] }]);
     expect(def.regionAssignments).toEqual([
       { point: [-39.5, -7.5], materialName: "Clay" },
@@ -112,15 +112,16 @@ describe("the geometry rules", () => {
   it("lets the water stand in the embankment, seeping out of its faces, and refuses it above the crest", () => {
     expect(embankmentNotes({ ...base, waterLevel: 0 })).toEqual([]);
     expect(embankmentNotes({ ...base, waterLevel: 1.5 })).toEqual([WATER_ABOVE_GROUND]);
+    // Ponded: the water stands beside the embankment (free water), and the note goes.
+    expect(embankmentNotes({ ...base, waterLevel: 1.5, ponded: true })).toEqual([]);
+    expect(embankmentDocument({ ...base, waterLevel: 1.5, ponded: true }).definition.waterTable).toEqual({ mode: "height", value: 1.5, freeWater: true });
+    expect(embankmentDocument({ ...base, waterLevel: 1.5 }).definition.waterTable).toEqual({ mode: "height", value: 1.5, freeWater: false });
     expect(WATER_ABOVE_GROUND).toBe("The water above the ground seeps out of the embankment's faces; no free water stands beside it.");
     expect(embankmentDocument({ ...base, waterLevel: 3 }).definition.waterTable).toEqual({ mode: "height", value: 3, freeWater: false });
     expect(embankmentFieldProblems({ ...base, waterLevel: 3.1 })).toEqual([{ field: "waterLevel", message: "The ground-water level must not be above the crest (3 m)." }]);
   });
 
-  it("uses the app's options, with the partial factors of the safety class on design values and the tension crack", () => {
-    expect(embankmentDocument({ ...base, tensionCrackDepth: 1 }).options).toEqual({ ...APP_OPTIONS, tensionCrackDepth: 1 });
-    expect(embankmentDocument({ ...base, tensionCrackDepth: 0 }).options).toEqual(APP_OPTIONS);
-    expect(embankmentFieldProblems({ ...base, tensionCrackDepth: 11 }).map((x) => x.field)).toEqual(["tensionCrackDepth"]);
+  it("uses the app's options without a tension crack, with the partial factors of the safety class on design values", () => {
     expect(embankmentDocument(base).options).toEqual(APP_OPTIONS);
     expect(embankmentDocument(EMBANKMENT_EXAMPLES["clay-3m-design-sk2"]).options).toEqual({
       ...APP_OPTIONS,
@@ -134,21 +135,21 @@ describe("the geometry rules", () => {
       ...base,
       embankmentHeight: 20,
       crestWidth: 0.5,
-      fill: { gamma: 19, c: 0, phi: 50 },
+      fill: { gamma: 19, c: 0, phi: 90 },
       crestLoad: -5,
-      layers: [{ ...clay(15), name: "Embankment" }, { bottomLevel: -14.98, material: { kind: "undrained", gamma: 16, su: 0 } }],
+      layers: [{ ...clay(15), name: "Embankment" }, { bottomLevel: -14.98, material: { kind: "undrained", gamma: 16, su: -1 } }],
       values: { basis: "design", safetyClass: 4 as never, etaCu: 1, etaDrained: 1, variableLoadBase: 2 },
     };
     expect(embankmentFieldProblems(params)).toEqual([
-      { field: "embankmentHeight", message: "Embankment height h (m) must be from 0.5 to 15 m." },
-      { field: "crestWidth", message: "Crest width B (m) must be from 1 to 60 m." },
-      { field: "fill.phi", message: "Embankment: Fill φ′ (°) must be from 25 to 45 °." },
-      { field: "crestLoad", message: "Load on the crest q (kPa) must be from 0 to 100 kPa." },
+      { field: "embankmentHeight", message: "Must be from 0.5 to 15 m.", general: "Embankment height h must be from 0.5 to 15 m." },
+      { field: "crestWidth", message: "Must be from 1 to 60 m.", general: "Crest width B must be from 1 to 60 m." },
+      { field: "fill.phi", message: "Must be at least 0° and less than 90°.", general: "Embankment: Fill φ′ must be at least 0° and less than 90°." },
+      { field: "crestLoad", message: "Must be at least 0 kPa.", general: "Load on the crest q must be at least 0 kPa." },
       { field: "layers.1.bottomLevel", message: "Layer 2: the bottom level -14.98 must be at least 0.05 m below the layer above (-15)." },
-      { field: "layers.1.su", message: "Layer 2: Su (kPa) must be from 1 to 500 kPa." },
+      { field: "layers.1.su", message: "Must be at least 0 kPa.", general: "Layer 2: Su must be at least 0 kPa." },
       { field: "layers.0.name", message: 'A layer is named "Embankment", which is the embankment\'s material.' },
       { field: "values.safetyClass", message: "The safety class must be 1, 2 or 3." },
-      { field: "values.variableLoadBase", message: "γQ / γd must be from 1 to 1.5." },
+      { field: "values.variableLoadBase", message: "Must be from 1 to 1.5.", general: "γQ / γd must be from 1 to 1.5." },
     ]);
     expect(() => embankmentDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
   });
@@ -160,10 +161,10 @@ describe("the geometry rules", () => {
   });
 });
 
-describe("the ten named sets", () => {
+describe("the eleven named sets", () => {
   const names = Object.keys(EMBANKMENT_EXAMPLES);
-  it("are ten, with a fixture and an expected F each", () => {
-    expect(names).toHaveLength(10);
+  it("are eleven, with a fixture and an expected F each", () => {
+    expect(names).toHaveLength(11);
     expect(Object.keys(expected).sort()).toEqual([...names].sort());
   });
 

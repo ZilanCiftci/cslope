@@ -18,7 +18,7 @@ export function random(seed: number): () => number {
 }
 
 /** A value within a parameter's bounds, on its step. */
-export function value(rnd: () => number, d: ParameterDescriptionLike, min = d.min, max = d.max): number {
+export function value(rnd: () => number, d: ParameterDescriptionLike, min = d.typical?.[0] ?? d.min, max = d.typical?.[1] ?? d.max): number {
   const steps = Math.floor((max - min) / d.step);
   const v = min + Math.floor(rnd() * (steps + 1)) * d.step;
   return Number(Math.min(max, v).toFixed(6));
@@ -33,8 +33,11 @@ export function material(rnd: () => number): LayerMaterial {
       return { kind: "undrained", gamma, su: value(rnd, L.su) };
     case "undrained-increasing":
       return { kind: "undrained-increasing", gamma, su: value(rnd, L.su), suRate: value(rnd, L.suRate) };
-    case "drained":
-      return { kind: "drained", gamma, gammaSat: rnd() < 0.5 ? value(rnd, L.gammaSat) : undefined, c: value(rnd, L.c), phi: value(rnd, L.phi) };
+    case "drained": {
+      // Now and then φ′ = 0, with c′ > 0 (both 0 is no strength, refused by the engine).
+      const phi = rnd() < 0.1 ? 0 : value(rnd, L.phi);
+      return { kind: "drained", gamma, c: value(rnd, L.c, phi === 0 ? 1 : 0), phi };
+    }
     case "impenetrable":
       return { kind: "impenetrable", gamma };
   }

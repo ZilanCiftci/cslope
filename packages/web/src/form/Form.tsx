@@ -2,15 +2,15 @@
  * A template's form, rendered from its spec (specs.ts) and its parameter
  * descriptions: one field per parameter, with its unit in the label, its
  * description as the tooltip and its problem under it. The template's
- * groups (Geometry, Water, Working road, Embankment) around the Layers,
+ * groups (Geometry, Water, Haul road, Embankment) around the Layers,
  * then Safety.
  */
-import { useEffect, useId, useRef, type ReactNode } from "react";
-import { X } from "lucide-react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, CircleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
 import { DESIGN_PARAMETERS, LAYER_PARAMETERS } from "@/templates/common";
-import { emptyLayer, emptyText, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, withGroup, type Draft, type LayerDraft } from "./draft";
+import { emptyLayer, emptyText, formState, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, parseNumber, strengthSummary, withGroup, type Draft, type LayerDraft } from "./draft";
 import { descOf, type AnySpec, type GroupSpec } from "./specs";
 
 export interface FormProps {
@@ -20,6 +20,8 @@ export interface FormProps {
   onChange: (draft: Draft) => void;
   /** The problem of each field, by key ("layers.0.su"). */
   errors: Map<string, string>;
+  /** The required fields that are empty, by key: a layer's header says so. */
+  missing?: string[];
   /** Sentences on what the model does that the fields do not say. */
   notes: string[];
 }
@@ -77,6 +79,7 @@ interface NumberFieldProps {
  */
 const HINTS: Record<string, string> = {
   slope: "Horizontal per 1 vertical.",
+  bottomWidth: "Empty for a wide excavation; set for a trench with the same slope on both sides.",
   waterLevel: "An elevation; empty for a dry slope.",
   bottomLevel: "An elevation, not a depth.",
   suRate: "Per meter below the layer's top.",
@@ -167,8 +170,13 @@ export function Choices<T extends string>({
 
 const grid = "grid grid-cols-2 gap-x-3";
 
-/** The id of a layer's name field, which gets the focus when the layer is added or the one after it removed. */
+/** The id of a layer's name field, which gets the focus when the layer is added. */
 const nameIdOf = (layer: LayerDraft) => `${layer.key}-name`;
+/** The id of a layer's header button, which gets the focus when the layer after it is removed. */
+const headerIdOf = (layer: LayerDraft) => `${layer.key}-header`;
+
+/** The fields of a layer, by key ("layers.0.su"), the name and the bottom level included. */
+const layerKeys = (layer: LayerDraft, index: number) => ["name", "bottomLevel", ...LAYER_FIELDS[layer.kind]].map((k) => `layers.${index}.${k}`);
 
 interface LayerFieldsProps {
   layer: LayerDraft;
@@ -176,67 +184,139 @@ interface LayerFieldsProps {
   count: number;
   /** The template's description of a layer's bottom level. */
   bottomLevel: ParameterDescription;
+  open: boolean;
+  onToggle: () => void;
   onChange: (l: LayerDraft) => void;
   onRemove: () => void;
   errors: Map<string, string>;
+  missing: ReadonlySet<string>;
 }
 
-function LayerFields({ layer, index, count, bottomLevel, onChange, onRemove, errors }: LayerFieldsProps) {
+/**
+ * A layer as a row of the accordion: its header (always shown) names it,
+ * its model, its bottom and its strength, and marks a problem or an empty
+ * required field; its fields show when it is open.
+ */
+function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChange, onRemove, errors, missing }: LayerFieldsProps) {
   const nameId = nameIdOf(layer);
+  const panelId = `${layer.key}-fields`;
   const kindId = useId();
   const f = (k: string) => `layers.${index}.${k}`;
   const last = index === count - 1;
   const nameError = errors.get(f("name"));
+  const keys = layerKeys(layer, index);
+  const problem = keys.some((k) => errors.has(k));
+  const required = !problem && keys.some((k) => missing.has(k));
+  const model = LAYER_KINDS.find((k) => k.kind === layer.kind)?.label ?? "";
+  const bottom = layer.bottomLevel.trim();
+  const details = [model, bottom && `bottom ${bottom} m`, strengthSummary(layer)].filter(Boolean).join(" · ");
   return (
-    <li className="rounded-md border p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Layer {index + 1}</h3>
+    <li className="rounded-md border">
+      <div className="flex items-start">
+        <h3 className="min-w-0 flex-1 text-sm">
+          <button
+            id={headerIdOf(layer)}
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={onToggle}
+            className="flex w-full min-w-0 items-start gap-2 rounded-md px-3 py-2 text-left hover:bg-accent/60"
+          >
+            {open ? (
+              <ChevronDown className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+            ) : (
+              <ChevronRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" strokeWidth={1.75} aria-hidden="true" />
+            )}
+            <span className="min-w-0 flex-1">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="truncate font-medium">{layer.name.trim() || `Layer ${index + 1}`}</span>
+                {problem && (
+                  <span className="flex shrink-0 items-center gap-1 text-xs text-destructive dark:text-signal">
+                    <CircleAlert className="h-3.5 w-3.5 self-center" strokeWidth={1.75} aria-hidden="true" />
+                    Problem
+                  </span>
+                )}
+                {required && <span className="shrink-0 text-xs text-muted-foreground">Required</span>}
+              </span>
+              {details && <span className="mt-0.5 block text-xs text-muted-foreground">{details}</span>}
+            </span>
+          </button>
+        </h3>
         {count > 1 && (
-          <button type="button" onClick={onRemove} aria-label={`Remove layer ${index + 1}`} title="Remove the layer" className="grid h-6 w-6 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground">
+          <button type="button" onClick={onRemove} aria-label={`Remove layer ${index + 1}`} title="Remove the layer" className="mt-1.5 mr-1.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground">
             <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
           </button>
         )}
       </div>
-      <div className={grid}>
-        <Field id={nameId} label="Name" error={nameError}>
-          <input
-            id={nameId}
-            type="text"
-            maxLength={40}
-            className={inputClass}
-            value={layer.name}
-            placeholder={`Layer ${index + 1}`}
-            aria-invalid={nameError ? true : undefined}
-            aria-describedby={nameError ? `${nameId}-error` : undefined}
-            onChange={(e) => onChange({ ...layer, name: e.target.value })}
+      {open && (
+        <div id={panelId} role="group" aria-labelledby={headerIdOf(layer)} className={cn(grid, "px-3 pt-1 pb-1")}>
+          <Field id={nameId} label="Name" error={nameError}>
+            <input
+              id={nameId}
+              type="text"
+              maxLength={40}
+              className={inputClass}
+              value={layer.name}
+              placeholder={`Layer ${index + 1}`}
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? `${nameId}-error` : undefined}
+              onChange={(e) => onChange({ ...layer, name: e.target.value })}
+            />
+          </Field>
+          <Field id={kindId} label="Material model" title="Undrained: Su, constant or increasing with depth. Mohr-Coulomb: c′ and φ′ (drained). Impenetrable (bedrock): no slip surface passes through it. The model sets the fields.">
+            <select id={kindId} aria-describedby={`${kindId}-desc`} className={inputClass} value={layer.kind} onChange={(e) => onChange({ ...layer, kind: e.target.value as LayerDraft["kind"] })}>
+              {LAYER_KINDS.map((k) => (
+                <option key={k.kind} value={k.kind}>
+                  {k.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <NumberField
+            field={f("bottomLevel")}
+            desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The model ends at the last layer's bottom, treated as firm ground.` } : bottomLevel}
+            value={layer.bottomLevel}
+            onChange={(v) => onChange({ ...layer, bottomLevel: v })}
+            errors={errors}
           />
-        </Field>
-        <Field id={kindId} label="Kind" title="Su constant and Su increasing (with depth) are undrained; drained has c′ and φ′; rock is impenetrable. The kind sets the fields.">
-          <select id={kindId} aria-describedby={`${kindId}-desc`} className={inputClass} value={layer.kind} onChange={(e) => onChange({ ...layer, kind: e.target.value as LayerDraft["kind"] })}>
-            {LAYER_KINDS.map((k) => (
-              <option key={k.kind} value={k.kind}>
-                {k.label}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <NumberField
-          field={f("bottomLevel")}
-          desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The model ends at the last layer's bottom, treated as firm ground.` } : bottomLevel}
-          value={layer.bottomLevel}
-          onChange={(v) => onChange({ ...layer, bottomLevel: v })}
-          errors={errors}
-        />
-        {LAYER_FIELDS[layer.kind].map((k) => (
-          <NumberField key={k} field={f(k)} desc={LAYER_PARAMETERS[k]} value={layer[k]} onChange={(v) => onChange({ ...layer, [k]: v })} errors={errors} />
-        ))}
-      </div>
+          {LAYER_FIELDS[layer.kind].map((k) => (
+            <NumberField key={k} field={f(k)} desc={LAYER_PARAMETERS[k]} value={layer[k]} onChange={(v) => onChange({ ...layer, [k]: v })} errors={errors} />
+          ))}
+        </div>
+      )}
     </li>
   );
 }
 
+/**
+ * Whether water above the ground stands as ponded (free) water: shown once
+ * a level is entered; its hint says when the level is below all the ground,
+ * where it does nothing.
+ */
+function PondedField({ spec, draft, params, onChange }: { spec: AnySpec; draft: Draft; params: unknown; onChange: (ponded: boolean) => void }) {
+  const id = useId();
+  const level = parseNumber(draft.fields.waterLevel ?? "");
+  if (level === null || Number.isNaN(level)) return null;
+  const ground = spec.lowestGround(params);
+  const below = Number.isFinite(ground) && level <= ground;
+  const hint = below ? `No effect at this level: it is below the ${spec.template.id === "excavation" ? "excavation bottom" : "ground"}.` : spec.pondedHint;
+  return (
+    <div className="mt-1">
+      <div className="flex items-center gap-2">
+        <input id={id} type="checkbox" className="h-4 w-4 accent-primary" checked={draft.ponded} aria-describedby={`${id}-hint`} onChange={(e) => onChange(e.target.checked)} />
+        <label htmlFor={id} className="text-sm">
+          Free water above ground (ponding)
+        </label>
+      </div>
+      <p id={`${id}-hint`} className="mt-1 text-[11px] leading-snug text-muted-foreground">
+        {hint}
+      </p>
+    </div>
+  );
+}
+
 /** One of the template's groups; an optional one behind a checkbox. */
-function TemplateGroup({ spec, group, draft, onChange, errors }: { spec: AnySpec; group: GroupSpec; draft: Draft; onChange: (d: Draft) => void; errors: Map<string, string> }) {
+function TemplateGroup({ spec, group, draft, onChange, errors, children }: { spec: AnySpec; group: GroupSpec; draft: Draft; onChange: (d: Draft) => void; errors: Map<string, string>; children?: ReactNode }) {
   const toggleId = useId();
   const on = !group.toggle || draft.on.includes(group.id);
   const fields = (
@@ -257,14 +337,22 @@ function TemplateGroup({ spec, group, draft, onChange, errors }: { spec: AnySpec
         </div>
       )}
       {on && fields}
+      {children}
     </Group>
   );
 }
 
-export function Form({ spec, draft, onChange, errors, notes }: FormProps) {
+export function Form({ spec, draft, onChange, errors, missing = [], notes }: FormProps) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => onChange({ ...draft, [key]: value });
+  const params = useMemo(() => formState(draft).params, [draft]);
   const setLayer = (i: number, layer: LayerDraft) => set("layers", draft.layers.map((l, j) => (j === i ? layer : l)));
-  // After adding or removing a layer, the focus goes to a layer's name (not lost on the page).
+  // One layer open at a time: on a first visit the first, when it has empty required fields.
+  const [openKey, setOpenKey] = useState<string | null>(() => {
+    const first = draft.layers[0];
+    return first && layerKeys(first, 0).some((k) => missing.includes(k)) ? first.key : null;
+  });
+  const missingSet = new Set(missing);
+  // After adding a layer, the focus goes to its name; after removing one, to the header of the one before (not lost on the page).
   const focus = useRef<string | null>(null);
   useEffect(() => {
     if (!focus.current) return;
@@ -277,16 +365,22 @@ export function Form({ spec, draft, onChange, errors, notes }: FormProps) {
   const addLayer = () => {
     const layer = emptyLayer(nextBottomLevel(draft.layers));
     set("layers", [...draft.layers, layer]);
+    setOpenKey(layer.key);
     setFocus(nameIdOf(layer));
   };
   const removeLayer = (i: number) => {
     const layers = draft.layers.filter((_, j) => j !== i);
     set("layers", layers);
-    setFocus(nameIdOf(layers[Math.max(0, i - 1)]));
+    setFocus(headerIdOf(layers[Math.max(0, i - 1)]));
   };
   const layersError = errors.get("layers");
   const bottomLevel = (spec.template.params.layer as Record<string, ParameterDescription>).bottomLevel;
-  const groups = (list: GroupSpec[]) => list.map((g) => <TemplateGroup key={g.id} spec={spec} group={g} draft={draft} onChange={onChange} errors={errors} />);
+  const groups = (list: GroupSpec[]) =>
+    list.map((g) => (
+      <TemplateGroup key={g.id} spec={spec} group={g} draft={draft} onChange={onChange} errors={errors}>
+        {g.id === "water" && <PondedField spec={spec} draft={draft} params={params} onChange={(ponded) => set("ponded", ponded)} />}
+      </TemplateGroup>
+    ));
 
   return (
     <form aria-label="Parameters" className="space-y-4" onSubmit={(e) => e.preventDefault()} noValidate>
@@ -302,9 +396,12 @@ export function Form({ spec, draft, onChange, errors, notes }: FormProps) {
               index={i}
               count={draft.layers.length}
               bottomLevel={bottomLevel}
+              open={openKey === layer.key}
+              onToggle={() => setOpenKey(openKey === layer.key ? null : layer.key)}
               onChange={(l) => setLayer(i, l)}
               onRemove={() => removeLayer(i)}
               errors={errors}
+              missing={missingSet}
             />
           ))}
         </ol>
