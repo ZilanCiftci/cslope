@@ -108,6 +108,38 @@ function KeyFigures() {
   );
 }
 
+/** cSlope in the browser (app.cslope.com), opened at a filled-in section: the page's screenshot and a button. */
+function WebApp() {
+  const link = { href: SITE.appExample, target: "_blank", rel: "noopener noreferrer" } as const;
+  return (
+    <Section id="browser" className="pb-0 sm:pb-0">
+      <div className="grid items-center gap-8 overflow-hidden rounded-xl border bg-card p-6 sm:p-10 lg:grid-cols-[1fr_1.4fr] lg:gap-12">
+        <div>
+          <p className="text-sm font-semibold text-primary">In the browser</p>
+          <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Try it in your browser</h2>
+          <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
+            Two templates, an excavation in clay with a haul road and an embankment on clay. Fill in the form and the
+            cSlope engine computes F on your own computer, with nothing to install.
+          </p>
+          <Button asChild size="lg" className="mt-6">
+            <a {...link}>
+              Open cSlope in the browser
+              <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </a>
+          </Button>
+        </div>
+        <a {...link} className="block overflow-hidden rounded-lg border shadow-sm hover:ring-2 hover:ring-ring">
+          <Picture
+            media={MEDIA.webApp}
+            sizes="(min-width: 1152px) 620px, (min-width: 1024px) 54vw, calc(100vw - 82px)"
+            className="block h-auto w-full"
+          />
+        </a>
+      </div>
+    </Section>
+  );
+}
+
 const CAPABILITIES: { icon: ReactNode; title: string; text: string }[] = [
   {
     icon: <BarChart3 className="h-5 w-5" />,
@@ -368,6 +400,7 @@ export function Home() {
     <>
       <Hero />
       <KeyFigures />
+      <WebApp />
       <Capabilities />
       <Verification />
       <Gallery />
