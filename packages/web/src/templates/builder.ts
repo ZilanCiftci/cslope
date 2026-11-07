@@ -118,7 +118,7 @@ export function materialModel(strength: Strength): MaterialModel {
 export class Definition {
   readonly orientation: SlopeOrientation;
   private outline: Point[] | null = null;
-  private readonly materials: { name: string; model: MaterialModel }[] = [];
+  private readonly materials: { name: string; color?: string; model: MaterialModel }[] = [];
   private readonly boundaries: Point[][] = [];
   private readonly assignments: { point: Point; materialName: string }[] = [];
   private water: SlopeDefinition["waterTable"] | null = null;
@@ -181,11 +181,11 @@ export class Definition {
     this.boundaries.push(points.map(([x, y]) => [x, y]));
   }
 
-  /** A material; returns the name, for `assign`. */
-  addMaterial(name: string, strength: Strength): string {
+  /** A material, with its display color ("#a0522d") or none; returns the name, for `assign`. */
+  addMaterial(name: string, strength: Strength, color?: string): string {
     if (!name.trim()) throw new Error("A material needs a name");
     if (this.materials.some((m) => m.name === name)) throw new Error(`A material named "${name}" exists already`);
-    this.materials.push({ name, model: materialModel(strength) });
+    this.materials.push({ name, ...(color ? { color } : {}), model: materialModel(strength) });
     return name;
   }
 
@@ -248,7 +248,7 @@ export class Definition {
     const d: SlopeDefinition = {
       orientation: this.orientation,
       coordinates: this.exterior,
-      materials: this.materials.map((m) => ({ name: m.name, model: { ...m.model } })),
+      materials: this.materials.map((m) => ({ name: m.name, ...(m.color ? { color: m.color } : {}), model: { ...m.model } })),
     };
     if (this.boundaries.length) d.materialBoundaries = this.boundaries.map((b) => ({ coordinates: b.map(([x, y]) => [x, y]) }));
     if (this.assignments.length) d.regionAssignments = this.assignments.map((a) => ({ point: [a.point[0], a.point[1]], materialName: a.materialName }));

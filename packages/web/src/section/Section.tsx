@@ -1,6 +1,6 @@
 /**
  * The section drawing: the template's section in SVG, drawn by hand (not
- * the app's canvas): the layers in earth tones by kind, the fill (the
+ * the app's canvas): the layers in their colors (see LAYER_FILL_OPACITY in colors.ts), the fill (the
  * road, the embankment), the water level, the load, and after a run the critical surface
  * (red, the thickest line) with its slices (the thinnest). Axes in meters.
  * It is drawn at the width it has, so that its text stays readable on a
@@ -8,15 +8,12 @@
  */
 import { useEffect, useId, useRef, useState } from "react";
 import type { SliceData } from "@cslope/engine";
-import type { Layer, LayerKind } from "@/templates/common";
+import type { Layer } from "@/templates/common";
+import { defaultLayerColor } from "@/templates/colors";
 import { lineAt, sliceSides, surfaceLine, ticks, viewOf, type Point, type SectionShapes } from "./section-geometry";
 
-const FILL: Record<LayerKind, string> = {
-  undrained: "fill-earth/30",
-  "undrained-increasing": "fill-earth/45",
-  drained: "fill-earth/15",
-  impenetrable: "fill-muted-foreground/35",
-};
+/** A layer's fill: its color at LAYER_FILL_OPACITY (colors.ts) in each theme; colors.test.ts checks that these are its values. */
+const LAYER_FILL = "[fill-opacity:0.6] dark:[fill-opacity:0.4]";
 
 const MARGIN = { left: 40, right: 10, top: 34, bottom: 24 };
 
@@ -38,7 +35,7 @@ const fmt = (v: number) => String(Math.round(v * 10) / 10);
 export interface SectionProps {
   /** The shapes of a parameter set whose geometry is valid. */
   shapes: SectionShapes;
-  /** Its layers, for their names and kinds. */
+  /** Its layers, for their names and colors. */
   layers: Layer[];
   /** The critical surface's slices, after a run of these parameters. */
   slices: SliceData[] | null;
@@ -71,7 +68,7 @@ export function Section({ shapes: s, layers, slices, label }: SectionProps) {
         </defs>
         <g clipPath={`url(#${clip})`}>
         {s.layers.map((poly, i) => (
-          <path key={i} d={path(poly)} className={FILL[layers[i].material.kind]} />
+          <path key={i} d={path(poly)} fill={layers[i].color ?? defaultLayerColor(i)} className={LAYER_FILL} />
         ))}
         {s.fill && <path d={path(s.fill)} className="fill-muted-foreground/20" />}
         {/* The boundaries between materials and the outline, in the theme's ink. */}

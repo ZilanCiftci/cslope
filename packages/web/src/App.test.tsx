@@ -156,17 +156,96 @@ describe("App", () => {
     // The new layer opens, the first closes: one open at a time.
     expect(header(/^Clay/)).toHaveAttribute("aria-expanded", "false");
     expect(header(/^Layer 2/)).toHaveAttribute("aria-expanded", "true");
-    expect(field("Bottom level (m)")).toHaveValue("-20");
+    expect(field("Thickness (m)")).toHaveValue("5");
+    expect(header(/^Layer 2/)).toHaveTextContent("Undrained · 5 m (−15 to −20 m)");
     expect(document.activeElement).toBe(field("Name"));
     type("Name", "Sand");
     fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
-    expect(header(/^Layer 3/)).toHaveTextContent("bottom -25 m");
-    fireEvent.click(screen.getByRole("button", { name: "Remove layer 2" }));
-    // The third layer is now the second; the focus is on the first layer's header.
-    expect(header(/^Layer 2/)).toHaveTextContent("bottom -25 m");
+    expect(header(/^Layer 3/)).toHaveTextContent("5 m (−20 to −25 m)");
+    fireEvent.click(screen.getByRole("button", { name: "Remove Sand" }));
+    // The third layer is now the second, and moves up by the removed one's thickness; the focus is on the first layer's header.
+    expect(header(/^Layer 2/)).toHaveTextContent("5 m (−15 to −20 m)");
     expect(document.activeElement).toBe(header(/^Clay/));
-    fireEvent.click(screen.getByRole("button", { name: "Remove layer 2" }));
-    expect(screen.queryByRole("button", { name: "Remove layer 1" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Layer 2" }));
+    expect(screen.queryByRole("button", { name: "Remove Clay" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Move Clay up" })).toBeNull();
+  });
+
+  it("moves a layer up and down with the focus kept on its button, and inserts one above another, open with the focus on its name", async () => {
+    window.history.replaceState(null, "", "/?" + toQuery(draftOf("excavation", EXCAVATION_EXAMPLES["crust-over-clay"])));
+    renderApp({ loadEngine: () => new Promise(() => {}) });
+    const header = (name: RegExp) => screen.getByRole("button", { name });
+    const names = () => screen.getAllByRole("button", { name: /^(Crust|Clay|Silt)/ }).map((b) => b.textContent);
+    expect(screen.getByRole("button", { name: "Move Crust up" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Move Clay down" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Insert a layer above Clay" }));
+    // The new layer: second, 1 m thick, open, the focus on its name; the clay below moves down by 1 m.
+    expect(header(/^Layer 2/)).toHaveAttribute("aria-expanded", "true");
+    expect(header(/^Layer 2/)).toHaveTextContent("1 m (−1.5 to −2.5 m)");
+    expect(header(/^Clay/)).toHaveTextContent("18.5 m (−2.5 to −21 m)");
+    expect(document.activeElement).toBe(field("Name"));
+    type("Name", "Silt");
+    // Down twice from the top: the focus stays on "Move Crust down", then (at the end, where it is disabled) on the header.
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust down" }));
+    expect(names().map((t) => /^(Silt|Crust|Clay)/.exec(t ?? "")?.[0])).toEqual(["Silt", "Crust", "Clay"]);
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust down" }));
+    expect(header(/^Crust/)).toHaveTextContent("1.5 m (−1 to −2.5 m)");
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust down" }));
+    expect(screen.getByRole("button", { name: "Move Crust down" })).toBeDisabled();
+    expect(document.activeElement).toBe(header(/^Crust/));
+    expect(header(/^Crust/)).toHaveTextContent("1.5 m (−19.5 to −21 m)");
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust up" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Move Crust up" }));
+    // A problem stays with the moved layer's field: the crust's c′, moved from the second place to the first.
+    fireEvent.click(header(/^Crust/));
+    type("c′ (kPa)", "-1");
+    fireEvent.click(screen.getByRole("button", { name: "Move Crust up" }));
+    expect(header(/^Crust/)).toHaveTextContent("Problem");
+    expect(header(/^Silt/)).not.toHaveTextContent("Problem");
+    expect(field("c′ (kPa)")).toHaveAttribute("aria-invalid", "true");
+    // The address follows: the crust first again, with its thickness and its wrong c′.
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("layer1.c")).toBe("-1"));
+    expect(new URLSearchParams(window.location.search).get("layer1.t")).toBe("1.5");
+    expect(new URLSearchParams(window.location.search).get("layer2.name")).toBe("Silt");
+  });
+
+  it("chooses a layer's color from the swatches with the keyboard, into the drawing, the address and the document", async () => {
+    const { requests } = renderApp();
+    fill();
+    await waitFor(() => expect(requests).toHaveLength(1));
+    // The first layer's color is the app's first: not in the document.
+    expect(requests[0].document.definition.materials[0].color).toBeUndefined();
+    const color = screen.getByRole("button", { name: "Color" });
+    expect(color).toHaveTextContent("Tan");
+    fireEvent.click(color);
+    const grid = screen.getByRole("listbox", { name: "Color of Clay" });
+    expect(within(grid).getAllByRole("option")).toHaveLength(14);
+    expect(document.activeElement).toBe(within(grid).getByRole("option", { name: "Tan" }));
+    expect(within(grid).getByRole("option", { name: "Tan" })).toHaveAttribute("aria-selected", "true");
+    // Escape closes it and gives the focus back to the button; nothing changes.
+    fireEvent.keyDown(document.activeElement!, { key: "Escape" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(color);
+    fireEvent.click(color);
+    // Right, then down a row: Sage, then the swatch under it (Olive); Enter chooses it.
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowRight" });
+    expect(document.activeElement).toHaveAccessibleName("Sage");
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
+    expect(document.activeElement).toHaveAccessibleName("Olive");
+    fireEvent.keyDown(document.activeElement!, { key: "Enter" });
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(document.activeElement).toBe(color);
+    expect(color).toHaveTextContent("Olive");
+    await waitFor(() => expect(new URLSearchParams(window.location.search).get("layer1.color")).toBe("7f9172"));
+    await waitFor(() => expect(requests).toHaveLength(2));
+    expect(requests[1].document.definition.materials[0]).toMatchObject({ name: "Clay", color: "#7f9172" });
+    // A click on a swatch chooses too; a press outside closes the grid.
+    fireEvent.click(color);
+    fireEvent.click(screen.getByRole("option", { name: "Sienna" }));
+    expect(color).toHaveTextContent("Sienna");
+    fireEvent.click(color);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole("listbox")).toBeNull();
   });
 
   it("shows the layers as an accordion: a summary in each header, one open at a time, problems and empty fields in the header", () => {
@@ -177,8 +256,8 @@ describe("App", () => {
     // A filled-in link: all closed, the profile at a glance.
     expect(crust).toHaveAttribute("aria-expanded", "false");
     expect(clay).toHaveAttribute("aria-expanded", "false");
-    expect(crust).toHaveTextContent("Mohr-Coulomb · bottom -1.5 m · c′ 2 kPa, φ′ 32°");
-    expect(clay).toHaveTextContent("Undrained · bottom -20 m · Su 18 kPa");
+    expect(crust).toHaveTextContent("Mohr-Coulomb · 1.5 m (0 to −1.5 m) · c′ 2 kPa, φ′ 32°");
+    expect(clay).toHaveTextContent("Undrained · 18.5 m (−1.5 to −20 m) · Su 18 kPa");
     expect(screen.queryByLabelText("Su (kPa)")).toBeNull();
     fireEvent.click(clay);
     expect(clay).toHaveAttribute("aria-expanded", "true");

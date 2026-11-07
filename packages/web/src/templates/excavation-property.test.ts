@@ -10,12 +10,14 @@ import { initEngine, validateDefinition } from "@cslope/engine";
 import { regionCount } from "./regions";
 import { EXCAVATION_PARAMETERS as P, MIN_LAYER_THICKNESS, RECOMMENDED_DEPTH, excavationDocument, excavationNotes, excavationProblems, type ExcavationParams, type Layer } from "./excavation";
 import { material, random, randomValues, value } from "./random-params";
+import { bottomLevels } from "../form/layers";
 
 /**
  * A parameter set within the bounds. The geometry is drawn first (the
- * depth, the slope, the road, the deepest layer), then the levels between
- * the ground and the deepest layer, at least 5 cm apart
- * (MIN_LAYER_THICKNESS), mostly thin ones near the excavation.
+ * depth, the slope, the road, the deepest layer), then the layers'
+ * thicknesses down from the ground, as the form takes them, at least 5 cm
+ * (MIN_LAYER_THICKNESS), mostly thin ones near the excavation; the last
+ * layer reaches the deepest level. The levels are the form's (bottomLevels).
  */
 function randomParams(rnd: () => number): ExcavationParams {
   const groundLevel = value(rnd, P.groundLevel, -20, 100);
@@ -47,20 +49,23 @@ function randomParams(rnd: () => number): ExcavationParams {
     values: { basis: "characteristic" },
   };
   const thin = MIN_LAYER_THICKNESS;
-  const levels: number[] = [];
+  const cm = (v: number) => Math.ceil(Number((v * 100).toFixed(6))) / 100;
+  const ts: number[] = [];
   let top = groundLevel;
   const wanted = Math.floor(rnd() * 5);
   for (let i = 0; i < wanted; i++) {
-    // A third are 5–10 cm thick.
-    const thickness = rnd() < 0.3 ? thin + rnd() * thin : rnd() < 0.7 ? thin + rnd() * 2 : thin + rnd() * 2 * excavationDepth;
-    let level = Math.floor((top - thickness) * 100) / 100;
-    if (Math.abs(level - bottom) < thin) level = Math.floor((bottom - thin) * 100) / 100;
-    level = Number(level.toFixed(2));
-    if (level > top - thin || level < shape.layers[0].bottomLevel + thin) break;
-    levels.push(level);
+    // A third are 5–10 cm thick; in whole centimeters.
+    let t = cm(rnd() < 0.3 ? thin + rnd() * thin : rnd() < 0.7 ? thin + rnd() * 2 : thin + rnd() * 2 * excavationDepth);
+    let [level] = bottomLevels(top, [t]);
+    // A layer that would end within 5 cm of the excavation bottom ends 5 cm below it.
+    if (Math.abs(level - bottom) < thin) [level] = bottomLevels(top, [(t = cm(top - bottom + thin))]);
+    if (level < deepest + thin) break;
+    ts.push(t);
     top = level;
   }
-  const layers: Layer[] = [...levels.map((bottomLevel) => ({ bottomLevel, material: material(rnd) })), shape.layers[0]];
+  // The last layer reaches the deepest level.
+  ts.push(Number((top - deepest).toFixed(6)));
+  const layers: Layer[] = bottomLevels(groundLevel, ts).map((bottomLevel, i) => (i === ts.length - 1 ? { ...shape.layers[0], bottomLevel } : { bottomLevel, material: material(rnd) }));
   // The water anywhere from well below the base to above the ground (and the road).
   const waterLevel = rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * excavationDepth, groundLevel + 3) : null;
   const values = randomValues(rnd);

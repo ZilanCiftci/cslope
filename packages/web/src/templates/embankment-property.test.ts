@@ -12,6 +12,7 @@ import { MIN_LAYER_THICKNESS } from "./common";
 import { EMBANKMENT_PARAMETERS as P, embankmentDocument, embankmentNotes, embankmentProblems, modelDepth, type EmbankmentParams } from "./embankment";
 import { material, random, randomValues, value } from "./random-params";
 import { regionCount } from "./regions";
+import { bottomLevels } from "../form/layers";
 
 function randomParams(rnd: () => number): EmbankmentParams {
   const groundLevel = value(rnd, P.groundLevel, -20, 100);
@@ -22,18 +23,20 @@ function randomParams(rnd: () => number): EmbankmentParams {
   const recommended = modelDepth({ embankmentHeight, crestWidth, slope });
   const depth = rnd() < 0.85 ? recommended * (1 + rnd()) : 0.2 + rnd() * (recommended - 0.2);
   const deepest = Math.max(P.layer.bottomLevel.min, Math.floor((groundLevel - depth) * 10) / 10);
-  const levels: number[] = [];
+  // The layers' thicknesses down from the ground, as the form takes them, in whole centimeters; the last reaches the deepest level.
+  const thin = MIN_LAYER_THICKNESS;
+  const ts: number[] = [];
   let top = groundLevel;
   const wanted = Math.floor(rnd() * 5);
   for (let i = 0; i < wanted; i++) {
     // A third are 5–10 cm thick.
-    const t = MIN_LAYER_THICKNESS;
-    const thickness = rnd() < 0.3 ? t + rnd() * t : t + rnd() * 2 * embankmentHeight;
-    const level = Number((Math.floor((top - thickness) * 100) / 100).toFixed(2));
-    if (level > top - t || level < deepest + t) break;
-    levels.push(level);
+    const t = Math.ceil(Number(((rnd() < 0.3 ? thin + rnd() * thin : thin + rnd() * 2 * embankmentHeight) * 100).toFixed(6))) / 100;
+    const [level] = bottomLevels(top, [t]);
+    if (level < deepest + thin) break;
+    ts.push(t);
     top = level;
   }
+  ts.push(Number((top - deepest).toFixed(6)));
   return {
     groundLevel,
     embankmentHeight,
@@ -41,7 +44,7 @@ function randomParams(rnd: () => number): EmbankmentParams {
     slope,
     fill: { gamma: value(rnd, P.fill.gamma), c: value(rnd, P.fill.c), phi: value(rnd, P.fill.phi) },
     crestLoad: rnd() < 0.6 ? value(rnd, P.crestLoad) : null,
-    layers: [...levels, deepest].map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
+    layers: bottomLevels(groundLevel, ts).map((bottomLevel) => ({ bottomLevel, material: material(rnd) })),
     // The water anywhere from well below the base to the crest.
     waterLevel: rnd() < 0.8 ? value(rnd, P.waterLevel, groundLevel - 4 * embankmentHeight, groundLevel + embankmentHeight) : null,
     values: randomValues(rnd),

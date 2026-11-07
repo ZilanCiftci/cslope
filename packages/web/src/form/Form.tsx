@@ -6,11 +6,13 @@
  * then Safety.
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, CircleAlert, X } from "lucide-react";
+import { ArrowDown, ArrowUp, BetweenHorizontalStart, ChevronDown, ChevronRight, CircleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ParameterDescription } from "@/templates/types";
 import { DESIGN_PARAMETERS, LAYER_PARAMETERS } from "@/templates/common";
-import { emptyLayer, emptyText, formState, LAYER_FIELDS, nextBottomLevel, LAYER_KINDS, parseNumber, strengthSummary, withGroup, type Draft, type LayerDraft } from "./draft";
+import { draftLevels, emptyText, formState, LAYER_FIELDS, LAYER_KINDS, moveLayer, parseNumber, strengthSummary, withGroup, withNewLayer, type Draft, type LayerDraft } from "./draft";
+import { ColorPicker, Swatch } from "./ColorPicker";
+import { LAYER_THICKNESS, rangeText } from "./layers";
 import { descOf, type AnySpec, type GroupSpec } from "./specs";
 
 export interface FormProps {
@@ -81,7 +83,6 @@ const HINTS: Record<string, string> = {
   slope: "Horizontal per 1 vertical.",
   bottomWidth: "Empty for a wide excavation; set for a trench with the same slope on both sides.",
   waterLevel: "An elevation; empty for a dry slope.",
-  bottomLevel: "An elevation, not a depth.",
   suRate: "Per meter below the layer's top.",
   distanceFromCrest: "To the near edge of the road's top.",
   etaCu: "γcu = 1.5 / η.",
@@ -170,37 +171,71 @@ export function Choices<T extends string>({
 
 const grid = "grid grid-cols-2 gap-x-3";
 
+/** The most layers a section has (as an address holds). */
+const MAX_LAYERS = 12;
+
 /** The id of a layer's name field, which gets the focus when the layer is added. */
 const nameIdOf = (layer: LayerDraft) => `${layer.key}-name`;
 /** The id of a layer's header button, which gets the focus when the layer after it is removed. */
 const headerIdOf = (layer: LayerDraft) => `${layer.key}-header`;
+/** The id of a layer's action button ("up", "down", "insert"), which keeps the focus when the layer moves. */
+const actionIdOf = (layer: LayerDraft, action: LayerAction) => `${layer.key}-${action}`;
 
-/** The fields of a layer, by key ("layers.0.su"), the name and the bottom level included. */
-const layerKeys = (layer: LayerDraft, index: number) => ["name", "bottomLevel", ...LAYER_FIELDS[layer.kind]].map((k) => `layers.${index}.${k}`);
+type LayerAction = "up" | "down" | "insert";
+
+/** The fields of a layer, by key ("layers.0.su"), the name and the thickness included. */
+const layerKeys = (layer: LayerDraft, index: number) => ["name", "thickness", ...LAYER_FIELDS[layer.kind]].map((k) => `layers.${index}.${k}`);
 
 interface LayerFieldsProps {
   layer: LayerDraft;
   index: number;
   count: number;
-  /** The template's description of a layer's bottom level. */
-  bottomLevel: ParameterDescription;
+  /** The template's rule on a layer's thickness, for its tooltip. */
+  thicknessRule: string;
+  /** The levels of the layer's top and bottom (NaN when not known). */
+  top: number;
+  bottom: number;
   open: boolean;
   onToggle: () => void;
   onChange: (l: LayerDraft) => void;
   onRemove: () => void;
+  /** Moves the layer one up (-1) or down (1). */
+  onMove: (by: -1 | 1) => void;
+  onInsert: () => void;
   errors: Map<string, string>;
   missing: ReadonlySet<string>;
 }
 
+/** A small icon button of a layer's header. */
+function HeaderButton({ id, label, title, disabled, onClick, children }: { id?: string; label: string; title: string; disabled?: boolean; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      id={id}
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={title}
+      className="grid h-6 w-6 shrink-0 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-35"
+    >
+      {children}
+    </button>
+  );
+}
+
+const iconClass = "h-3.5 w-3.5";
+
 /**
  * A layer as a row of the accordion: its header (always shown) names it,
- * its model, its bottom and its strength, and marks a problem or an empty
- * required field; its fields show when it is open.
+ * its model, its thickness with its levels and its strength, and marks a
+ * problem or an empty required field, with buttons to move it, to insert a
+ * layer above it and to remove it; its fields show when it is open.
  */
-function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChange, onRemove, errors, missing }: LayerFieldsProps) {
+function LayerFields({ layer, index, count, thicknessRule, top, bottom, open, onToggle, onChange, onRemove, onMove, onInsert, errors, missing }: LayerFieldsProps) {
   const nameId = nameIdOf(layer);
   const panelId = `${layer.key}-fields`;
   const kindId = useId();
+  const colorId = useId();
   const f = (k: string) => `layers.${index}.${k}`;
   const last = index === count - 1;
   const nameError = errors.get(f("name"));
@@ -208,8 +243,11 @@ function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChang
   const problem = keys.some((k) => errors.has(k));
   const required = !problem && keys.some((k) => missing.has(k));
   const model = LAYER_KINDS.find((k) => k.kind === layer.kind)?.label ?? "";
-  const bottom = layer.bottomLevel.trim();
-  const details = [model, bottom && `bottom ${bottom} m`, strengthSummary(layer)].filter(Boolean).join(" · ");
+  const thickness = parseNumber(layer.thickness);
+  const range = thickness !== null && Number.isFinite(thickness) ? rangeText(thickness, top, bottom) : "";
+  const details = [model, range, strengthSummary(layer)].filter(Boolean).join(" · ");
+  const name = layer.name.trim() || `Layer ${index + 1}`;
+  const thicknessDesc = { ...LAYER_THICKNESS, description: `${LAYER_THICKNESS.description}${thicknessRule}${last ? " The model ends at the last layer's bottom, treated as firm ground." : ""}` };
   return (
     <li className="rounded-md border">
       <div className="flex items-start">
@@ -229,7 +267,10 @@ function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChang
             )}
             <span className="min-w-0 flex-1">
               <span className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-medium">{layer.name.trim() || `Layer ${index + 1}`}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Swatch color={layer.color} className="h-2.5 w-2.5 self-center" />
+                  <span className="truncate font-medium">{name}</span>
+                </span>
                 {problem && (
                   <span className="flex shrink-0 items-center gap-1 text-xs text-destructive dark:text-signal">
                     <CircleAlert className="h-3.5 w-3.5 self-center" strokeWidth={1.75} aria-hidden="true" />
@@ -242,11 +283,28 @@ function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChang
             </span>
           </button>
         </h3>
-        {count > 1 && (
-          <button type="button" onClick={onRemove} aria-label={`Remove layer ${index + 1}`} title="Remove the layer" className="mt-1.5 mr-1.5 grid h-6 w-6 shrink-0 place-items-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground">
-            <X className="h-3.5 w-3.5" strokeWidth={1.75} aria-hidden="true" />
-          </button>
-        )}
+        <div className="mt-1.5 mr-1.5 flex shrink-0 items-center">
+          {count > 1 && (
+            <>
+              <HeaderButton id={actionIdOf(layer, "up")} label={`Move ${name} up`} title="Move the layer up; the layers below its new place move down" disabled={index === 0} onClick={() => onMove(-1)}>
+                <ArrowUp className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+              </HeaderButton>
+              <HeaderButton id={actionIdOf(layer, "down")} label={`Move ${name} down`} title="Move the layer down; the layers above its new place move up" disabled={last} onClick={() => onMove(1)}>
+                <ArrowDown className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+              </HeaderButton>
+            </>
+          )}
+          {count < MAX_LAYERS && (
+            <HeaderButton id={actionIdOf(layer, "insert")} label={`Insert a layer above ${name}`} title="Insert a new layer above this one; the layers below move down by its thickness" onClick={onInsert}>
+              <BetweenHorizontalStart className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+            </HeaderButton>
+          )}
+          {count > 1 && (
+            <HeaderButton label={`Remove ${name}`} title="Remove the layer; the layers below move up by its thickness" onClick={onRemove}>
+              <X className={iconClass} strokeWidth={1.75} aria-hidden="true" />
+            </HeaderButton>
+          )}
+        </div>
       </div>
       {open && (
         <div id={panelId} role="group" aria-labelledby={headerIdOf(layer)} className={cn(grid, "px-3 pt-1 pb-1")}>
@@ -272,13 +330,10 @@ function LayerFields({ layer, index, count, bottomLevel, open, onToggle, onChang
               ))}
             </select>
           </Field>
-          <NumberField
-            field={f("bottomLevel")}
-            desc={last ? { ...bottomLevel, description: `${bottomLevel.description} The model ends at the last layer's bottom, treated as firm ground.` } : bottomLevel}
-            value={layer.bottomLevel}
-            onChange={(v) => onChange({ ...layer, bottomLevel: v })}
-            errors={errors}
-          />
+          <NumberField field={f("thickness")} desc={thicknessDesc} value={layer.thickness} onChange={(v) => onChange({ ...layer, thickness: v })} errors={errors} />
+          <Field id={colorId} label="Color" title="The layer's color in the drawing and in the analysis document.">
+            <ColorPicker id={colorId} value={layer.color} onChange={(color) => onChange({ ...layer, color })} label={`Color of ${name}`} describedBy={`${colorId}-desc`} />
+          </Field>
           {LAYER_FIELDS[layer.kind].map((k) => (
             <NumberField key={k} field={f(k)} desc={LAYER_PARAMETERS[k]} value={layer[k]} onChange={(v) => onChange({ ...layer, [k]: v })} errors={errors} />
           ))}
@@ -362,9 +417,10 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
   const setFocus = (id: string) => {
     focus.current = id;
   };
-  const addLayer = () => {
-    const layer = emptyLayer(nextBottomLevel(draft.layers));
-    set("layers", [...draft.layers, layer]);
+  // A new layer (at the bottom, or above another) opens with the focus on its name.
+  const addLayer = (index: number) => {
+    const { layers, layer } = withNewLayer(draft, index);
+    set("layers", layers);
     setOpenKey(layer.key);
     setFocus(nameIdOf(layer));
   };
@@ -373,8 +429,17 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
     set("layers", layers);
     setFocus(headerIdOf(layers[Math.max(0, i - 1)]));
   };
+  // A moved layer keeps the focus on the same button, so that it can be pressed again; on its header once that button is disabled at the end.
+  const move = (i: number, by: -1 | 1) => {
+    const layer = draft.layers[i];
+    const to = i + by;
+    set("layers", moveLayer(draft.layers, i, to));
+    setFocus(to === 0 || to === draft.layers.length - 1 ? headerIdOf(layer) : actionIdOf(layer, by < 0 ? "up" : "down"));
+  };
   const layersError = errors.get("layers");
-  const bottomLevel = (spec.template.params.layer as Record<string, ParameterDescription>).bottomLevel;
+  const levels = draftLevels(draft);
+  const ground = parseNumber(draft.fields.groundLevel ?? "") ?? NaN;
+  const thicknessRule = spec.avoidLevel ? ` It does not end within 0.05 m of the excavation bottom, and the last one ends below it.` : "";
   const groups = (list: GroupSpec[]) =>
     list.map((g) => (
       <TemplateGroup key={g.id} spec={spec} group={g} draft={draft} onChange={onChange} errors={errors}>
@@ -387,7 +452,7 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
       {groups(spec.before)}
 
       <Group title="Layers">
-        <p className="mb-2 text-xs text-muted-foreground">From the top down; the first starts at the ground.</p>
+        <p className="mb-2 text-xs text-muted-foreground">From the top down, each with its thickness; the first starts at the ground level, and the model ends at the last one's bottom.</p>
         <ol className="space-y-2">
           {draft.layers.map((layer, i) => (
             <LayerFields
@@ -395,19 +460,23 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes }: For
               layer={layer}
               index={i}
               count={draft.layers.length}
-              bottomLevel={bottomLevel}
+              thicknessRule={thicknessRule}
+              top={i === 0 ? ground : levels[i - 1]}
+              bottom={levels[i]}
               open={openKey === layer.key}
               onToggle={() => setOpenKey(openKey === layer.key ? null : layer.key)}
               onChange={(l) => setLayer(i, l)}
               onRemove={() => removeLayer(i)}
+              onMove={(by) => move(i, by)}
+              onInsert={() => addLayer(i)}
               errors={errors}
               missing={missingSet}
             />
           ))}
         </ol>
         {layersError && <ErrorText>{layersError}</ErrorText>}
-        {draft.layers.length < 12 && (
-          <button type="button" onClick={addLayer} className="mt-2 text-sm text-primary underline-offset-4 hover:underline">
+        {draft.layers.length < MAX_LAYERS && (
+          <button type="button" onClick={() => addLayer(draft.layers.length)} className="mt-2 text-sm text-primary underline-offset-4 hover:underline">
             + Add layer
           </button>
         )}

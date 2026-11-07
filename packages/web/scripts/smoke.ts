@@ -6,7 +6,8 @@
  * exception, a failed request or an accessibility violation (axe-core, on
  * the empty form and on a result). It opens a filled-in section from its
  * link, waits for F with its label, changes a parameter and waits for the
- * new F. Then it runs T-ACADS Simple through the worker (window.cslopeWeb,
+ * new F; on the embankment it opens a layer and its color picker, moves the
+ * layer down and waits for the new F. Then it runs T-ACADS Simple through the worker (window.cslopeWeb,
  * the developer check of main.tsx) and expects F 0.984, so that a policy
  * that blocks the engine, or a worker that does not start, fails the
  * build. It also checks that the engine is served as a hashed asset with a
@@ -162,6 +163,22 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       await crust.click();
       if ((await crust.getAttribute("aria-expanded")) !== "true") problems.push("a layer's header does not open the layer");
       await axe("on the embankment with a layer open");
+      // The layer's color picker, open, checked by axe; Escape closes it.
+      await page.getByRole("button", { name: "Color", exact: true }).click();
+      await page.getByRole("listbox", { name: "Color of Crust" }).waitFor({ timeout: 5_000 });
+      await axe("with a layer's color picker open");
+      await page.keyboard.press("Escape");
+      // A move: the crust goes below the clay, the address follows with the thicknesses, and F is computed again.
+      const before = await fValue(page).textContent();
+      await page.getByRole("button", { name: "Move Crust down" }).click();
+      await page.waitForFunction(() => new URLSearchParams(location.search).get("layer1.name") === "Clay", null, { timeout: 5_000 });
+      const q = new URL(page.url()).searchParams;
+      if (q.get("layer1.t") !== "18.5" || q.get("layer2.t") !== "1.5") problems.push(`after a move the address has the thicknesses ${q.get("layer1.t")}, ${q.get("layer2.t")}, expected 18.5, 1.5`);
+      await page.waitForFunction((b) => {
+        const el = [...document.querySelectorAll("#result p")].find((p) => /^F \d+\.\d{3}$/.test(p.textContent ?? ""));
+        return el && el.textContent !== b && !el.closest(".opacity-50");
+      }, before, { timeout: 30_000 });
+      console.log(`  embankment, crust moved below the clay: ${before} → ${await fValue(page).textContent()}`);
       await page.getByRole("button", { name: "Excavation in clay with a haul road" }).click();
       await page.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" }).waitFor({ timeout: 5_000 });
       await page.waitForFunction(() => new URLSearchParams(location.search).get("t") === "excavation", null, { timeout: 5_000 });
