@@ -1,265 +1,80 @@
-"""cslope.project: reading .cslp project files (pure Python, no engine).
+"""cslope.project: opening, changing and saving .cslp project files with the
+engine's reader and writer (crate cslope-project, issue #58), and
+``cslope analyse site.cslp [--write]``.
 
-Runs without the compiled extension: the module is loaded from its file
-when the package cannot be imported. The fixtures are the desktop app's
-(packages/desktop/src/features/project/fixtures); the tests that need them
-are skipped when the repository is not there (a wheel test).
+The fixtures are the desktop app's (packages/desktop/src/features/project/
+fixtures) and a project the app saved with its results (tests/data); the
+tests that need them are skipped when the repository is not there (a wheel
+test).
 """
 
 from __future__ import annotations
 
-import hashlib
-import importlib.util
 import io
 import json
-import sys
+import shutil
 import zipfile
 from pathlib import Path
 
 import pytest
 
+import cslope
+from cslope import cli, project
+
 HERE = Path(__file__).resolve().parent
 FIXTURES = HERE.parents[3] / "desktop" / "src" / "features" / "project" / "fixtures"
+APP_RESULTS = HERE / "data" / "app-results.cslp"
 
-try:
-    from cslope import project
-except ImportError:  # no compiled engine: the module on its own
-    _spec = importlib.util.spec_from_file_location("cslope_project", HERE.parent / "python" / "cslope" / "project.py")
-    assert _spec and _spec.loader
-    project = importlib.util.module_from_spec(_spec)
-    sys.modules["cslope_project"] = project
-    _spec.loader.exec_module(project)
-
-PNG = bytes.fromhex("89504e470d0a1a0a0000000d494844520000000100000001080600000" "01f15c4890000000d49444154789c63646060f8df0f0002870180eb47ba920000000049454e44ae426082")
-
-MODEL = {
-    "name": "Slope",
-    "coordinates": [[0, 0], [10, 0], [20, 5], [30, 5]],
-    "materials": [{"id": "mat-1", "name": "Clay", "model": {"kind": "mohr-coulomb", "unitWeight": 18, "frictionAngle": 0, "cohesion": 12}}],
-}
+needs_fixtures = pytest.mark.skipif(not FIXTURES.is_dir(), reason="the desktop fixtures are not in this checkout")
+needs_app_results = pytest.mark.skipif(not APP_RESULTS.is_file(), reason="the app-saved project is not in this checkout")
 
 
-def archive(entries: dict, manifest: dict | None = None) -> io.BytesIO:
-    """A .cslp archive in memory of the given entries (dicts as JSON)."""
-    manifest = manifest or {"format": "cslope-project", "formatVersion": 1, "minReaderVersion": 1, "appVersion": "0.1.0", "generator": "cSlope 0.1.0"}
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("manifest.json", json.dumps(manifest))
-        for name, value in entries.items():
-            z.writestr(name, value if isinstance(value, (bytes, str)) else json.dumps(value))
-    out.seek(0)
-    return out
+def run(*argv):
+    out, err = io.StringIO(), io.StringIO()
+    code = cli.main(list(map(str, argv)), out=out, err=err)
+    return code, out.getvalue(), err.getvalue()
 
 
-def layout(models: dict, extra: dict | None = None) -> dict:
-    files = {"project.json": {"version": 3, "activeModelId": next(iter(models)), "models": list(models), "units": "SI", "settings": {}}}
-    for mid, (data, result) in models.items():
-        files[f"models/{mid}/model.json"] = data
-        if result is not None:
-            files[f"models/{mid}/result.json"] = result
-    files.update(extra or {})
-    return files
+def entries(path):
+    with zipfile.ZipFile(path) as z:
+        return {n: z.read(n) for n in z.namelist()}
 
 
-def test_reads_this_layout_with_results_backgrounds_and_assets():
-    result = {"runState": "done", "result": {"minFOS": 1.25, "method": "Bishop"}, "errorMessage": None, "inputHash": "0" * 64, "engine": {"version": "0.1.0", "sourceHash": "abc"}}
-    sha = hashlib.sha256(PNG).hexdigest()
-    files = layout(
-        {"a": (dict(MODEL, runState="running", result={"minFOS": 9}), result), "b": (dict(MODEL, name="Second"), {"runState": "error", "result": None, "errorMessage": "No surface"})},
-        {
-            "models/a/backgrounds.json": [{"assetId": "img", "transform": {"originX": 0, "originY": 0, "scale": 0.1, "rotationDeg": 0, "mirrored": False}, "opacity": 1, "visible": True, "order": 0}],
-            "assets/index.json": [{"id": "img", "path": "assets/img.png", "mime": "image/png", "bytes": len(PNG), "sha256": sha, "originalName": "plan.png", "addedAt": "2026-11-04T00:00:00.000Z"}],
-            "assets/img.png": PNG,
-            "thumbnail.png": PNG,
-        },
-    )
-    with project.read(archive(files)) as p:  # type: ignore[arg-type]
-        assert p.layout == "cslp"
-        assert p.manifest["generator"] == "cSlope 0.1.0"
-        assert (p.version, p.active_model_id, p.units) == (3, "a", "SI")
-        assert [m.id for m in p.models] == ["a", "b"]
-        a = p.active_model
-        assert a.name == "Slope" and a.data["coordinates"][2] == [20, 5]
-        # the outcome comes from result.json only
-        assert "runState" not in a.data and "result" not in a.data
-        assert a.min_fos == 1.25 and a.result["engine"]["version"] == "0.1.0"
-        assert p.model("b").result == {"runState": "error", "result": None, "errorMessage": "No surface"}
-        assert p.model("b").min_fos is None
-        assert a.backgrounds[0]["assetId"] == "img"
-        assert [x.id for x in p.assets] == ["img"] and p.asset("img").original_name == "plan.png"
-        assert p.read_asset("img") == PNG
-        assert p.thumbnail() == PNG
-        with pytest.raises(KeyError):
-            p.model("c")
+def rewritten(src, target, name, edit):
+    """A copy of the archive ``src`` with the JSON entry ``name`` edited."""
+    with zipfile.ZipFile(src) as zin, zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zout:
+        for info in zin.infolist():
+            data = zin.read(info)
+            if info.filename == name:
+                v = json.loads(data)
+                edit(v)
+                data = json.dumps(v).encode()
+            zout.writestr(info.filename, data)
+    return target
 
 
-def test_reads_placements_with_page_crop_and_calibration():
-    sha = hashlib.sha256(PNG).hexdigest()
-    index = [{"id": "img", "path": "assets/img.png", "mime": "image/png", "bytes": len(PNG), "sha256": sha, "originalName": "s.png", "addedAt": ""}]
-    entry = {
-        "id": "drawing-1",
-        "assetId": "img",
-        "name": "Section",
-        "page": 2,
-        "crop": {"x0": 30, "y0": 40, "x1": 10, "y1": 20},
-        "calibration": {"mode": "scale", "points": [{"source": [0, 0], "model": [1, 2]}], "scale": {"metersPerUnit": 0.5, "unit": "px"}},
-        "transform": {"a": 0.5, "b": 0, "c": 0, "d": -0.5, "e": 1, "f": 2},
-        "opacity": 3,
-        "visible": False,
-        "order": 1,
-        "showInResults": True,
-        "hiddenLayers": ["text", 3, "text", "axes"],
-    }
-    files = layout(
-        {"a": ({**MODEL, "locks": {"backgrounds": ["drawing-1"]}}, None)},
-        {
-            "assets/index.json": index,
-            "assets/img.png": PNG,
-            "models/a/backgrounds.json": [
-                entry,
-                {**entry, "id": "x", "assetId": "missing"},
-                {**entry, "id": "y", "transform": {"a": 0, "b": 0, "c": 0, "d": 0, "e": 0, "f": 0}},
-                {"assetId": "img", "transform": {"originX": 1, "originY": 1, "scale": 2}, "order": 0},
-            ],
-        },
-    )
-    with project.read(archive(files)) as p:  # type: ignore[arg-type]
-        old, new = p.placements("a")
-        assert new == project.Placement(
-            id="drawing-1",
-            asset_id="img",
-            transform=(0.5, 0.0, 0.0, -0.5, 1.0, 2.0),
-            calibration=entry["calibration"],
-            opacity=1.0,
-            visible=False,
-            order=1,
-            page=2,
-            crop=(10, 20, 30, 40),
-            name="Section",
-            show_in_results=True,
-            locked=True,
-            hidden_layers=("text", "axes"),
-        )
-        assert new.to_model(2, 2) == (2.0, 1.0)
-        assert old.hidden_layers == ()
-        # the first form: the 1 x 1 px image's bottom-left corner at the origin, 2 m per pixel
-        assert old.id == "drawing-4" and old.to_model(0, 1) == pytest.approx((1, 1)) and old.to_model(1, 0) == pytest.approx((3, 3))
+def test_versions_are_the_apps():
+    assert (project.FORMAT_VERSION, project.SCHEMA_VERSION) == (1, 3)
 
 
-def test_checks_an_attachment_against_its_hash_and_drops_bad_index_entries():
-    good = {"id": "img", "path": "assets/img.png", "mime": "image/png", "bytes": len(PNG), "sha256": "0" * 64, "originalName": "plan.png", "addedAt": ""}
-    p = project.read(archive(layout({"a": (MODEL, None)}, {"assets/index.json": [good], "assets/img.png": PNG})))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="plan.png does not match its hash"):
-        p.read_asset("img")
-    for bad in (dict(good, bytes=1), dict(good, path="assets/other.png"), dict(good, id="../x")):
-        p = project.read(archive(layout({"a": (MODEL, None)}, {"assets/index.json": [bad], "assets/img.png": PNG})))  # type: ignore[arg-type]
-        assert p.assets == []
-    assert p.thumbnail() is None
-
-
-def test_refuses_a_newer_file_and_damaged_archives():
-    files = layout({"a": (MODEL, None)})
-    with pytest.raises(ValueError, match=r"newer cSlope \(cSlope 9.0\); update to open it"):
-        project.read(archive(files, {"format": "cslope-project", "formatVersion": 2, "minReaderVersion": 2, "generator": "cSlope 9.0"}))  # type: ignore[arg-type]
-    # a newer format that this reader may read opens
-    assert project.read(archive(files, {"format": "cslope-project", "formatVersion": 2, "minReaderVersion": 1})).models[0].name == "Slope"  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="another format"):
-        project.read(archive(files, {"format": "x", "formatVersion": 1}))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="no valid formatVersion"):
-        project.read(archive(files, {"format": "cslope-project", "formatVersion": "1"}))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="models/ghost/model.json is missing"):
-        project.read(archive(dict(files, **{"project.json": dict(files["project.json"], models=["a", "ghost"])})))  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="no manifest.json"):
-        out = io.BytesIO()
-        with zipfile.ZipFile(out, "w") as z:
-            z.writestr("project.json", "{}")
-        out.seek(0)
-        project.read(out)  # type: ignore[arg-type]
-    with pytest.raises(ValueError, match="not valid JSON"):
-        project.read(archive(dict(files, **{"models/a/model.json": "{"})))  # type: ignore[arg-type]
-
-
-def _declare_size(data: bytes, name: str, size: int) -> io.BytesIO:
-    """The archive with `name`'s uncompressed size in the central directory set to `size`."""
-    buf = bytearray(data)
-    at = 0
-    while True:
-        at = buf.index(b"PK\x01\x02", at)
-        name_len = int.from_bytes(buf[at + 28 : at + 30], "little")
-        if bytes(buf[at + 46 : at + 46 + name_len]) == name.encode():
-            buf[at + 24 : at + 28] = size.to_bytes(4, "little")
-            return io.BytesIO(bytes(buf))
-        at += 4
-
-
-def test_refuses_archives_larger_than_the_limits(monkeypatch: pytest.MonkeyPatch):
-    files = layout({"a": (MODEL, None)}, {"thumbnail.png": PNG})
-    data = archive(files).getvalue()
-    mb = 1024 * 1024
-    # A declared size above 100 MB is refused before anything is read.
-    with pytest.raises(ValueError, match=r"entry project.json is too large \(150 MB unpacked; at most 100 MB\)"):
-        project.read(_declare_size(data, "project.json", 150 * mb))  # type: ignore[arg-type]
-    # So are entries that unpack to more than 200 MB together.
-    big_data = _declare_size(_declare_size(data, "models/a/model.json", 90 * mb).getvalue(), "thumbnail.png", 90 * mb).getvalue()
-    big_data = _declare_size(big_data, "project.json", 30 * mb).getvalue()
-    with pytest.raises(ValueError, match=r"unpack to more than 200 MB"):
-        project.read(io.BytesIO(big_data))  # type: ignore[arg-type]
-    # The limits are those of the module.
-    monkeypatch.setattr(project, "MAX_ENTRY_BYTES", 50)
-    with pytest.raises(ValueError, match="too large"):
-        project.read(archive(files))  # type: ignore[arg-type]
-
-
-def test_refuses_units_other_than_si(tmp_path: Path):
-    files = layout({"a": (MODEL, None)})
-    imperial = dict(files, **{"project.json": dict(files["project.json"], units="imperial")})
-    with pytest.raises(ValueError, match="in imperial units; this reader reads SI projects only"):
-        project.read(archive(imperial))  # type: ignore[arg-type]
-    f = tmp_path / "old.json"
-    f.write_text(json.dumps({"units": 3, "models": [dict(MODEL, id="m1")]}), encoding="utf-8")
-    with pytest.raises(ValueError, match="in unknown units"):
-        project.read(f)
-    # Without units, SI.
-    f.write_text(json.dumps({"models": [dict(MODEL, id="m1")]}), encoding="utf-8")
-    assert project.read(f).units == "SI"
-
-
-def test_reads_the_first_cslp_layout_and_json_projects(tmp_path: Path):
-    model = dict(MODEL, id="m1")
-    old = {"project.json": {"version": 3, "activeModelId": "m1", "models": [model]}, "results.json": {"models": {"m1": {"runState": "done", "result": {"minFOS": 1.5}, "errorMessage": None}}}}
-    p = project.read(archive(old, {"format": "cslope-project", "formatVersion": 1}))  # type: ignore[arg-type]
-    assert p.layout == "cslp-3file" and p.models[0].min_fos == 1.5 and "result" not in p.models[0].data
-    f = tmp_path / "old.json"
-    f.write_text("﻿" + json.dumps({"activeModelId": "m1", "models": [dict(model, runState="error", errorMessage="x")]}), encoding="utf-8")
-    p = project.read(f)
-    assert p.layout == "json" and p.version == 1 and p.models[0].result == {"runState": "error", "result": None, "errorMessage": "x"}
-    (tmp_path / "no.txt").write_text("hello")
-    with pytest.raises(ValueError, match="not a cSlope project"):
-        project.read(tmp_path / "no.txt")
-
-
-@pytest.mark.skipif(not FIXTURES.is_dir(), reason="the desktop fixtures are not in this checkout")
-def test_opens_the_committed_fixtures():
-    v1 = project.read(FIXTURES / "legacy-json-v1.json")
-    assert v1.layout == "json" and v1.models[0].name == "Legacy v1 slope"
-    v3 = project.read(FIXTURES / "legacy-json-v3.json")
-    assert v3.active_model_id == "model-2" and v3.models[0].min_fos == 1.25
-    three = project.read(FIXTURES / "cslp-3file.cslp")
-    assert three.layout == "cslp-3file" and [m.name for m in three.models] == ["Legacy v3 slope", "Second model"]
-    with project.read(FIXTURES / "cslp-v1.cslp") as p:
-        assert p.layout == "cslp" and p.manifest["formatVersion"] == 1
+@needs_fixtures
+def test_opens_the_apps_fixtures():
+    with project.open(FIXTURES / "cslp-v1.cslp") as p:
+        assert p.layout == "cslp" and p.manifest["formatVersion"] == 1 and (p.version, p.units) == (3, "SI")
         assert [m.id for m in p.models] == ["model-1", "model-2"] and p.active_model.name == "Second model"
         assert p.models[0].min_fos == 1.25 and len(p.models[0].result["inputHash"]) == 64
         assert p.models[1].result["errorMessage"] == "No admissible surface"
         (asset,) = p.assets
         assert asset.original_name == "section.png" and p.models[0].backgrounds[0]["assetId"] == asset.id
-        assert p.read_asset(asset.id)[:8] == b"\x89PNG\r\n\x1a\n"
+        assert p.read_asset(asset.id)[:8] == b"\x89PNG\r\n\x1a\n" and asset.path.endswith(".png")
         assert p.thumbnail() == p.read_asset(asset.id)
         # the first form of backgrounds.json, converted (1 x 1 px image: its bottom-left corner at (0, -5))
         (old,) = p.placements(p.models[0])
         assert old.calibration == {"mode": "drawing", "points": []}
         assert old.to_model(0, 1) == pytest.approx((0, -5)) and old.to_model(1, 0) == pytest.approx((0.1, -4.9))
-    with project.read(FIXTURES / "cslp-v1-drawings.cslp") as p:
+        # the model as the app holds it: the members it fills are there
+        assert {"projectInfo", "resultViewSettings", "options", "analysisLimits"} <= set(p.models[0].data)
+    with project.open(FIXTURES / "cslp-v1-drawings.cslp") as p:
         (pdf,) = p.assets
         assert pdf.mime == "application/pdf" and p.read_asset(pdf.id)[:5] == b"%PDF-"
         (a,) = p.placements(p.models[0])
@@ -269,3 +84,106 @@ def test_opens_the_committed_fixtures():
         assert a.calibration["mode"] == "axes" and a.crop == b.crop
         # vertical exaggeration 2: twice the metres per point along x as along y
         assert abs(a.transform[0]) == pytest.approx(2 * abs(a.transform[3]))
+
+
+@needs_fixtures
+@pytest.mark.parametrize("name", ["cslp-3file.cslp", "legacy-json-v3.json", "legacy-json-v1.json"])
+def test_refuses_earlier_versions_pointing_to_the_app(name):
+    with pytest.raises(ValueError, match="earlier cSlope.*open it in the cSlope app and save it"):
+        project.open(FIXTURES / name)
+
+
+@needs_fixtures
+def test_refuses_unknown_members_and_newer_files(tmp_path):
+    src = FIXTURES / "cslp-v1.cslp"
+    bad = rewritten(src, tmp_path / "a.cslp", "models/model-1/model.json", lambda v: v["udls"][0].update(note="x"))
+    with pytest.raises(ValueError, match=r"unknown member udls\[0\]\.note"):
+        project.open(bad)
+    newer = rewritten(src, tmp_path / "b.cslp", "project.json", lambda v: v.update(version=4))
+    with pytest.raises(ValueError, match="newer cSlope"):
+        project.open(newer)
+    with pytest.raises(OSError):
+        project.open(tmp_path / "none.cslp")
+
+
+def test_read_is_a_deprecated_alias(tmp_path):
+    with pytest.deprecated_call(), pytest.raises(OSError):
+        project.read(tmp_path / "none.cslp")
+
+
+@needs_fixtures
+def test_saves_the_same_json_entries(tmp_path):
+    for name in ["cslp-v1.cslp", "cslp-v1-drawings.cslp"]:
+        p = project.open(FIXTURES / name)
+        target = tmp_path / name
+        assert p.save(target) == {"droppedResults": [], "droppedThumbnail": False}
+        before, after = entries(FIXTURES / name), entries(target)
+        assert list(after) == list(before)
+        for n in before:
+            if n == "manifest.json":
+                a, b = json.loads(after[n]), json.loads(before[n])
+                assert a["created"] == b["created"] and a["generator"].startswith("cslope ")
+            elif n.endswith("backgrounds.json") and b"originX" in before[n]:
+                continue  # the first form is written in the current one
+            else:
+                assert after[n] == before[n], (name, n)
+        assert p.manifest["generator"] == json.loads(after["manifest.json"])["generator"]
+
+
+@needs_fixtures
+def test_a_model_changed_keeps_no_result_and_the_thumbnail_goes(tmp_path):
+    p = project.open(FIXTURES / "cslp-v1.cslp")
+    m = p.model("model-1")
+    assert m.result_is_current
+    m.data["materials"][0]["model"]["unitWeight"] += 1
+    assert not m.result_is_current
+    # a change that is not part of the input keeps it
+    p.model("model-2").data["name"] = "Renamed"
+    report = p.save(tmp_path / "x.cslp")
+    assert report == {"droppedResults": ["model-1"], "droppedThumbnail": True}
+    names = entries(tmp_path / "x.cslp")
+    assert "models/model-1/result.json" not in names and "thumbnail.png" not in names
+    assert "models/model-2/result.json" in names
+    assert m.result is None and p.thumbnail() is None
+
+
+@needs_fixtures
+def test_an_unknown_member_added_in_python_is_refused_on_save(tmp_path):
+    p = project.open(FIXTURES / "cslp-v1.cslp")
+    p.models[0].data["comment"] = "x"
+    with pytest.raises(ValueError, match="unknown member comment"):
+        p.save(tmp_path / "x.cslp")
+    assert not (tmp_path / "x.cslp").exists()
+
+
+@needs_app_results
+def test_analyse_write_keeps_current_results(tmp_path):
+    target = shutil.copy(APP_RESULTS, tmp_path / "site.cslp")
+    p = project.open(target)
+    sparse = p.model("model-sparse")
+    before = sparse.min_fos
+    # the strength raised: the saved result is out of date until the model runs again
+    sparse.data["materials"][0]["model"]["cohesion"] += 5
+    p.save(target)
+    assert project.open(target).model("model-sparse").result is None
+    code, out, err = run("analyse", target, "--model", "Fields missing", "--write", "--threads", 2)
+    assert code == 0, err
+    assert out.startswith("Fields missing:\nF ") and "Saved " in out
+    again = project.open(target).model("model-sparse")
+    assert again.result_is_current and again.min_fos > before
+    assert again.result["engine"] == {"version": cslope.__version__, "sourceHash": ""}
+    assert again.result["runState"] == "done" and again.result["errorMessage"] is None
+
+
+@needs_app_results
+def test_analyse_prints_without_writing(tmp_path):
+    code, out, err = run("analyse", APP_RESULTS, "--json", "--threads", 2)
+    assert code == 0, err
+    data = json.loads(out)
+    assert set(data) == {"id", "name", "summary", "result"}
+    code, _, err = run("analyse", APP_RESULTS, "--model", "Nope")
+    assert code == 2 and "No model named 'Nope'" in err
+    doc = tmp_path / "d.json"
+    doc.write_text(json.dumps({"format": "cslope-analysis", "formatVersion": 1, "definition": {}}))
+    code, _, err = run("analyse", doc, "--write")
+    assert code == 2 and "for a project file" in err

@@ -8,6 +8,7 @@
 //! threads.
 
 mod errors;
+mod project;
 mod run;
 mod slope;
 
@@ -316,7 +317,8 @@ fn default_options<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
 /// cslope-project. With ``normalize`` (the default) the model is first read
 /// as the app reads it when it opens the project (``normalize_model``), so
 /// that the definition is the one the app runs; without it, the model is
-/// taken as it is.
+/// taken as it is, which must then be the shape the app writes (every
+/// member known, the ones it always writes present).
 #[pyfunction]
 #[pyo3(signature = (model, *, normalize=true))]
 fn model_to_definition<'py>(
@@ -385,5 +387,17 @@ fn native(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(model_to_definition, m)?)?;
     m.add_function(wrap_pyfunction!(normalize_model, m)?)?;
     m.add_function(wrap_pyfunction!(assign_unassigned_regions, m)?)?;
+    m.add_function(wrap_pyfunction!(project::project_read, m)?)?;
+    m.add_function(wrap_pyfunction!(project::project_write, m)?)?;
+    m.add_function(wrap_pyfunction!(project::input_hash_of, m)?)?;
+    m.add_function(wrap_pyfunction!(project::saved_result, m)?)?;
+    m.add(
+        "PROJECT_FORMAT_VERSION",
+        cslope_project::project::FORMAT_VERSION,
+    )?;
+    m.add(
+        "PROJECT_SCHEMA_VERSION",
+        cslope_project::project::PROJECT_SCHEMA_VERSION,
+    )?;
     Ok(())
 }

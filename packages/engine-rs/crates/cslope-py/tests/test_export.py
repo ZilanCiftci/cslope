@@ -60,7 +60,9 @@ def corpus():
 @needs_corpus
 def test_model_to_definition_gives_the_apps_definition():
     for m in corpus()["models"]:
-        same(cslope.model_to_definition(m["model"], normalize=False), m["definition"], m["name"])
+        # (normalize=False takes the model as the app writes it, every member present)
+        same(cslope.model_to_definition(m["parsed"], normalize=False), m["definition"], m["name"])
+        same(cslope.model_to_definition(m["model"]), m["definition"], m["name"])
 
 
 @needs_corpus
@@ -127,7 +129,7 @@ def test_a_hand_written_document_with_an_unassigned_region_is_still_an_error():
 
 
 def test_model_to_definition_names_what_it_cannot_read():
-    with pytest.raises(ValueError, match=r"materials\[0\]"):
+    with pytest.raises(ValueError, match=r"The model cannot be read at materials\[0\]: missing field"):
         cslope.model_to_definition({"id": "m", "coordinates": [[0, 0], [1, 1]], "materials": [{"id": "a"}]}, normalize=False)
     # read as the app reads it: the app's messages
     with pytest.raises(ValueError, match=r"Model m must include coordinates"):
@@ -142,7 +144,7 @@ def test_export_writes_the_active_model(tmp_path):
     assert code == 0, err
     doc = json.loads(out)
     assert doc["format"] == "cslope-analysis" and doc["formatVersion"] == 1
-    p = project.read(FIXTURES / "cslp-v1.cslp")
+    p = project.open(FIXTURES / "cslp-v1.cslp")
     active = p.active_model
     # the model's own orientation (model-2 faces left), and its options as saved
     assert doc["definition"]["orientation"] == active.data["orientation"] == "rtl"
@@ -239,7 +241,7 @@ def test_export_file_names_are_safe():
 @pytest.mark.skipif(not APP_RESULTS.is_file(), reason="the app-saved project is not in this checkout")
 def test_export_runs_to_the_f_the_app_saved():
     # a project saved by the app with its results (packages/desktop/scripts/make-export-fixture.ts)
-    p = project.read(APP_RESULTS)
+    p = project.open(APP_RESULTS)
     compared = 0
     for m in p.models:
         assert m.result and m.result["runState"] == "done", m.name

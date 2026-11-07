@@ -29,7 +29,9 @@ const FIXTURES: [&str; 3] = [
 ];
 
 fn options() -> ProjectReadOptions {
-    ProjectReadOptions { today: "1970-01-01".into() }
+    ProjectReadOptions {
+        today: "1970-01-01".into(),
+    }
 }
 
 fn writer() -> Writer {
@@ -64,13 +66,19 @@ fn app_files_save_to_the_same_entries() {
     for rel in FIXTURES {
         let Some(bytes) = fixture(rel) else { continue };
         seen += 1;
-        let mut project = read_project(bytes.clone(), &options()).unwrap_or_else(|e| panic!("{rel}: {e}"));
+        let mut project =
+            read_project(bytes.clone(), &options()).unwrap_or_else(|e| panic!("{rel}: {e}"));
         let (out, report) = write_project(&mut project, &writer()).unwrap();
         assert!(report.dropped_results.is_empty(), "{rel}: {report:?}");
         let before = entries(&bytes);
         let after = entries(&out);
-        let names = |e: &[(String, Vec<u8>, bool)]| e.iter().map(|(n, ..)| n.clone()).collect::<Vec<_>>();
-        assert_eq!(names(&after), names(&before), "{rel}: the entries and their order");
+        let names =
+            |e: &[(String, Vec<u8>, bool)]| e.iter().map(|(n, ..)| n.clone()).collect::<Vec<_>>();
+        assert_eq!(
+            names(&after),
+            names(&before),
+            "{rel}: the entries and their order"
+        );
         for ((name, a, deflated), (_, b, was_deflated)) in after.iter().zip(&before) {
             assert_eq!(deflated, was_deflated, "{rel}: {name} stored or deflated");
             if name == "manifest.json" {
@@ -83,7 +91,8 @@ fn app_files_save_to_the_same_entries() {
                 continue;
             }
             // backgrounds of the first form are written in the current one
-            let legacy = name.ends_with("backgrounds.json") && String::from_utf8_lossy(b).contains("originX");
+            let legacy = name.ends_with("backgrounds.json")
+                && String::from_utf8_lossy(b).contains("originX");
             if legacy {
                 continue;
             }
@@ -110,14 +119,19 @@ fn a_result_whose_input_changed_is_dropped_with_the_thumbnail() {
     assert!(m.result.is_some());
     // the unit weight of the first material, as one would edit it in Python
     let mut model = m.model.to_json();
-    let unit_weight = model["materials"][0]["model"]["unitWeight"].as_f64().unwrap();
+    let unit_weight = model["materials"][0]["model"]["unitWeight"]
+        .as_f64()
+        .unwrap();
     model["materials"][0]["model"]["unitWeight"] = json!(unit_weight + 1.0);
     m.model = ModelEntry::from_json(model).unwrap();
     let (out, report) = write_project(&mut project, &writer()).unwrap();
     assert_eq!(report.dropped_results, vec!["model-1".to_owned()]);
     assert!(report.dropped_thumbnail);
     let names: Vec<String> = entries(&out).into_iter().map(|(n, ..)| n).collect();
-    assert!(!names.contains(&"models/model-1/result.json".to_owned()), "{names:?}");
+    assert!(
+        !names.contains(&"models/model-1/result.json".to_owned()),
+        "{names:?}"
+    );
     assert!(names.contains(&"models/model-2/result.json".to_owned()));
     assert!(!names.contains(&"thumbnail.png".to_owned()));
 }
@@ -132,9 +146,15 @@ fn a_model_run_again_keeps_its_result() {
     let model = ModelEntry::from_json(model).unwrap();
     let result = project.models[0].result.clone().unwrap().result.unwrap();
     project.models[0].model = model.clone();
-    let engine = EngineInfo { version: "0.1.0".into(), source_hash: String::new() };
+    let engine = EngineInfo {
+        version: "0.1.0".into(),
+        source_hash: String::new(),
+    };
     project
-        .set_result("model-1", SavedResult::done(&model, result, engine).unwrap())
+        .set_result(
+            "model-1",
+            SavedResult::done(&model, result, engine).unwrap(),
+        )
         .unwrap();
     let (out, report) = write_project(&mut project, &writer()).unwrap();
     assert!(report.dropped_results.is_empty());
@@ -144,7 +164,10 @@ fn a_model_run_again_keeps_its_result() {
         .map(|(_, b, _)| as_json(&b))
         .unwrap();
     assert_eq!(saved["inputHash"], json!(input_hash(&model).unwrap()));
-    assert_eq!(saved["engine"], json!({ "version": "0.1.0", "sourceHash": "" }));
+    assert_eq!(
+        saved["engine"],
+        json!({ "version": "0.1.0", "sourceHash": "" })
+    );
 }
 
 /// An archive of the fixture with one JSON entry changed.
@@ -160,7 +183,8 @@ fn edited(rel: &str, name: &str, edit: &dyn Fn(&mut Value)) -> Vec<u8> {
         } else {
             data
         };
-        zip.start_file(n.as_str(), zip::write::SimpleFileOptions::default()).unwrap();
+        zip.start_file(n.as_str(), zip::write::SimpleFileOptions::default())
+            .unwrap();
         zip.write_all(&data).unwrap();
     }
     zip.finish().unwrap().into_inner()
@@ -171,15 +195,21 @@ fn unknown_members_and_entries_are_refused_with_their_path() {
     let rel = FIXTURES[0];
     let cases: Vec<(Vec<u8>, &str)> = vec![
         (
-            edited(rel, "models/model-1/model.json", &|v| v["udls"][0]["foo"] = json!(1)),
+            edited(rel, "models/model-1/model.json", &|v| {
+                v["udls"][0]["foo"] = json!(1)
+            }),
             "models/model-1/model.json: unknown member udls[0].foo",
         ),
         (
-            edited(rel, "models/model-2/result.json", &|v| v["note"] = json!("x")),
+            edited(rel, "models/model-2/result.json", &|v| {
+                v["note"] = json!("x")
+            }),
             "unknown field `note`",
         ),
         (
-            edited(rel, "models/model-1/result.json", &|v| v["result"]["glow"] = json!(1)),
+            edited(rel, "models/model-1/result.json", &|v| {
+                v["result"]["glow"] = json!(1)
+            }),
             "models/model-1/result.json: unknown member result.glow",
         ),
         (
@@ -206,9 +236,14 @@ fn older_and_newer_files_are_refused_with_a_message() {
     let rel = FIXTURES[0];
     let older = edited(rel, "project.json", &|v| v["version"] = json!(2));
     let err = read_project(older, &options()).unwrap_err();
-    assert!(err.contains("earlier cSlope") && err.contains("open it in the cSlope app and save it"), "{err}");
+    assert!(
+        err.contains("earlier cSlope") && err.contains("open it in the cSlope app and save it"),
+        "{err}"
+    );
     let newer = edited(rel, "project.json", &|v| v["version"] = json!(4));
-    assert!(read_project(newer, &options()).unwrap_err().contains("newer cSlope"));
+    assert!(read_project(newer, &options())
+        .unwrap_err()
+        .contains("newer cSlope"));
     let newer_layout = edited(rel, "manifest.json", &|v| {
         v["formatVersion"] = json!(2);
         v["minReaderVersion"] = json!(2);
@@ -216,12 +251,21 @@ fn older_and_newer_files_are_refused_with_a_message() {
     let err = read_project(newer_layout, &options()).unwrap_err();
     assert!(err.contains("newer cSlope (cSlope 0.1.0-beta.2)"), "{err}");
     for (rel, what) in [
-        ("desktop/src/features/project/fixtures/cslp-3file.cslp", "first .cslp layout"),
-        ("desktop/src/features/project/fixtures/legacy-json-v3.json", "a JSON project"),
+        (
+            "desktop/src/features/project/fixtures/cslp-3file.cslp",
+            "first .cslp layout",
+        ),
+        (
+            "desktop/src/features/project/fixtures/legacy-json-v3.json",
+            "a JSON project",
+        ),
     ] {
         if let Some(bytes) = fixture(rel) {
             let err = read_project(bytes, &options()).unwrap_err();
-            assert!(err.contains(what) && err.contains("open it in the cSlope app"), "{rel}: {err}");
+            assert!(
+                err.contains(what) && err.contains("open it in the cSlope app"),
+                "{rel}: {err}"
+            );
         }
     }
 }
@@ -232,8 +276,11 @@ fn the_document_form_round_trips() {
     for rel in FIXTURES {
         let Some(bytes) = fixture(rel) else { continue };
         let project = read_project(bytes, &options()).unwrap();
-        let data: BTreeMap<String, Vec<u8>> =
-            project.assets.iter().map(|a| (a.id.clone(), a.data.clone())).collect();
+        let data: BTreeMap<String, Vec<u8>> = project
+            .assets
+            .iter()
+            .map(|a| (a.id.clone(), a.data.clone()))
+            .collect();
         let back = cslope_project::project::Project::from_document(
             &project.to_document(),
             data,
