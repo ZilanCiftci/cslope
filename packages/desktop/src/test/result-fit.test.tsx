@@ -77,9 +77,15 @@ describe("fit to screen in the result view", () => {
           },
         });
       });
+    // The canvas fits on its next animation frame and then clears the flag.
+    // Wait for that instead of a fixed time, which a slow runner can miss.
     const fit = async () => {
       act(() => useAppStore.setState({ _pendingFitToScreen: true } as never));
-      await frames(3);
+      await vi.waitFor(() => expect(useAppStore.getState()._pendingFitToScreen).toBe(false), {
+        timeout: 5000,
+        interval: 20,
+      });
+      await frames(1);
       return useAppStore.getState().resultViewScale;
     };
 
