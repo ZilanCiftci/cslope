@@ -24,6 +24,8 @@ Search open and closed issues for the same problem (GitHub MCP `search_issues` /
   cp <crops> /home/user/cslope-assets/issue-<n>/ && git -C /home/user/cslope-assets add -A && git -C /home/user/cslope-assets commit -m "Images for #<n>" && git -C /home/user/cslope-assets push
   ```
 
+  Keep the branch's `packages/website/vercel.json` (it makes Vercel skip the branch instead of failing) and README; add only images.
+
   Link: `![what it shows](https://raw.githubusercontent.com/ZilanCiftci/cslope/issue-assets/issue-<n>/<file>.png)`.
 - Output (a test failure, a log, a stack) goes in a code block, trimmed to the relevant lines.
 
