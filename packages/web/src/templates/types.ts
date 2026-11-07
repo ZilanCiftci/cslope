@@ -38,6 +38,8 @@ export interface Template<P> {
    * missing strength), as sentences for the form; empty when it can be.
    */
   problems(params: P): string[];
+  /** The same problems, each with the field it is about (a key path such as "layers.0.su"). */
+  fieldProblems(params: P): { field: string; message: string }[];
   /**
    * What the model does that the parameters do not say (a layer extended,
    * a bottom widened), as sentences the form shows beside them; they do
