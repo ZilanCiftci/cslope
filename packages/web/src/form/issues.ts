@@ -1,11 +1,21 @@
 /**
  * The engine's validation issues (`validateDefinition`, by JSON pointer
- * into the analysis document) at the form's fields: the excavation
- * template writes the layers' materials first, in order, then the road's
- * fill, and one region assignment per layer, then the road's.
+ * into the analysis document) at the form's fields. The templates write
+ * the layers' materials first, in order, then the fill's (the road, the
+ * embankment), and one region assignment per layer, then the fill's; the
+ * template's form says which field each is (`IssueTargets`).
  */
 import type { ValidationIssue } from "@cslope/engine";
-import type { ExcavationParams } from "../templates/excavation";
+
+/** The fields of a document's parts, by index, as a template writes them. */
+export interface IssueTargets {
+  /** The owner of each material's fields ("layers.0", "road", "fill"). */
+  materials: string[];
+  /** The field of each region assignment ("layers.0.bottomLevel", "road.height"). */
+  regions: string[];
+  /** The field of the distributed loads, or null for none. */
+  udl: string | null;
+}
 
 const MATERIAL_KEYS: Record<string, string> = {
   unitWeight: "gamma",
@@ -42,7 +52,7 @@ function materialKey(message: string): string | undefined {
 }
 
 /** The field an issue is about, or null when it is about the model as a whole. */
-export function issueField(path: string, params: Pick<ExcavationParams, "layers" | "road">, message = ""): string | null {
+export function issueField(path: string, targets: IssueTargets, message = ""): string | null {
   const parts = path.split("/").slice(1);
   const [root, list, index, model, key] = parts;
   if (root === "options") {
@@ -52,20 +62,17 @@ export function issueField(path: string, params: Pick<ExcavationParams, "layers"
   }
   if (root !== "definition") return null;
   const i = Number(index);
-  const owner = (n: number) => (n < params.layers.length ? `layers.${n}` : params.road && n === params.layers.length ? "road" : null);
   switch (list) {
     case "materials": {
-      const o = Number.isInteger(i) ? owner(i) : null;
+      const o = Number.isInteger(i) ? targets.materials[i] : undefined;
       if (!o) return null;
       const k = model === "model" ? (MATERIAL_KEYS[key ?? ""] ?? materialKey(message)) : undefined;
       return k ? `${o}.${k}` : null;
     }
-    case "regionAssignments": {
-      const o = Number.isInteger(i) ? owner(i) : null;
-      return o === "road" ? "road.height" : o && `${o}.bottomLevel`;
-    }
+    case "regionAssignments":
+      return (Number.isInteger(i) && targets.regions[i]) || null;
     case "udls":
-      return params.road ? "road.trafficLoad" : null;
+      return targets.udl;
     case "waterTable":
       return "waterLevel";
     default:
@@ -80,7 +87,7 @@ export function issueField(path: string, params: Pick<ExcavationParams, "layers"
  */
 export function issuesByField(
   issues: ValidationIssue[],
-  params: Pick<ExcavationParams, "layers" | "road">,
+  targets: IssueTargets,
   shown: ReadonlySet<string>,
 ): { fields: Map<string, string>; general: ValidationIssue[]; warnings: ValidationIssue[] } {
   const fields = new Map<string, string>();
@@ -91,7 +98,7 @@ export function issuesByField(
       warnings.push(issue);
       continue;
     }
-    const field = issueField(issue.path, params, issue.message);
+    const field = issueField(issue.path, targets, issue.message);
     if (field && shown.has(field)) {
       if (!fields.has(field)) fields.set(field, issue.message);
     } else general.push(issue);

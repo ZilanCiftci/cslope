@@ -21,15 +21,16 @@ beforeAll(() => initEngine());
 const fixtures = import.meta.glob("./fixtures/*.json", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const expected = JSON.parse(fixtures["./fixtures/expected.json"] ?? "{}") as Record<string, { fos: number; fosLabel: string }>;
 
-const base = EXCAVATION_EXAMPLES["clay-5m-water"];
+/** One clay to −10, the water 1 m down: clay-5m-water without its rock. */
+const base: ExcavationParams = { ...EXCAVATION_EXAMPLES["clay-5m-water"], layers: [{ bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 25 } }] };
 /** Points rounded to 1e-9 m, to compare computed coordinates. */
 const r9 = (pts: [number, number][]) => pts.map(([x, y]) => [Number(x.toFixed(9)) + 0, Number(y.toFixed(9)) + 0]);
 const withLayers = (params: ExcavationParams, ...layers: ExcavationParams["layers"]) => ({ ...params, layers });
 
 describe("the geometry rules", () => {
-  it("reaches 1.5 × its depth beyond the crest and the toe, and 2H below the bottom or to the deepest layer", () => {
+  it("reaches 1.5 × its depth beyond the crest and the toe, down to the last layer's bottom", () => {
     const g = geometry(base);
-    // 2H below the bottom is −5; the layer goes down to −10, and the model with it:
+    // The layer goes down to −10, and the model with it:
     // 20 m deep, so each side reaches 30 m.
     expect(g).toMatchObject({ ground: 10, bottom: 5, crestX: 0, toeX: 10, left: -30, right: 40, base: -10, road: null, levels: [] });
     const def = excavationDocument(base).definition;
@@ -43,9 +44,9 @@ describe("the geometry rules", () => {
     ]);
     expect(def.orientation).toBe("ltr");
     expect(def.waterTable).toEqual({ mode: "height", value: 9, freeWater: false });
-    // A shallower layer: the base is 2H below the bottom, the sides at least 3H.
+    // A shallow layer: the base at its bottom, the sides at least 3H.
     const shallow = geometry(withLayers({ ...base, excavationDepth: 2 }, { bottomLevel: 7, material: { kind: "undrained", gamma: 16, su: 25 } }));
-    expect(shallow).toMatchObject({ base: 4, left: -9, right: 4 + 9 });
+    expect(shallow).toMatchObject({ base: 7, left: -6, right: 4 + 6 });
   });
 
   it("lets surfaces enter behind the crest and exit from the crest on, in the face or the bottom", () => {
@@ -59,10 +60,15 @@ describe("the geometry rules", () => {
     expect(excavationNotes({ ...base, bottomWidth: 60 })).toEqual([]);
   });
 
-  it("says when the last layer goes on below its bottom level", () => {
+  it("ends at the last layer's bottom as firm ground, says so when that is less than 3H below the ground, and refuses it above the excavation bottom", () => {
     expect(excavationNotes(base)).toEqual([]);
+    expect(excavationNotes(withLayers(base, { name: "Clay", bottomLevel: -5, material: { kind: "undrained", gamma: 16, su: 25 } }))).toEqual([]);
     expect(excavationNotes(withLayers(base, { name: "Clay", bottomLevel: 0, material: { kind: "undrained", gamma: 16, su: 25 } }))).toEqual([
-      "Clay goes on below its bottom level 0 m, down to -5 m, 2H below the excavation bottom: the model needs that depth.",
+      "The model ends at the last layer's bottom (0 m), treated as firm ground. If the soil continues deeper, enter its real bottom: a deeper base can give a lower F.",
+    ]);
+    expect(geometry(withLayers(base, { bottomLevel: 0, material: { kind: "undrained", gamma: 16, su: 25 } })).base).toBe(0);
+    expect(excavationFieldProblems(withLayers(base, { bottomLevel: 5, material: { kind: "undrained", gamma: 16, su: 25 } }))).toEqual([
+      { field: "layers.0.bottomLevel", message: "Layer 1: the bottom level 5 must be at least 0.05 m below the excavation bottom (5); the model ends at the last layer's bottom." },
     ]);
     expect(excavationNotes({ ...base, slope: 0 })).toEqual([]);
     expect(excavationTemplate.notes(base)).toEqual([]);
@@ -335,6 +341,28 @@ describe("the model's extent", () => {
     const wide = (await runDocument(widened(deep))).summary.fos!;
     expect(Math.abs(wide - own), `F ${own}, twice as wide ${wide}`).toBeLessThan(1e-3);
   });
+});
+
+/** The document with its base twice as far below the ground: the last layer twice as deep. */
+function deepened(params: ExcavationParams): AnalysisDocument {
+  const g = geometry(params);
+  const doc = excavationDocument(params);
+  const deep = g.base - (g.ground - g.base);
+  doc.definition.coordinates = doc.definition.coordinates.map(([x, y]) => [x, Math.abs(y - g.base) < 1e-9 ? deep : y]);
+  return doc;
+}
+
+describe("the model's depth", () => {
+  // Only where the last layer reaches the recommended depth: a shallower firm base is the user's (a note says so).
+  const deepEnough = Object.entries(EXCAVATION_EXAMPLES).filter(([, p]) => !excavationNotes(p).some((n) => n.startsWith("The model ends")));
+  it("covers every example", () => expect(deepEnough).toHaveLength(Object.keys(EXCAVATION_EXAMPLES).length));
+  for (const [name, params] of deepEnough) {
+    it(`${name}: twice as deep, F does not change beyond 1e-3`, async () => {
+      const own = (await runDocument(excavationDocument(params))).summary.fos!;
+      const deep = (await runDocument(deepened(params))).summary.fos!;
+      expect(Math.abs(deep - own), `F ${own}, twice as deep ${deep}`).toBeLessThan(1e-3);
+    });
+  }
 });
 
 describe("a weak layer in the face", () => {

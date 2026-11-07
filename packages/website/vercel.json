@@ -48,6 +48,10 @@
       "destination": "/docs/analysis/index.html"
     },
     {
+      "source": "/docs/browser",
+      "destination": "/docs/browser/index.html"
+    },
+    {
       "source": "/docs/drawings",
       "destination": "/docs/drawings/index.html"
     },
