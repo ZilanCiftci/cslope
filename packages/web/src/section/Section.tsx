@@ -87,13 +87,13 @@ export function Section({ shapes: s, layers, slices, label }: SectionProps) {
             </text>
           );
         })}
-        {s.pond && <path d={path(s.pond)} className="fill-primary/20" />}
-        {s.water.length > 0 && <path d={path(s.water, false)} className="fill-none stroke-foreground" strokeWidth={1} strokeDasharray="5 3" />}
+        {s.pond && <path d={path(s.pond)} className="fill-blue-700/20 dark:fill-blue-400/25" />}
+        {s.water.length > 0 && <path d={path(s.water, false)} className="fill-none stroke-blue-800 dark:stroke-blue-400" strokeWidth={1.5} strokeDasharray="5 3" />}
         {s.water.length > 0 &&
           (() => {
             const x = Math.max(view.x0, s.extent.left) + 60 / scale;
             const y = lineAt(s.water, x) ?? s.water[0][1];
-            return <path d={`M${X(x)},${Y(y) - 8}h10l-5,7z`} className="fill-none stroke-foreground" strokeWidth={1} aria-hidden="true" />;
+            return <path d={`M${X(x)},${Y(y) - 8}h10l-5,7z`} className="fill-none stroke-blue-800 dark:stroke-blue-400" strokeWidth={1.5} aria-hidden="true" />;
           })()}
         {s.load && (
           <g className="stroke-foreground fill-foreground" strokeWidth={1}>
