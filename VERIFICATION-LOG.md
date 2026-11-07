@@ -91,11 +91,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-07 | Engine: shallow-slide warning says design φ′ only on design values (#106) | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 520 s (4 workers, load 1.2 at start) |
 | 2026-11-07 | Engine: the same bits on every platform (libm crate); Python 3.10 minimum | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 529 s (4 workers, load 0.6 at start) |
 | 2026-11-07 | Engine: warning when the critical surface lies on the edge of the search limits | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 533 s (4 workers, load 1.3 at start) |
+| 2026-11-07 | Web: Download .cslp (project writer in a separate WebAssembly module) | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 542 s (4 workers, load 0.8 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-07: Web: Download .cslp (project writer in a separate WebAssembly module)
+
+Compared with 8e9967c3. Errors are relative to the reference, in percent. Verification run time: 542 s (4 workers, load 0.8 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.228 % | -0.228 % |
+| **Mean absolute error** | | | | 0.323 % | 0.323 % |
+| **RMS error** | | | | 0.455 % | 0.455 % |
+| **Largest error** | | | | 2.109 % | 2.109 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.164 % | -0.164 % |
+| **Mean absolute error** | | | | 0.938 % | 0.938 % |
+| **RMS error** | | | | 1.521 % | 1.521 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.288 % | -0.288 % |
+| **Mean absolute error** | | | | 2.026 % | 2.026 % |
+| **RMS error** | | | | 2.735 % | 2.735 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-07: Engine: warning when the critical surface lies on the edge of the search limits
 
