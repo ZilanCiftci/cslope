@@ -63,5 +63,9 @@ export const MEDIA = {
   geometry: generated("edit-geometry.png", "Edit view: slope geometry with its boundary points and the rulers"),
   waterTable: generated("edit-water-table.png", "Edit view: a slope with its piezometric line"),
   soilNails: media("/media/tutorials/soil-nails/02-model.png", "Edit view: a slope with three rows of soil nails"),
+  webApp: media(
+    "/media/web/app.png",
+    "cSlope in the browser: the excavation template filled in with a crust over clay and a haul road, the section with its critical slip surface and slices, and F",
+  ),
   sensitivity: media("/media/tutorials/probabilistic/01-sensitivity.png", "Sensitivity analysis: the factor of safety plotted against the unit weight"),
 } satisfies Record<string, Media>;
