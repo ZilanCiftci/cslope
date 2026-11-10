@@ -126,7 +126,7 @@ pub fn nullable<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
 /// instead of `null`: for types that buffer their input before choosing a
 /// variant (`MaterialModel`), so that a non-finite number from JavaScript
 /// (serde-wasm-bindgen passes it as `f64`) reaches validation as itself.
-pub struct JsJson(pub serde_json::Value);
+pub struct JsJson(pub Value);
 
 impl<'de> Deserialize<'de> for JsJson {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
@@ -445,7 +445,7 @@ impl<T> From<T> for OrOther<T> {
     }
 }
 
-impl<'de, T: serde::de::DeserializeOwned> Deserialize<'de> for OrOther<T> {
+impl<'de, T: de::DeserializeOwned> Deserialize<'de> for OrOther<T> {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let v = JsJson::deserialize(d)?.0;
         Ok(match serde_json::from_value::<T>(v.clone()) {

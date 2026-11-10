@@ -22,6 +22,7 @@
 //! 4. Without errors so far: the engine builds the model and takes the
 //!    options; an error it raises is reported.
 
+use crate::math::polygon::{point_in_ring, point_on_ring};
 use crate::model::build_slope::build_slope;
 use crate::model::canonical::to_canonical_slope_definition;
 use crate::model::geometry_ops::{keyhole_ring, polygonize_regions_detailed};
@@ -512,7 +513,7 @@ impl<'a> SchemaCheck<'a> {
                             format!("\"{k}\" is deprecated."),
                         ));
                     }
-                    self.check(s, val, &p, out)
+                    self.check(s, val, &p, out);
                 }
                 None => match schema.get("additionalProperties") {
                     Some(Value::Bool(false)) => {
@@ -822,29 +823,6 @@ fn line_y(points: &[Pt], x: f64) -> Option<f64> {
     Some(right[1])
 }
 
-fn in_polygon(p: Pt, ring: &[Pt]) -> bool {
-    let xs: Vec<f64> = ring.iter().map(|c| c[0]).collect();
-    let ys: Vec<f64> = ring.iter().map(|c| c[1]).collect();
-    crate::math::polygon::is_point_in_polygon(p[0], p[1], &xs, &ys)
-}
-
-/// Whether `p` lies on the ring's edges (within `tol`).
-fn on_ring(p: Pt, ring: &[Pt], tol: f64) -> bool {
-    (0..ring.len()).any(|i| {
-        let a = ring[i];
-        let b = ring[(i + 1) % ring.len()];
-        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-        let len2 = dx * dx + dy * dy;
-        let t = if len2 > 0.0 {
-            (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let (qx, qy) = (a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
-        (qx * qx + qy * qy).sqrt() <= tol
-    })
-}
-
 fn fmt(x: f64) -> String {
     crate::js::num::to_string(crate::js::math::round(x * 1000.0) / 1000.0)
 }
@@ -857,7 +835,7 @@ fn region_label(ring: &[Pt]) -> String {
         ring.iter().map(|p| p[0]).sum::<f64>() / n,
         ring.iter().map(|p| p[1]).sum::<f64>() / n,
     ];
-    let p = if in_polygon(c, ring) {
+    let p = if point_in_ring(c, ring) {
         c
     } else {
         ring.first().copied().unwrap_or(c)
@@ -1031,13 +1009,13 @@ fn model_rules(def: &SlopeDefinition, pre: &str, out: &mut Vec<Issue>) {
                     format!("No material is named \"{}\".", ra.material_name),
                 ));
             }
-            let inside = regions.iter().position(|r| in_polygon(ra.point, r));
+            let inside = regions.iter().position(|r| point_in_ring(ra.point, r));
             // A point on a region's edge is in no region for the engine:
             // the region keeps the first material, which is right only when
             // the point names it.
             let on_edge = inside
                 .is_none()
-                .then(|| regions.iter().position(|r| on_ring(ra.point, r, tol)))
+                .then(|| regions.iter().position(|r| point_on_ring(ra.point, r, tol)))
                 .flatten();
             let inside = match on_edge {
                 Some(r) if mat == Some(0) || names[0] == ra.material_name => {
@@ -1210,7 +1188,9 @@ fn model_rules(def: &SlopeDefinition, pre: &str, out: &mut Vec<Issue>) {
                 && (ring
                     .iter()
                     .any(|p| line_y(&line, p[0]).is_some_and(|w| p[1] < w - 1e-6))
-                    || line.iter().any(|w| in_polygon([w[0], w[1] - 1e-3], ring)))
+                    || line
+                        .iter()
+                        .any(|w| point_in_ring([w[0], w[1] - 1e-3], ring)))
         });
         if below {
             out.push(Issue::warning(

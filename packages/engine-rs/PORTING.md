@@ -1,5 +1,7 @@
 # Porting the engine to Rust
 
+> Since 2026-11-10 the Rust engine is the only reference: it need not reproduce the removed TypeScript engine bit for bit, only the golden verification results (ARCHITECTURE.md, amendment of 2026-11-10). The fixture comparisons below are a record of the port.
+
 The TypeScript engine in `packages/engine/src` was rewritten in Rust here,
 and the Rust engine replaced it at the cutover (2026-11-04, see "Cutover"
 at the end): the app, the tests, the website's data and the report call it

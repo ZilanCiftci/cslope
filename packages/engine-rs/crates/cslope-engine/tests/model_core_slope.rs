@@ -936,7 +936,7 @@ fn build_slope_legacy_boundary_assignment() {
         ["Clay", "Top"]
     );
     // Boundaries with a single point are ignored.
-    let mut t = d.clone();
+    let mut t = d;
     t["materialBoundaries"]
         .as_array_mut()
         .unwrap()

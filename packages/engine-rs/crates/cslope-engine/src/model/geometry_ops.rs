@@ -537,11 +537,10 @@ pub fn split_polygon_by_polyline_detailed(
         Ok(results)
     };
 
-    let mut results = match split() {
-        Ok(r) => r,
-        // If the split fails for any reason, return the original polygon
-        // unsplit, but make the failure explicit for diagnostics.
-        Err(_) => return Ok(original(true)),
+    // If the split fails for any reason, return the original polygon
+    // unsplit, but make the failure explicit for diagnostics.
+    let Ok(mut results) = split() else {
+        return Ok(original(true));
     };
 
     if results.is_empty() {

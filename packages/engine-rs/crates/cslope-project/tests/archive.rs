@@ -142,8 +142,9 @@ fn a_result_whose_input_changed_is_dropped_with_the_thumbnail() {
     let (out, report) = write_project(&mut project, &writer()).unwrap();
     assert_eq!(report.dropped_results, vec!["model-2".to_owned()]);
     assert!(report.dropped_thumbnail);
-    let names: Vec<String> = entries(&out).into_iter().map(|(n, ..)| n).collect();
-    assert!(!names.contains(&"thumbnail.png".to_owned()));
+    assert!(!entries(&out)
+        .into_iter()
+        .any(|(n, ..)| n == "thumbnail.png"));
 }
 
 /// The archive with the uncompressed size its central directory declares
@@ -257,7 +258,7 @@ fn unknown_members_and_entries_are_refused_with_their_path() {
     let cases: Vec<(Vec<u8>, &str)> = vec![
         (
             edited(rel, "models/model-1/model.json", &|v| {
-                v["udls"][0]["foo"] = json!(1)
+                v["udls"][0]["foo"] = json!(1);
             }),
             "models/model-1/model.json: unknown member udls[0].foo",
         ),

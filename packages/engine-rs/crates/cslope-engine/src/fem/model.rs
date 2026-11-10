@@ -838,7 +838,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
     }
     let size_fn = |px: f64, py: f64| size.at(px, py);
     let tm = mesh_domain(&MeshInput {
-        boundary: bnd.clone(),
+        boundary: bnd,
         segments,
         size: &size_fn,
         min_angle: options.min_angle,

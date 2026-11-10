@@ -1612,7 +1612,7 @@ mod tests {
     fn a_result_with_an_unknown_member_is_refused() {
         let ok = json!({ "minFOS": 1.2, "maxFOS": 2.0, "allSurfaces": [], "criticalSlices": [], "criticalSurface": null, "method": "Bishop", "elapsedMs": 1 });
         check_result(&ok, "r").unwrap();
-        let mut bad = ok.clone();
+        let mut bad = ok;
         bad["glow"] = json!(1);
         assert_eq!(
             check_result(&bad, "r").unwrap_err(),

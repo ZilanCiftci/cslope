@@ -74,8 +74,8 @@ fn public_options(
     given: Option<&Bound<'_, PyAny>>,
 ) -> PyResult<AnalysisOptionsPatch> {
     Ok(public_default_options()
-        .merged(&self::options(document)?)
-        .merged(&self::options(given)?))
+        .merged(&options(document)?)
+        .merged(&options(given)?))
 }
 
 /// Limit equilibrium analysis of a slope: the result the app shows

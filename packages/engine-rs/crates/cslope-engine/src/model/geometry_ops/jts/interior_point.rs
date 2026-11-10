@@ -44,17 +44,15 @@ fn intersection(p0: &Coord, p1: &Coord, y: f64) -> f64 {
 
 /// `getInteriorPoint()` of a polygon (`None` for an empty one).
 pub fn interior_point(poly: &Polygon) -> JtsResult<Option<Coord>> {
-    let env = match Envelope::of_coords(&poly.shell) {
-        None => return Ok(None),
-        Some(e) => e,
+    let Some(env) = Envelope::of_coords(&poly.shell) else {
+        return Ok(None);
     };
     let y = scan_line_y(poly, &env);
     let mut interior = poly.shell[0];
     let mut crossings: Vec<f64> = Vec::new();
     for ring in std::iter::once(&poly.shell).chain(poly.holes.iter()) {
-        let renv = match Envelope::of_coords(ring) {
-            None => continue,
-            Some(e) => e,
+        let Some(renv) = Envelope::of_coords(ring) else {
+            continue;
         };
         if y < renv.miny || y > renv.maxy {
             continue;

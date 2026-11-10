@@ -51,7 +51,6 @@ use crate::fem::model::polyline_y;
 use crate::fem::sparse::{nested_dissection, node_graph, SparseCholesky};
 use crate::js;
 use crate::model::slope::Slope;
-use crate::types::WATER_UNIT_WEIGHT;
 use serde::Serialize;
 
 /// The mesh and flow parameters of a seepage problem (`SeepageMesh`).
@@ -358,9 +357,4 @@ pub fn solve_seepage(
         seepage_face_nodes: faces,
         flow: true,
     })
-}
-
-/// Pore pressure (kPa) at a point from nodal heads interpolated in an element.
-pub fn pore_pressure_from_head(h: f64, yy: f64) -> f64 {
-    js::math::max(0.0, WATER_UNIT_WEIGHT * (h - yy))
 }

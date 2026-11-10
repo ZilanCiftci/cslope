@@ -104,12 +104,22 @@ pub struct SliceArrays {
     pub tan_phis: Vec<f64>,
     pub cos_as: Vec<f64>,
     pub sin_as: Vec<f64>,
-    /// The base normal forces of the last solve (TypeScript's `nCurrent`).
+    /// The base normal forces of the last solve.
     pub normals: Vec<f64>,
+    /// Per-slice terms of the solvers that do not change between iterations
+    /// (`fill` computes them once): the vertical load without passive
+    /// reinforcement, the horizontal force without it, c·l, the effective
+    /// cohesion force c·l − u·l·tan φ, u·l and cu·l.
+    pub w0: Vec<f64>,
+    pub h0: Vec<f64>,
+    pub c_bl: Vec<f64>,
+    pub c_eff: Vec<f64>,
+    pub u_bl: Vec<f64>,
+    pub cu_bl: Vec<f64>,
+    /// Whether the undrained strength governed each slice in the last pass
+    /// of a solve (written to the slices once, at its end).
+    pub undrained: Vec<bool>,
 }
-
-/// The solver scratch of one thread (ARCHITECTURE.md §1.4).
-pub type SolverScratch = SliceArrays;
 
 impl SliceArrays {
     pub fn new() -> Self {
@@ -163,7 +173,14 @@ impl SliceArrays {
             tan_phis,
             cos_as,
             sin_as,
-            normals
+            normals,
+            w0,
+            h0,
+            c_bl,
+            c_eff,
+            u_bl,
+            cu_bl,
+            undrained
         );
         for s in slices {
             self.weights.push(s.weight);
@@ -202,6 +219,16 @@ impl SliceArrays {
             self.cos_as.push(js::math::cos(s.alpha));
             self.sin_as.push(js::math::sin(s.alpha));
             self.normals.push(0.0);
+            let bl = s.base_length;
+            let tan_phi = *self.tan_phis.last().unwrap_or(&0.0);
+            self.w0
+                .push(s.weight + self.udls[self.udls.len() - 1] + s.ll + av);
+            self.h0.push(s.h_force.unwrap_or(0.0) + ah);
+            self.c_bl.push(s.cohesion * bl);
+            self.c_eff.push(s.cohesion * bl - s.u * bl * tan_phi);
+            self.u_bl.push(s.u * bl);
+            self.cu_bl.push(s.cohesion_undrained * bl);
+            self.undrained.push(false);
         }
     }
 
@@ -302,19 +329,24 @@ fn secant_next(iter: f64, fos: f64, prev_fos: f64, sec_f: &mut f64, sec_r: &mut 
     next
 }
 
-/// Generic moment equilibrium FOS solver.
-#[allow(clippy::needless_range_loop)]
-pub fn solve_fos_generic_moment(
-    p: &mut SliceArrays,
-    slices: &mut [Slice],
-    lambda_val: f64,
+/// Write the last pass's undrained flags to the combined-method slices.
+fn store_undrained(p: &SliceArrays, slices: &mut [Slice]) {
+    for ((s, &code), &u) in slices.iter_mut().zip(&p.material_codes).zip(&p.undrained) {
+        if code == 1 {
+            s.undrained_governs = Some(u);
+        }
+    }
+}
+
+/// The iteration on F shared by both solvers: `pass(F)` runs over the slices
+/// at the trial value F and returns (resisting, pushing); passive
+/// reinforcement is already in both.
+fn iterate_fos(
     initial_fos: f64,
     max_iters: f64,
     tolerance: f64,
+    mut pass: impl FnMut(f64) -> (f64, f64),
 ) -> SolverResult {
-    let n = p.len();
-    p.normals.clear();
-    p.normals.resize(n, 0.0);
     let mut prev_fos = initial_fos;
     let mut fos = initial_fos;
     let mut pushing = 0.0;
@@ -322,95 +354,9 @@ pub fn solve_fos_generic_moment(
     let mut non_positive = 0;
     let mut sec_f = 0.0;
     let mut sec_r = 0.0;
-
-    let mut inner_converged = false;
     let mut iter = 0.0;
     while iter < max_iters {
-        pushing = 0.0;
-        resisting = 0.0;
-        let mut passive_moment = 0.0;
-        let mut e_left = 0.0;
-        let mut x_left = 0.0;
-
-        // Passive reinforcement mobilises with the soil: divided by F (an
-        // initial guess of 0 from the Ordinary method would give NaN).
-        let k_p = if prev_fos > 0.0 { 1.0 / prev_fos } else { 1.0 };
-        for i in 0..n {
-            let w = p.weights[i] + p.udls[i] + p.lls[i] + p.active_v[i] + p.passive_v[i] * k_p;
-            // Horizontal external force in the sliding direction; with the
-            // solvers' sign of E it reduces the interslice force on the right.
-            let h = p.h_forces[i] + p.active_h[i] + p.passive_h[i] * k_p;
-            let c = p.cohesions[i];
-            let bl = p.base_lengths[i];
-            let u = p.us[i];
-            let dx = p.dxs[i];
-            let f = p.funcs[i];
-            let mat_code = p.material_codes[i];
-            let cu = p.cohesion_undraineds[i];
-
-            let tan_phi = p.tan_phis[i];
-            let cos_a = p.cos_as[i];
-            let sin_a = p.sin_as[i];
-            let shear_factor = lambda_val * f;
-
-            let [mut nn, mut e_right, mut x_right] = solve_slice_normal(
-                w,
-                x_left,
-                e_left - h,
-                c * bl - u * bl * tan_phi,
-                tan_phi,
-                cos_a,
-                sin_a,
-                shear_factor,
-                prev_fos,
-            );
-            let r = p.shear_arms[i];
-            let shear = c * bl + (nn - u * bl) * tan_phi;
-            let mut res = shear * r;
-            // Combined method: where the undrained strength governs, the
-            // slice must be in equilibrium with that (smaller) shear too; a
-            // negative drained shear (N′ < 0, e.g. m_α < 0 on a steep slice)
-            // is replaced the same way, which keeps the iteration stable.
-            // (Compared as forces: on a non-circular surface the arm can be
-            // negative.)
-            let mut undrained_governs = false;
-            if mat_code == 1 && !(shear >= 0.0 && shear <= cu * bl) {
-                undrained_governs = true;
-                [nn, e_right, x_right] = solve_slice_normal(
-                    w,
-                    x_left,
-                    e_left - h,
-                    cu * bl,
-                    0.0,
-                    cos_a,
-                    sin_a,
-                    shear_factor,
-                    prev_fos,
-                );
-                res = cu * bl * r;
-            }
-            resisting += res;
-            if mat_code == 1 {
-                slices[i].undrained_governs = Some(undrained_governs);
-            }
-
-            // On a non-circular surface the normal force has a moment too.
-            // Passive reinforcement is resistance: its moment is collected
-            // unscaled and taken off the driving side below.
-            pushing += (w - p.passive_v[i] * k_p) * dx
-                + p.extra_moments[i]
-                + p.active_m[i]
-                + nn * p.normal_arms[i];
-            passive_moment += p.passive_v[i] * dx + p.passive_m[i];
-            p.normals[i] = nn;
-            e_left = e_right;
-            x_left = x_right;
-        }
-
-        // F = R / (D + P/F)  ⇔  F = (R − P) / D, with P (< 0) the passive
-        // moment: no division by a driving moment the passive force could
-        // make vanish.
-        resisting -= passive_moment;
+        (resisting, pushing) = pass(prev_fos);
         // A trial FOS far too low can make the driving side vanish for one
         // iteration (large active loads, steep slices): raise the trial
         // value instead of giving up on the surface.
@@ -428,11 +374,14 @@ pub fn solve_fos_generic_moment(
             iter += 1.0;
             continue;
         }
-
         fos = resisting / pushing;
         if (prev_fos - fos).abs() < tolerance {
-            inner_converged = true;
-            break;
+            return SolverResult {
+                fos: Some(fos),
+                pushing,
+                resisting,
+                converged: true,
+            };
         }
         prev_fos = secant_next(iter, fos, prev_fos, &mut sec_f, &mut sec_r);
         iter += 1.0;
@@ -441,12 +390,162 @@ pub fn solve_fos_generic_moment(
         fos: Some(fos),
         pushing,
         resisting,
-        converged: inner_converged,
+        converged: false,
     }
 }
 
+/// Generic moment equilibrium FOS solver.
+pub fn solve_fos_generic_moment(
+    p: &mut SliceArrays,
+    slices: &mut [Slice],
+    lambda_val: f64,
+    initial_fos: f64,
+    max_iters: f64,
+    tolerance: f64,
+) -> SolverResult {
+    let n = p.len();
+    p.normals.clear();
+    p.normals.resize(n, 0.0);
+    // Passive reinforcement's moment does not depend on F: F = (R − P) / D
+    // with P (< 0) collected unscaled, so no division by a driving moment
+    // the passive force could make vanish.
+    let passive_moment: f64 = (0..n)
+        .map(|i| p.passive_v[i] * p.dxs[i] + p.passive_m[i])
+        .sum();
+    let has_passive = p.passive_v.iter().chain(&p.passive_h).any(|&v| v != 0.0);
+    let r = {
+        let SliceArrays {
+            w0,
+            h0,
+            c_bl,
+            c_eff,
+            u_bl,
+            cu_bl,
+            passive_v,
+            passive_h,
+            funcs,
+            material_codes,
+            tan_phis,
+            cos_as,
+            sin_as,
+            shear_arms,
+            normal_arms,
+            dxs,
+            extra_moments,
+            active_m,
+            normals,
+            undrained,
+            ..
+        } = &mut *p;
+        let (
+            w0,
+            h0,
+            c_bl,
+            c_eff,
+            u_bl,
+            cu_bl,
+            passive_v,
+            passive_h,
+            funcs,
+            material_codes,
+            tan_phis,
+            cos_as,
+            sin_as,
+            shear_arms,
+            normal_arms,
+            dxs,
+            extra_moments,
+            active_m,
+        ) = (
+            &w0[..n],
+            &h0[..n],
+            &c_bl[..n],
+            &c_eff[..n],
+            &u_bl[..n],
+            &cu_bl[..n],
+            &passive_v[..n],
+            &passive_h[..n],
+            &funcs[..n],
+            &material_codes[..n],
+            &tan_phis[..n],
+            &cos_as[..n],
+            &sin_as[..n],
+            &shear_arms[..n],
+            &normal_arms[..n],
+            &dxs[..n],
+            &extra_moments[..n],
+            &active_m[..n],
+        );
+        let (normals, undrained) = (&mut normals[..n], &mut undrained[..n]);
+        iterate_fos(initial_fos, max_iters, tolerance, |fos| {
+            // Passive reinforcement mobilises with the soil: divided by F.
+            let k_p = if fos > 0.0 { 1.0 / fos } else { 1.0 };
+            let mut pushing = 0.0;
+            let mut resisting = 0.0;
+            let mut e_left = 0.0;
+            let mut x_left = 0.0;
+            for i in 0..n {
+                let (pv, ph) = if has_passive {
+                    (passive_v[i] * k_p, passive_h[i] * k_p)
+                } else {
+                    (0.0, 0.0)
+                };
+                let w = w0[i] + pv;
+                let h = h0[i] + ph;
+                let tan_phi = tan_phis[i];
+                let (cos_a, sin_a) = (cos_as[i], sin_as[i]);
+                let shear_factor = lambda_val * funcs[i];
+                let [mut nn, mut e_right, mut x_right] = solve_slice_normal(
+                    w,
+                    x_left,
+                    e_left - h,
+                    c_eff[i],
+                    tan_phi,
+                    cos_a,
+                    sin_a,
+                    shear_factor,
+                    fos,
+                );
+                let r = shear_arms[i];
+                let shear = c_bl[i] + (nn - u_bl[i]) * tan_phi;
+                let mut res = shear * r;
+                // Combined method: where the undrained strength governs, the
+                // slice must be in equilibrium with that (smaller) shear too;
+                // a negative drained shear is replaced the same way, which
+                // keeps the iteration stable. (Compared as forces: on a
+                // non-circular surface the arm can be negative.)
+                let mut governs = false;
+                if material_codes[i] == 1 && !(shear >= 0.0 && shear <= cu_bl[i]) {
+                    governs = true;
+                    [nn, e_right, x_right] = solve_slice_normal(
+                        w,
+                        x_left,
+                        e_left - h,
+                        cu_bl[i],
+                        0.0,
+                        cos_a,
+                        sin_a,
+                        shear_factor,
+                        fos,
+                    );
+                    res = cu_bl[i] * r;
+                }
+                undrained[i] = governs;
+                resisting += res;
+                // On a non-circular surface the normal force has a moment too.
+                pushing += (w - pv) * dxs[i] + extra_moments[i] + active_m[i] + nn * normal_arms[i];
+                normals[i] = nn;
+                e_left = e_right;
+                x_left = x_right;
+            }
+            (resisting - passive_moment, pushing)
+        })
+    };
+    store_undrained(p, slices);
+    r
+}
+
 /// Generic force equilibrium FOS solver for circular surfaces.
-#[allow(clippy::needless_range_loop)]
 pub fn solve_fos_generic_force_circular(
     p: &mut SliceArrays,
     slices: &mut [Slice],
@@ -458,118 +557,118 @@ pub fn solve_fos_generic_force_circular(
     let n = p.len();
     p.normals.clear();
     p.normals.resize(n, 0.0);
-    let mut prev_fos = initial_fos;
-    let mut fos = initial_fos;
-    let mut pushing = 0.0;
-    let mut resisting = 0.0;
-    let mut non_positive = 0;
-    let mut sec_f = 0.0;
-    let mut sec_r = 0.0;
-
-    let mut inner_converged = false;
-    let mut iter = 0.0;
-    while iter < max_iters {
-        pushing = 0.0;
-        resisting = 0.0;
-        let mut passive_force = 0.0;
-        let mut e_left = 0.0;
-        let mut x_left = 0.0;
-
-        // Passive reinforcement mobilises with the soil: divided by F (an
-        // initial guess of 0 from the Ordinary method would give NaN).
-        let k_p = if prev_fos > 0.0 { 1.0 / prev_fos } else { 1.0 };
-        for i in 0..n {
-            let w = p.weights[i] + p.udls[i] + p.lls[i] + p.active_v[i] + p.passive_v[i] * k_p;
-            // Horizontal external force in the sliding direction; with the
-            // solvers' sign of E it reduces the interslice force on the right.
-            let h = p.h_forces[i] + p.active_h[i] + p.passive_h[i] * k_p;
-            let c = p.cohesions[i];
-            let bl = p.base_lengths[i];
-            let u = p.us[i];
-            let f = p.funcs[i];
-            let mat_code = p.material_codes[i];
-            let cu = p.cohesion_undraineds[i];
-
-            let tan_phi = p.tan_phis[i];
-            let cos_a = p.cos_as[i];
-            let sin_a = p.sin_as[i];
-            let shear_factor = lambda_val * f;
-
-            let [mut nn, mut e_right, mut x_right] = solve_slice_normal(
-                w,
-                x_left,
-                e_left - h,
-                c * bl - u * bl * tan_phi,
-                tan_phi,
-                cos_a,
-                sin_a,
-                shear_factor,
-                prev_fos,
-            );
-            // Circular force equilibrium resistance
-            let mut res = c * bl * cos_a + (nn - u * bl) * cos_a * tan_phi;
-            // Combined method: where the undrained strength governs, N and the
-            // interslice forces must follow from that shear as well.
-            let mut undrained_governs = false;
-            if mat_code == 1 && !(res >= 0.0 && res <= cu * bl * cos_a) {
-                undrained_governs = true;
-                [nn, e_right, x_right] = solve_slice_normal(
+    // Passive horizontal force (< 0) on the resisting side, unscaled.
+    let passive_force: f64 = p.passive_h.iter().sum();
+    let has_passive = p.passive_v.iter().chain(&p.passive_h).any(|&v| v != 0.0);
+    let r = {
+        let SliceArrays {
+            w0,
+            h0,
+            c_bl,
+            c_eff,
+            u_bl,
+            cu_bl,
+            passive_v,
+            passive_h,
+            funcs,
+            material_codes,
+            tan_phis,
+            cos_as,
+            sin_as,
+            normals,
+            undrained,
+            ..
+        } = &mut *p;
+        let (
+            w0,
+            h0,
+            c_bl,
+            c_eff,
+            u_bl,
+            cu_bl,
+            passive_v,
+            passive_h,
+            funcs,
+            material_codes,
+            tan_phis,
+            cos_as,
+            sin_as,
+        ) = (
+            &w0[..n],
+            &h0[..n],
+            &c_bl[..n],
+            &c_eff[..n],
+            &u_bl[..n],
+            &cu_bl[..n],
+            &passive_v[..n],
+            &passive_h[..n],
+            &funcs[..n],
+            &material_codes[..n],
+            &tan_phis[..n],
+            &cos_as[..n],
+            &sin_as[..n],
+        );
+        let (normals, undrained) = (&mut normals[..n], &mut undrained[..n]);
+        iterate_fos(initial_fos, max_iters, tolerance, |fos| {
+            let k_p = if fos > 0.0 { 1.0 / fos } else { 1.0 };
+            let mut pushing = 0.0;
+            let mut resisting = 0.0;
+            let mut e_left = 0.0;
+            let mut x_left = 0.0;
+            for i in 0..n {
+                let (pv, ph) = if has_passive {
+                    (passive_v[i] * k_p, passive_h[i] * k_p)
+                } else {
+                    (0.0, 0.0)
+                };
+                let w = w0[i] + pv;
+                let h = h0[i] + ph;
+                let tan_phi = tan_phis[i];
+                let (cos_a, sin_a) = (cos_as[i], sin_as[i]);
+                let shear_factor = lambda_val * funcs[i];
+                let [mut nn, mut e_right, mut x_right] = solve_slice_normal(
                     w,
                     x_left,
                     e_left - h,
-                    cu * bl,
-                    0.0,
+                    c_eff[i],
+                    tan_phi,
                     cos_a,
                     sin_a,
                     shear_factor,
-                    prev_fos,
+                    fos,
                 );
-                res = cu * bl * cos_a;
+                // Circular force equilibrium resistance
+                let mut res = (c_bl[i] + (nn - u_bl[i]) * tan_phi) * cos_a;
+                // Combined method: where the undrained strength governs, N and
+                // the interslice forces must follow from that shear as well.
+                let mut governs = false;
+                if material_codes[i] == 1 && !(res >= 0.0 && res <= cu_bl[i] * cos_a) {
+                    governs = true;
+                    [nn, e_right, x_right] = solve_slice_normal(
+                        w,
+                        x_left,
+                        e_left - h,
+                        cu_bl[i],
+                        0.0,
+                        cos_a,
+                        sin_a,
+                        shear_factor,
+                        fos,
+                    );
+                    res = cu_bl[i] * cos_a;
+                }
+                undrained[i] = governs;
+                resisting += res;
+                pushing += nn * sin_a + h - ph;
+                normals[i] = nn;
+                e_left = e_right;
+                x_left = x_right;
             }
-            resisting += res;
-            if mat_code == 1 {
-                slices[i].undrained_governs = Some(undrained_governs);
-            }
-
-            pushing += nn * sin_a + h - p.passive_h[i] * k_p;
-            passive_force += p.passive_h[i];
-            p.normals[i] = nn;
-            e_left = e_right;
-            x_left = x_right;
-        }
-
-        // Passive horizontal force (< 0) on the resisting side, as above.
-        resisting -= passive_force;
-        // As in the moment solver: a too-low trial value is raised.
-        if pushing <= 0.0 {
-            non_positive += 1;
-            if non_positive > MAX_NON_POSITIVE {
-                return SolverResult {
-                    fos: None,
-                    pushing,
-                    resisting,
-                    converged: false,
-                };
-            }
-            prev_fos = js::math::max(2.0 * prev_fos, 0.1);
-            iter += 1.0;
-            continue;
-        }
-
-        fos = resisting / pushing;
-        if (prev_fos - fos).abs() < tolerance {
-            inner_converged = true;
-            break;
-        }
-        prev_fos = secant_next(iter, fos, prev_fos, &mut sec_f, &mut sec_r);
-        iter += 1.0;
-    }
-    SolverResult {
-        fos: Some(fos),
-        pushing,
-        resisting,
-        converged: inner_converged,
-    }
+            (resisting - passive_force, pushing)
+        })
+    };
+    store_undrained(p, slices);
+    r
 }
 
 // ────────────────────────────────────────────────────────────────

@@ -154,34 +154,20 @@ fn clip_halfplane_into(
     out_x: &mut [f64],
     out_y: &mut [f64],
 ) -> usize {
+    if n == 0 {
+        return 0;
+    }
+    let (in_x, in_y) = (&in_x[..n], &in_y[..n]);
+    // A convex clip of n vertices yields at most 2n (one crossing per edge
+    // plus the vertex): the writes stay in bounds.
+    let (out_x, out_y) = (&mut out_x[..2 * n], &mut out_y[..2 * n]);
     let mut m = 0;
-    for i in 0..n {
-        let k = if i + 1 == n { 0 } else { i + 1 };
-        let p1x = in_x[i];
-        let p1y = in_y[i];
-        let p2x = in_x[k];
-        let p2y = in_y[k];
-        let d1 = a * p1x + b * p1y + c;
+    let (mut p1x, mut p1y) = (in_x[n - 1], in_y[n - 1]);
+    let mut d1 = a * p1x + b * p1y + c;
+    for (&p2x, &p2y) in in_x.iter().zip(in_y) {
         let d2 = a * p2x + b * p2y + c;
-        let in1 = d1 >= -1e-12;
-        let in2 = d2 >= -1e-12;
-        if in1 {
-            if in2 {
-                out_x[m] = p2x;
-                out_y[m] = p2y;
-                m += 1;
-            } else {
-                let dx = p2x - p1x;
-                let dy = p2y - p1y;
-                let denom = a * dx + b * dy;
-                if denom.abs() > 1e-14 {
-                    let t = -d1 / denom;
-                    out_x[m] = p1x + t * dx;
-                    out_y[m] = p1y + t * dy;
-                    m += 1;
-                }
-            }
-        } else if in2 {
+        let (in1, in2) = (d1 >= -1e-12, d2 >= -1e-12);
+        if in1 != in2 {
             let dx = p2x - p1x;
             let dy = p2y - p1y;
             let denom = a * dx + b * dy;
@@ -191,10 +177,62 @@ fn clip_halfplane_into(
                 out_y[m] = p1y + t * dy;
                 m += 1;
             }
+        }
+        if in2 {
             out_x[m] = p2x;
             out_y[m] = p2y;
             m += 1;
         }
+        p1x = p2x;
+        p1y = p2y;
+        d1 = d2;
+    }
+    m
+}
+
+/// Clip the polygon in (in_x, in_y)[0..n) to the side of the vertical line
+/// x = xc given by `keep_right` (x ≥ xc, else x ≤ xc) into (out_x, out_y);
+/// returns the vertex count. The vertical case of `clip_halfplane_into`,
+/// with the same arithmetic for the sides and the crossings.
+fn clip_vertical_into(
+    in_x: &[f64],
+    in_y: &[f64],
+    n: usize,
+    xc: f64,
+    keep_right: bool,
+    out_x: &mut [f64],
+    out_y: &mut [f64],
+) -> usize {
+    let (in_x, in_y) = (&in_x[..n], &in_y[..n]);
+    let (out_x, out_y) = (&mut out_x[..2 * n], &mut out_y[..2 * n]);
+    let side = |x: f64| if keep_right { x - xc } else { xc - x };
+    let mut m = 0;
+    let (mut p1x, mut p1y) = match n {
+        0 => return 0,
+        _ => (in_x[n - 1], in_y[n - 1]),
+    };
+    let mut in1 = side(p1x) >= -1e-12;
+    for (&p2x, &p2y) in in_x.iter().zip(in_y) {
+        let in2 = side(p2x) >= -1e-12;
+        if in1 != in2 {
+            let dx = p2x - p1x;
+            if dx.abs() > 1e-14 {
+                // t as `clip_halfplane_into` computes it, so that the
+                // crossing is the same point to the last bit.
+                let t = (xc - p1x) / dx;
+                out_x[m] = p1x + t * dx;
+                out_y[m] = p1y + t * (p2y - p1y);
+                m += 1;
+            }
+        }
+        if in2 {
+            out_x[m] = p2x;
+            out_y[m] = p2y;
+            m += 1;
+        }
+        p1x = p2x;
+        p1y = p2y;
+        in1 = in2;
     }
     m
 }
@@ -510,24 +548,22 @@ pub fn create_slice(
         // Step 1: Vertical clip (global coordinates), as clip_polygon_vertical.
         let n_in = m.px.len();
         scratch.ensure(2 * n_in + 8);
-        let mut n = clip_halfplane_into(
+        let mut n = clip_vertical_into(
             &m.px,
             &m.py,
             n_in,
-            1.0,
-            0.0,
-            -x0,
+            x0,
+            true,
             &mut scratch.ax,
             &mut scratch.ay,
         );
         if n > 0 {
-            n = clip_halfplane_into(
+            n = clip_vertical_into(
                 &scratch.ax,
                 &scratch.ay,
                 n,
-                -1.0,
-                0.0,
                 x1,
+                false,
                 &mut scratch.bx,
                 &mut scratch.by,
             );
@@ -1599,7 +1635,7 @@ pub fn get_slices(
     };
 
     // Create slices
-    let mut results: Vec<Slice> = Vec::new();
+    let mut results: Vec<Slice> = Vec::with_capacity(n_slices);
     let vertical_head = slope.pore_pressure_head() == PorePressureHead::Vertical;
     let has_sat_weight = slope.material_geometries().iter().any(|g| {
         slope

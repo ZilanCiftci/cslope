@@ -173,29 +173,3 @@ pub struct Slice {
     /// and the entire surface must be rejected.
     pub impenetrable: Option<bool>,
 }
-
-/// Mutable solver state for a slice during FOS iteration.
-/// Kept separate from the immutable Slice geometry.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct SliceSolverState {
-    /// `FS`: factor of safety (current iteration).
-    pub fs: f64,
-    /// m-alpha coefficient.
-    pub malpha: f64,
-    /// `N`: base normal force (kN).
-    pub n: f64,
-    /// Left horizontal interslice force.
-    pub e_left: f64,
-    /// Right horizontal interslice force.
-    pub e_right: f64,
-    /// Left vertical interslice force.
-    pub x_left: f64,
-    /// Right vertical interslice force.
-    pub x_right: f64,
-    /// Lambda for Morgenstern-Price.
-    pub lambda: f64,
-    /// Interslice function value.
-    pub func: f64,
-    /// Cached cohesion term for N calculation.
-    pub cohesion_term: f64,
-}
