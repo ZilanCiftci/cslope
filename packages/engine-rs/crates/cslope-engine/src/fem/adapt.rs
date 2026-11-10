@@ -30,7 +30,9 @@
 #![allow(clippy::needless_range_loop)]
 
 use crate::fem::elements::GP_STRIDE;
+use crate::fem::mesh::dist;
 use crate::fem::model::{FeModel, SizeField};
+use crate::fem::transfer::cell_index;
 use crate::js;
 use std::sync::Arc;
 
@@ -97,10 +99,6 @@ pub fn zz_indicator(model: &FeModel, stress: &[f64]) -> Vec<f64> {
     eta2
 }
 
-fn edge(dx: f64, dy: f64) -> f64 {
-    (dx * dx + dy * dy).sqrt()
-}
-
 /// Dörfler marking: the elements with the largest indicators that carry a
 /// fraction θ of the total (TypeScript default θ = 0.5).
 pub fn dorfler_mark(eta2: &[f64], theta: f64) -> Vec<bool> {
@@ -139,17 +137,6 @@ pub struct RefinedSizeField {
     buckets: Vec<Vec<usize>>,
     fallback: f64,
     smallest: f64,
-}
-
-/// `Math.min(nb − 1, Math.max(0, Math.floor((v − v0) / d)))` as an index
-/// (a NaN coordinate, which TypeScript would fail on, takes cell 0).
-fn cell_index(v: f64, v0: f64, d: f64, nb: usize) -> usize {
-    let c = js::math::min((nb - 1) as f64, js::math::max(0.0, ((v - v0) / d).floor()));
-    if c.is_nan() {
-        0
-    } else {
-        c as usize
-    }
 }
 
 impl RefinedSizeField {
@@ -215,10 +202,10 @@ pub fn refined_size_field(model: &FeModel, marked: &[bool], min_size: f64) -> Ar
         if marked[e] {
             let h = js::math::max(
                 js::math::max(
-                    edge(x[a] - x[b], y[a] - y[b]),
-                    edge(x[b] - x[c], y[b] - y[c]),
+                    dist(x[a] - x[b], y[a] - y[b]),
+                    dist(x[b] - x[c], y[b] - y[c]),
                 ),
-                edge(x[c] - x[a], y[c] - y[a]),
+                dist(x[c] - x[a], y[c] - y[a]),
             );
             size[e] = js::math::max(min_size, js::math::min(target, h) / 2.0);
         } else {

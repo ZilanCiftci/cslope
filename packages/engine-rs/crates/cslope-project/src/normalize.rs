@@ -35,7 +35,9 @@
 use crate::convert::ConvertError;
 use crate::model::{ModelEntry, MATERIAL_COLORS};
 use crate::options::app_default_options;
+use cslope_engine::js::math::{max as jmax, min as jmin};
 use cslope_engine::model::canonical::{resolve_orientation, SlopeOrientation};
+use cslope_engine::types::json::js_truthy;
 use cslope_engine::types::{
     default_fem_settings, supports_anisotropy, supports_suction_strength, swedish_partial_factors,
     try_validate_material_model, MaterialModel, SwedishFactorBasis, ITERATIONS_RANGE,
@@ -164,26 +166,7 @@ fn array(v: Option<&Value>) -> impl Iterator<Item = &Value> {
     v.and_then(Value::as_array).into_iter().flatten()
 }
 
-/// JavaScript truthiness of a JSON value.
-fn js_truthy(v: &Value) -> bool {
-    match v {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().is_some_and(|x| x != 0.0),
-        Value::String(s) => !s.is_empty(),
-        _ => true,
-    }
-}
-
 /// `Math.max` / `Math.min`.
-fn jmax(a: f64, b: f64) -> f64 {
-    cslope_engine::js::math::max(a, b)
-}
-
-fn jmin(a: f64, b: f64) -> f64 {
-    cslope_engine::js::math::min(a, b)
-}
-
 fn clamp(v: f64, lo: f64, hi: f64) -> f64 {
     jmax(lo, jmin(hi, v))
 }
@@ -528,7 +511,7 @@ fn model(raw: &Value, cx: &Ctx) -> Result<Value, ConvertError> {
     out.insert(
         "options".into(),
         Value::Object(match model.get("options") {
-            Some(o) if js_truthy(o) => analysis_options(o, cx),
+            Some(o) if js_truthy(Some(o)) => analysis_options(o, cx),
             _ => app_default_options(),
         }),
     );

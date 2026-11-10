@@ -148,13 +148,6 @@ pub fn slope_count() -> usize {
     SLOPES.with(|r| r.borrow().len())
 }
 
-/// A copy of the slope under a new handle.
-#[wasm_bindgen]
-pub fn slope_clone(handle: u32) -> JsResult<u32> {
-    let copy = with_slope(handle, |s| s.clone())?;
-    insert_slope(copy)
-}
-
 /// Changes with every mutable access to the slope (the facade's cache key).
 #[wasm_bindgen]
 pub fn slope_stamp(handle: u32) -> JsResult<f64> {

@@ -16,34 +16,11 @@
 //! `topRegionMaterialName` above the first boundary, which is left alone
 //! (no change) when it names another material.
 
-use cslope_engine::math::polygon::is_point_in_polygon;
+use cslope_engine::math::polygon::{point_in_ring, point_on_ring};
 use cslope_engine::model::geometry_ops::{keyhole_ring, polygonize_regions_detailed};
 use cslope_engine::types::{RegionAssignment, SlopeDefinition};
 
 type Pt = [f64; 2];
-
-fn in_polygon(p: Pt, ring: &[Pt]) -> bool {
-    let xs: Vec<f64> = ring.iter().map(|c| c[0]).collect();
-    let ys: Vec<f64> = ring.iter().map(|c| c[1]).collect();
-    is_point_in_polygon(p[0], p[1], &xs, &ys)
-}
-
-/// Whether `p` lies on the ring's edges (within `tol`), as the validation tests it.
-fn on_ring(p: Pt, ring: &[Pt], tol: f64) -> bool {
-    (0..ring.len()).any(|i| {
-        let a = ring[i];
-        let b = ring[(i + 1) % ring.len()];
-        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
-        let len2 = dx * dx + dy * dy;
-        let t = if len2 > 0.0 {
-            (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
-        } else {
-            0.0
-        };
-        let (qx, qy) = (a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
-        (qx * qx + qy * qy).sqrt() <= tol
-    })
-}
 
 /// The regions of a definition as the validation computes them, or None
 /// when the boundaries cannot be split.
@@ -69,7 +46,7 @@ fn regions(def: &SlopeDefinition) -> Option<Vec<Vec<Pt>>> {
 
 /// The first region that contains `p`.
 fn region_of(p: Pt, regions: &[Vec<Pt>]) -> Option<usize> {
-    regions.iter().position(|r| in_polygon(p, r))
+    regions.iter().position(|r| point_in_ring(p, r))
 }
 
 /// The index of the region of `def` (the outline cut by its boundaries, as
@@ -121,7 +98,8 @@ pub fn interior_point(r: usize, regions: &[Vec<Pt>], tol: f64) -> Option<Pt> {
                 continue;
             }
             let p = [x, y];
-            if region_of(p, regions) == Some(r) && !regions.iter().any(|q| on_ring(p, q, tol)) {
+            if region_of(p, regions) == Some(r) && !regions.iter().any(|q| point_on_ring(p, q, tol))
+            {
                 return Some(p);
             }
         }
@@ -167,7 +145,7 @@ pub fn assign_unassigned_regions(def: &mut SlopeDefinition) -> usize {
         let r = region_of(a.point, &regions).or_else(|| {
             // on an edge: the validation counts it for the region when it names the first material
             (a.material_name == first)
-                .then(|| regions.iter().position(|q| on_ring(a.point, q, tol)))
+                .then(|| regions.iter().position(|q| point_on_ring(a.point, q, tol)))
                 .flatten()
         });
         if let Some(r) = r {

@@ -672,35 +672,4 @@ impl SparseCholesky {
             b[j] = s / lx[lp[j]];
         }
     }
-
-    // ── Read access to the factorisation (diagnosis and differential tests) ──
-
-    /// Row pointers of the lower triangle of A.
-    pub fn row_ptr(&self) -> &[usize] {
-        &self.sym.row_ptr
-    }
-    /// Column indices of the lower triangle of A by rows.
-    pub fn row_cols(&self) -> &[usize] {
-        &self.sym.row_cols
-    }
-    /// Column pointers of L.
-    pub fn l_ptr(&self) -> &[usize] {
-        &self.sym.lp
-    }
-    /// Row indices of L by columns.
-    pub fn l_rows(&self) -> &[usize] {
-        &self.sym.li
-    }
-    /// Elimination tree (−1 at a root).
-    pub fn etree(&self) -> &[i64] {
-        &self.sym.parent
-    }
-    /// Values of L (unit diagonal stored as 1 for an LU factorisation).
-    pub fn l_values(&self) -> &[f64] {
-        &self.lx
-    }
-    /// Values of U of an LU factorisation.
-    pub fn u_values(&self) -> Option<&[f64]> {
-        self.ux.as_deref()
-    }
 }

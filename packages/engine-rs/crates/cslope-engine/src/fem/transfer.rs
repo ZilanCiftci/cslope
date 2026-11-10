@@ -32,7 +32,7 @@ struct Locator<'a> {
 
 /// `Math.min(nb − 1, Math.max(0, Math.floor((v − v0) / d)))` as an index
 /// (a NaN coordinate, which TypeScript would fail on, takes cell 0).
-fn cell(v: f64, v0: f64, d: f64, nb: usize) -> usize {
+pub(crate) fn cell_index(v: f64, v0: f64, d: f64, nb: usize) -> usize {
     let c = js::math::min((nb - 1) as f64, js::math::max(0.0, ((v - v0) / d).floor()));
     if c.is_nan() {
         0
@@ -71,10 +71,10 @@ impl<'a> Locator<'a> {
         let mut cells: Vec<Vec<usize>> = vec![Vec::new(); nb * nb];
         for e in 0..ne {
             let (a, b, c) = (el[6 * e], el[6 * e + 1], el[6 * e + 2]);
-            let i0 = cell(js::math::min(js::math::min(x[a], x[b]), x[c]), x0, dx, nb);
-            let i1 = cell(js::math::max(js::math::max(x[a], x[b]), x[c]), x0, dx, nb);
-            let j0 = cell(js::math::min(js::math::min(y[a], y[b]), y[c]), y0, dy, nb);
-            let j1 = cell(js::math::max(js::math::max(y[a], y[b]), y[c]), y0, dy, nb);
+            let i0 = cell_index(js::math::min(js::math::min(x[a], x[b]), x[c]), x0, dx, nb);
+            let i1 = cell_index(js::math::max(js::math::max(x[a], x[b]), x[c]), x0, dx, nb);
+            let j0 = cell_index(js::math::min(js::math::min(y[a], y[b]), y[c]), y0, dy, nb);
+            let j1 = cell_index(js::math::max(js::math::max(y[a], y[b]), y[c]), y0, dy, nb);
             for i in i0..=i1 {
                 for j in j0..=j1 {
                     cells[j * nb + i].push(e);
@@ -112,8 +112,8 @@ impl<'a> Locator<'a> {
         let mut best: i64 = -1;
         let mut best_out = f64::INFINITY;
         let (mut bxi, mut beta) = (0.0, 0.0);
-        let ci =
-            cell(py, self.y0, self.dy, self.nb) * self.nb + cell(px, self.x0, self.dx, self.nb);
+        let ci = cell_index(py, self.y0, self.dy, self.nb) * self.nb
+            + cell_index(px, self.x0, self.dx, self.nb);
         for &e in &self.cells[ci] {
             let (xi, eta) = self.local(e, px, py);
             let out = js::math::max(js::math::max(js::math::max(0.0, -xi), -eta), xi + eta - 1.0);

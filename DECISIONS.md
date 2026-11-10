@@ -4,6 +4,12 @@ A log of the decisions behind cSlope's behavior and look, newest first, so that 
 
 Add an entry when the maintainer chooses between options (an issue labeled `needs-decision`, a design review), in the same PR as the change.
 
+## Engine
+
+### 2026-11-10: Rust is the only engine; no bit identity with the removed TypeScript engine
+
+The engine is optimised as Rust code in its own right. A change must keep the verification checks against the golden values (F within 1e-6) and keep native, WebAssembly and Python bit-identical to each other; it need not reproduce the TypeScript engine's arithmetic. Turned down: keeping TypeScript's operation order everywhere, which blocked restructuring the slice builder and the solvers.
+
 ## Process
 
 ### 2026-11-06: Work flows through issues and sprints

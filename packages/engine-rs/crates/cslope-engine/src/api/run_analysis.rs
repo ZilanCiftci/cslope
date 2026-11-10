@@ -402,7 +402,7 @@ pub fn analysis_result(
         .filter(|p| p.below_min_size == Some(true))
         .count();
 
-    let normals_for_warnings: Option<Vec<f64>> = solved_normals.clone().or_else(|| {
+    let normals_for_warnings: Option<Vec<f64>> = solved_normals.or_else(|| {
         if critical_slices.is_empty() {
             None
         } else {

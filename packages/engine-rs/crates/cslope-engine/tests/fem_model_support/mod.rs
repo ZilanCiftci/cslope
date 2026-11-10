@@ -27,26 +27,6 @@ pub fn slope_of(case: &Value) -> Slope {
     slope
 }
 
-/// Largest relative difference seen, and how many numbers differ at all.
-#[derive(Debug, Default, Clone)]
-pub struct Diff {
-    pub numbers: usize,
-    pub differing: usize,
-    pub max_rel: f64,
-    pub at: String,
-}
-
-impl Diff {
-    pub fn merge(&mut self, o: &Diff) {
-        self.numbers += o.numbers;
-        self.differing += o.differing;
-        if o.max_rel > self.max_rel {
-            self.max_rel = o.max_rel;
-            self.at = o.at.clone();
-        }
-    }
-}
-
 /// Relative difference of two numbers, measured against the larger of
 /// their magnitudes and `floor` (NaN equal to NaN, equal infinities 0).
 pub fn rel(a: f64, b: f64, floor: f64) -> f64 {
@@ -60,31 +40,4 @@ pub fn rel(a: f64, b: f64, floor: f64) -> f64 {
         return f64::INFINITY;
     }
     (a - b).abs() / a.abs().max(b.abs()).max(floor).max(1e-300)
-}
-
-/// The digest the fixture writes for a long vector.
-pub fn digest(a: &[f64]) -> [f64; 4] {
-    let (mut s, mut s1, mut s2, mut w) = (0.0, 0.0, 0.0, 0.0);
-    for (i, &v) in a.iter().enumerate() {
-        s += v;
-        s1 += v.abs();
-        s2 += v * v;
-        w += v * ((i % 97) as f64 + 1.0);
-    }
-    [s, s1, s2, w]
-}
-
-/// Print a summary line.
-pub fn report(what: &str, d: &Diff) {
-    eprintln!(
-        "{what}: {} numbers, {} not bit-identical, max rel {:e}{}",
-        d.numbers,
-        d.differing,
-        d.max_rel,
-        if d.at.is_empty() {
-            String::new()
-        } else {
-            format!(" at {}", d.at)
-        }
-    );
 }
