@@ -33,7 +33,7 @@ const saved: Record<string, unknown>[] = [
   ...BENCHMARK_MODELS.map((m, i) => {
     const { resultViewSettings: _v, result: _r, runState: _s, progress: _p, errorMessage: _e, ...rest } = m;
     void [_v, _r, _s, _p, _e];
-    return { ...JSON.parse(JSON.stringify(rest)), id: `model-${i + 1}` };
+    return { ...(JSON.parse(JSON.stringify(rest)) as Record<string, unknown>), id: `model-${i + 1}` };
   }),
   {
     // a file with fields missing: faces left (inferred), no options, no limits

@@ -62,7 +62,7 @@ describe("the anonymized copy of a project", () => {
     const [a, b] = BENCHMARK_MODELS;
     const { run } = await runSaveReopen([a, b]);
     // the second result is out of date (as a file edited after its run opens)
-    markResultOutOfDate(run[1].result as AnalysisResult);
+    markResultOutOfDate(run[1].result);
     const options = { ...DEFAULT_ANONYMIZE_OPTIONS, removeResults: false, localOrigin: "none" as const };
     const { file, summary } = anonymizeProject({ version: PROJECT_FILE_VERSION, activeModelId: run[0].id, models: run, units: "SI" }, options, [], new Date("2026-11-07T00:00:00Z"));
     expect(summary.resultsRemoved).toBe(1);

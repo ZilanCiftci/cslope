@@ -113,7 +113,7 @@ function runFemShard(shard: number, shards: number): Record<string, FemRaw> {
     if (i % shards !== shard) return;
     const file = join(FEM_CACHE, `${c.id}-${femKey(c)}.json`);
     if (existsSync(file) && !process.argv.includes("--fem-fresh")) {
-      out[c.id] = JSON.parse(readFileSync(file, "utf8"));
+      out[c.id] = JSON.parse(readFileSync(file, "utf8")) as FemRaw;
       return;
     }
     const r = runFemVerification(c.definition, c.fem!);
@@ -175,7 +175,11 @@ async function runAllShards(): Promise<{
   const reliability: Record<string, number[]> = {};
   const fem: Record<string, FemRaw> = {};
   for (let k = 0; k < shards; k++) {
-    const part = JSON.parse(readFileSync(join(dir, `${k}.json`), "utf8"));
+    const part = JSON.parse(readFileSync(join(dir, `${k}.json`), "utf8")) as {
+      fos: Record<string, (number | null)[]>;
+      reliability: Record<string, number[]>;
+      fem?: Record<string, FemRaw>;
+    };
     Object.assign(fos, part.fos);
     Object.assign(reliability, part.reliability);
     Object.assign(fem, part.fem);
@@ -311,7 +315,7 @@ if (import.meta.main) {
     const loadAtStart = loadavg()[0];
     let raw: Awaited<ReturnType<typeof runAllShards>>;
     if (process.argv.includes("--cached") && existsSync(CACHE)) {
-      raw = JSON.parse(readFileSync(CACHE, "utf8"));
+      raw = JSON.parse(readFileSync(CACHE, "utf8")) as typeof raw;
       // A cache from an older set of problems would publish them as failed.
       const stale =
         VERIFICATION_CASES.filter((c) => raw.fos[c.id]?.length !== presentedAnalyses(c).length).length +
@@ -335,7 +339,7 @@ if (import.meta.main) {
     mkdirSync(join(OUT, ".."), { recursive: true });
     writeFileSync(OUT, json);
     writeHome();
-    const s = JSON.parse(json).summary;
+    const s = (JSON.parse(json) as ReturnType<typeof buildData>).summary;
     const a = agreement(fos);
     const fa = femAgreement(fem);
     console.log(`${s.problems} problems, ${a.agree}/${a.total} checks agree, ${fa.agree}/${fa.total} finite element references agree, ${((Date.now() - started) / 1000).toFixed(0)} s → ${OUT}`);

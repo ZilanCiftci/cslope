@@ -150,7 +150,7 @@ describe("FloatingToolbar", () => {
     expect(tb.onTogglePan).toHaveBeenCalled();
     expect(tb.onFitToScreen).toHaveBeenCalled();
     // The zoom preset closest to the current zoom is shown.
-    const zoom = screen.getByRole("combobox") as HTMLSelectElement;
+    const zoom = screen.getByRole<HTMLSelectElement>("combobox");
     expect(zoom.value).toBe("150");
     fireEvent.change(zoom, { target: { value: "300" } });
     expect(tb.onSetZoomPercent).toHaveBeenCalledWith(300);
@@ -198,7 +198,7 @@ describe("FloatingToolbar", () => {
       observe() {}
       unobserve() {}
       disconnect() {}
-    } as unknown as typeof ResizeObserver;
+    };
     try {
       const { container } = render(
         <div>

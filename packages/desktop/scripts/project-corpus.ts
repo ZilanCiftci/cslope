@@ -108,7 +108,7 @@ function feed(h: Fnv, v: unknown): void {
     h.u32(v.length);
     for (const x of v) feed(h, x);
   } else if (typeof v === "object") {
-    const keys = Object.keys(v as object).sort(byteOrder);
+    const keys = Object.keys(v).sort(byteOrder);
     h.tag("o");
     h.u32(keys.length);
     for (const k of keys) {
@@ -412,7 +412,7 @@ const DEF_FULL: SlopeDefinition = {
   materials: [
     { name: "Clay", color: "#123456", depthRange: [0, 4], model: mc(18, 10, 25), waterTableId: "perched" },
     // an older definition: the flat Mohr-Coulomb fields
-    { name: "Old", unitWeight: 19, cohesion: 2, frictionAngle: 31, cohesionRefDepth: 5, cohesionRateOfChange: 1 } as SlopeDefinition["materials"][number],
+    { name: "Old", unitWeight: 19, cohesion: 2, frictionAngle: 31, cohesionRefDepth: 5, cohesionRateOfChange: 1 },
     { name: "Sand", model: mc(20, 0, 35), waterTableId: "same" },
     { name: "Gravel", model: mc(21, 0, 38) },
   ],
@@ -461,13 +461,13 @@ const DEF_FULL: SlopeDefinition = {
   },
   earlierStage: { coordinates: GROUND, materials: [{ name: "Clay", model: mc(18, 10, 25) }] },
   analysisLimits: { entryLeftX: 18, entryRightX: 30, exitLeftX: 42, exitRightX: 58 },
-} as SlopeDefinition;
+};
 
 /** No orientation (inferred), no water, no limits (the model's x range), the deprecated followBoundary. */
 const DEF_PLAIN: SlopeDefinition = {
   coordinates: GROUND.map(([x, y]) => [60 - x, y]),
   materials: [{ name: "Fill", model: mc(19, 3, 32) }],
-} as SlopeDefinition;
+};
 
 const DEF_FOLLOW: SlopeDefinition = {
   coordinates: GROUND,
@@ -477,18 +477,18 @@ const DEF_FOLLOW: SlopeDefinition = {
 } as unknown as SlopeDefinition;
 
 const REFUSED: { name: string; definition: SlopeDefinition }[] = [
-  { name: "a water table by height", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTable: { mode: "height", value: 5 } } as SlopeDefinition },
-  { name: "further water tables without a main one", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTables: [{ id: "x", coordinates: [[0, 5], [60, 5]] }] } as SlopeDefinition },
+  { name: "a water table by height", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTable: { mode: "height", value: 5 } } },
+  { name: "further water tables without a main one", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTables: [{ id: "x", coordinates: [[0, 5], [60, 5]] }] } },
   {
     name: "water tables that differ in free water",
-    definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTable: { mode: "custom", value: [[0, 5], [60, 5]], freeWater: true }, waterTables: [{ id: "x", coordinates: [[0, 4], [60, 4]], freeWater: false }] } as SlopeDefinition,
+    definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], waterTable: { mode: "custom", value: [[0, 5], [60, 5]], freeWater: true }, waterTables: [{ id: "x", coordinates: [[0, 4], [60, 4]], freeWater: false }] },
   },
-  { name: "an unknown water table", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32), waterTableId: "nope" }], waterTable: { mode: "custom", value: [[0, 5], [60, 5]] } } as SlopeDefinition },
+  { name: "an unknown water table", definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32), waterTableId: "nope" }], waterTable: { mode: "custom", value: [[0, 5], [60, 5]] } } },
   {
     name: "interface coverage",
-    definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], reinforcements: [{ x1: 1, y1: 1, x2: 2, y2: 2, tensileCapacity: 5, pullout: { kind: "interface", adhesion: 0, frictionAngle: 20, coverage: 0.5 } }] } as SlopeDefinition,
+    definition: { coordinates: GROUND, materials: [{ name: "A", model: mc(19, 3, 32) }], reinforcements: [{ x1: 1, y1: 1, x2: 2, y2: 2, tensileCapacity: 5, pullout: { kind: "interface", adhesion: 0, frictionAngle: 20, coverage: 0.5 } }] },
   },
-  { name: "a material without a model", definition: { coordinates: GROUND, materials: [{ name: "A", unitWeight: 19 }] } as SlopeDefinition },
+  { name: "a material without a model", definition: { coordinates: GROUND, materials: [{ name: "A", unitWeight: 19 }] } },
 ];
 
 // ── Models as saved (the app's load) ───────────────────────────

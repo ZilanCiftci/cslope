@@ -14,5 +14,5 @@ import { wasm } from "../facade/internal";
  * Reconstruct a Slope model from a serialized SlopeDefinition DTO.
  */
 export function buildSlope(def: SlopeDefinition): TsSlope {
-  return Slope._wrap(wasm().build_slope(def) as number) as unknown as TsSlope;
+  return Slope._wrap(wasm().build_slope(def));
 }

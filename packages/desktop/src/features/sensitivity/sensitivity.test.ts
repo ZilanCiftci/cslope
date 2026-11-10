@@ -86,7 +86,7 @@ describe("sensitivity cancel", () => {
       const promise = new Promise<never>((_, r) => (reject = r));
       const cancel = vi.fn(() => reject(new Error("cancelled")));
       cancels.push(cancel);
-      return { promise, cancel } as never;
+      return { promise, cancel };
     });
     useAppStore.getState().newProject();
     const model = snapshotFromState(useAppStore.getState());

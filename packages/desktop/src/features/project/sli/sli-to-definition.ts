@@ -452,7 +452,8 @@ interface MaterialContext {
  * needed.
  */
 function fileOption(code: unknown): string {
-  return `an option of the file (code ${String(code ?? "?")}) that cSlope does not import`;
+  const shown = typeof code === "string" || typeof code === "number" ? String(code) : "?";
+  return `an option of the file (code ${shown}) that cSlope does not import`;
 }
 
 /** The strength model of one material. */
@@ -707,13 +708,13 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     const largest = own.reduce((m, r) => (r.area > m.area ? r : m), own[0]);
     let model = strength(f, { sc, index: k, name, notes, rtl, top, x: largest?.point[0] ?? 0, u });
     const uw = num(f.uw), sat = num(f.uwbwt);
-    if (sat !== undefined && sat > 0 && sat !== uw) model = { ...model, unitWeightSat: sat * u.G } as MaterialModel;
+    if (sat !== undefined && sat > 0 && sat !== uw) model = { ...model, unitWeightSat: sat * u.G };
     // strength from suction
     const phiB = num(f.gw_phi_b) ?? 0;
     if (phiB > 0 && (model.kind === "mohr-coulomb" || model.kind === "anisotropic-function")) {
       const cap = dn("usemaxnegporepressure") ? (dn("maxnegporepressure") ?? 0) * u.P : undefined;
       if (cap === 0) notes.push(`Material "${name}": φb = ${phiB}° is not imported; the model limits the negative pore pressure to 0 (no suction).`);
-      else model = { ...model, phiB, ...(cap !== undefined ? { maxSuction: cap } : {}) } as MaterialModel;
+      else model = { ...model, phiB, ...(cap !== undefined ? { maxSuction: cap } : {}) };
     }
     if ((num(f.rd_undrained) ?? 0) !== 0) {
       if (model.kind === "mohr-coulomb" && drawdownLine && ((num(f.rd_cr) ?? 0) > 0 || (num(f.rd_phir) ?? 0) > 0)) {
@@ -726,17 +727,17 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     const bbar = num(f.bbar) ?? 0;
     if (bBarMethod) {
       if (bbar > 0 && bbar <= 1.5) {
-        model = { ...model, bBar: bbar } as MaterialModel;
+        model = { ...model, bBar: bbar };
         bBarMaterials.push({ name, bbar });
       } else if (bbar === 0) {
-        if (!fillMarked || num(f.stg2) === 1) model = { ...model, bBarLoad: true } as MaterialModel;
+        if (!fillMarked || num(f.stg2) === 1) model = { ...model, bBarLoad: true };
       } else notes.push(`Material "${name}": its B̄ ${bbar} is outside 0–1.5 and is not imported.`);
     }
     // (without the method switched on, B-bar values have no effect in the file either)
     // an ru coefficient: the water method ru (the `water` value is ru), or
     // with "with_ru" one on top of the water line's pressure
     const ru = waterMode === "ru" ? num(f.water) ?? 0 : dn("with_ru") !== 0 ? num(f.withru) ?? 0 : 0;
-    if (ru > 0 && ru < 1) model = { ...model, ru } as MaterialModel;
+    if (ru > 0 && ru < 1) model = { ...model, ru };
     else if (ru !== 0) notes.push(`Material "${name}": its rᵤ ${ru} is outside 0–1 and is not imported.`);
     if ((num(f.mat_tensile) ?? 0) !== 0) notes.push(`Material "${name}": the tensile strength (cut-off) is not imported.`);
     if ((num(f.use_alternate_strength) ?? 0) !== 0) notes.push(`Material "${name}": the alternate strength is not imported.`);
@@ -973,7 +974,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const lx = ["x1", "x2", "x3", "x4"].map((k) => (num(limits[k]) !== undefined ? num(limits[k])! * u.L : undefined));
   let analysisLimits: SlopeDefinition["analysisLimits"];
   if (lx.every((v) => v !== undefined)) {
-    const [a, b, c, e] = lx as number[];
+    const [a, b, c, e] = lx;
     const left: [number, number] = [Math.min(a, b), Math.max(a, b)], right: [number, number] = [Math.min(c, e), Math.max(c, e)];
     const [entry, exit] = rtl ? [right, left] : [left, right];
     analysisLimits = { entryLeftX: entry[0], entryRightX: entry[1], exitLeftX: exit[0], exitRightX: exit[1] };

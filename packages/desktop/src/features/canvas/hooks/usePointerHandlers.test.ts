@@ -667,7 +667,7 @@ describe("wheel", () => {
         preventDefault: vi.fn(),
         stopPropagation: vi.fn(),
         ...e,
-      } as never),
+      }),
     );
 
   it("zooms around the cursor with Ctrl", () => {

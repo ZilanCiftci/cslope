@@ -24,7 +24,6 @@ import {
   serveEvaluator,
   webEndpoint,
   type CoordinatorEndpoint,
-  type EvaluatorEndpoint,
   type FemStage,
 } from "@cslope/engine";
 
@@ -36,7 +35,7 @@ import {
  */
 function evaluatorPool(ports: MessagePort[] | undefined): EvaluatorPool | null {
   if (!ports || ports.length === 0) return null;
-  return new EvaluatorPool(ports.map((port) => webEndpoint(port) as CoordinatorEndpoint));
+  return new EvaluatorPool(ports.map((port): CoordinatorEndpoint => webEndpoint(port)));
 }
 
 /** Handle incoming analysis requests. */
@@ -45,7 +44,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
   if (event.data.engine) initEngineSync(event.data.engine);
   if (event.data.type === "serve-evaluator") {
     // This worker evaluates trial surfaces for an analysis worker.
-    serveEvaluator(webEndpoint(event.data.port) as EvaluatorEndpoint);
+    serveEvaluator(webEndpoint(event.data.port));
     return;
   }
   if (event.data.type === "run-reliability") {
@@ -58,7 +57,7 @@ self.onmessage = async (event: MessageEvent<WorkerMessage>) => {
     const errorResponse: AnalysisResponse = {
       type: "analysis-error",
       id: id ?? "unknown",
-      error: `Unknown message type: ${type}`,
+      error: `Unknown message type: ${String(type)}`,
     };
     self.postMessage(errorResponse);
     return;

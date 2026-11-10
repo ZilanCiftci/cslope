@@ -72,8 +72,8 @@ const fake = vi.hoisted(() => {
     title = "";
     show = vi.fn();
     focus = vi.fn();
-    loadURL = vi.fn();
-    loadFile = vi.fn();
+    loadURL = vi.fn(() => Promise.resolve());
+    loadFile = vi.fn(() => Promise.resolve());
     reload = vi.fn();
     minimized = false;
     minimize = vi.fn(() => {
@@ -172,15 +172,19 @@ const fake = vi.hoisted(() => {
   };
 
   const dialog = {
-    showMessageBox: vi.fn<(...args: any[]) => Promise<any>>(async () => ({ response: 0 })),
-    showOpenDialog: vi.fn<(...args: any[]) => Promise<any>>(async () => ({
-      canceled: true,
-      filePaths: [] as string[],
-    })),
-    showSaveDialog: vi.fn<(...args: any[]) => Promise<any>>(async () => ({
-      canceled: true,
-      filePath: undefined as string | undefined,
-    })),
+    showMessageBox: vi.fn<(...args: any[]) => Promise<any>>(() => Promise.resolve({ response: 0 })),
+    showOpenDialog: vi.fn<(...args: any[]) => Promise<any>>(() =>
+      Promise.resolve({
+        canceled: true,
+        filePaths: [] as string[],
+      }),
+    ),
+    showSaveDialog: vi.fn<(...args: any[]) => Promise<any>>(() =>
+      Promise.resolve({
+        canceled: true,
+        filePath: undefined as string | undefined,
+      }),
+    ),
     showErrorBox: vi.fn(),
   };
 
@@ -198,11 +202,11 @@ const fake = vi.hoisted(() => {
     getCursorScreenPoint: vi.fn(() => ({ x: 0, y: 0 })),
   };
   const Menu = { setApplicationMenu: vi.fn() };
-  const shell = { openExternal: vi.fn(async () => {}), openPath: vi.fn<(file: string) => Promise<string>>(async () => "") };
+  const shell = { openExternal: vi.fn(() => Promise.resolve()), openPath: vi.fn<(file: string) => Promise<string>>(() => Promise.resolve("")) };
   // Preload side, for the channel contract test.
   const ipcRenderer = {
     send: vi.fn(),
-    invoke: vi.fn<(...args: any[]) => Promise<any>>(async () => null),
+    invoke: vi.fn<(...args: any[]) => Promise<any>>(() => Promise.resolve(null)),
     on: vi.fn(),
     off: vi.fn(),
   };
@@ -230,15 +234,15 @@ const fake = vi.hoisted(() => {
     session.defaultSession.webRequest.onHeadersReceived.mockClear();
     app.requestSingleInstanceLock.mockImplementation(() => true);
     app.isReady.mockImplementation(() => true);
-    dialog.showMessageBox.mockImplementation(async () => ({ response: 0 }));
-    dialog.showOpenDialog.mockImplementation(async () => ({
+    dialog.showMessageBox.mockResolvedValue({ response: 0 });
+    dialog.showOpenDialog.mockResolvedValue({
       canceled: true,
       filePaths: [],
-    }));
-    dialog.showSaveDialog.mockImplementation(async () => ({
+    });
+    dialog.showSaveDialog.mockResolvedValue({
       canceled: true,
       filePath: undefined,
-    }));
+    });
   }
 
   return {
@@ -1486,6 +1490,7 @@ describe("opening files", () => {
       filePaths: [file],
     });
     vi.spyOn(fs, "readFileSync").mockImplementationOnce(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- a non-Error rejection is what this test is about
       throw "boom";
     });
     expect(await invoke("dialog:openFile", win.webContents)).toBeNull();
@@ -1624,7 +1629,7 @@ describe("saving", () => {
 
   const leftovers = () => fs.readdirSync(dir).filter((f) => f.includes(".tmp-"));
 
-  async function saveAsTo(file: string, content: string, suggested?: string) {
+  function saveAsTo(file: string, content: string, suggested?: string) {
     fake.dialog.showSaveDialog.mockResolvedValueOnce({
       canceled: false,
       filePath: file,

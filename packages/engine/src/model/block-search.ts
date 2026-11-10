@@ -43,7 +43,7 @@ export function blockSearch(slope: Slope, evaluate: Evaluate): SearchPlane[] {
  */
 export function blockSearchSteps(slope: Slope): PlaneSteps<SearchPlane[]> {
   function* run(): PlaneSteps<SearchPlane[]> {
-    return yield* engineSteps(slope, wasm().block_search_steps_new(h(slope)) as number, (r) => mark(facadeSlope(slope)._planes(r.planes!)));
+    return yield* engineSteps(slope, wasm().block_search_steps_new(h(slope)), (r) => mark(facadeSlope(slope)._planes(r.planes!)));
   }
   return run();
 }

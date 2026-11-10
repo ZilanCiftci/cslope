@@ -135,7 +135,7 @@ describe("the slip surface plot's quantities", () => {
     const model = activeModel();
     const { container } = render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", { model, result: result(surface(model, 1.3), "Bishop") });
-    const select = screen.getByRole("combobox", { name: "Y axis" }) as HTMLSelectElement;
+    const select = screen.getByRole<HTMLSelectElement>("combobox", { name: "Y axis" });
     expect(Array.from(select.querySelectorAll("optgroup")).map((g) => g.label)).toEqual([
       "Stresses on the base",
       "Forces",

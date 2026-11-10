@@ -47,12 +47,12 @@ export function findExpressionErrors(model: ModelEntry): string[] {
     }
   }
   model.udls.forEach((u, i) => {
-    for (const [field, expr] of Object.entries(u.expressions ?? {})) {
+    for (const [field, expr] of Object.entries(u.expressions ?? {}) as [string, string | undefined][]) {
       check(`UDL ${i + 1} ${field}`, expr);
     }
   });
   model.lineLoads.forEach((l, i) => {
-    for (const [field, expr] of Object.entries(l.expressions ?? {})) {
+    for (const [field, expr] of Object.entries(l.expressions ?? {}) as [string, string | undefined][]) {
       check(`Line load ${i + 1} ${field}`, expr);
     }
   });

@@ -6,7 +6,6 @@
 import { describe, it, expect } from "vitest";
 import { buildSlope } from "../model/build-slope";
 import { toCanonicalSlopeDefinition } from "../model/canonical";
-import type { SlopeDefinition } from "../types/slope-definition";
 import { buildFeModel } from "./model";
 import { strengthReduction } from "./srm";
 import { PROBLEMS } from "../verification/problems";
@@ -15,7 +14,7 @@ describe("strengthReduction", () => {
   it("finds Griffiths & Lane's homogeneous slope near 1.4 on a coarse mesh", () => {
     // Griffiths & Lane (1999), example 1: 2:1 slope, H = 10 m, c' = 10 kPa,
     // φ' = 20°, γ = 20 kN/m³, ψ = 0; F = 1.4 by SRFEM, 1.38 by Bishop.
-    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition;
     const slope = buildSlope(toCanonicalSlopeDefinition(def));
     const model = buildFeModel(slope, { elementSize: 1.25 });
     const r = strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.02 });
@@ -25,7 +24,7 @@ describe("strengthReduction", () => {
   }, 600000);
 
   it("gives the same factor with Newton and the viscoplastic iteration for associated flow", () => {
-    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition;
     const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 1.5 });
     const newton = strengthReduction(model, { flowRule: "associated", fTolerance: 0.01 });
     const vp = strengthReduction(model, { flowRule: "associated", solver: "viscoplastic", fTolerance: 0.01 });
@@ -34,7 +33,7 @@ describe("strengthReduction", () => {
   }, 600000);
 
   it("gives the same factor with Newton and BFGS (constant stiffness) for associated flow", () => {
-    const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+    const def = PROBLEMS.find((p) => p.id === "V055")!.definition;
     const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2 });
     const newton = strengthReduction(model, { flowRule: "associated", fTolerance: 0.01 });
     const bfgs = strengthReduction(model, { flowRule: "associated", solver: "bfgs", fTolerance: 0.01 });
@@ -44,7 +43,7 @@ describe("strengthReduction", () => {
 });
 
 describe("strengthReduction with non-associated flow", () => {
-  const def = PROBLEMS.find((p) => p.id === "V055")!.definition as SlopeDefinition;
+  const def = PROBLEMS.find((p) => p.id === "V055")!.definition;
   const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2, materialParameters: { "*": { dilationAngle: 0 } } });
   let vpResult: ReturnType<typeof strengthReduction> | null = null;
   const viscoplastic = () => (vpResult ??= strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.01 }));
@@ -69,7 +68,7 @@ describe("viscoplastic iteration beyond the apex", () => {
     // toe. Without the apex relaxation a tensile point there never returned and
     // every trial above F ≈ 0.83 failed; associated flow gives 1.40.
     const p = PROBLEMS.find((q) => q.id === "V094")!;
-    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(p.definition as SlopeDefinition)), {});
+    const model = buildFeModel(buildSlope(toCanonicalSlopeDefinition(p.definition)), {});
     const r = strengthReduction(model, { flowRule: "non-associated", fTolerance: 0.05 });
     expect(r.factorOfSafety).toBeGreaterThan(1.2);
   }, 600000);

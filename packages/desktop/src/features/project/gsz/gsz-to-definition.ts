@@ -811,7 +811,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         ? { customSurfaces: [truncatedReference] }
         : {}),
     ...(blockSearchObjects ? { blockSearchObjects } : {}),
-  } as SlopeDefinition;
+  };
   const base = fileName.replace(/\.gsz$/i, "");
   return { name: stabilityAnalyses(file).length > 1 ? `${analysis.name} (${base})` : base, definition, options, notes, reference };
 }

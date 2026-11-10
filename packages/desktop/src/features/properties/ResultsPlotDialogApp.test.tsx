@@ -108,7 +108,7 @@ describe("ResultsPlotDialogApp", () => {
     expect(screen.getByText("Critical surface")).toBeInTheDocument();
     // The slices of the default model are derived for the surface.
     const slices = screen.getByText(/^Slices: \d+$/);
-    expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
+    expect(Number(slices.textContent.split(": ")[1])).toBeGreaterThan(0);
     expect(
       screen.queryByText("Unable to derive slice values for the selected surface."),
     ).toBeNull();
@@ -139,7 +139,7 @@ describe("ResultsPlotDialogApp", () => {
     );
     expect(screen.getByRole("combobox", { name: "Y axis" })).toHaveValue("frictionAngle");
 
-    const xAxis = screen.getByRole("combobox", { name: "X axis" }) as HTMLSelectElement;
+    const xAxis = screen.getByRole<HTMLSelectElement>("combobox", { name: "X axis" });
     await userEvent.selectOptions(xAxis, "x");
     expect(xAxis.value).toBe("x");
   });
@@ -167,14 +167,14 @@ describe("ResultsPlotDialogApp", () => {
     expect(screen.getByText("F: 1.100")).toBeInTheDocument();
   });
 
-  it("offers the lambda plot only for Morgenstern-Price runs", async () => {
+  it("offers the lambda plot only for Morgenstern-Price runs", () => {
     const model = activeModel();
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", {
       model,
       result: result([surfaceThroughSlope(model, 1.25)], "Bishop"),
     });
-    const plot = screen.getByRole("combobox", { name: "Plot" }) as HTMLSelectElement;
+    const plot = screen.getByRole<HTMLSelectElement>("combobox", { name: "Plot" });
     const lambdaOption = Array.from(plot.options).find(
       (o) => o.value === "lambdaFmFf",
     )!;
@@ -215,7 +215,7 @@ describe("ResultsPlotDialogApp", () => {
       result: result([surfaceThroughSlope(model, 1.3)], "Bishop"),
     });
     expect(
-      (screen.getByRole("combobox", { name: "Plot" }) as HTMLSelectElement).value,
+      (screen.getByRole<HTMLSelectElement>("combobox", { name: "Plot" })).value,
     ).toBe("slipSurface");
     expect(screen.getByText("F: 1.300")).toBeInTheDocument();
   });
@@ -263,7 +263,7 @@ describe("ResultsPlotDialogApp", () => {
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", { model, result: result([surface]) });
     const slices = screen.getByText(/^Slices: \d+$/);
-    expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
+    expect(Number(slices.textContent.split(": ")[1])).toBeGreaterThan(0);
   });
 
   it("derives slices in the opposite direction when that direction governs", () => {
@@ -291,7 +291,7 @@ describe("ResultsPlotDialogApp", () => {
     render(<ResultsPlotDialogApp />);
     bridge.emit("onResultsPlotState", { model, result: governing });
     const slices = screen.getByText(/^Slices: \d+$/);
-    expect(Number(slices.textContent!.split(": ")[1])).toBeGreaterThan(0);
+    expect(Number(slices.textContent.split(": ")[1])).toBeGreaterThan(0);
   });
 
   it("keeps the model's own direction when it governs", () => {
@@ -325,7 +325,7 @@ describe("Export CSV in the Results plot", () => {
     await userEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     const [file, data] = vi.mocked(downloadFile).mock.calls[0];
     expect(file).toBe(`${model.name} slices.csv`);
-    const lines = String(data).replace("\uFEFF", "").split("\r\n");
+    const lines = (data as string).replace("\uFEFF", "").split("\r\n");
     expect(lines[0].startsWith("Slice,x (m),Shear strength (kPa),")).toBe(true);
     expect(lines[0]).toContain("Local F,");
     expect(lines[1].startsWith("1,")).toBe(true);
@@ -336,6 +336,6 @@ describe("Export CSV in the Results plot", () => {
     await userEvent.click(screen.getByRole("menuitemradio", { name: "Decimal comma (1,5)" }));
     const [file2, data2] = vi.mocked(downloadFile).mock.calls[1];
     expect(file2).toBe(`${model.name} F against lambda.csv`);
-    expect(String(data2)).toBe("\uFEFFλ;Fm;Ff\r\n0;1,4;1,1\r\n0,2;1,31;1,29\r\n");
+    expect(data2 as string).toBe("\uFEFFλ;Fm;Ff\r\n0;1,4;1,1\r\n0,2;1,31;1,29\r\n");
   });
 });

@@ -86,8 +86,8 @@ describe("probabilistic analysis", () => {
       ...model,
       orientation: "rtl" as const,
       coordinates: model.coordinates.map(([x, y]) => [sum - x, y] as [number, number]),
-      analysisLimits: { ...model.analysisLimits!, enabled: false },
-      options: { ...model.options!, iterations: 200, refinedIterations: 100 },
+      analysisLimits: { ...model.analysisLimits, enabled: false },
+      options: { ...model.options, iterations: 200, refinedIterations: 100 },
     };
     const dto = buildSlopeDTOFromModel(rtl);
     const slope = buildSlope(dto);

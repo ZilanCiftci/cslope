@@ -17,6 +17,11 @@ import { num, pts, type Pt, type StixCalculation, type StixFile, type StixStage 
 
 type Json = Record<string, unknown>;
 
+/** A value of the file as text: a string, number or boolean as written; anything else (missing, or an object) as `fallback`. */
+function text(v: unknown, fallback = ""): string {
+  return typeof v === "string" || typeof v === "number" || typeof v === "boolean" ? String(v) : fallback;
+}
+
 export interface StixImport {
   name: string;
   definition: SlopeDefinition;
@@ -79,7 +84,7 @@ function layerState(state: Json | undefined, layerId: string, centroid: Pt, note
   const points = ((state?.StatePoints as Json[] | undefined) ?? []).filter((p) => p.LayerId === layerId);
   if (points.length > 0) {
     const s = points.map((p) => p.Stress as Json);
-    const key = (x: Json) => `${x.StateType}:${x.Pop}:${x.Ocr}:${x.YieldStress}`;
+    const key = (x: Json) => `${text(x.StateType)}:${text(x.Pop)}:${text(x.Ocr)}:${text(x.YieldStress)}`;
     if (new Set(s.map(key)).size > 1) notes.push(`Layer "${layerLabel}": ${s.length} state points with different values; the first is used for the whole layer.`);
     const at = pts([points[0].Point])[0];
     return at && svAt ? { ...s[0], __sv: svAt(at) } : s[0];
@@ -116,7 +121,7 @@ function layerState(state: Json | undefined, layerId: string, centroid: Pt, note
 
 /** The model of a soil's strength type (one side of the phreatic level). */
 function strengthModel(soil: Json, type: string, state: Json | undefined, unitWeight: number, notes: string[], fromEarlier = false): MaterialModel {
-  const name = String(soil.Name ?? soil.Code ?? "soil");
+  const name = text(soil.Name ?? soil.Code, "soil");
   if (type === "MohrCoulombAdvanced" || type === "MohrCoulombClassic") {
     const mc = (soil[`${type}ShearStrengthModel`] ?? {}) as Json;
     let phi = num(mc.FrictionAngle) ?? 0;
@@ -183,7 +188,7 @@ function strengthModel(soil: Json, type: string, state: Json | undefined, unitWe
  */
 function stateOf(state: Json | undefined): { pop: number } | { ocr: number } | { yieldStress: number } | undefined {
   if (!state) return undefined;
-  const type = String(state.StateType ?? "");
+  const type = text(state.StateType);
   const sv = num(state.__sv);
   if (type === "Pop") return { pop: num(state.Pop) ?? 0 };
   if (type === "Ocr") return sv !== undefined ? { pop: Math.max(0, ((num(state.Ocr) ?? 1) - 1) * sv) } : { ocr: num(state.Ocr) ?? 1 };
@@ -240,7 +245,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   const headLines = ((wn?.HeadLines as Json[] | undefined) ?? []).map((h) => ({ id: String(h.Id), points: pts(h.Points).sort((a, b) => a[0] - b[0]) })).filter((h) => h.points.length >= 2);
   const headLabel = (id: string) => {
     const h = ((wn?.HeadLines as Json[] | undefined) ?? []).find((l) => String(l.Id) === id);
-    return String(h?.Label ?? id);
+    return text(h?.Label, id);
   };
   const refs = ((wn?.ReferenceLines as Json[] | undefined) ?? [])
     .map((r) => ({ points: pts(r.Points).sort((a, b) => a[0] - b[0]), ...(typeof r.TopHeadLineId === "string" ? { topHeadLineId: r.TopHeadLineId } : {}), ...(typeof r.BottomHeadLineId === "string" ? { bottomHeadLineId: r.BottomHeadLineId } : {}) }))
@@ -312,7 +317,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     const soilId = soilOfLayer.get(String(layer.Id));
     const soil = file.soils.find((s) => s.Id === soilId);
     if (!soil) {
-      notes.push(`Layer "${layer.Label ?? layer.Id}" has no soil; it is left as the first material.`);
+      notes.push(`Layer "${text(layer.Label ?? layer.Id)}" has no soil; it is left as the first material.`);
       continue;
     }
     const holes = holesOf(r.id);
@@ -329,14 +334,14 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
       if (had !== undefined && Math.abs(had - so.pop) > 1e-9) notes.push(`Stage "${st.label}" has several layers labeled "${String(layer.Label ?? layer.Id)}" with different states; a later stage takes the last one's.`);
       popByLabel.set(label, so.pop);
     }
-    const above = String(soil.ShearStrengthModelTypeAbovePhreaticLevel ?? "MohrCoulombAdvanced");
-    const below = String(soil.ShearStrengthModelTypeBelowPhreaticLevel ?? above);
+    const above = text(soil.ShearStrengthModelTypeAbovePhreaticLevel, "MohrCoulombAdvanced");
+    const below = text(soil.ShearStrengthModelTypeBelowPhreaticLevel, above);
     const gAbove = num(soil.VolumetricWeightAbovePhreaticLevel) ?? 18;
     const gBelow = num(soil.VolumetricWeightBelowPhreaticLevel) ?? gAbove;
     const key = `${soilId}|${JSON.stringify(state ?? null)}`;
     let name = nameOf.get(key);
     if (!name) {
-      const base = String(soil.Name ?? soil.Code ?? `Soil ${soilId}`);
+      const base = text(soil.Name ?? soil.Code, `Soil ${soilId}`);
       name = base;
       for (let k = 2; materials.some((m) => m.name === name); k++) name = `${base} (${k})`;
       nameOf.set(key, name);
@@ -345,9 +350,9 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
         ...belowModel,
         ...(gBelow !== gAbove ? { unitWeightSat: gBelow } : {}),
         ...(above !== below ? { aboveWater: strengthModel(soil, above, state, gAbove, notes, kept !== undefined) } : {}),
-      } as MaterialModel;
+      };
       const colour = file.colours.get(String(soilId));
-      materials.push({ name, model, ...(colour ? { color: colour } : {}) } as SlopeDefinition["materials"][number]);
+      materials.push({ name, model, ...(colour ? { color: colour } : {}) });
     }
     regionAssignments.push({ point: centroid, materialName: name });
     materialOfLayer.set(String(layer.Id), name);
@@ -416,7 +421,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   if (consolidations((loads.Earthquake as Json | undefined) ?? {}).length > 0 && (loads.Earthquake as Json | undefined)?.IsEnabled) {
     notes.push("Degrees of consolidation below 100 % under the earthquake load are not imported.");
   }
-  if ((((loads.UniformLoads as Json[] | undefined) ?? []) as Json[]).some((u) => (num(u.Spread) ?? 0) !== 0)) notes.push("The spread angles of the uniform loads are not imported (they matter for the stress in the soil below them).");
+  if ((((loads.UniformLoads as Json[] | undefined) ?? [])).some((u) => (num(u.Spread) ?? 0) !== 0)) notes.push("The spread angles of the uniform loads are not imported (they matter for the stress in the soil below them).");
   if (((loads.Trees as Json[] | undefined) ?? []).length > 0) notes.push(`${(loads.Trees as Json[]).length} tree load(s) (wind on trees) not imported.`);
   const eq = loads.Earthquake as Json | undefined;
   if (eq?.IsEnabled) {
@@ -478,7 +483,7 @@ export function stixToDefinition(file: StixFile, index: number, fileName = "stix
   const options = part.options;
   // method and the file's slip plane
   const s = calc.settings ?? {};
-  const type = String(s.AnalysisType ?? "");
+  const type = text(s.AnalysisType);
   let customSurfaces: SlopeDefinition["customSurfaces"];
   let customSearchPlanes: SlopeDefinition["customSearchPlanes"];
   if (/^Bishop/.test(type)) options.method = "Bishop";
@@ -535,7 +540,7 @@ export function stixToDefinition(file: StixFile, index: number, fileName = "stix
     ...(customSearchPlanes ? { customSearchPlanes } : {}),
     ...(customSurfaces ? { customSurfaces, ...(type === "Spencer" ? { customPlanesOnly: true } : {}) } : {}),
     ...(type === "Bishop" ? { customPlanesOnly: true } : {}),
-  } as SlopeDefinition;
+  };
   const base = fileName.replace(/\.stix$/i, "");
   // A short name, the calculation (and its scenario when needed) and the file; the list shows the whole name on hover.
   const scenarios = new Set(file.calculations.map((c) => c.scenario));

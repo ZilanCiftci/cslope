@@ -89,9 +89,7 @@ describe("importDwg", () => {
   it("a reader that cannot be started is started again on the next request, and its worker is replaced", async () => {
     let starts = 0;
     const handle = dwgRequestHandler(
-      async () => {
-        if (++starts === 1) throw new Error("no memory");
-      },
+      () => (++starts === 1 ? Promise.reject(new Error("no memory")) : Promise.resolve()),
       { drawing: () => "{}", vectors: () => "[]" },
     );
     const first = await handle(new Uint8Array([1]));

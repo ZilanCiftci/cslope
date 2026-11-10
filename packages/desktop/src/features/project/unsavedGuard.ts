@@ -39,6 +39,15 @@ export function markProjectSaved(state: AppState, created: string): void {
 }
 
 /**
+ * Tell the user that a project action failed and why: "Unable to <action>:
+ * <the error's message>". The app's file actions report errors this way.
+ */
+export function alertFailure(action: string, err: unknown): void {
+  const msg = err instanceof Error ? err.message : "Unknown error";
+  window.alert(`Unable to ${action}: ${msg}`);
+}
+
+/**
  * Save the current project through Electron (Save As when `saveAs` or
  * when the project has no file yet).  Returns true when the file was
  * written; reports write errors to the user.
@@ -56,8 +65,7 @@ export async function saveProjectInElectron(saveAs = false): Promise<boolean> {
     if (saved) markProjectSaved(state, created);
     return saved;
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
-    window.alert(`Unable to save project: ${msg}`);
+    alertFailure("save project", err);
     return false;
   }
 }

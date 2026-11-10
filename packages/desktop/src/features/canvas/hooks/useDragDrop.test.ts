@@ -7,7 +7,7 @@ vi.mock("../../../utils/is-electron", () => ({
     return electron.value;
   },
 }));
-const confirm = vi.hoisted(() => ({ fn: vi.fn(async () => true) }));
+const confirm = vi.hoisted(() => ({ fn: vi.fn(() => Promise.resolve(true)) }));
 vi.mock("../../project/unsavedGuard", () => ({ confirmUnsavedChanges: () => confirm.fn() }));
 
 import { useDragDrop } from "./useDragDrop";
@@ -104,7 +104,7 @@ describe("useDragDrop", () => {
   it("reads the native path in the desktop app and confirms the open", async () => {
     electron.value = true;
     const text = projectText(-80);
-    const openDroppedFile = vi.fn(async () => new TextEncoder().encode(text));
+    const openDroppedFile = vi.fn(() => Promise.resolve(new TextEncoder().encode(text)));
     const confirmFileOpened = vi.fn();
     (window as unknown as { cslope: unknown }).cslope = { openDroppedFile, confirmFileOpened };
     renderHook(() => useDragDrop());
@@ -130,7 +130,7 @@ describe("useDragDrop", () => {
   it("opens the project file the desktop app was given (double-click), at mount and when told", async () => {
     electron.value = true;
     const requested: Uint8Array[] = [new TextEncoder().encode(projectText(-82))];
-    const openRequestedFile = vi.fn(async () => requested.shift() ?? null);
+    const openRequestedFile = vi.fn(() => Promise.resolve(requested.shift() ?? null));
     let notify: (() => void) | undefined;
     const unsubscribe = vi.fn();
     const onOpenFileRequested = vi.fn((fn: () => void) => {
@@ -145,7 +145,7 @@ describe("useDragDrop", () => {
     expect(confirmFileOpened).toHaveBeenCalledTimes(1);
     // One handed over later (second launch).
     requested.push(new TextEncoder().encode(projectText(-83)));
-    await act(async () => notify?.());
+    await act(() => Promise.resolve(notify?.()));
     await waitFor(() => expect(firstX()).toBe(-83));
     expect(confirmFileOpened).toHaveBeenCalledTimes(2);
     unmount();

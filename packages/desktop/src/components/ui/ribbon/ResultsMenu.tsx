@@ -550,18 +550,19 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                       const reader = new FileReader();
                       reader.onload = () => {
                         try {
-                          const data = JSON.parse(reader.result as string);
-                          if (
-                            !data?.resultViewSettings ||
-                            typeof data.resultViewSettings !== "object"
-                          ) {
+                          const data: unknown = JSON.parse(reader.result as string);
+                          const settings: unknown =
+                            data && typeof data === "object" && "resultViewSettings" in data
+                              ? data.resultViewSettings
+                              : undefined;
+                          if (!settings || typeof settings !== "object") {
                             alert("Invalid template file.");
                             return;
                           }
                           // Validate like a project file; unset optional
                           // fields so values from the current view don't
                           // leak into the template's settings.
-                          const imported = normalizeResultView(data.resultViewSettings);
+                          const imported = normalizeResultView(settings);
                           setRvs({
                             gridSpacing: undefined,
                             gridLineSpacing: undefined,

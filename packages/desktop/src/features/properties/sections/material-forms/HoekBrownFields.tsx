@@ -28,7 +28,7 @@ export function HoekBrownFields({ model, onChange, modelExpressions, parameterVa
         value={value}
         expression={modelExpressions?.[key]}
         vars={parameterValues}
-        onValueChange={(v) => onChange({ [key]: v } as Partial<HoekBrownModel>)}
+        onValueChange={(v) => onChange({ [key]: v })}
         onExpressionChange={(expr) => onExpressionChange(key, expr)}
         min={min}
         fallbackValue={fallback}

@@ -23,7 +23,7 @@ function Harness() {
 
 const renderWindow = () => render(<Harness />);
 
-const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+const input = (label: string) => screen.getByLabelText<HTMLInputElement>(label);
 
 function type(label: string, value: string) {
   const el = input(label);
@@ -56,7 +56,7 @@ describe("Sensitivity window", () => {
 
   it("lists parameters and material values with ±20 % as the default range", () => {
     renderWindow();
-    const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>("Variable");
     expect([...select.options].map((o) => o.textContent)).toEqual([
       "Parameter H, now 10",
       "Clay: γ (kN/m³), now 18",
@@ -72,7 +72,7 @@ describe("Sensitivity window", () => {
 
   it("resets the range when another variable is chosen (±5 around zero)", () => {
     renderWindow();
-    const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>("Variable");
     // A parameter has no unit; a material value shows its unit in the labels.
     expect(screen.getByText("From")).toBeInTheDocument();
     fireEvent.change(select, { target: { value: select.options[2].value } });
@@ -87,7 +87,7 @@ describe("Sensitivity window", () => {
 
   it("runs the model for evenly spaced values of the chosen variable", () => {
     renderWindow();
-    const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>("Variable");
     fireEvent.change(select, { target: { value: select.options[2].value } });
     type("From", "10");
     type("To", "14");
@@ -153,7 +153,7 @@ describe("Sensitivity window", () => {
     fireEvent.click(screen.getByRole("button", { name: "Export CSV" }));
     const [filename, data] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(`${useAppStore.getState().models[0].name} sensitivity.csv`);
-    const csv = String(data);
+    const csv = data as string;
     expect(csv.startsWith("﻿Parameter H,F,Note")).toBe(true);
     expect(csv).toContain("8,1.2346");
     expect(csv).toContain("No valid surface");
@@ -168,10 +168,10 @@ describe("Sensitivity window", () => {
 
   it("follows edits of the model: a variable that is gone gives way to the first one", () => {
     renderWindow();
-    const select = screen.getByLabelText("Variable") as HTMLSelectElement;
+    const select = screen.getByLabelText<HTMLSelectElement>("Variable");
     fireEvent.change(select, { target: { value: select.options[3].value } });
     act(() => useAppStore.setState({ materials: [{ ...DEFAULT_MATERIAL, name: "Silt", model: { ...DEFAULT_MATERIAL.model, frictionAngle: undefined } as never }] }));
-    expect((screen.getByLabelText("Variable") as HTMLSelectElement).value).toBe("p:H");
+    expect((screen.getByLabelText<HTMLSelectElement>("Variable")).value).toBe("p:H");
     expect(input("From").value).toBe("8");
   });
 });

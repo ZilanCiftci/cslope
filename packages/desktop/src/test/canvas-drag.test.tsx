@@ -14,10 +14,13 @@ function toScreen([x, y]: [number, number]): [number, number] {
 
 // Fake timers: a drag runs a requestAnimationFrame loop, and waiting for it
 // on real timers inside act() hung under load.
-const frames = async (n: number) =>
+// (a promise: the caller's await also lets the microtasks the frames queued run)
+const frames = (n: number): Promise<void> => {
   act(() => {
     vi.advanceTimersByTime(20 * n);
   });
+  return Promise.resolve();
+};
 
 describe("dragging points on the edit canvas", () => {
   beforeEach(async () => {
@@ -32,7 +35,7 @@ describe("dragging points on the edit canvas", () => {
       x: 0,
       y: 0,
       toJSON: () => ({}),
-    } as DOMRect);
+    });
     // Full 2D context stand-in: every method is a no-op.
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
       () =>
@@ -176,7 +179,7 @@ describe("dragging points on the edit canvas", () => {
     expect(s.materialBoundaries[0].coordinates[0]).toEqual(s.coordinates[2]);
   });
 
-  it("zooms on Ctrl+wheel and suppresses the browser default", async () => {
+  it("zooms on Ctrl+wheel and suppresses the browser default", () => {
     const canvas = screen.getByTestId("slope-canvas");
     const before = useAppStore.getState().editViewScale;
     const event = new WheelEvent("wheel", {
@@ -254,7 +257,7 @@ describe("dragging points on the edit canvas", () => {
       expect(planes()[1].points![1][1]).toBeCloseTo(1, 6);
     });
 
-    it("adds a point on a segment and deletes a vertex from the context menu", async () => {
+    it("adds a point on a segment and deletes a vertex from the context menu", () => {
       const canvas = screen.getByTestId("slope-canvas");
       // On the segment (12, 2)–(22, 5), at x = 17 (y = 3.5).
       const [ex, ey] = toScreen([17, 3.5]);

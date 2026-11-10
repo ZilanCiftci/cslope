@@ -322,7 +322,7 @@ function criticalPlane(slope: Slope): Plane | null {
   const valid = slope.search.filter((p) => p.fos != null);
   if (valid.length === 0) return null;
   const best = valid.reduce((a, b) => (b.fos! < a.fos! ? b : a));
-  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc as Pt, rc: best.rc as Pt, fos: best.fos!, points: best.points as Pt[] | undefined };
+  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc, rc: best.rc, fos: best.fos!, points: best.points };
 }
 
 function niceStep(range: number, target = 6): number {
@@ -356,7 +356,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value) && canon.waterTable.followBoundary !== true
       ? [...(canon.waterTable.value as Pt[])].sort((a, b) => a[0] - b[0])
       : null;
-  const ponds = mainWater ? freeWaterPolygons(mainWater, canon.coordinates as Pt[]) : [];
+  const ponds = mainWater ? freeWaterPolygons(mainWater, canon.coordinates) : [];
   let y1 = Math.max(...ys0, ...ponds.flat().map((p) => p[1]));
   const modelH = y1 - y0;
   if (plane && plane.cy - y1 < 0.8 * Math.max(modelH, (x1 - x0) * 0.3)) {
@@ -395,7 +395,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     const inFace = (p: Pt) =>
       isPointInPolygon(p[0], p[1], fxs, fys) &&
       !face.holes.some((h) => isPointInPolygon(p[0], p[1], h.map((c) => c[0]), h.map((c) => c[1])));
-    const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point as Pt));
+    const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point));
     const idx = hit ? matIndex(hit.materialName) : 0;
     pdf.setFillColor(...MATERIAL_FILLS[idx % MATERIAL_FILLS.length]);
     const rings = [face.outer, ...face.holes];
@@ -449,9 +449,9 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   // Water lines (continued horizontally to the model edges, as analyzed).
   const waterLines: Pt[][] = [];
   if (canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value)) {
-    waterLines.push(canon.waterTable.value as Pt[]);
+    waterLines.push(canon.waterTable.value);
   }
-  for (const wt of canon.waterTables ?? []) waterLines.push(wt.coordinates as Pt[]);
+  for (const wt of canon.waterTables ?? []) waterLines.push(wt.coordinates);
   for (const line of waterLines) {
     const sorted = [...line].sort((a, b) => a[0] - b[0]);
     pdf.setDrawColor(...WATER);

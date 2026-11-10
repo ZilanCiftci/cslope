@@ -83,7 +83,7 @@ export function FileMenu({
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          setSummary({ title: `Import of ${file.name}`, text: importDxf(String(reader.result ?? ""), file.name) });
+          setSummary({ title: `Import of ${file.name}`, text: importDxf(typeof reader.result === "string" ? reader.result : "", file.name) });
         } catch (err) {
           failure(`Import of ${file.name}`, err);
         }
@@ -143,7 +143,7 @@ export function FileMenu({
       if (!ctrl) return;
       if (e.key === "n" || e.key === "N") {
         e.preventDefault();
-        handleNew();
+        void handleNew();
       } else if (e.key === "o" || e.key === "O") {
         e.preventDefault();
         void handleOpen();
@@ -193,14 +193,14 @@ export function FileMenu({
                 icon={<NewIcon {...LARGE_ICON} />}
                 label="New"
                 shortcut="Ctrl+N"
-                onClick={handleNew}
+                onClick={() => void handleNew()}
               />
               <RibbonButton
                 icon={<OpenIcon {...LARGE_ICON} />}
                 label="Open"
                 tooltip="Open…"
                 shortcut="Ctrl+O"
-                onClick={handleOpen}
+                onClick={() => void handleOpen()}
               />
               <RibbonStack>
                 <RibbonMenuButton
@@ -236,14 +236,14 @@ export function FileMenu({
                 icon={<SaveIcon {...LARGE_ICON} />}
                 label="Save"
                 shortcut="Ctrl+S"
-                onClick={handleSave}
+                onClick={() => void handleSave()}
               />
               <RibbonStack>
                 <RibbonSmallButton
                   icon={<SaveAsIcon {...SMALL_ICON} />}
                   label="Save as…"
                   shortcut="Ctrl+Shift+S"
-                  onClick={handleSaveAs}
+                  onClick={() => void handleSaveAs()}
                 />
                 <RibbonSmallButton
                   icon={<SaveAnonymizedIcon {...SMALL_ICON} />}

@@ -130,7 +130,7 @@ export function ExpressionNumericInput({
         ...(inputProps.style ?? {}),
         borderColor: hasError
           ? "var(--color-vsc-error)"
-          : (inputProps.style as { borderColor?: string } | undefined)
+          : (inputProps.style)
               ?.borderColor,
       }}
     />

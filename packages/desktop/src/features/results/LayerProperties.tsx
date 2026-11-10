@@ -118,7 +118,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
     <Field label="Color" group>
       <ColorSwatches
         value={styles[key]?.color}
-        onChange={(color) => set(key, { color } as Partial<NonNullable<ResultLayerStyles[K]>>)}
+        onChange={(color) => set(key, { color })}
         defaultTitle={title}
       />
     </Field>

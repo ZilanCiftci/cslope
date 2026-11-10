@@ -17,7 +17,7 @@ function hydrate(parameters: ParameterDef[]) {
 }
 
 const names = () =>
-  (screen.queryAllByLabelText("Parameter name") as HTMLInputElement[]).map(
+  (screen.queryAllByLabelText<HTMLInputElement>("Parameter name")).map(
     (i) => i.value,
   );
 
