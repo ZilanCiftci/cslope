@@ -425,10 +425,8 @@ function withoutArchive(file: ProjectFile, layout: OpenedProject["layout"], mani
     layout,
     manifest,
     assets: [],
-    readAsset: async (id) => {
-      throw new Error(`The project has no attachment ${id}.`);
-    },
-    readThumbnail: async () => null,
+    readAsset: (id) => Promise.reject(new Error(`The project has no attachment ${id}.`)),
+    readThumbnail: () => Promise.resolve(null),
     results: new Map(),
   };
 }

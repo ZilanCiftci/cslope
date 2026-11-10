@@ -433,7 +433,7 @@ function ModelFields({
       return (
         <MohrCoulombFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -443,7 +443,7 @@ function ModelFields({
       return (
         <UndrainedFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -453,7 +453,7 @@ function ModelFields({
       return (
         <HighStrengthFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -463,7 +463,7 @@ function ModelFields({
       return (
         <ImpenetrableFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -473,7 +473,7 @@ function ModelFields({
       return (
         <SpatialMCFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -483,7 +483,7 @@ function ModelFields({
       return (
         <AnisotropicFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -493,7 +493,7 @@ function ModelFields({
       return (
         <SfDepthFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -503,7 +503,7 @@ function ModelFields({
       return (
         <SfDatumFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -513,7 +513,7 @@ function ModelFields({
       return (
         <LimeCementFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -523,7 +523,7 @@ function ModelFields({
       return (
         <HoekBrownFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -533,7 +533,7 @@ function ModelFields({
       return (
         <ShansepFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}
@@ -543,7 +543,7 @@ function ModelFields({
       return (
         <ShearNormalFields
           model={model}
-          onChange={onChange as (p: Partial<typeof model>) => void}
+          onChange={onChange}
           modelExpressions={modelExpressions}
           parameterValues={parameterValues}
           onExpressionChange={onExpressionChange}

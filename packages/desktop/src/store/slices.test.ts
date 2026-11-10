@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useAppStore } from "./app-store";
 import { INITIAL_MODEL } from "./slices/modelsSlice";
 import { stopIdleWorkers } from "./analysis-workers";
-import type { ModelEntry } from "./types";
 import { PLOT_MARGINS } from "./defaults";
 
 function clone<T>(value: T): T {
@@ -185,7 +184,7 @@ describe("store slices", () => {
     Object.defineProperty(globalThis, "Worker", {
       configurable: true,
       writable: true,
-      value: FakeWorker as unknown as typeof Worker,
+      value: FakeWorker,
     });
 
     try {
@@ -1411,7 +1410,7 @@ describe("store slices", () => {
       // No mode, orientation, projectInfo, resultViewSettings, etc.
     };
     useAppStore.setState({
-      models: [...store.models, legacyModel as ModelEntry],
+      models: [...store.models, legacyModel],
     });
 
     // Switch to the legacy model — exercises ?? fallbacks in mapModelToState

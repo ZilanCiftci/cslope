@@ -105,7 +105,7 @@ describe("paperTopBand", () => {
 });
 
 describe("marksClearOfTitleBlock", () => {
-  const lock = { bottomLeft: [0, 0], topRight: [100, 70] } as ViewLock;
+  const lock: ViewLock = { bottomLeft: [0, 0], topRight: [100, 70] };
   const annotations = DEFAULT_RESULT_VIEW_SETTINGS.annotations;
   const top = 70 * (1 - paperTopBand(annotations));
   const label = (y: number) => [{ at: [50, y] as [number, number], rightPx: 40, upPx: 14 }];

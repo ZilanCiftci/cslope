@@ -27,7 +27,7 @@ import { runDocument } from "./run-document";
 beforeAll(() => initEngine());
 
 /** The committed fixtures (scripts/write-fixtures.ts), as text. */
-const fixtures = import.meta.glob("./fixtures/embankment/*.json", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const fixtures = import.meta.glob<string>("./fixtures/embankment/*.json", { query: "?raw", import: "default", eager: true });
 const expected = JSON.parse(fixtures["./fixtures/embankment/expected.json"] ?? "{}") as Record<string, { fos: number; fosLabel: string }>;
 
 const base = EMBANKMENT_EXAMPLES["clay-3m"];

@@ -38,10 +38,10 @@ export function ensurePdfFonts(pdf: FontTarget): void {
   const added = new Set<string>();
   for (const [file, data, style] of FACES) {
     if (!added.has(file)) {
-      pdf.addFileToVFS!(file, base64(data));
+      pdf.addFileToVFS(file, base64(data));
       added.add(file);
     }
-    pdf.addFont!(file, PDF_SANS, style);
+    pdf.addFont(file, PDF_SANS, style);
   }
 }
 

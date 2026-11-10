@@ -515,7 +515,7 @@ describe(".gsz export", () => {
     udls: [{ magnitude: 20, x1: 2, x2: 8 }],
     lineLoads: [{ magnitude: 40, x: 5 }],
     analysisLimits: { entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
-  } as SlopeDefinition;
+  };
   const model = modelFromDefinition(def, { id: "m", name: "Section A", options: { method: "Morgenstern-Price", intersliceFunction: "constant" } });
 
   it("writes the regions, materials, water, loads and search, and reads back the same slope", async () => {
@@ -544,7 +544,7 @@ describe(".gsz export", () => {
           { magnitude: 20, x: 25, angle: -45, y: 5 },
           { magnitude: 10, x: 12, angle: 120 },
         ],
-      } as SlopeDefinition,
+      },
       { id: "m", name: "Section A" },
     );
     // the import into the model keeps the angle and the point
@@ -596,7 +596,7 @@ describe(".gsz export", () => {
           def.materials[1],
         ],
         rapidDrawdown: { waterBefore: [[0, 9], [30, 9]] },
-      } as SlopeDefinition,
+      },
       { id: "m", name: "Section A" },
     );
     expect(rd.piezometricLine.rapidDrawdown).toEqual({ waterBefore: [[0, 9], [30, 9]] });
@@ -657,7 +657,7 @@ describe(".gsz export", () => {
 
   it("writes given circles and surfaces analyzed alone as fully specified slip surfaces, and notes them when the model also searches", async () => {
     const circle = { cx: 16, cy: 18, radius: 15 };
-    const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "C", options: { method: "Bishop" } });
+    const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true }, { id: "m", name: "C", options: { method: "Bishop" } });
     const { xml, notes } = modelToGszXml(onCircle);
     expect(xml).toContain("<Option>FullySpecified</Option>");
     expect(xml).toMatch(/<Axis ID="\d+" \/>/);
@@ -669,15 +669,15 @@ describe(".gsz export", () => {
     // the points are on the circle and reach above the ground at both ends
     expect(surface.points.every(([x, y]) => Math.abs(Math.hypot(x - 16, y - 18) - 15) < 1e-9)).toBe(true);
     // a polyline in 2° steps: the factor of safety of the circle within 0.2 %
-    const f0 = fos({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { method: "Bishop" });
+    const f0 = fos({ ...def, customSearchPlanes: [circle], customPlanesOnly: true }, { method: "Bishop" });
     expect(Math.abs(fos(imp.definition, { method: "Bishop" }) / f0 - 1)).toBeLessThan(2e-3);
     // a surface: its points, no axis
     const pts: [number, number][] = [[4, 10], [12, 4], [22, 3.5], [27, 5]];
-    const onSurface = modelFromDefinition({ ...def, customSurfaces: [{ points: pts }], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "S" });
+    const onSurface = modelFromDefinition({ ...def, customSurfaces: [{ points: pts }], customPlanesOnly: true }, { id: "m", name: "S" });
     const [back] = await gszImports(modelToGsz(onSurface).bytes, "S.gsz");
     expect(back.definition.customSurfaces).toEqual([{ points: pts }]);
     // with the search as well: not written, with a note
-    const both = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: false } as SlopeDefinition, { id: "m", name: "B" });
+    const both = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: false }, { id: "m", name: "B" });
     const out = modelToGszXml(both);
     expect(out.xml).not.toContain("FullySpecified");
     expect(out.notes.join(" ")).toMatch(/custom slip surfaces are not written/);
@@ -744,12 +744,12 @@ describe(".gsz export", () => {
     expect(imp.definition.analysisLimits).toEqual(def.analysisLimits);
     expect(imp.definition.orientation ?? "ltr").toBe("ltr");
     // sliding to the left is written, and read back
-    const rtl = modelFromDefinition({ ...def, orientation: "rtl", coordinates: def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]).reverse(), analysisLimits: undefined } as SlopeDefinition, { id: "m", name: "L" });
+    const rtl = modelFromDefinition({ ...def, orientation: "rtl", coordinates: def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]).reverse(), analysisLimits: undefined }, { id: "m", name: "L" });
     expect(modelToGszXml(rtl).xml).toContain("<DirectionOfSlip>RightToLeft</DirectionOfSlip>");
     const [left] = await gszImports(modelToGsz(rtl).bytes, "L.gsz");
     expect(left.definition.orientation).toBe("rtl");
     // dry: no pore pressure option and no empty lists
-    const dry = modelFromDefinition({ ...def, waterTable: undefined, udls: [], lineLoads: [] } as SlopeDefinition, { id: "m", name: "D" });
+    const dry = modelFromDefinition({ ...def, waterTable: undefined, udls: [], lineLoads: [] }, { id: "m", name: "D" });
     const dryXml = modelToGszXml(dry).xml;
     expect(dryXml).not.toContain("ResultInputInfo");
     expect(tags(parse(dryXml).querySelector("StabilityItem > Entry"))).toEqual(["SlipSurface", "Seismic"]);

@@ -77,7 +77,7 @@ function effectiveOptions(options: Partial<AnalysisOptions> = {}): Partial<Analy
     Object.entries(o)
       .filter(([, v]) => v !== undefined)
       .sort(([a], [b]) => a.localeCompare(b)),
-  ) as Partial<AnalysisOptions>;
+  );
 }
 
 /** Options that choose the method rather than describe the problem. */

@@ -42,7 +42,7 @@ function taylorResult(over: Partial<ReliabilityResult> = {}): ReliabilityResult 
     surface: {} as ReliabilityResult["surface"],
     failed: 0,
     ...over,
-  } as ReliabilityResult;
+  };
 }
 
 beforeEach(() => {
@@ -69,10 +69,10 @@ describe("Probabilistic analysis window", () => {
   it("starts with the first strength value as a random variable with a typical σ", () => {
     renderWindow();
     expect(screen.getByText("Probabilistic analysis")).toBeInTheDocument();
-    const variable = screen.getByLabelText("Variable 1") as HTMLSelectElement;
+    const variable = screen.getByLabelText<HTMLSelectElement>("Variable 1");
     expect(variable.selectedOptions[0].textContent).toBe("Clay: c (kPa), mean 12");
     // σ = 25 % of c = 12.
-    expect((screen.getByLabelText("Standard deviation 1") as HTMLInputElement).value).toBe("3");
+    expect((screen.getByLabelText<HTMLInputElement>("Standard deviation 1")).value).toBe("3");
     // Distribution is fixed for the Taylor series.
     expect(screen.getByLabelText("Distribution 1")).toBeDisabled();
   });
@@ -101,10 +101,10 @@ describe("Probabilistic analysis window", () => {
     expect(screen.getByLabelText("Variable 3")).toBeInTheDocument();
     // γ, c and φ are all used now.
     expect(add).toBeDisabled();
-    const second = screen.getByLabelText("Variable 2") as HTMLSelectElement;
+    const second = screen.getByLabelText<HTMLSelectElement>("Variable 2");
     expect([...second.options].map((o) => o.textContent)).toEqual(["Clay: γ (kN/m³), mean 18"]);
     // φ = 0 gets σ = 1 instead of 0.
-    expect((screen.getByLabelText("Standard deviation 3") as HTMLInputElement).value).toBe("1");
+    expect((screen.getByLabelText<HTMLInputElement>("Standard deviation 3")).value).toBe("1");
 
     for (let i = 3; i >= 1; i--) fireEvent.click(screen.getByLabelText(`Remove variable ${i}`));
     expect(screen.getByRole("button", { name: "Run" })).toBeDisabled();
@@ -113,10 +113,10 @@ describe("Probabilistic analysis window", () => {
   it("switching the variable resets σ to the new value's default", () => {
     renderWindow();
     const select = screen.getByLabelText("Variable 1");
-    const gamma = [...(select as HTMLSelectElement).options].find((o) => o.textContent!.startsWith("Clay: γ"))!;
+    const gamma = [...(select as HTMLSelectElement).options].find((o) => o.textContent.startsWith("Clay: γ"))!;
     fireEvent.change(select, { target: { value: gamma.value } });
     // 5 % of γ = 18 → 0.9.
-    expect((screen.getByLabelText("Standard deviation 1") as HTMLInputElement).value).toBe("0.9");
+    expect((screen.getByLabelText<HTMLInputElement>("Standard deviation 1")).value).toBe("0.9");
   });
 
   it("runs Monte Carlo with samples, seed and distribution", () => {
@@ -152,7 +152,7 @@ describe("Probabilistic analysis window", () => {
     renderWindow();
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Run" }));
-    expect((run.mock.calls[0] as unknown[])[3]).toEqual({ method: "taylor", search: false });
+    expect((run.mock.calls[0])[3]).toEqual({ method: "taylor", search: false });
   });
 
   it("shows progress and cancels a running analysis", () => {
@@ -186,9 +186,9 @@ describe("Probabilistic analysis window", () => {
     fireEvent.click(screen.getByRole("menuitemradio", { name: "Decimal comma (1,5)" }));
     const [filename, data, type] = vi.mocked(downloadFile).mock.calls[0];
     expect(filename).toBe(`${useAppStore.getState().models[0].name} probabilistic.csv`);
-    expect(String(data).startsWith("﻿")).toBe(true);
-    expect(String(data)).toContain("Taylor series");
-    expect(String(data)).toContain(";");
+    expect((data as string).startsWith("﻿")).toBe(true);
+    expect(data as string).toContain("Taylor series");
+    expect(data as string).toContain(";");
     expect(type).toBe("text/csv;charset=utf-8");
   });
 

@@ -56,7 +56,7 @@ describe("GeometryDialogApp", () => {
     expect(bridge.callNames()).toContain("requestGeometryState");
     hydrate();
     expect(screen.getAllByLabelText(/^Point \d X$/)).toHaveLength(4);
-    expect((screen.getByLabelText("Point 3 X") as HTMLInputElement).value).toBe("20");
+    expect((screen.getByLabelText<HTMLInputElement>("Point 3 X")).value).toBe("20");
     expect(bridge.sentOf("sendGeometryChanged")).toEqual([]);
   });
 
@@ -134,7 +134,7 @@ describe("MaterialAssignmentDialogApp", () => {
     hydrate();
     expect(screen.getByText("Region 1")).toBeInTheDocument();
     expect(screen.getByText("Region 2")).toBeInTheDocument();
-    const selects = screen.getAllByRole("combobox") as HTMLSelectElement[];
+    const selects = screen.getAllByRole<HTMLSelectElement>("combobox");
     // Unassigned regions use the first material.
     expect(selects.map((s) => s.value)).toEqual(["m1", "m1"]);
     expect(bridge.sentOf("sendMaterialAssignmentChanged")).toEqual([]);
@@ -147,7 +147,7 @@ describe("MaterialAssignmentDialogApp", () => {
     expect(store().regionMaterials).toHaveLength(1);
     expect(store().regionMaterials[0].materialId).toBe("m2");
     expect(
-      (screen.getByLabelText("Material for region 2") as HTMLSelectElement).value,
+      (screen.getByLabelText<HTMLSelectElement>("Material for region 2")).value,
     ).toBe("m2");
     const sent = bridge.sentOf<{ regionMaterials: unknown[] }>(
       "sendMaterialAssignmentChanged",

@@ -100,7 +100,7 @@ describe("φb in the material table and the summary", () => {
     expect(strengthText({ ...mc, phiB: 15, maxSuction: 60 })).toBe("c' = 5 kPa, φ' = 30°; suction above the water line, φb = 15°, at most 60 kPa");
     expect(strengthText({ ...mc, phiB: 15 })).toMatch(/φb = 15°$/);
     expect(strengthText({ ...mc })).not.toMatch(/suction/);
-    expect(strengthText({ ...combinedDepth, drainedCohesion: undefined, drainedFrictionAngle: undefined } as MaterialModel)).not.toMatch(/suction/);
+    expect(strengthText({ ...combinedDepth, drainedCohesion: undefined, drainedFrictionAngle: undefined })).not.toMatch(/suction/);
     const s = buildAnalysisSummary({
       result: { minFOS: 1.2, criticalSurface: null, allSurfaces: [], criticalSlices: [], elapsedMs: 1 } as unknown as AnalysisResult,
       options: { ...DEFAULT_ANALYSIS_OPTIONS },

@@ -13,7 +13,7 @@ const cut = (extra: Partial<SlopeDefinition> = {}): SlopeDefinition => ({
   coordinates: [[0, 0], [0, 10], [10, 10], [15, 5], [30, 5], [30, 0]],
   materials: [{ name: "Clay", model: { kind: "undrained", unitWeight: 18, undrainedShearStrength: 20 } }],
   ...extra,
-}) as SlopeDefinition;
+});
 
 describe("analyzeFem", () => {
   it("returns the factor of safety with the mesh and the fields", () => {
@@ -32,7 +32,7 @@ describe("analyzeFem", () => {
   }, 60000);
 
   it("warns about non-associated flow at high friction angles", () => {
-    const def = cut({ materials: [{ name: "Sand", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 5, frictionAngle: 40 } }] } as Partial<SlopeDefinition>);
+    const def = cut({ materials: [{ name: "Sand", model: { kind: "mohr-coulomb", unitWeight: 20, cohesion: 5, frictionAngle: 40 } }] });
     const slope = buildSlope(toCanonicalSlopeDefinition(def));
     const r = analyzeFem(slope, { elementSize: 2.5, flowRule: "non-associated", fTolerance: 0.05 });
     expect(r.warnings.some((w) => w.includes("Davis B"))).toBe(true);
@@ -41,7 +41,7 @@ describe("analyzeFem", () => {
 
 describe("inputs the finite element analyses do not take", () => {
   it("warns that rᵤ is not included, naming the material", () => {
-    const def = cut({ materials: [{ name: "Clay", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 10, frictionAngle: 25, ru: 0.3 } }] } as Partial<SlopeDefinition>);
+    const def = cut({ materials: [{ name: "Clay", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 10, frictionAngle: 25, ru: 0.3 } }] });
     const r = analyzeFem(buildSlope(toCanonicalSlopeDefinition(def)), { elementSize: 2.5, fTolerance: 0.05 });
     expect(r.warnings.some((w) => w.includes("rᵤ") && w.includes("Clay"))).toBe(true);
   }, 60000);

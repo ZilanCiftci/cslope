@@ -36,10 +36,10 @@ describe("UdlDialogApp", () => {
       { id: "u1", magnitude: 12, x1: 1, x2: 3 },
       { id: "u2", magnitude: 5, x1: 4, x2: 6, expressions: { x2: "H*2" } },
     ]);
-    const mags = screen.getAllByLabelText("Load magnitude") as HTMLInputElement[];
+    const mags = screen.getAllByLabelText<HTMLInputElement>("Load magnitude");
     expect(mags.map((i) => i.value)).toEqual(["12", "5"]);
     // An expression is shown instead of the resolved value.
-    const x2s = screen.getAllByLabelText("Load x2") as HTMLInputElement[];
+    const x2s = screen.getAllByLabelText<HTMLInputElement>("Load x2");
     expect(x2s[1].value).toBe("H*2");
     expect(useAppStore.getState().parameters).toEqual(PARAMS);
   });
@@ -233,7 +233,7 @@ describe("LineLoadsDialogApp", () => {
   it("shows, edits and removes line loads", async () => {
     render(<LineLoadsDialogApp />);
     hydrate([], [{ id: "l1", magnitude: 50, x: 10 }]);
-    const mag = screen.getByLabelText("Line load magnitude") as HTMLInputElement;
+    const mag = screen.getByLabelText<HTMLInputElement>("Line load magnitude");
     expect(mag.value).toBe("50");
 
     await userEvent.clear(mag);

@@ -55,5 +55,5 @@ export function materialFromEngine(e: Omit<MaterialEntry, "key">): Material {
   m.color = e.color;
   m.model = e.model;
   Object.defineProperty(m, "_key", { value: registerMaterial(m as Material), enumerable: false });
-  return m as Material;
+  return m;
 }

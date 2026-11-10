@@ -80,7 +80,7 @@ export function normalizeLayerStyles(raw: unknown): ResultLayerStyles | undefine
     }
     if (Object.keys(clean).length > 0) out[layer] = clean;
   }
-  return Object.keys(out).length > 0 ? (out as ResultLayerStyles) : undefined;
+  return Object.keys(out).length > 0 ? (out) : undefined;
 }
 
 /**
@@ -96,7 +96,7 @@ export function layerStylePatch<K extends keyof ResultLayerStyles>(
   const merged: Record<string, unknown> = { ...(rvs.layerStyles?.[layer] ?? {}), ...patch };
   for (const k of Object.keys(merged)) if (merged[k] === undefined) delete merged[k];
   const styles: ResultLayerStyles = { ...(rvs.layerStyles ?? {}) };
-  if (Object.keys(merged).length > 0) styles[layer] = merged as ResultLayerStyles[K];
+  if (Object.keys(merged).length > 0) styles[layer] = merged;
   else delete styles[layer];
   return { layerStyles: Object.keys(styles).length > 0 ? styles : undefined };
 }

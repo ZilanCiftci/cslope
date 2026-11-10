@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
-import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+import { alertFailure, confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
 import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 
 /**
@@ -61,20 +61,25 @@ export function HelpMenu({ isOpen, onActivate, panelHost }: Props) {
   const [aboutOpen, setAboutOpen] = useState(false);
 
   // Replace the project with a set of models, as a new unsaved project.
+  // (never rejects: a failure is reported to the user)
   const loadModels = async (what: string, load: () => void) => {
-    const ok = await confirmReplace(`Open ${what} as a new project? The current project will be closed.`);
-    if (!ok) return;
-    adoptProjectAssets([]);
-    load();
-    useAppStore.temporal.getState().clear();
-    // The examples are a new, unsaved project: Ctrl+S must not write them
-    // over the file that was open before.
-    if (isElectron) window.cslope.menuNew();
+    try {
+      const ok = await confirmReplace(`Open ${what} as a new project? The current project will be closed.`);
+      if (!ok) return;
+      adoptProjectAssets([]);
+      load();
+      useAppStore.temporal.getState().clear();
+      // The examples are a new, unsaved project: Ctrl+S must not write them
+      // over the file that was open before.
+      if (isElectron) window.cslope.menuNew();
+    } catch (err) {
+      alertFailure(`open ${what}`, err);
+    }
   };
 
-  const handleLoadExamples = () => loadModels("the example models", () => useAppStore.getState().loadExamples());
+  const handleLoadExamples = () => void loadModels("the example models", () => useAppStore.getState().loadExamples());
   const handleLoadBenchmarks = () =>
-    loadModels("the verification problems", () => useAppStore.getState().loadBenchmarks());
+    void loadModels("the verification problems", () => useAppStore.getState().loadBenchmarks());
 
   const handleDocs = () => {
     openDocumentation();

@@ -117,7 +117,7 @@ describe("OptionsSection finite elements", () => {
     expect(screen.queryByRole("combobox", { name: "Flow rule" })).toBeNull();
     expect(screen.getByText("Run strength reduction (FE)")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "Strength reduction by finite elements" }));
-    const flowRule = screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement;
+    const flowRule = screen.getByRole<HTMLSelectElement>("combobox", { name: "Flow rule" });
     expect(flowRule.value).toBe("davis-b");
     expect(flowRule.selectedOptions[0].textContent).toBe("Davis B (recommended)");
     expect(useAppStore.getState().options.fem).toMatchObject({ enabled: true, flowRule: "davis-b" });
@@ -127,7 +127,7 @@ describe("OptionsSection finite elements", () => {
     useAppStore.getState().newProject();
     useAppStore.getState().setOptions({ fem: { ...DEFAULT_FEM_SETTINGS, enabled: true, flowRule: "non-associated" } });
     render(<OptionsSection plain />);
-    expect((screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement).value).toBe("non-associated");
+    expect((screen.getByRole<HTMLSelectElement>("combobox", { name: "Flow rule" })).value).toBe("non-associated");
   });
 });
 

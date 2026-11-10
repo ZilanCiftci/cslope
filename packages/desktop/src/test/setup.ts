@@ -14,7 +14,7 @@ globalThis.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
-} as unknown as typeof globalThis.ResizeObserver;
+};
 
 // Mock HTMLCanvasElement.getContext (not available without `canvas` npm package)
 HTMLCanvasElement.prototype.getContext = (() => {

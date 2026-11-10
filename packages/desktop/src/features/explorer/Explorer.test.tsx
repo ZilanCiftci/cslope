@@ -310,7 +310,7 @@ describe("Explorer — context menu", () => {
     expect(names()).toEqual(["Alpha"]);
   });
 
-  it("right-clicking an unselected model selects only it, and an outside click closes the menu", async () => {
+  it("right-clicking an unselected model selects only it, and an outside click closes the menu", () => {
     render(<Explorer />);
     fireEvent.contextMenu(row("Gamma"));
     expect(row("Gamma")).toHaveAttribute("aria-selected", "true");
@@ -373,7 +373,7 @@ describe("Explorer — drag and drop", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       top: 0, height: 20, left: 0, width: 100, bottom: 20, right: 100, x: 0, y: 0,
       toJSON: () => ({}),
-    } as DOMRect);
+    });
     fireEvent.dragStart(row("Alpha"));
     dragOverAt(row("Gamma"), 15);
     // The drop line under the target row.
@@ -495,7 +495,7 @@ describe("ProjectInfoDialog", () => {
     ...patch,
   });
 
-  const input = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+  const input = (label: string) => screen.getByLabelText<HTMLInputElement>(label);
 
   it("saves only the fields that were changed", async () => {
     const onSave = vi.fn();

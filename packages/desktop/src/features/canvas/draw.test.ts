@@ -166,7 +166,7 @@ function result(over: Partial<AnalysisResult> = {}): AnalysisResult {
     method: "Bishop",
     elapsedMs: 1,
     ...over,
-  } as AnalysisResult;
+  };
 }
 
 function rvs(over: Partial<ResultViewSettings> = {}): ResultViewSettings {

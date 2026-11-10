@@ -124,9 +124,9 @@ describe("ReinforcementDialogApp — elements", () => {
     const r = newReinforcement("r1", "anchor", COORDS, "ltr");
     hydrate([r]);
     // 10 m at 15°: x2 = 10 - 10·cos 15° = 0.3407…, y2 = 9 - 10·sin 15° = 6.4118…
-    const x2 = screen.getByLabelText("Reinforcement x2") as HTMLInputElement;
+    const x2 = screen.getByLabelText<HTMLInputElement>("Reinforcement x2");
     expect(x2.value).toBe("0.34");
-    expect((screen.getByLabelText("Reinforcement y2") as HTMLInputElement).value).toBe("6.41");
+    expect((screen.getByLabelText<HTMLInputElement>("Reinforcement y2")).value).toBe("6.41");
     expect(elements().getByText("0.34, 6.41")).toBeInTheDocument();
     // Focusing and leaving the field keeps the full stored value.
     await userEvent.click(x2);

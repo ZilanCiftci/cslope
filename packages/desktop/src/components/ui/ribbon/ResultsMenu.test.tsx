@@ -383,7 +383,7 @@ describe("ResultsMenu", () => {
     vi.spyOn(canvas, "getBoundingClientRect").mockReturnValue({
       left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0,
       toJSON: () => ({}),
-    } as DOMRect);
+    });
     renderMenu();
     await userEvent.click(screen.getByTitle("More export options"));
     await userEvent.click(screen.getByRole("button", { name: "Export as PDF…" }));
@@ -500,7 +500,7 @@ describe("ResultsMenu", () => {
         link.click = () => {};
       }
       return el;
-    }) as typeof document.createElement);
+    }));
     act(() => useAppStore.setState({ selectedAnnotationIds: ["a1"] }));
     renderMenu();
     await userEvent.click(screen.getByTitle("More export options"));

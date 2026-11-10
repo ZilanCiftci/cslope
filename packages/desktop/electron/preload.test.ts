@@ -7,7 +7,7 @@ const fake = vi.hoisted(() => {
   const listeners = new Map<string, ((...args: any[]) => void)[]>();
   const ipcRenderer = {
     send: vi.fn(),
-    invoke: vi.fn<(...args: any[]) => Promise<any>>(async () => "result"),
+    invoke: vi.fn<(...args: any[]) => Promise<any>>(() => Promise.resolve("result")),
     on: vi.fn((channel: string, fn: (...args: any[]) => void) => {
       listeners.set(channel, [...(listeners.get(channel) ?? []), fn]);
     }),

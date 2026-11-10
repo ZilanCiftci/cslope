@@ -20,7 +20,7 @@ describe("rapid drawdown (three-stage)", () => {
   });
 
   it("an upstream slope after drawdown: no higher than drained throughout; free-draining soil unchanged", () => {
-    const clay = (extra: object = {}): MaterialModel => ({ kind: "mohr-coulomb", unitWeight: 19, cohesion: 5, frictionAngle: 28, ...extra } as MaterialModel);
+    const clay = (extra: object = {}): MaterialModel => ({ kind: "mohr-coulomb", unitWeight: 19, cohesion: 5, frictionAngle: 28, ...extra });
     // a dam's upstream face (sliding to the left, towards the reservoir)
     const def = (m: MaterialModel, drawdown: boolean) => ({
       ...layered([[0, 0], [30, 15], [40, 15], [60, 15]], -10, [{ name: "C", topY: null, model: m }]),

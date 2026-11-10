@@ -43,7 +43,7 @@ describe("shallow cohesionless critical surface", () => {
     expect(shallowCohesionlessMessage([slice(1.5, 0, 30)], 0.7, 3)).toBeNull(); // deeper than 1 m
     expect(shallowCohesionlessMessage([slice(1.5, 0, 30)], 0.7, 20)).toMatch(/shallow/); // a tenth of a 20 m relief: 2 m
     // a long thin surface with one deeper slice: by its mean depth
-    expect(shallowCohesionlessMessage([...Array(9).fill(slice(0.3, 0, 30)), slice(1.2, 0, 30)], 0.7, 3)).toMatch(/at most 1.20 m/);
+    expect(shallowCohesionlessMessage([...Array<ReturnType<typeof slice>>(9).fill(slice(0.3, 0, 30)), slice(1.2, 0, 30)], 0.7, 3)).toMatch(/at most 1.20 m/);
     expect(shallowCohesionlessMessage([slice(0.5, 10, 0), slice(0.5, 0, 30)], 0.7, 3)).toMatch(/50 %/);
     expect(shallowCohesionlessMessage([slice(0.5, 10, 0), slice(0.5, 10, 0), slice(0.5, 0, 30)], 0.7, 3)).toBeNull();
     // combined clay (c′ = 0 with an undrained strength) is not cohesionless

@@ -32,12 +32,12 @@ function lane<T>(rand: () => number) {
   let handler: (message: T) => void = () => {};
   let chain = Promise.resolve();
   return {
-    send(message: T) {
+    send: (message: T) => {
       const copy = structuredClone(message);
       const ms = Math.floor(rand() * 3);
       chain = chain.then(() => new Promise<void>((resolve) => setTimeout(() => (handler(copy), resolve()), ms)));
     },
-    listen(h: (message: T) => void) {
+    listen: (h: (message: T) => void) => {
       handler = h;
     },
   };

@@ -1,6 +1,6 @@
 import { createPortal } from "react-dom";
 import { isProjectDirty, useAppStore } from "../../../store/app-store";
-import { confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
+import { alertFailure, confirmUnsavedChanges } from "../../../features/project/unsavedGuard";
 import { adoptProjectAssets } from "../../../features/drawings/asset-registry";
 
 /**
@@ -33,7 +33,7 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     }
   };
 
-  const handleResetStore = async () => {
+  const resetStore = async () => {
     const ok = await confirmReplace(
       "Reset the entire app store to defaults? This cannot be undone.",
     );
@@ -41,6 +41,9 @@ export function DevMenu({ isOpen, onActivate, panelHost }: Props) {
     adoptProjectAssets([]);
     useAppStore.getState().newProject();
     if (isElectron) window.cslope.menuNew();
+  };
+  const handleResetStore = () => {
+    resetStore().catch((err: unknown) => alertFailure("reset the store", err));
   };
 
   const handleLogState = () => {

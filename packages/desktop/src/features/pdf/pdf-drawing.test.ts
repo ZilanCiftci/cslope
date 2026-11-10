@@ -172,7 +172,7 @@ function result(over: Partial<AnalysisResult> = {}): AnalysisResult {
     method: "Bishop",
     elapsedMs: 1,
     ...over,
-  } as AnalysisResult;
+  };
 }
 
 const rvs = (over: Partial<ResultViewSettings> = {}): ResultViewSettings => ({
@@ -1033,7 +1033,7 @@ describe("drawAnnotations", () => {
 
   it("draws the material table cells with a colour swatch per material, right-anchored", () => {
     const rec = recorder();
-    const sand = { ...DEFAULT_MATERIAL, id: "sand", name: "Sand", color: "#eedd88" } as MaterialRow;
+    const sand = { ...DEFAULT_MATERIAL, id: "sand", name: "Sand", color: "#eedd88" };
     drawAnnotations(
       rec.pdf,
       tf,

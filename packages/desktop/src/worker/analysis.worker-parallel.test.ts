@@ -10,7 +10,6 @@ import {
   toCanonicalSlopeDefinition,
   webEndpoint,
   type AnalysisOptions,
-  type EvaluatorEndpoint,
   type RandomVariable,
   type SlopeDefinition,
 } from "@cslope/engine";
@@ -29,7 +28,7 @@ const handler = () => (self as unknown as { onmessage: (e: unknown) => Promise<v
 function evaluators(n: number): MessagePort[] {
   return Array.from({ length: n }, () => {
     const channel = new MessageChannel();
-    serveEvaluator(webEndpoint(channel.port1) as EvaluatorEndpoint);
+    serveEvaluator(webEndpoint(channel.port1));
     return channel.port2;
   });
 }
@@ -65,7 +64,7 @@ describe("analysis worker with evaluators", () => {
   ];
   for (const [label, extra] of cases) {
     it(`${label}: the same result as without`, async () => {
-      const options = { ...DEFAULT_ANALYSIS_OPTIONS, ...extra } as AnalysisOptions;
+      const options = { ...DEFAULT_ANALYSIS_OPTIONS, ...extra };
       const alone = await send({ type: "run-analysis", id: "a", slope, options });
       const shared = await send({ type: "run-analysis", id: "b", slope, options, evaluators: evaluators(2) });
       expect(shared).toMatchObject({ type: "analysis-complete", id: "b" });
@@ -91,7 +90,7 @@ describe("analysis worker with evaluators", () => {
   });
 
   it("an error with evaluators is reported as without", async () => {
-    const options = { ...DEFAULT_ANALYSIS_OPTIONS, iterations: 100 } as AnalysisOptions;
+    const options = { ...DEFAULT_ANALYSIS_OPTIONS, iterations: 100 };
     const msg = await send({ type: "run-analysis", id: "e", slope: { ...slope, coordinates: [] }, options, evaluators: evaluators(1) });
     expect(msg).toMatchObject({ type: "analysis-error", id: "e" });
   });

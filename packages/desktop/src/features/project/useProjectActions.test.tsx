@@ -65,7 +65,7 @@ describe("useProjectActions", () => {
     const { result } = renderHook(() => useProjectActions("cslope-project"));
 
     act(() => {
-      result.current.handleNew();
+      void result.current.handleNew();
     });
 
     // newProject resets to a single default model
@@ -79,7 +79,7 @@ describe("useProjectActions", () => {
     const off = onProjectAssetsReplaced(replaced);
     const { result } = renderHook(() => useProjectActions("cslope-project"));
     act(() => {
-      result.current.handleNew();
+      void result.current.handleNew();
     });
     off();
     expect(openedProjectAssets()).toEqual([]);

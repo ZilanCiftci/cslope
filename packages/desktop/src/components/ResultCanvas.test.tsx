@@ -28,7 +28,7 @@ function fakeResult(): AnalysisResult {
     criticalSlices: [],
     method: "Bishop",
     elapsedMs: 1,
-  } as AnalysisResult;
+  };
 }
 
 const paper = () => useAppStore.getState().resultViewSettings.paperFrame;
@@ -55,9 +55,9 @@ beforeEach(() => {
     x: 0,
     y: 0,
     toJSON: () => ({}),
-  } as DOMRect);
+  });
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
-    () => createRecordingContext(W, H).ctx as never,
+    () => createRecordingContext(W, H).ctx,
   );
   HTMLElement.prototype.setPointerCapture = vi.fn();
   HTMLElement.prototype.releasePointerCapture = vi.fn();
@@ -197,7 +197,7 @@ describe("ResultCanvas paper zoom and pan", () => {
         analysisLimits: { ...s.analysisLimits, enabled: false },
         udls: [],
         lineLoads: [],
-        result: { ...fakeResult(), criticalSurface: surface, allSurfaces: [surface] } as AnalysisResult,
+        result: { ...fakeResult(), criticalSurface: surface, allSurfaces: [surface] },
         resultViewSettings: { ...s.resultViewSettings, viewLock: undefined, showFosLabel: false },
       })),
     );

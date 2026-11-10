@@ -82,7 +82,7 @@ function soilJson(id: string, name: string, model: MaterialModel, notes: string[
   if (above !== below && above.type === below.type && JSON.stringify(above) !== JSON.stringify(below)) {
     notes.push(`Material "${name}": the strength above the water line is of the same kind as below it with other parameters; the format has one set per kind, so the one below the water is written for both.`);
   }
-  const pick = <K extends keyof SoilStrength>(k: K) => (below[k] ?? above[k]) as SoilStrength[K];
+  const pick = <K extends keyof SoilStrength>(k: K) => (below[k] ?? above[k]);
   const mc = pick("mc") ?? { c: 0, phi: 0 };
   const su = pick("su") ?? { ratio: 0, exponent: 0 };
   const table = (pts: Pt[] | undefined, key: string) => (pts ?? []).map(([s, v]) => ({ EffectiveStress: s, [key]: v }));
@@ -320,7 +320,7 @@ export function modelToStixDocuments(model: ModelEntry): { docs: Map<string, Jso
 
   // stages: the earlier one (its stress history) and the model's
   const stages: { label: string; docs: StageDocs }[] = [];
-  if (earlier) stages.push({ label: "Earlier stage", docs: stageDocs(earlier as SlopeDefinition, id, soilOf, () => false, seismic, notes) });
+  if (earlier) stages.push({ label: "Earlier stage", docs: stageDocs(earlier, id, soilOf, () => false, seismic, notes) });
   stages.push({ label: earlier ? "Stage 2" : "Stage 1", docs: stageDocs(def, id, soilOf, (name) => !!earlier && fromEarlier(name), seismic, notes) });
   if (model.piezometricLine?.rapidDrawdown) notes.push("Rapid drawdown is not written; the water written is the water after drawdown.");
 

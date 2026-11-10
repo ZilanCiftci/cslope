@@ -25,7 +25,7 @@ const base = (extra: Partial<SlopeDefinition> = {}): SlopeDefinition =>
     customSearchPlanes: [{ cx: 14, cy: 16, radius: 12 }],
     customPlanesOnly: true,
     ...extra,
-  }) as SlopeDefinition;
+  });
 const groundAt = (x: number) => (x <= 10 ? 10 : x >= 20 ? 5 : 10 - (x - 10) / 2);
 const fos = (def: SlopeDefinition, method: "Bishop" | "Morgenstern-Price" = "Morgenstern-Price") => {
   const s = buildSlope(toCanonicalSlopeDefinition(def));

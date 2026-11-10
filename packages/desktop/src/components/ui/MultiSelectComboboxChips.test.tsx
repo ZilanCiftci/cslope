@@ -36,7 +36,7 @@ function Harness({ initial = [] as string[] }) {
 }
 
 const combobox = () => screen.getByRole("combobox");
-const input = () => screen.getByRole("textbox") as HTMLInputElement;
+const input = () => screen.getByRole<HTMLInputElement>("textbox");
 const chipLabels = () =>
   screen
     .queryAllByRole("button", { name: /^Remove / })
