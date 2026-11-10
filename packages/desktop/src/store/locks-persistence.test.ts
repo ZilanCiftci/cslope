@@ -75,7 +75,7 @@ describe("locks in a .cslp archive", () => {
     const locks = lockSome();
     s().saveCurrentModel();
     const bytes = await buildProjectArchive(s());
-    const zip = await openZip(bytes);
+    const zip = openZip(bytes);
     const id = s().activeModelId;
     const modelJson = JSON.parse(new TextDecoder().decode(await zip.read(`models/${id}/model.json`)));
     expect(modelJson.locks).toEqual(locks);
@@ -86,7 +86,7 @@ describe("locks in a .cslp archive", () => {
   it("have no entry for a model with nothing locked", async () => {
     s().saveCurrentModel();
     const bytes = await buildProjectArchive(s());
-    const zip = await openZip(bytes);
+    const zip = openZip(bytes);
     const modelJson = JSON.parse(new TextDecoder().decode(await zip.read(`models/${s().activeModelId}/model.json`)));
     expect(modelJson).not.toHaveProperty("locks");
     expect((await readProjectBytes(bytes)).models[0].locks).toBeUndefined();
@@ -104,7 +104,7 @@ describe("imported models", () => {
     ],
     materials: [{ name: "Clay", color: "#a08060", model: { kind: "mohr-coulomb", unitWeight: 18, cohesion: 10, frictionAngle: 25 } }],
     materialBoundaries: [{ coordinates: [[0, 5], [30, 5]], materialName: "Clay" }],
-  } as SlopeDefinition;
+  };
 
   it("from another program's file start with the exterior and material boundaries locked", () => {
     addImportedModels([{ name: "Imported", definition, options: {}, notes: [] }], "a.gsz", "circle");

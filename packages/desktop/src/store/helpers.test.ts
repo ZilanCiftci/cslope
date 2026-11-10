@@ -208,7 +208,7 @@ describe("buildSlopeDTO", () => {
   it("includes UDLs when present", () => {
     const state = makeMinimalState({
       udls: [{ id: "u1", magnitude: 10, x1: 2, x2: 8 }],
-    } as Partial<AppState>);
+    });
     const dto = buildSlopeDTO(state);
     expect(dto.udls).toBeDefined();
     expect(dto.udls!.length).toBe(1);
@@ -224,7 +224,7 @@ describe("buildSlopeDTO", () => {
   it("includes line loads when present", () => {
     const state = makeMinimalState({
       lineLoads: [{ id: "l1", magnitude: 25, x: 5 }],
-    } as Partial<AppState>);
+    });
     const dto = buildSlopeDTO(state);
     expect(dto.lineLoads).toBeDefined();
     expect(dto.lineLoads!.length).toBe(1);
@@ -237,7 +237,7 @@ describe("buildSlopeDTO", () => {
         { id: "l2", magnitude: 10, x: 2, angle: 90, y: 4 },
         { id: "l3", magnitude: 10, x: 2, angle: -20 },
       ],
-    } as Partial<AppState>);
+    });
     expect(buildSlopeDTO(state).lineLoads).toEqual([
       { magnitude: 25, x: 5 },
       { magnitude: 10, x: 2, angle: 90, y: 4 },
@@ -255,7 +255,7 @@ describe("buildSlopeDTO", () => {
     const state = makeMinimalState({
       customSearchPlanes: [{ id: "sp1", cx: 10, cy: 20, radius: 15 }],
       customPlanesOnly: true,
-    } as Partial<AppState>);
+    });
     const dto = buildSlopeDTO(state);
     expect(dto.customSearchPlanes).toBeDefined();
     expect(dto.customSearchPlanes!.length).toBe(1);

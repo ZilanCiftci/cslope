@@ -51,8 +51,8 @@ let ready = false;
 /** The bytes as a Uint8Array of this realm (jsdom replaces the typed arrays; WebAssembly refuses another realm's). */
 function ownBytes(source: BufferSource): Uint8Array<ArrayBuffer> {
   const view = ArrayBuffer.isView(source)
-    ? new Uint8Array(source.buffer as ArrayBuffer, source.byteOffset, source.byteLength)
-    : new Uint8Array(source as ArrayBuffer);
+    ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+    : new Uint8Array(source);
   const copy = new Uint8Array(view.length);
   copy.set(view);
   return copy;
@@ -75,7 +75,7 @@ export async function initProjectWriter(source?: string | URL | BufferSource | W
     // alone; the file name too, or Vite would emit the file as an asset
     const fs = "node:fs/promises";
     const file = "./wasm-project/cslope_project_wasm_bg.wasm";
-    const { readFile } = (await import(/* @vite-ignore */ fs)) as { readFile(path: URL): Promise<Uint8Array<ArrayBuffer>> };
+    const { readFile } = (await import(/* @vite-ignore */ fs)) as { readFile: (path: URL) => Promise<Uint8Array<ArrayBuffer>> };
     input = ownBytes(await readFile(new URL(file, import.meta.url)));
   } else if (typeof source === "string" || source instanceof URL) {
     input = fetch(source).then((response) => {

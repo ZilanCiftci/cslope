@@ -581,7 +581,7 @@ export function parseSlipSurfaceCsv(text: string): GszSlipResult[] {
       ...(Number.isFinite(weight) ? { weight } : {}),
       ...(Number.isInteger(n) ? { num: n } : {}),
       ...(Number.isFinite(dir) && dir !== 0 ? { direction: dir < 0 ? 1 : -1 } : {}),
-    } as GszSlipResult);
+    });
   }
   return out;
 }

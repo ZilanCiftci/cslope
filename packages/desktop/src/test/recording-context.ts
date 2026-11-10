@@ -219,7 +219,7 @@ export function createRecordingContext(
         width: String(text).length * charW * (size / 10),
         actualBoundingBoxAscent: size * 0.8,
         actualBoundingBoxDescent: size * 0.2,
-      } as TextMetrics;
+      };
     },
     setLineDash(dash: number[]) {
       record("setLineDash", [dash]);

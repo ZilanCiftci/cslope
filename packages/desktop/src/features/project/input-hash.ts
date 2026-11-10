@@ -39,7 +39,7 @@ function readBack(model: ModelEntry): ModelEntry {
   const rest: Record<string, unknown> = { ...model };
   for (const f of RUN_FIELDS) delete rest[f];
   delete rest.backgrounds;
-  const saved: Record<string, unknown> = JSON.parse(JSON.stringify(rest));
+  const saved = JSON.parse(JSON.stringify(rest)) as Record<string, unknown>;
   try {
     return parseProjectData({ version: PROJECT_FILE_VERSION, models: [saved] }).models[0];
   } catch {

@@ -42,7 +42,7 @@ const worldY = (py: number) => {
 beforeEach(() => {
   vi.useFakeTimers();
   rec = createRecordingContext(W, H);
-  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => rec.ctx as never);
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(() => rec.ctx);
   useAppStore.getState().newProject();
   useAppStore.setState({ mode: "edit", result: null, editViewScale: 20, editViewOffset: [-15, -5] });
 });

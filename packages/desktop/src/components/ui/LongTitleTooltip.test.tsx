@@ -30,7 +30,9 @@ describe("LongTitleTooltip", () => {
     // The system tooltip is suppressed while the pointer rests on it.
     expect(el.hasAttribute("title")).toBe(false);
     expect(screen.queryByRole("tooltip")).toBeNull();
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent(LONG.trim());
     expect(tip.style.maxWidth).toBe("340px");
@@ -43,7 +45,9 @@ describe("LongTitleTooltip", () => {
     setup();
     const el = screen.getByText("short");
     fireEvent.mouseOver(el);
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(el.getAttribute("title")).toBe("Short");
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
@@ -52,7 +56,9 @@ describe("LongTitleTooltip", () => {
     setup();
     const el = screen.getByText("long");
     fireEvent.mouseOver(el);
-    act(() => vi.advanceTimersByTime(500));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
     expect(screen.getByRole("tooltip")).toBeInTheDocument();
     fireEvent.mouseDown(el);
     expect(screen.queryByRole("tooltip")).toBeNull();

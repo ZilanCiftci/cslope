@@ -315,7 +315,7 @@ async function deflateRaw(data: Uint8Array): Promise<Uint8Array> {
     },
   });
   const stream = source.pipeThrough(new CompressionStream("deflate-raw") as unknown as ReadableWritablePair<Uint8Array, Uint8Array>);
-  return new Uint8Array(await new Response(stream as unknown as BodyInit).arrayBuffer());
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 /** A ZIP archive of the given entries, deflated (entries marked "store" as they are). */

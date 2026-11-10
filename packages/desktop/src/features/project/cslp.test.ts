@@ -233,7 +233,7 @@ describe(".cslp round trip", () => {
       appVersion: expect.any(String),
       created: "2026-11-04T12:00:00.000Z",
       modified: "2026-11-04T12:00:00.000Z",
-      generator: `cSlope ${m.appVersion}`,
+      generator: `cSlope ${m.appVersion as string}`,
     });
     // The project's own created (from the file it was opened from) stays.
     const opened = await readProjectBytes(bytes);

@@ -8,7 +8,6 @@ import { Slope } from "./slope";
 import { getSlices } from "./slices";
 import { buildEnvelope, envelopeAt, pileForceDirection } from "./reinforcement";
 import type { Pile } from "../types/reinforcement";
-import type { AnalysisOptions } from "../types/analysis";
 import { Material } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
 
@@ -203,7 +202,7 @@ describe("pile force direction", () => {
     customPlanesOnly: true,
   };
   const run = (extra: Partial<Pile>) =>
-    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", pileCase.checks[0].options as Partial<AnalysisOptions>).fos!;
+    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", pileCase.checks[0].options).fos!;
 
   it("keeps the given angle when no direction is set", () => {
     expect(run({})).toBeCloseTo(run({ direction: "angle" }), 9);

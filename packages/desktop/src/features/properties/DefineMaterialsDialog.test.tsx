@@ -24,7 +24,7 @@ async function setField(label: string, text: string) {
 }
 
 const kindSelect = () =>
-  screen.getByDisplayValue(/Mohr-Coulomb|Undrained|High|Impenetrable|Spatial|Anisotropic|S = f|Lime|Bedrock|function|SHANSEP/i) as HTMLSelectElement;
+  screen.getByDisplayValue<HTMLSelectElement>(/Mohr-Coulomb|Undrained|High|Impenetrable|Spatial|Anisotropic|S = f|Lime|Bedrock|function|SHANSEP/i);
 
 beforeEach(() => {
   store().newProject();
@@ -489,7 +489,7 @@ describe("DefineMaterialsDialog — switching the model", () => {
     expect(model()).toMatchObject({ suMax: 120 });
   });
 
-  it("shows validation errors for invalid values", async () => {
+  it("shows validation errors for invalid values", () => {
     store().setMaterials([
       material("a", "Bad", { kind: "mohr-coulomb", unitWeight: 19, cohesion: -1, frictionAngle: 30 }),
     ]);

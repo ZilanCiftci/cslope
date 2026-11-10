@@ -24,7 +24,7 @@ export function LimeCementFields({ model, onChange, modelExpressions, parameterV
     <label className="flex flex-col gap-0.5" key={key}>
       <Label>{label}</Label>
       <ExpressionNumericInput
-        value={(model[key] as number | undefined) ?? 0}
+        value={(model[key]) ?? 0}
         expression={modelExpressions?.[key]}
         vars={parameterValues}
         onValueChange={(v) => onChange({ [key]: opts.max !== undefined ? Math.min(opts.max, v) : v })}

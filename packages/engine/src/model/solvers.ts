@@ -57,7 +57,7 @@ export function solveSliceNormal(
  * Ordinary (Swedish) method of slices.
  */
 export function analyseOrdinary(slope: Slope, slices: Slice[]): number | null {
-  return (wasm().analyse_ordinary(h(slope), facadeSlope(slope)._slicesOut(slices)) as number | undefined) ?? null;
+  return (wasm().analyse_ordinary(h(slope), facadeSlope(slope)._slicesOut(slices))) ?? null;
 }
 
 /**
@@ -133,7 +133,7 @@ export function analyseMorgensternPrice(slope: Slope, slices: Slice[]): MpResult
  * @returns Minimum FOS found, or null if no valid surfaces.
  */
 export function analyseSlope(slope: Slope): number | null {
-  return (wasm().analyse_slope(h(slope)) as number | undefined) ?? null;
+  return (wasm().analyse_slope(h(slope))) ?? null;
 }
 
 /**
@@ -165,7 +165,7 @@ export function restoreCriticalSlices(slope: Slope): void {
 export function analyseSlopeSteps(slope: Slope): PlaneSteps<number | null> {
   // (the planes are generated when the generator starts, as in TypeScript)
   function* run(): PlaneSteps<number | null> {
-    return yield* engineSteps(slope, wasm().analyse_steps_new(h(slope)) as number, (r) => r.fos ?? null);
+    return yield* engineSteps(slope, wasm().analyse_steps_new(h(slope)), (r) => r.fos ?? null);
   }
   return run();
 }

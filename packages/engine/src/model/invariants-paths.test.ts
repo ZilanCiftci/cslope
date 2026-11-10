@@ -44,7 +44,7 @@ describe("circle vs polyline", () => {
         expect(b === null, `seed 8080 case ${i} ${method}`).toBe(a === null);
         if (a !== null && b !== null) {
           // Chords instead of the arc (400 of them, one slice each).
-          expect(relDiff(a, b), `seed 8080 case ${i} ${method} [${[...features]}]: ${a} vs ${b}`).toBeLessThan(5e-4);
+          expect(relDiff(a, b), `seed 8080 case ${i} ${method} [${[...features].join(",")}]: ${a} vs ${b}`).toBeLessThan(5e-4);
           compared++;
         }
       }

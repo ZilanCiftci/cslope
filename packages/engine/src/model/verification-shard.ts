@@ -33,8 +33,8 @@ export function defineVerificationShard(shard: number): void {
         if (!results.has(key)) results.set(key, runVerification(c.definition, check.method, check.options).fos);
         const fos = results.get(key)!;
         expect(fos).not.toBeNull();
-        const deviation = (fos! - check.published) / check.published;
-        expect(agrees(check, fos!), `deviation ${(deviation * 100).toFixed(2)} %, tolerance ${(check.tolerance * 100).toFixed(2)} %`).toBe(true);
+        const deviation = (fos - check.published) / check.published;
+        expect(agrees(check, fos), `deviation ${(deviation * 100).toFixed(2)} %, tolerance ${(check.tolerance * 100).toFixed(2)} %`).toBe(true);
       });
     });
   });

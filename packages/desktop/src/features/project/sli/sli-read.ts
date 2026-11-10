@@ -167,11 +167,11 @@ export async function readSli(bytes: Uint8Array): Promise<SliFile> {
   const names = [...entries.keys()];
   const find = (ext: string) => names.filter((n) => n.toLowerCase().endsWith(ext));
   const sli = find(".sli")[0];
-  if (sli) return { ...parseSli(latin1.decode(entries.get(sli)!)), kind: "slim" };
+  if (sli) return { ...parseSli(latin1.decode(entries.get(sli))), kind: "slim" };
   const scenarioFiles = find(".slsc");
   if (scenarioFiles.length === 0) throw new Error("The archive holds no model (.sli) or scenario (.slsc).");
   const slsp = find(".slsp")[0];
-  const shared = slsp ? parseSections(latin1.decode(entries.get(slsp)!)) : undefined;
+  const shared = slsp ? parseSections(latin1.decode(entries.get(slsp))) : undefined;
   let version: string | undefined;
   for (const l of shared?.get("shared model description") ?? []) {
     const m = l.match(/^\s*version:\s*(\S+)/);
@@ -182,7 +182,7 @@ export async function readSli(bytes: Uint8Array): Promise<SliFile> {
   const slmm = find(".slmm")[0];
   if (slmm) {
     let file: string | undefined, name: string | undefined;
-    for (const l of latin1.decode(entries.get(slmm)!).split(/\r?\n/)) {
+    for (const l of latin1.decode(entries.get(slmm)).split(/\r?\n/)) {
       const f = l.match(/^\s*sc_filename:\s*"([^"]*)"/);
       if (f) file = base(f[1]);
       const n = l.match(/^\s*sc_name:\s*"([^"]*)"/);
@@ -195,6 +195,6 @@ export async function readSli(bytes: Uint8Array): Promise<SliFile> {
   }
   const listed = order.filter((o) => scenarioFiles.some((n) => base(n) === o.file));
   for (const n of scenarioFiles) if (!listed.some((o) => o.file === base(n))) listed.push({ file: base(n), name: base(n).replace(/\.slsc$/i, "") });
-  const scenarios = listed.map((o) => ({ ...scenarioFromText(latin1.decode(entries.get(scenarioFiles.find((n) => base(n) === o.file)!)!), o.name, shared), file: o.file }));
+  const scenarios = listed.map((o) => ({ ...scenarioFromText(latin1.decode(entries.get(scenarioFiles.find((n) => base(n) === o.file)!)), o.name, shared), file: o.file }));
   return { kind: "slmd", ...(version ? { version } : {}), scenarios };
 }

@@ -64,7 +64,7 @@ async function analyseWith(def: SlopeDefinition, options: AnalysisOptions, run: 
 function governingDirection(def: SlopeDefinition, ownResult: AnalysisResult, opposite: AnalysisResult | undefined): AnalysisResult {
   const own = resolveOrientation(def.orientation, def.coordinates);
   const ownGoverns = !opposite || ownResult.minFOS <= opposite.minFOS;
-  const governing = ownGoverns ? ownResult : opposite!;
+  const governing = ownGoverns ? ownResult : opposite;
   const other = ownGoverns ? opposite : ownResult;
   return {
     ...governing,

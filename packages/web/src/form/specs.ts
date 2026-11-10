@@ -27,9 +27,9 @@ export interface GroupSpec {
 /** The fields' values, as a template's `params` reads them. */
 export interface Read {
   /** A required number: NaN when empty or not a number. */
-  num(key: string): number;
+  num: (key: string) => number;
   /** An optional number: null when empty. */
-  opt(key: string): number | null;
+  opt: (key: string) => number | null;
   /** The optional groups switched on. */
   on: ReadonlySet<string>;
   layers: Layer[];
@@ -214,8 +214,10 @@ export const embankmentSpec: FormSpec<EmbankmentParams> = {
   },
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnySpec = FormSpec<any>;
+/** The parameter set of any of the page's templates. */
+export type TemplateParams = ExcavationParams | EmbankmentParams;
+
+export type AnySpec = FormSpec<TemplateParams>;
 
 /** The templates of the page, in the picker's order; the first is the one of a link without `t`. */
 export const SPECS: AnySpec[] = [excavationSpec, embankmentSpec];

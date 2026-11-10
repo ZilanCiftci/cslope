@@ -122,7 +122,7 @@ export function modelWithValue(
             Object.entries(m.modelExpressions).filter(([k]) => k !== variable.field),
           )
         : undefined;
-      const next = { ...m.model, [variable.field]: value } as typeof m.model;
+      const next = { ...m.model, [variable.field]: value };
       return { ...m, model: next, modelExpressions };
     }),
   };

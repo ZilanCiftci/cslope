@@ -145,7 +145,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!focused.startsWith("Clay")) problems.push(`after Undo the focus is on "${focused}", expected the header of Clay`);
       await page.waitForFunction((a) => location.search === a, address, { timeout: 5_000 }).catch(() => problems.push(`after Undo the address is ${new URL(page.url()).search}, expected ${address}`));
     } catch (e) {
-      problems.push(`the first visit: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+      problems.push(`the first visit: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : String(e)})`);
     }
 
     // The embankment's first visit: no strengths, so it asks for them and does not run.
@@ -178,7 +178,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       if (!box || box.y < 0 || box.y + box.height > height) problems.push(`F is out of view after scrolling the form (at ${box?.y} of ${height} px)`);
       if (await page.getByRole("complementary", { name: "Result summary" }).isVisible()) problems.push("the phone's result bar shows on a wide screen");
     } catch (e) {
-      problems.push(`no result: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+      problems.push(`no result: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : String(e)})`);
     }
     const wasm = responses.find((r) => new URL(r.url).pathname.endsWith(".wasm"));
     if (!wasm) problems.push("the page did not load the engine's .wasm");
@@ -227,7 +227,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       await page.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" }).waitFor({ timeout: 5_000 });
       await page.waitForFunction(() => new URLSearchParams(location.search).get("t") === "excavation", null, { timeout: 5_000 });
     } catch (e) {
-      problems.push(`the embankment: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+      problems.push(`the embankment: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : String(e)})`);
     }
 
     // Ponded water from its link: the checkbox is on and F is the pinned one.
@@ -240,7 +240,7 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
       console.log(`  ponded excavation: ${f}`);
       await axe("with ponded water");
     } catch (e) {
-      problems.push(`ponded water: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : e})`);
+      problems.push(`ponded water: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : String(e)})`);
     }
   } finally {
     page.off("console", onConsole);
@@ -306,7 +306,7 @@ async function checkPhone(browser: Browser, base: string, colorScheme: "light" |
       await bar.waitFor({ state: "visible", timeout: 30_000 });
     }
   } catch (e) {
-    problems.push(`Undo on the phone: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+    problems.push(`Undo on the phone: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`);
   }
   // The bar's picture of the section opens the drawing across the screen; Escape closes it and the focus goes back to the picture.
   try {
@@ -324,7 +324,7 @@ async function checkPhone(browser: Browser, base: string, colorScheme: "light" |
     await sheet.waitFor({ state: "detached", timeout: 5_000 });
     if ((await page.evaluate(() => document.activeElement?.getAttribute("aria-label"))) !== "Show the section") problems.push("after Escape the focus is not back on the section's picture");
   } catch (e) {
-    problems.push(`the section's picture: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+    problems.push(`the section's picture: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`);
   }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   if (overflow > 0) problems.push(`the page is ${overflow} px wider than the phone`);
@@ -367,7 +367,7 @@ async function checkProjectDownload(browser: Browser, base: string): Promise<str
     if (!/model model-1 \(active\): "Excavation in clay with a haul road", \d+ ground points, 2 material\(s\)/.test(out)) problems.push(`the model is not the section: ${out}`);
     console.log(`  ${out.split("\n").filter((l) => /result:|model /.test(l)).map((l) => l.trim()).join("; ")}`);
   } catch (e) {
-    problems.push(`the download: ${e instanceof Error ? e.message.split("\n")[0] : e}`);
+    problems.push(`the download: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`);
   } finally {
     rmSync(dir, { recursive: true, force: true });
     await context.close();

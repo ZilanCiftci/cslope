@@ -18,7 +18,7 @@ import type { AnalysisDocument } from "../engine/document";
 beforeAll(() => initEngine());
 
 /** The committed fixtures (scripts/write-fixtures.ts), as text. */
-const fixtures = import.meta.glob("./fixtures/*.json", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
+const fixtures = import.meta.glob<string>("./fixtures/*.json", { query: "?raw", import: "default", eager: true });
 const expected = JSON.parse(fixtures["./fixtures/expected.json"] ?? "{}") as Record<string, { fos: number; fosLabel: string }>;
 
 /** One clay to −10, the water 1 m down: clay-5m-water without its rock. */

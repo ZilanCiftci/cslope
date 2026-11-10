@@ -91,7 +91,7 @@ describe("main window IPC", () => {
   });
 
   it("moves boundary points with a vertex edited in the Geometry window", () => {
-    const coords = useAppStore.getState().coordinates.map((c) => [...c]) as [number, number][];
+    const coords = useAppStore.getState().coordinates.map(([x, y]): [number, number] => [x, y]);
     const i = 1;
     const [vx, vy] = coords[i];
     act(() =>
@@ -286,7 +286,7 @@ describe("dialog windows", () => {
     window.location.hash = `#${hash}`;
     const { container } = render(<App />);
     expect(container.querySelector("[data-testid='slope-canvas']")).toBeNull();
-    expect(container.textContent!.length).toBeGreaterThan(0);
+    expect(container.textContent.length).toBeGreaterThan(0);
     expect(calls).not.toContain("appReady");
     expect(calls.some((c) => /^request[A-Za-z]+State$/.test(c))).toBe(true);
     // The main-window sync handlers are not installed in a dialog window.
@@ -348,7 +348,9 @@ describe("dialog windows", () => {
       // The field is left first (it commits on blur), the window closes after.
       expect(blurred).toHaveBeenCalledTimes(1);
       expect(document.activeElement).not.toBe(input);
-      act(() => vi.advanceTimersByTime(200));
+      act(() => {
+      vi.advanceTimersByTime(200);
+    });
       expect(close).toHaveBeenCalledTimes(1);
       input.remove();
       // A key the field already used (preventDefault) does not close.

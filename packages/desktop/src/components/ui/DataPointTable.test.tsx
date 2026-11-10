@@ -30,7 +30,7 @@ function Harness({
   );
 }
 
-const cell = (label: string) => screen.getByLabelText(label) as HTMLInputElement;
+const cell = (label: string) => screen.getByLabelText<HTMLInputElement>(label);
 
 describe("DataPointTable", () => {
   it("shows one labelled input per value", () => {

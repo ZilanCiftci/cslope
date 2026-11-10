@@ -197,7 +197,7 @@ function shiftRef(ref: number | undefined, rate: number | undefined, dy: number)
 
 /** A material model with its elevations (and data points) shifted. */
 export function shiftMaterialModel(model: MaterialModel, dx: number, dy: number): MaterialModel {
-  const m = { ...model } as MaterialModel;
+  const m = { ...model };
   if (m.aboveWater) m.aboveWater = shiftMaterialModel(m.aboveWater, dx, dy);
   switch (m.kind) {
     case "mohr-coulomb": {
@@ -517,8 +517,8 @@ const countExpressions = (m: ModelEntry): number => {
   for (const b of m.materialBoundaries) n += coord(b.coordinateExpressions);
   for (const l of m.piezometricLine.lines) n += coord(l.coordinateExpressions);
   for (const mat of m.materials) n += Object.values(mat.modelExpressions ?? {}).filter((e) => e?.trim()).length;
-  for (const u of m.udls) n += Object.values(u.expressions ?? {}).filter((e) => e?.trim()).length;
-  for (const l of m.lineLoads) n += Object.values(l.expressions ?? {}).filter((e) => e?.trim()).length;
+  for (const u of m.udls) n += (Object.values(u.expressions ?? {}) as (string | undefined)[]).filter((e) => e?.trim()).length;
+  for (const l of m.lineLoads) n += (Object.values(l.expressions ?? {}) as (string | undefined)[]).filter((e) => e?.trim()).length;
   return n;
 };
 

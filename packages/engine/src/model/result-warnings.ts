@@ -32,7 +32,7 @@ export const STEEP_ENTRY_LIMIT = 70;
 
 /** A partial plane as the engine reads a plane. */
 function asPlane(p: Partial<SearchPlane>): SearchPlane {
-  return { lc: [0, 0], rc: [0, 0], cx: 0, cy: 0, radius: 0, fos: null, slices: null, ...p } as SearchPlane;
+  return { lc: [0, 0], rc: [0, 0], cx: 0, cy: 0, radius: 0, fos: null, slices: null, ...p };
 }
 
 /**
@@ -71,7 +71,7 @@ export function entryInclination(p: SearchPlane): number {
  * closest pair, or those without a factor when no surface has one.
  */
 export function steepEntryMessage(slope: TsSlope, planes: readonly SearchPlane[]): string | null {
-  return (wasm().steep_entry_message(h(slope), facadeSlope(slope)._planesOut(planes)) as string | undefined) ?? null;
+  return (wasm().steep_entry_message(h(slope), facadeSlope(slope)._planesOut(planes))) ?? null;
 }
 
 /**
@@ -83,7 +83,7 @@ export function steepEntryMessage(slope: TsSlope, planes: readonly SearchPlane[]
  * φ′ = 25° 2.211 against 2.227). Null when it does not apply.
  */
 export function steepEntryTensionMessage(slope: TsSlope, plane: SearchPlane, n: number): string | null {
-  return (wasm().steep_entry_tension_message(h(slope), { ...plane, slices: null }, n) as string | undefined) ?? null;
+  return (wasm().steep_entry_tension_message(h(slope), { ...plane, slices: null }, n)) ?? null;
 }
 
 /** Warning text for a dangling boundary, numbered from 1 as the user knows it. */
@@ -119,5 +119,5 @@ export function shallowCohesionlessMessage(slices: readonly Slice[], fos: number
     const i = materials.indexOf(m);
     return i >= 0 ? i : materials.push(m) - 1;
   });
-  return (wasm().shallow_cohesionless_message(wire, materials.map(materialWire), fos, relief) as string | undefined) ?? null;
+  return (wasm().shallow_cohesionless_message(wire, materials.map(materialWire), fos, relief)) ?? null;
 }

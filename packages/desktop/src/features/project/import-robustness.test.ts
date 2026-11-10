@@ -81,7 +81,7 @@ async function check(kind: Kind, bytes: Uint8Array, label: string, limitMs = 500
   const ms = cpu ? (cpu.user + cpu.system) / 1000 : wallMs;
   if (ms > limitMs) return `${label}: took ${Math.round(ms)} ms${cpu ? " of CPU time" : ""}`;
   if (err !== undefined) {
-    if (!(err instanceof Error)) return `${label}: threw a non-Error ${String(err)}`;
+    if (!(err instanceof Error)) return `${label}: threw a non-Error ${JSON.stringify(err)}`;
     if (!err.message || err.message.trim() === "") return `${label}: empty error message`;
     if (INTERNAL.test(err.message)) return `${label}: internal message "${err.message}"`;
     return undefined;
@@ -232,7 +232,7 @@ function mutateJson(v: Json, r: Rng): Json {
   for (let i = 0; i < changes; i++) {
     const [parent, key] = r.pick(slots);
     const what = r.int(5);
-    if (what === 0 && !Array.isArray(parent)) delete (parent as Record<string, Json>)[key as string];
+    if (what === 0 && !Array.isArray(parent)) delete (parent)[key as string];
     else if (what === 1 && Array.isArray(parent)) parent.splice(key as number, 1);
     else if (what === 2) {
       const cur = (parent as Record<string, Json>)[key as string];

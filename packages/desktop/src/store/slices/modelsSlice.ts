@@ -25,7 +25,7 @@ import { backgroundsEntry } from "./backgroundsSlice";
 function cloneModelEntry(model: ModelEntry): ModelEntry {
   const clone = globalThis.structuredClone
     ? globalThis.structuredClone
-    : (value: ModelEntry) => JSON.parse(JSON.stringify(value));
+    : (value: ModelEntry) => JSON.parse(JSON.stringify(value)) as ModelEntry;
   return clone(model);
 }
 

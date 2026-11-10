@@ -144,7 +144,7 @@ describe("reliability: Monte Carlo sampling", () => {
     expect(logn.meanFOS / logn.fos).toBeGreaterThan(0.75);
     expect(logn.meanFOS / logn.fos).toBeLessThan(1.25);
     // su rising with depth at a rate of mean 0: lognormal impossible.
-    const rising = slope(su(40, 18, { suRateOfChange: 0, suRefDepth: 10 } as Partial<MaterialModel>));
+    const rising = slope(su(40, 18, { suRateOfChange: 0, suRefDepth: 10 }));
     const v: RandomVariable = { material: 0, field: "suRateOfChange", sd: 0.5, distribution: "lognormal" };
     const r = analyseReliability(rising, options, [v], { method: "monte-carlo", samples: 60, seed: 3 });
     const normal = analyseReliability(rising, options, [{ ...v, distribution: "normal" }], { method: "monte-carlo", samples: 60, seed: 3 });
@@ -175,7 +175,7 @@ describe("reliability: unit weight", () => {
     expect(r.terms![0].fMinus).toBeCloseTo((r.fos * 18) / 16, 6);
     // Sand with γsat below a water table: γ ± σ shifts γsat by the same amount.
     const wet: SlopeDefinition = {
-      ...slope(mc(5, 30, 18, { unitWeightSat: 20 } as Partial<MaterialModel>)),
+      ...slope(mc(5, 30, 18, { unitWeightSat: 20 })),
       waterTable: { mode: "height", value: 3 },
     };
     const sameSat: SlopeDefinition = { ...slope(mc(5, 30, 20)), waterTable: { mode: "height", value: 3 } };

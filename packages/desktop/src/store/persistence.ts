@@ -261,7 +261,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
     materials: (model.materials as unknown[]).map((m, i) =>
       normalizeMaterial(m, i),
     ),
-    materialBoundaries: (Array.isArray(model.materialBoundaries)
+    materialBoundaries: Array.isArray(model.materialBoundaries)
       ? model.materialBoundaries
           .filter((b) => b && typeof b === "object")
           .map((boundary) => {
@@ -281,7 +281,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
             ),
           };
         })
-      : []) as unknown as ModelEntry["materialBoundaries"],
+      : [],
     regionMaterials: Array.isArray(model.regionMaterials)
       ? (model.regionMaterials as unknown[])
           .filter(isRegionAssignment)
@@ -357,7 +357,7 @@ function normalizeModelEntry(raw: unknown): ModelEntry {
         })
       : [],
     customPlanesOnly: (model.customPlanesOnly ===
-      true) as ModelEntry["customPlanesOnly"],
+      true),
     // Absent in files saved before the block search (read as none).
     ...(Array.isArray(model.blockSearchObjects)
       ? {
@@ -630,7 +630,7 @@ function normalizeCoords(raw: unknown): [number, number][] {
     if (!Array.isArray(pair) || pair.length < 2) {
       throw new Error(`Coordinate #${idx + 1} is invalid.`);
     }
-    const [x, y] = pair;
+    const [x, y] = pair as unknown[];
     if (typeof x !== "number" || typeof y !== "number") {
       throw new Error(`Coordinate #${idx + 1} must be numbers.`);
     }
@@ -721,29 +721,30 @@ function normalizeSgi3dSettings(raw: Record<string, unknown>): Sgi3dSettings {
 function isFemSummary(raw: unknown): raw is FemResultSummary {
   if (!raw || typeof raw !== "object") return false;
   const f = raw as Record<string, unknown>;
-  const nums = (a: unknown) => Array.isArray(a) && a.every((v) => typeof v === "number");
+  const nums = (a: unknown): a is number[] => Array.isArray(a) && a.every((v) => typeof v === "number");
+  const rec = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object";
   if (!Number.isFinite(f.factorOfSafety) || !nums(f.x) || !nums(f.y) || !nums(f.triangles) || !nums(f.plasticShear)) return false;
-  const x = f.x as number[], tri = f.triangles as number[];
+  const x = f.x, tri = f.triangles;
   return (
-    (f.y as number[]).length === x.length &&
+    f.y.length === x.length &&
     tri.length % 3 === 0 &&
-    (f.plasticShear as number[]).length === tri.length / 3 &&
-    (f.shearIncrement === undefined || (nums(f.shearIncrement) && (f.shearIncrement as number[]).length === tri.length / 3)) &&
+    f.plasticShear.length === tri.length / 3 &&
+    (f.shearIncrement === undefined || (nums(f.shearIncrement) && f.shearIncrement.length === tri.length / 3)) &&
     tri.every((n) => Number.isInteger(n) && n >= 0 && n < x.length) &&
     nums(f.displacement) &&
-    (f.displacement as number[]).length === 2 * x.length &&
+    f.displacement.length === 2 * x.length &&
     Number.isFinite(f.elapsedMs) &&
     (f.flowRule === "davis-b" || f.flowRule === "associated" || f.flowRule === "non-associated") &&
     Array.isArray(f.levels) &&
-    f.levels.every((l) => !!l && typeof l === "object" && Number.isFinite(l.elements) && Number.isFinite(l.fos)) &&
+    f.levels.every((l) => rec(l) && Number.isFinite(l.elements) && Number.isFinite(l.fos)) &&
     Array.isArray(f.warnings) &&
     f.warnings.every((w) => typeof w === "string") &&
     (f.bounds === undefined || isBounds(f.bounds)) &&
     (f.piles === undefined ||
       (Array.isArray(f.piles) &&
-        f.piles.every((p) => !!p && typeof p === "object" && Number.isInteger(p.pile) && [p.maxAxialForce, p.maxShearForce, p.maxMoment].every(Number.isFinite)))) &&
+        f.piles.every((p) => rec(p) && Number.isInteger(p.pile) && [p.maxAxialForce, p.maxShearForce, p.maxMoment].every(Number.isFinite)))) &&
     (f.curve === undefined ||
-      (Array.isArray(f.curve) && f.curve.every((p) => !!p && typeof p === "object" && Number.isFinite(p.F) && Number.isFinite(p.displacement))))
+      (Array.isArray(f.curve) && f.curve.every((p) => rec(p) && Number.isFinite(p.F) && Number.isFinite(p.displacement))))
   );
 }
 
@@ -1021,18 +1022,17 @@ function normalizeMaterial(raw: unknown, index: number): MaterialRow {
     typeof m.color === "string" && m.color.length > 0
       ? m.color
       : MATERIAL_COLORS[index % MATERIAL_COLORS.length];
-  const depthRange = (
+  const depthRange: [number, number] | undefined =
     Array.isArray(m.depthRange) &&
     m.depthRange.length >= 2 &&
     typeof m.depthRange[0] === "number" &&
     typeof m.depthRange[1] === "number"
       ? [m.depthRange[0], m.depthRange[1]]
-      : undefined
-  ) as [number, number] | undefined;
+      : undefined;
 
   // Use persisted model if present; otherwise synthesise from legacy flat fields
   let model: MaterialModel;
-  if (m.model && typeof m.model === "object" && "kind" in (m.model as object)) {
+  if (m.model && typeof m.model === "object" && "kind" in m.model) {
     model = m.model as MaterialModel;
     // A bad saturated unit weight is dropped (γ applies) instead of failing
     // the analysis.
@@ -1158,7 +1158,7 @@ function sanitizeStrengthOptions(model: MaterialModel): MaterialModel {
  */
 function sanitizeBBar(model: MaterialModel): MaterialModel {
   if (!("bBar" in model) && !("bBarLoad" in model) && !("ru" in model)) return model;
-  const out = { ...model } as MaterialModel & { bBar?: unknown; bBarLoad?: unknown; ru?: unknown };
+  const out = { ...model };
   const ru = out.ru;
   if (!(typeof ru === "number" && Number.isFinite(ru) && ru >= 0 && ru < 1)) delete out.ru;
   const b = out.bBar;
@@ -1245,7 +1245,7 @@ function normalizeCoordinateExpressions(
   }
 
   const out = Array.from({ length }, (_, i) => {
-    const item = raw[i];
+    const item: unknown = raw[i];
     if (!item || typeof item !== "object") return {};
     const record = item as Record<string, unknown>;
     const next: CoordinateExpression = {};
@@ -1405,7 +1405,7 @@ function normalizePartialFactors(raw: unknown): PartialFactors | undefined {
 /** An angle range [min, max] with 0° < min ≤ max < 90°, as the engine takes it, or null. */
 function angleRangeOrNull(raw: unknown): [number, number] | null {
   if (!Array.isArray(raw) || raw.length !== 2) return null;
-  const [lo, hi] = raw;
+  const [lo, hi] = raw as unknown[];
   return typeof lo === "number" && typeof hi === "number" && lo > 0 && hi < 90 && lo <= hi ? [lo, hi] : null;
 }
 
