@@ -1099,7 +1099,7 @@ pub fn slope_remove_water_table(handle: u32) -> JsResult<()> {
 pub fn slope_set_udls(handle: u32, udls: JsValue) -> JsResult<()> {
     let u: Vec<UdlWire> = from_js(udls, "UDLs")?;
     with_slope_mut(handle, |s| {
-        s.set_udls(u.into_iter().map(Into::into).collect())
+        s.set_udls(u.into_iter().map(Into::into).collect());
     })
 }
 
@@ -1112,7 +1112,7 @@ pub fn slope_remove_udls(handle: u32) -> JsResult<()> {
 pub fn slope_set_line_loads(handle: u32, loads: JsValue) -> JsResult<()> {
     let l: Vec<LineLoadWire> = from_js(loads, "line loads")?;
     with_slope_mut(handle, |s| {
-        s.set_line_loads(l.into_iter().map(Into::into).collect())
+        s.set_line_loads(l.into_iter().map(Into::into).collect());
     })
 }
 

@@ -270,18 +270,15 @@ fn clarabel_solve(
         .static_regularization_constant(static_reg)
         .build()
         .expect("valid Clarabel settings");
-    let mut solver = match DefaultSolver::new(&p, q, a, b, cones, settings) {
-        Ok(s) => s,
-        Err(_) => {
-            // (the module's output buffer stays zero)
-            return Run {
-                status: None,
-                x: vec![0.0; n],
-                obj: 0.0,
-                z: vec![0.0; m],
-                time: 0.0,
-            };
-        }
+    let Ok(mut solver) = DefaultSolver::new(&p, q, a, b, cones, settings) else {
+        // (the module's output buffer stays zero)
+        return Run {
+            status: None,
+            x: vec![0.0; n],
+            obj: 0.0,
+            z: vec![0.0; m],
+            time: 0.0,
+        };
     };
     solver.solve();
     let sol = &solver.solution;

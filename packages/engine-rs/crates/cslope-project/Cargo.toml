@@ -36,3 +36,6 @@ flate2 = { version = "=1.1.11", default-features = false, features = ["rust_back
 # for zip's deflate.
 [package.metadata.cargo-machete]
 ignored = ["flate2"]
+
+[lints]
+workspace = true

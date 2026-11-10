@@ -869,7 +869,7 @@ fn design_strength_per_part() {
     close_to(d.tan_phi, (0.2 * tan(PI / 6.0)) / 1.25, 12);
     close_to(d.cohesion_undrained, (0.2 * 150.0 + 0.8 * 20.0) / 1.4, 12);
     assert!(!d.undrained);
-    let mut undrained = lccj.clone();
+    let mut undrained = lccj;
     undrained.as_object_mut().unwrap().remove("columnCohesion");
     let u = design_strength(
         Some("lime-cement-columns"),

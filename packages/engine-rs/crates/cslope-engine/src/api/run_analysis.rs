@@ -459,7 +459,7 @@ pub fn analysis_result(
                 result.sgi3d_error = Some(
                     "No circular slip surface with a factor of safety (the 3D effects apply to circular surfaces)."
                         .to_string(),
-                )
+                );
             }
             Err(e) => result.sgi3d_error = Some(e.message),
         }

@@ -513,7 +513,7 @@ impl<'a> SchemaCheck<'a> {
                             format!("\"{k}\" is deprecated."),
                         ));
                     }
-                    self.check(s, val, &p, out)
+                    self.check(s, val, &p, out);
                 }
                 None => match schema.get("additionalProperties") {
                     Some(Value::Bool(false)) => {

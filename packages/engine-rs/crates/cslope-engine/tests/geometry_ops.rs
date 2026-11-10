@@ -115,8 +115,8 @@ fn split_slope_horizontally() {
         .map(|p| calculate_polygon_area(&p.px, &p.py))
         .collect();
     assert!(close(areas[0] + areas[1], orig, 1));
-    let upper = cslope_engine::js::math::min(areas[0], areas[1]);
-    let lower = cslope_engine::js::math::max(areas[0], areas[1]);
+    let upper = js::math::min(areas[0], areas[1]);
+    let lower = js::math::max(areas[0], areas[1]);
     assert!(close(upper, 125., 0));
     assert!(close(lower, orig - 125., 0));
 }
@@ -848,8 +848,7 @@ fn level_on_face_failures(past: f64) -> (usize, Vec<String>) {
         for h in [2., 3.3, 5., 7.7] {
             for k in 1..20 {
                 let (g, bottom) = (10., 10. - h);
-                let level =
-                    cslope_engine::js::math::round((g - (h * k as f64) / 20.) * 100.) / 100.;
+                let level = js::math::round((g - (h * k as f64) / 20.) * 100.) / 100.;
                 if level >= g || level <= bottom {
                     continue;
                 }
