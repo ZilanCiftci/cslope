@@ -21,7 +21,8 @@ use crate::model::canonical::{get_domain_x, mirror_x};
 use crate::model::composite::{composite_floor, CompositeFloor};
 use crate::model::geometry_ops::{
     clip_line_to_surface, create_geometry_with_material, get_surface_line, keyhole_ring,
-    polygonize_regions_detailed, split_polygon_by_polyline_detailed, Polyline,
+    polygonize_regions_detailed, polyline_y_at_side, split_polygon_by_polyline_detailed, Polyline,
+    Side,
 };
 use crate::model::reinforcement::{
     build_envelope, build_pile_profile, PileProfile, ReinforcementEnvelope,
@@ -1035,6 +1036,8 @@ impl Slope {
     /// Ranges are in canonical (left-to-right) space; an entry range given as
     /// a point on a corner is widened to both sides. Other ends are as given
     /// (moving them as well moved the search's start on V005's plane face).
+    /// An exit given as a single x on a vertical face of the ground stays
+    /// [x, x]: its circles end at the foot of the face (`exit_face_point`).
     pub fn search_limits(&self) -> [f64; 4] {
         let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = self.limits;
         let Some(surf) = &self.surface_line else {
@@ -1061,13 +1064,70 @@ impl Slope {
             } else {
                 entry_right_x
             },
-            if at_corner(exit_left_x) {
+            if at_corner(exit_left_x) && self.exit_face_point().is_none() {
                 js::math::max(x0, exit_left_x - w)
             } else {
                 exit_left_x
             },
             exit_right_x,
         ]
+    }
+
+    /// The exit point at the foot of a vertical face of the ground, when the
+    /// exit range is a single x (exit left = exit right) on that face: a face
+    /// that descends in the sliding direction (in canonical space the ground
+    /// just left of x is above the ground just right of it) and is not one
+    /// of the model's own end faces. The point is the foot moved up the face
+    /// by 1e-5 of the model's width (at most half the face's height): a
+    /// circle through it ends there, as `select_entry_exit` ends a circle
+    /// where it comes out of the soil, while a circle exactly through the
+    /// foot would run on in the soil beyond it (the vertical analogue of the
+    /// corner rule of `search_limits`). Files of other programs give the exit
+    /// of a wall's internal stability search as this point. None otherwise:
+    /// a face that rises in the sliding direction, an exit range, an x that
+    /// is not on a vertical face.
+    pub fn exit_face_point(&self) -> Option<Pt> {
+        let [_, _, exit_left_x, exit_right_x] = self.limits;
+        let surf = self.surface_line.as_ref()?;
+        let (xs, ys) = (&surf.x, &surf.y);
+        if xs.len() < 2 || ys.len() < xs.len() {
+            return None;
+        }
+        let x0 = js::math::min_of(xs);
+        let x1 = js::math::max_of(xs);
+        let tol = 1e-9 * (x1 - x0);
+        let x = exit_left_x;
+        if !((exit_right_x - x).abs() <= tol && x > x0 + tol && x < x1 - tol) {
+            return None;
+        }
+        // The face's own x (the limit may differ from it by rounding).
+        let fx = (0..xs.len() - 1)
+            .find(|&i| {
+                (xs[i] - x).abs() <= tol
+                    && (xs[i + 1] - x).abs() <= tol
+                    && (ys[i] - ys[i + 1]).abs() > tol
+            })
+            .map(|i| xs[i])?;
+        let top = polyline_y_at_side(xs, ys, fx, Side::Left);
+        let foot = polyline_y_at_side(xs, ys, fx, Side::Right);
+        if !(top > foot + tol) {
+            return None;
+        }
+        let up = js::math::min(1e-5 * (x1 - x0), (top - foot) / 2.0);
+        Some([x, foot + up])
+    }
+
+    /// The ground point of an exit at x for the search: the point at the
+    /// foot of the face for an exit given as a single x on a vertical face
+    /// (`exit_face_point`), otherwise the ground at x.
+    pub fn exit_ground_point(&self, x: f64) -> Result<Pt> {
+        if let (Some(p), Some(surf)) = (self.exit_face_point(), &self.surface_line) {
+            let tol = 1e-9 * (js::math::max_of(&surf.x) - js::math::min_of(&surf.x));
+            if (x - p[0]).abs() <= tol {
+                return Ok(p);
+            }
+        }
+        Ok([x, self.get_external_y_intersection(x)?])
     }
 
     pub fn min_failure_distance(&self) -> f64 {
