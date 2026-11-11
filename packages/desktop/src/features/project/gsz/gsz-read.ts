@@ -258,11 +258,11 @@ export interface GszBlockGrid {
 }
 
 /**
- * Keep a point of a numbered list (the geometry's points by ID, an
- * analysis's points by Number). A number the list has already given is a
- * repeat, which some files have: that point takes its position in the list
- * (1-based) as its number, as the references to it do, so no point is lost.
- * A list without repeats is read by its numbers alone.
+ * Keep a point of an analysis's point list (DataPoints, by Number). A
+ * number the list has already given is a repeat, which some files have:
+ * that point takes its position in the list (1-based) as its number, as
+ * the search objects' references to it do, so no point is lost. A list
+ * without repeats is read by its numbers alone.
  */
 function setPoint(points: Map<number, Pt>, n: number, index: number, p: Pt) {
   const key = points.has(n) ? index + 1 : n;
@@ -301,11 +301,11 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   if (geometryElements.length === 0) geometryElements.push(...children(root, "GeometryItems"));
   geometryElements.forEach((g, i) => {
     const points = new Map<number, Pt>();
-    children(g, "Points/Point").forEach((p, i) => {
+    for (const p of children(g, "Points/Point")) {
       const id = num(p.getAttribute("ID")), x = num(p.getAttribute("X")), y = num(p.getAttribute("Y"));
       // a deleted point keeps its id without coordinates
-      if (id !== undefined && x !== undefined && y !== undefined) setPoint(points, id, i, [x, y]);
-    });
+      if (id !== undefined && x !== undefined && y !== undefined) points.set(id, [x, y]);
+    }
     const regions = new Map<number, number[]>();
     for (const r of children(g, "Regions/Region")) {
       const id = num(childText(r, "ID"));

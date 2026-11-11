@@ -566,7 +566,7 @@ describe(".gsz import", () => {
     expect(imp.notes).toContain("The file's minimum slip volume (2 m²) and minimum slip depth (1.5 m) are carried over.");
   });
 
-  it("keeps every point of a list that repeats a number: the repeat takes its position as its number", () => {
+  it("keeps every point of an analysis's point list that repeats a number: the repeat takes its position as its number", () => {
     // the analysis's points 1–5, then 6, 6 (the seventh), 8 and 9–11; the block grids refer to 6–11
     const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="6" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
       .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="115" Angle2="135" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="30" Angle2="45" PointUL="9" PointLL="10" PointLR="11" /></Block>');
@@ -581,11 +581,10 @@ describe(".gsz import", () => {
       { points: [[6, 6], [6, 3], [10, 3], [10, 6]] },
       { points: [[18, 4], [18, 2], [24, 2], [24, 4]] },
     ]);
-    // the geometry's points by ID: point 9 (the T-junction) written with a repeated ID 8
+    // the geometry's points by ID are read as before: a repeated ID is the last point with it
     const geometry = parseGszXml(XML.replace('<Point ID="9" X="15" Y="3" />', '<Point ID="8" X="15" Y="3" />'));
-    expect(geometry.geometries.get(1)!.points.get(8)).toEqual([30, 0]);
-    expect(geometry.geometries.get(1)!.points.get(9)).toEqual([15, 3]);
-    expect(gszToDefinition({ ...geometry, results: new Map() }, 1).definition.coordinates).toHaveLength(8);
+    expect(geometry.geometries.get(1)!.points.get(8)).toEqual([15, 3]);
+    expect(geometry.geometries.get(1)!.points.has(9)).toBe(false);
   });
 
   it("imports every stability analysis of a ZIP and skips the seepage one", async () => {
