@@ -452,27 +452,26 @@ fn an_active_anchor_past_the_normal_gives_hoeks_plane_failure_solution() {
     );
 }
 
-/// The wall anchor: its head on the face (20, 5), inclined 25° below the
-/// horizontal into the slope, 14 m long; and the circles' centre x.
-const WALL_HEAD: [f64; 2] = [20.0, 5.0];
-const WALL_BETA: f64 = 25.0;
+/// The circles of the wall model: centre (34, cy), 0.3 m below the toe
+/// (20, 0) of the wall, so that they enter the crest just behind the face
+/// and cross the soil behind the wall steeply (thin wedges).
 const WALL_CX: f64 = 34.0;
 
-/// The radius of the wall's circle with its centre at (34, cy): it passes
-/// 0.3 m below the toe (20, 0) and leaves the ground beyond it.
 fn wall_radius(cy: f64) -> f64 {
     (WALL_CX - 20.0).hypot(cy) + 0.3
 }
 
-/// A 10 m vertical wall (face at x = 20, sliding to +x) with the anchor
-/// (450 kN/m, `application`; none without) and one circle.
-fn wall_anchor(cy: f64, application: Option<&str>) -> Value {
-    let b = WALL_BETA.to_radians();
-    let [hx, hy] = WALL_HEAD;
-    let reinforcements = match application {
-        Some(a) => json!([{
-            "x1": hx, "y1": hy, "x2": hx - 14.0 * b.cos(), "y2": hy - 14.0 * b.sin(),
-            "tensileCapacity": 450, "application": a,
+/// A straight element: a point on it and its unit direction into the
+/// stable ground.
+type Line = ([f64; 2], [f64; 2]);
+
+/// A 10 m vertical wall (face at x = 20, sliding to +x), one circle, and
+/// the element along `line` (450 kN/m, `application`) when given.
+fn wall_model(cy: f64, element: Option<(Line, &str)>) -> Value {
+    let reinforcements = match element {
+        Some((([px, py], [ux, uy]), application)) => json!([{
+            "x1": px - 6.0 * ux, "y1": py - 6.0 * uy, "x2": px + 10.0 * ux, "y2": py + 10.0 * uy,
+            "tensileCapacity": 450, "application": application,
         }]),
         None => json!([]),
     };
@@ -488,16 +487,22 @@ fn wall_anchor(cy: f64, application: Option<&str>) -> Value {
     )
 }
 
-/// F (Janbu) on the wall's circle, and how far the anchor lies past the
-/// normal to the slice base it crosses, on the pushed side (degrees;
-/// negative on the pulled side).
-fn wall_fos_and_angle(cy: f64, application: Option<&str>) -> (f64, f64) {
-    let (f, slope) = run_verification(wall_anchor(cy, application), "Janbu", json!({}));
+/// F (Janbu) on the wall's circle with the element (or none).
+fn wall_fos(cy: f64, element: Option<(Line, &str)>) -> f64 {
+    run_verification(wall_model(cy, element), "Janbu", json!({}))
+        .0
+        .unwrap()
+}
+
+/// The slice bases of the wall's circle, as the analysis makes them: each
+/// one's start point and unit direction (+x, the direction of movement).
+fn wall_bases(cy: f64) -> Vec<([f64; 2], [f64; 2], f64)> {
+    let (_, slope) = run_verification(wall_model(cy, None), "Janbu", json!({}));
     let r = wall_radius(cy);
     let ints = slope
         .get_circle_external_intersection(WALL_CX, cy, r)
         .unwrap();
-    let slices = get_slices(
+    get_slices(
         &slope,
         ints[0][0],
         ints[ints.len() - 1][0],
@@ -507,67 +512,91 @@ fn wall_fos_and_angle(cy: f64, application: Option<&str>) -> (f64, f64) {
         None,
         &mut SliceScratch::new(),
     )
-    .unwrap();
-    // The anchor's direction into the stable ground, (−cos β, −sin β), and
-    // the base it crosses (the movement along it towards +x).
-    let b = WALL_BETA.to_radians();
-    let (ux, uy) = (-b.cos(), -b.sin());
-    let mut angle = f64::NAN;
-    for q in &slices {
+    .unwrap()
+    .iter()
+    .map(|q| {
         let (bx, by) = (q.x_right - q.x_left, q.y1_bottom - q.y0_bottom);
-        let den = bx * uy - by * ux;
-        let (qx, qy) = (WALL_HEAD[0] - q.x_left, WALL_HEAD[1] - q.y0_bottom);
-        let u = (qx * uy - qy * ux) / den;
-        let s = (qx * by - qy * bx) / den;
-        if (0.0..=1.0).contains(&u) && (0.0..=14.0).contains(&s) {
-            angle = ((ux * bx + uy * by) / bx.hypot(by)).asin().to_degrees();
+        let l = bx.hypot(by);
+        ([q.x_left, q.y0_bottom], [bx / l, by / l], l)
+    })
+    .collect()
+}
+
+/// How far the element lies past the normal to the slice base it crosses
+/// on the wall's circle, on the pushed side (degrees; negative on the
+/// pulled side), and that base's index.
+fn angle_past_normal(cy: f64, ([px, py], [ux, uy]): Line) -> (f64, usize) {
+    for (i, ([x0, y0], [tx, ty], l)) in wall_bases(cy).into_iter().enumerate() {
+        let den = tx * uy - ty * ux;
+        let (qx, qy) = (px - x0, py - y0);
+        let s = (qx * uy - qy * ux) / den;
+        let w = (qx * ty - qy * tx) / den;
+        if (0.0..=l).contains(&s) && (-6.0..=10.0).contains(&w) {
+            return ((ux * tx + uy * ty).asin().to_degrees(), i);
         }
     }
-    (f.unwrap(), angle)
+    panic!("the element misses the circle");
 }
 
 #[test]
 fn f_is_continuous_across_the_old_2_degree_threshold_for_an_active_anchor() {
-    // Issue #143: two neighbouring circles (centres 0.01 m apart) on which
-    // the anchor crosses the same slice's base just within and just beyond
-    // 2° past its normal, on the pushed side. Found by stepping the centre
-    // up, so that the pair does not hang on the slice layout.
-    let mut prev: Option<(f64, f64)> = None;
-    let mut pair = None;
-    for k in 0..=130 {
-        let cy = 10.0 + 0.01 * k as f64;
-        let (_, angle) = wall_fos_and_angle(cy, Some("active"));
-        if let Some((pcy, pa)) = prev {
-            if (pa - angle).abs() < 0.1 && pa.min(angle) < 2.0 && pa.max(angle) > 2.0 {
-                pair = Some((pcy, cy));
-                break;
+    // Issue #143: an anchor through the steep part of a circle behind the
+    // wall, 1.9° past the normal to the base it crosses (on the pushed
+    // side), and a neighbouring circle (its centre 0.1–0.3 m lower) on which
+    // it crosses the same base beyond 2°. Built from the slices the analysis
+    // makes, so that the pair does not hang on the slice layout.
+    let mut found = None;
+    'search: for k in 0..40 {
+        let c1 = 10.6 + 0.05 * k as f64;
+        let bases = wall_bases(c1);
+        // The steepest base above y = 1 and below y = 8.
+        let Some((i, &([x0, y0], [tx, ty], l))) = bases
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.0[1] > 1.0 && b.0[1] < 8.0)
+            .min_by(|a, b| a.1 .1[1].total_cmp(&b.1 .1[1]))
+        else {
+            continue;
+        };
+        let d = 1.9f64.to_radians();
+        let (nx, ny) = (ty, -tx);
+        let line: Line = (
+            [x0 + 0.5 * l * tx, y0 + 0.5 * l * ty],
+            [d.cos() * nx + d.sin() * tx, d.cos() * ny + d.sin() * ty],
+        );
+        let (a1, i1) = angle_past_normal(c1, line);
+        assert_eq!(i1, i);
+        close(a1, 1.9, 9);
+        for j in 1..=6 {
+            let c2 = c1 - 0.05 * j as f64;
+            let (a2, i2) = angle_past_normal(c2, line);
+            if i2 == i && a2 > 2.05 && a2 < 2.5 {
+                found = Some((c1, c2, line));
+                break 'search;
             }
         }
-        prev = Some((cy, angle));
     }
-    let (c1, c2) = pair.expect("two neighbouring circles across 2° past the normal");
-    let (a1, angle1) = wall_fos_and_angle(c1, Some("active"));
-    let (a2, _) = wall_fos_and_angle(c2, Some("active"));
-    let (p1, _) = wall_fos_and_angle(c1, Some("passive"));
-    let (p2, _) = wall_fos_and_angle(c2, Some("passive"));
-    let (b1, _) = wall_fos_and_angle(c1, None);
-    let (b2, _) = wall_fos_and_angle(c2, None);
-    // The active anchor counts on both circles: F moves by less than 0.5 %
-    // (as much as without the anchor), where before it fell to F without it
-    // on the circle beyond 2° (about 10 % lower).
-    assert!((a1 - a2).abs() < 0.005 * a1, "active {a1} {a2}");
-    assert!(
-        a1.min(a2) > 1.05 * b1.max(b2),
-        "active {a1} {a2} bare {b1} {b2}"
+    let (c1, c2, line) = found.expect("two neighbouring circles across 2° past the normal");
+    let (a1, a2) = (
+        wall_fos(c1, Some((line, "active"))),
+        wall_fos(c2, Some((line, "active"))),
     );
+    let (b1, b2) = (wall_fos(c1, None), wall_fos(c2, None));
+    // The active anchor counts on both circles: F moves by no more than it
+    // does without the anchor (plus 0.5 %), where before it fell to F
+    // without it on the circle beyond 2°.
+    assert!(
+        (a1 - a2).abs() < (b1 - b2).abs() + 0.005 * a1,
+        "active {a1} {a2}, bare {b1} {b2}"
+    );
+    assert!(a2 > 1.05 * b2, "active {a2} bare {b2}");
     // The passive anchor (unchanged): counted within 2°, not beyond.
-    let (within, beyond, bare_beyond) = if angle1 < 2.0 {
-        (p1, p2, b2)
-    } else {
-        (p2, p1, b1)
-    };
-    close(beyond, bare_beyond, 9);
-    assert!(within > 1.01 * beyond, "passive {within} {beyond}");
+    let (p1, p2) = (
+        wall_fos(c1, Some((line, "passive"))),
+        wall_fos(c2, Some((line, "passive"))),
+    );
+    close(p2, b2, 9);
+    assert!(p1 > 1.01 * b1, "passive {p1} bare {b1}");
 }
 
 #[test]
