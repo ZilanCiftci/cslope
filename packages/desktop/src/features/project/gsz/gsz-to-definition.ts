@@ -499,10 +499,10 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   const stab = file.stability.get(analysis.id);
   const water = file.water.get(analysis.id);
   const waterOption = water?.option ?? "None";
+  // the file's unit weight of water, in kN/m³, as the model's (absent: 9.807)
   const gw = water?.gammaWater;
-  if (gw !== undefined && Math.abs(gw * scale.weight - WATER_UNIT_WEIGHT) > 0.02) {
-    notes.push(`The file's unit weight of water is ${(gw * scale.weight).toFixed(3)} kN/m³; cSlope uses ${WATER_UNIT_WEIGHT}.`);
-  }
+  const gammaW = gw !== undefined ? Number((gw * scale.weight).toFixed(4)) : undefined;
+  if (gammaW !== undefined && !(gammaW > 0)) notes.push(`The file's unit weight of water (${gw}) is not valid; ${WATER_UNIT_WEIGHT} kN/m³ is used.`);
   const xs = geo.outline.map((p) => p[0]), ys = geo.outline.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), yMin = Math.min(...ys);
   const clipLine = (line: Pt[]): Pt[] => {
@@ -639,6 +639,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   });
 
   const options: Partial<AnalysisOptions> = {};
+  if (gammaW !== undefined && gammaW > 0 && gammaW !== WATER_UNIT_WEIGHT) options.waterUnitWeight = gammaW;
   const method = analysis.method.toLowerCase().replace(/[^a-z]/g, "");
   if (method === "spencer") Object.assign(options, { method: "Morgenstern-Price", intersliceFunction: "constant" });
   else if (method === "morgensternprice") Object.assign(options, { method: "Morgenstern-Price", intersliceFunction: "half-sine" });

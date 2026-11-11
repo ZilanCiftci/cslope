@@ -65,7 +65,7 @@ For most slopes the choice of function changes $F$ by only a few percent. Spence
 
 ## Pore pressure
 
-Pore pressure comes from a piezometric line: at a point below the line, the pressure head is the distance to the line, and $u = \gamma_w h$ with $\gamma_w = 9.807\ \text{kN/m}^3$.
+Pore pressure comes from a piezometric line: at a point below the line, the pressure head is the distance to the line, and $u = \gamma_w h$ with $\gamma_w$ the model's **Unit weight of water**, 9.807 kN/m³ by default ([Analysis options](/docs/analysis#unit-weight-of-water)).
 
 - **Vertical head** (default): $h$ is the vertical distance from the point to the line. This is the usual convention.
 - **Phreatic correction**: $h$ is the vertical distance multiplied by $\cos^2\theta$, where $\theta$ is the inclination of the line above the slice. This assumes a free phreatic surface with flow parallel to it, and gives lower pore pressures, and so a higher $F$, below a steep line.

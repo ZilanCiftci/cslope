@@ -31,6 +31,10 @@ The [theory](/docs/theory) page gives the equations. The **Tolerance** is the co
   Thirty slices are enough for most slopes; the steep ends of a circle are cut into narrower slices automatically. With thin layers or a tension crack, check that more slices do not change the result.
 </Callout>
 
+## Unit weight of water
+
+**Unit weight of water (kN/m³)** under *Water and tension crack* is γw, used for the pore pressure $u = \gamma_w h$, the weight of [free water](/docs/water) on the ground and the water in a tension crack. The default is 9.807 kN/m³ ($\rho_w g$ with standard gravity); enter another value for local gravity (9.82 in parts of Sweden, for example) or for a simplified 10. A value outside about 9–11 kN/m³ is usually a unit mistake. Models imported from .gsz, .sli and .stix files take the file's value, and the exports write the model's.
+
 ## Tension crack
 
 - **Tension crack depth (m)**: a vertical crack at the upper end of the slip surface, in which the soil carries no shear. 0 means no crack.

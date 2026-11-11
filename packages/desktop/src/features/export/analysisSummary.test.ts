@@ -55,6 +55,12 @@ describe("analysis summary", () => {
     expect(section(buildAnalysisSummary(input()), "Loads and structures")).toBeUndefined();
   });
 
+  it("shows the model's unit weight of water, 9.807 without a setting", () => {
+    expect(value(buildAnalysisSummary(input()), "Water and tension crack", "Unit weight of water")).toBe("9.807 kN/m³");
+    const s = buildAnalysisSummary(input({ options: { ...DEFAULT_ANALYSIS_OPTIONS, waterUnitWeight: 9.82 } }));
+    expect(value(s, "Water and tension crack", "Unit weight of water")).toBe("9.82 kN/m³");
+  });
+
   it("writes B̄ and rᵤ as the PDF font can print them", () => {
     expect(pdfSafeText("B̄ = 0.5; rᵤ = 0.2; x̄")).toBe("B̄ = 0.5; rᵤ = 0.2; x");
   });

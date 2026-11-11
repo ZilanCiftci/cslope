@@ -295,6 +295,38 @@ const dike: SlopeDefinition = {
 const model = (def: SlopeDefinition, options: Partial<AnalysisOptions> = {}) =>
   modelFromDefinition(def, { id: "m", name: "Dike", options: { ...DEFAULT_ANALYSIS_OPTIONS, method: "Bishop", ...options } });
 
+describe(".sli unit weight of water", () => {
+  const withWater = (lines: string[]) => sli({
+    description: ["  methods: 2", "  water: hu", "  direction: right to left", ...lines],
+    materials: ["type: 0 water: 1 wtable: 1 c: 10 phi: 25 uw: 18 hutype: 0 withru: 0"],
+    names: ["Clay"],
+    vertices: [[0, 0], [40, 0], [40, 15], [25, 15], [15, 10], [0, 10], [40, 12], [0, 5]],
+    cells: [[[1, 2, 3, 4, 5, 6], 1]],
+    extra: ["water table:", "  from_boreholes: 0  unique_id: {X} vertices: [8,7]", ""].join("\r\n"),
+  });
+
+  it("takes the file's unit weight of water into the model, converted to kN/m³", () => {
+    expect(sliToDefinition(parseSli(withWater(["  gammaw: 9.807"])), 0).options.waterUnitWeight).toBeUndefined();
+    expect(sliToDefinition(parseSli(withWater([])), 0).options.waterUnitWeight).toBeUndefined();
+    const imp = sliToDefinition(parseSli(withWater(["  gammaw: 9.81"])), 0);
+    expect(imp.options.waterUnitWeight).toBe(9.81);
+    expect(imp.notes.join(" ")).not.toMatch(/unit weight of water/);
+    // imperial: 62.4 pcf
+    const imperial = sliToDefinition(parseSli(withWater(["  units: imperial", "  gammaw: 62.4"])), 0);
+    expect(imperial.notes.join(" ")).toMatch(/converted to SI/);
+    expect(imperial.options.waterUnitWeight).toBe(9.8023);
+    // a file marked imperial with metric water keeps its numbers
+    expect(sliToDefinition(parseSli(withWater(["  units: imperial", "  gammaw: 9.81"])), 0).options.waterUnitWeight).toBe(9.81);
+  });
+
+  it("exports the model's unit weight of water and reads it back", () => {
+    expect(modelToSli(model(dike)).text).toMatch(/gammaw: 9\.807\r?\n/);
+    const { text } = modelToSli(model(dike, { waterUnitWeight: 9.82 }));
+    expect(text).toMatch(/gammaw: 9\.82\r?\n/);
+    expect(sliToDefinition(parseSli(text), 0, "Dike.sli").options.waterUnitWeight).toBe(9.82);
+  });
+});
+
 describe(".sli export and import", () => {
   it("round-trips a model: regions in triangles, materials, water, loads, a tieback and the circle give the same factor of safety", async () => {
     const opts = { method: "Bishop" as const, slices: 40 };

@@ -57,6 +57,10 @@ Implemented in PRs #28–#30, #32–#35 and #37.
 
 ## Engine
 
+### 2026-11-11: The unit weight of water is a per-model analysis option
+
+γw is `AnalysisOptions.waterUnitWeight` (kN/m³, finite and > 0, else an error; absent: `WATER_UNIT_WEIGHT`, 9.807), not a `SlopeDefinition` field, because the comparable model-level physical inputs already live there: the seismic coefficients kh and kv, the pore pressure head convention and the water in a tension crack are analysis options, and the app edits them in one panel (Model › Analysis › Options, *Water and tension crack*), where the new field sits. The slope takes it from the options and gives it to everything that turns a head into a pressure: the slices (pore pressure, suction, free water, water in a crack, the Rankine crack depth), the waternet, the effective stress of reinforcement and SHANSEP, the earlier stage and the state before rapid drawdown (the same water), and the finite element models and bounds. `validate` warns outside 9–11 kN/m³ (a unit mistake, mostly). Projects store it only when a model sets its own value, so files and input hashes of models at the default do not change, and nothing moves for a model without it (the verification is unchanged). The importers take the file's γw (in kN/m³) into the model instead of noting the difference, and the exporters write the model's. Turned down: a `SlopeDefinition` field (the definition holds geometry, materials, water lines and loads; the physical constants that are settings sit with the options, and the earlier stage would carry a second copy that could disagree); a global app preference (a project would give other results on another machine).
+
 ### 2026-11-11: The unit weight of water is 9.807 kN/m³
 
 γw = ρw·g with ρw = 1000 kg/m³ and standard gravity g = 9.80665 m/s² (CGPM 1901), rounded to 9.807 kN/m³, in the engine and everywhere the app writes or compares it (the importers' unit checks and notes, the exporters, the docs and the verification report). Was 9.81. Problems that publish their own unit weights keep them; the engine has no per-model γw. Turned down: keeping 9.81 (0.03 % more pore pressure than standard gravity gives).

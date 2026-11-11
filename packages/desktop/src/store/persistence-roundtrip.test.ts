@@ -58,3 +58,25 @@ describe("project file round trip", () => {
     ]);
   });
 });
+
+describe("unit weight of water in the project file", () => {
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+  });
+
+  it("keeps a model's value and leaves it out when not set (9.807)", () => {
+    expect("waterUnitWeight" in roundTrip().options).toBe(false);
+    useAppStore.getState().setOptions({ waterUnitWeight: 9.82 });
+    expect(roundTrip().options.waterUnitWeight).toBe(9.82);
+  });
+
+  it("drops a value that is not a positive number without an error", () => {
+    useAppStore.getState().setOptions({ waterUnitWeight: 10 });
+    useAppStore.getState().saveCurrentModel();
+    for (const bad of [0, -9.807, "10", null, true]) {
+      const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState()))) as { models: { options: Record<string, unknown> }[] };
+      raw.models[0].options.waterUnitWeight = bad;
+      expect("waterUnitWeight" in parseProjectFile(JSON.stringify(raw)).models[0].options).toBe(false);
+    }
+  });
+});

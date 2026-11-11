@@ -676,8 +676,10 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     notes.push(`The pore pressures come from ${what[waterMode] ?? `the method "${waterMode}"`}, which is not imported; the model has no pore pressure.`);
   }
   if (waterUsed && (sc.sections.get("pore pressures") ?? []).some((l) => /\bv:/.test(l))) notes.push("The grid of pore pressure points is not imported.");
-  const gammaW = dn("gammaw");
-  if (gammaW !== undefined && Math.abs(gammaW * u.G - WATER_UNIT_WEIGHT) > 0.02) notes.push(`The unit weight of water is ${+(gammaW * u.G).toFixed(3)} kN/m³ in the file; cSlope uses ${WATER_UNIT_WEIGHT}.`);
+  // the file's unit weight of water, in kN/m³, as the model's (absent: 9.807)
+  const gammaWFile = dn("gammaw");
+  const gammaW = gammaWFile !== undefined ? Number((gammaWFile * u.G).toFixed(4)) : undefined;
+  if (gammaW !== undefined && !(gammaW > 0)) notes.push(`The unit weight of water in the file (${gammaWFile}) is not valid; ${WATER_UNIT_WEIGHT} kN/m³ is used.`);
 
   // materials: one per material key used by the cells
   const usedKeys = [...new Set(geo.regions.map((r) => r.material))].sort((a, b) => Number(a.replace(/\D/g, "")) - Number(b.replace(/\D/g, "")));
@@ -794,6 +796,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   if (unusedPiezos > 0) notes.push(`${unusedPiezos} piezometric line(s) that no material uses are not imported.`);
   // Hu: automatic (cos² of the water line's inclination) or the given value
   const options: Partial<AnalysisOptions> = {};
+  if (gammaW !== undefined && gammaW > 0 && gammaW !== WATER_UNIT_WEIGHT) options.waterUnitWeight = gammaW;
   const autos = wet.filter(([, w]) => w.auto).map(([n]) => n);
   if (autos.length > 0) {
     if (autos.length === wet.length) options.porePressureHead = "phreatic-correction";

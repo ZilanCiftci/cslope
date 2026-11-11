@@ -283,7 +283,10 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   };
   const waterTable = phreatic ? { mode: "custom" as const, value: extend(phreatic), followBoundary: false } : undefined;
   const waternet = refs.length > 0 || headLines.length > 1 ? { headLines, referenceLines: refs, ...(phreaticId ? { phreaticLineId: phreaticId } : {}) } : undefined;
-  if (num(wn?.UnitWeightWater) !== undefined && Math.abs(num(wn?.UnitWeightWater)! - WATER_UNIT_WEIGHT) > 0.02) notes.push(`The unit weight of water is ${num(wn?.UnitWeightWater)} kN/m³ in the file; cSlope uses ${WATER_UNIT_WEIGHT}.`);
+  // the file's unit weight of water (kN/m³) as the model's (absent: 9.807)
+  const gwFile = num(wn?.UnitWeightWater);
+  if (gwFile !== undefined && !(gwFile > 0)) notes.push(`The unit weight of water in the file (${gwFile}) is not valid; ${WATER_UNIT_WEIGHT} kN/m³ is used.`);
+  const gammaW = gwFile !== undefined && gwFile > 0 ? gwFile : WATER_UNIT_WEIGHT;
 
   // the effective vertical stress at a point (for a state given as a yield
   // stress or OCR at it): the soil column above it, γ above or below the
@@ -302,8 +305,8 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     const n = 400, dz = (top - p[1]) / n;
     let sv = 0;
     for (let k = 0; k < n; k++) sv += gammaAt([p[0], p[1] + (k + 0.5) * dz]) * dz;
-    if (phreatic) sv += Math.max(0, lineAt(phreatic, p[0]) - top) * WATER_UNIT_WEIGHT;
-    const u = waternet ? waternetPorePressure(waternet, p[0], p[1]) : phreatic ? Math.max(0, (lineAt(phreatic, p[0]) - p[1]) * WATER_UNIT_WEIGHT) : 0;
+    if (phreatic) sv += Math.max(0, lineAt(phreatic, p[0]) - top) * gammaW;
+    const u = waternet ? waternetPorePressure(waternet, p[0], p[1], gammaW) : phreatic ? Math.max(0, (lineAt(phreatic, p[0]) - p[1]) * gammaW) : 0;
     return sv - u;
   };
 
@@ -362,6 +365,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   // loads
   const loads = st.loads ?? {};
   const options: Partial<AnalysisOptions> = {};
+  if (gammaW !== WATER_UNIT_WEIGHT) options.waterUnitWeight = gammaW;
   const consolidations = (l: Json) => ((l.Consolidations as Json[] | undefined) ?? []).filter((c) => (num(c.Degree) ?? 100) < 100);
   const udls = ((loads.UniformLoads as Json[] | undefined) ?? []).flatMap((u) => {
     const a = num(u.Start), b = num(u.End), q = num(u.Magnitude);
