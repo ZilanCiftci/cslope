@@ -438,11 +438,51 @@ fn axial_tangent_and_bisector_directions_the_bisector_halves_the_angle() {
 }
 
 #[test]
-fn an_element_the_movement_would_push_carries_nothing() {
-    assert!(forces_for(
-        json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100 })
-    )
+fn a_passive_element_the_movement_would_push_carries_nothing() {
+    // (issue #143: the rule is for passive elements; these were the default,
+    // active, before)
+    let passive = json!({ "application": "passive" });
+    assert!(forces_for(with(
+        &json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100 }),
+        passive.clone()
+    ))
     .is_empty());
+    assert!(forces_for(with(
+        &json!({ "x1": 35, "y1": -1, "x2": 38, "y2": -3, "tensileCapacity": 100 }),
+        passive.clone()
+    ))
+    .is_empty());
+    assert!(forces_for(with(
+        &json!({ "x1": 20, "y1": 0, "x2": 20, "y2": 0, "tensileCapacity": 100 }),
+        passive
+    ))
+    .is_empty());
+    assert!(forces_for(with(
+        &nail(),
+        json!({ "tensileCapacity": 0, "application": "passive" })
+    ))
+    .is_empty());
+}
+
+#[test]
+fn an_active_element_the_movement_would_push_carries_its_force_along_itself() {
+    // Pointing down-slope out of the mass: pushed by the movement, yet a
+    // prestressed anchor's force acts all the same (issue #143), along the
+    // element towards its part in stable ground, here partly down-slope.
+    for r in [
+        json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100 }),
+        json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100, "application": "active", "direction": "tangent" }),
+    ] {
+        let f = forces_for(r);
+        assert_eq!(f.len(), 1);
+        close(f[0].force, 100.0, 12);
+        assert!(!f[0].passive);
+        let (ux, uy) = (14.0 / 14.0f64.hypot(9.33), -9.33 / 14.0f64.hypot(9.33));
+        close(f[0].fx, 100.0 * ux, 9);
+        close(f[0].fy, 100.0 * uy, 9);
+        assert!(f[0].fx > 0.0);
+    }
+    // Missing the surface, of no length or of no capacity: nothing, as before.
     assert!(
         forces_for(json!({ "x1": 35, "y1": -1, "x2": 38, "y2": -3, "tensileCapacity": 100 }))
             .is_empty()
@@ -455,7 +495,21 @@ fn an_element_the_movement_would_push_carries_nothing() {
 }
 
 #[test]
-fn an_element_within_2_degrees_of_the_normal_carries_its_force() {
+fn a_passive_element_within_2_degrees_of_the_normal_carries_its_force() {
+    let at = |deg: f64| {
+        let t = deg * PI / 180.0;
+        forces_for(
+            json!({ "x1": 22.0 - 6.0 * t.sin(), "y1": -0.5 + 6.0 * t.cos(), "x2": 22.0 + 6.0 * t.sin(), "y2": -0.5 - 6.0 * t.cos(), "tensileCapacity": 100, "application": "passive" }),
+        )
+    };
+    assert_eq!(at(0.0).len(), 1);
+    assert_eq!(at(6.0).len(), 0);
+}
+
+#[test]
+fn an_active_element_carries_its_force_whatever_its_angle_past_the_normal() {
+    // The same elements, active (the default application): the force acts
+    // at 6° past the vertical too.
     let at = |deg: f64| {
         let t = deg * PI / 180.0;
         forces_for(
@@ -463,7 +517,78 @@ fn an_element_within_2_degrees_of_the_normal_carries_its_force() {
         )
     };
     assert_eq!(at(0.0).len(), 1);
-    assert_eq!(at(6.0).len(), 0);
+    assert_eq!(at(6.0).len(), 1);
+    close(at(6.0)[0].force, 100.0, 12);
+}
+
+/// An element through the middle of the base of the slice at the circle's
+/// lowest point, `deg` past the normal to that base on the pushed side
+/// (the movement, +x along the base, would shorten it); returns the forces
+/// and the base's unit tangent and the element's unit direction into the
+/// stable ground.
+fn pushed_by(deg: f64, extra: Value) -> (Vec<ReinforcementForce>, [f64; 2], [f64; 2]) {
+    let s = slope_of(mc19());
+    let slices = arc_slices(&s);
+    let q = slices
+        .iter()
+        .find(|q| q.x_left <= 22.0 && 22.0 < q.x_right)
+        .unwrap();
+    let (bx, by) = (q.x_right - q.x_left, q.y1_bottom - q.y0_bottom);
+    let bl = bx.hypot(by);
+    let (tx, ty) = (bx / bl, by / bl);
+    // Normal into the stable ground (below the base), tilted towards +t.
+    let (nx, ny) = (ty, -tx);
+    let d = deg * PI / 180.0;
+    let (ux, uy) = (d.cos() * nx + d.sin() * tx, d.cos() * ny + d.sin() * ty);
+    let (mx, my) = (q.x, (q.y0_bottom + q.y1_bottom) / 2.0);
+    let r = with(
+        &json!({ "x1": mx - 6.0 * ux, "y1": my - 6.0 * uy, "x2": mx + 6.0 * ux, "y2": my + 6.0 * uy, "tensileCapacity": 100 }),
+        extra,
+    );
+    (forces_for(r), [tx, ty], [ux, uy])
+}
+
+#[test]
+fn an_active_element_past_the_normal_carries_its_full_force_along_itself() {
+    // Issue #143: 1°, 3°, 10° and 30° past the normal to the base, on the
+    // pushed side: the full force, along the element, its component in the
+    // direction of sliding sin(angle) of it.
+    for deg in [1.0, 3.0, 10.0, 30.0] {
+        for extra in [
+            json!({}),
+            json!({ "application": "active" }),
+            json!({ "application": "active", "direction": "bisector" }),
+        ] {
+            let (f, [tx, ty], [ux, uy]) = pushed_by(deg, extra);
+            assert_eq!(f.len(), 1, "{deg}°");
+            close(f[0].force, 100.0, 12);
+            close(f[0].fx, 100.0 * ux, 9);
+            close(f[0].fy, 100.0 * uy, 9);
+            close(
+                (f[0].fx * tx + f[0].fy * ty) / 100.0,
+                (deg * PI / 180.0).sin(),
+                9,
+            );
+        }
+    }
+}
+
+#[test]
+fn a_passive_element_past_the_normal_is_dropped_beyond_2_degrees() {
+    // Unchanged by issue #143: within 2° along itself, beyond it nothing.
+    let (f, _, [ux, uy]) = pushed_by(1.0, json!({ "application": "passive" }));
+    assert_eq!(f.len(), 1);
+    close(f[0].fx, 100.0 * ux, 9);
+    close(f[0].fy, 100.0 * uy, 9);
+    assert!(f[0].passive);
+    for deg in [3.0, 10.0, 30.0] {
+        assert!(
+            pushed_by(deg, json!({ "application": "passive" }))
+                .0
+                .is_empty(),
+            "{deg}°"
+        );
+    }
 }
 
 #[test]

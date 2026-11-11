@@ -48,6 +48,13 @@ With pullout, **Plate / connection, end 1 (kN)** and **Anchorage, end 2 (kN)** l
 - **Active (not divided by F)**: the force is a known, allowable force, such as a prestressed anchor. It is applied as it is.
 - **Passive (divided by F)**: the force is an ultimate capacity that is mobilized together with the soil strength. Like the soil strength it is divided by the factor of safety.
 
+### Direction of movement
+
+Where a slip surface crosses an element, the sliding mass moves along the slip surface there. If the element points into the stable ground against the movement, the movement pulls on it. If it points into the stable ground beyond the normal to the slip surface, on the side the mass moves towards, the movement pushes on it and would shorten it. The application decides what the element carries then:
+
+- **Passive** elements (soil nails, geosynthetics, unstressed anchors) act in tension only. An element that the movement pushes more than 2° past the normal to the slip surface carries nothing on that surface; within 2° it carries its force along itself, whatever its force direction. Compression in a nail is not counted (Recommendations Clouterre 1991, §3.2.2.3), and nails steeper than about 40–45° may be in compression (FHWA GEC 7, Lazarte et al. 2015, §6.3.3c). The published range for nails is wider: Clouterre finds a nail still in tension 10–20° past the normal, with the tension falling gradually as the angle grows (§2.2.3 and §3.2.2.3). cSlope's 2° is its own number and is conservative.
+- **Active** elements (prestressed anchors) carry their full force on every slip surface they cross, whatever the direction of movement: the force of a prestressed anchor is a known force on the sliding mass (FHWA GEC 4, Sabatini et al. 1999, §5.7.3.1; Duncan, Wright & Brandon 2014, §8.1–8.2; Wright & Duncan 1991). Where the movement pushes the element, the force acts along the element, whatever its force direction. If part of the force then acts in the direction of sliding, it lowers the factor of safety, as in Hoek's plane failure with a tensioned anchor (Hoek, *Practical Rock Engineering*).
+
 ### Lock-off load (finite elements)
 
 An element with a bonded length at end 2 has a **Lock-off load (kN, FE)**: the prestress of its free length in the finite element analysis, per element. There the free length is joined to the soil only at its ends. Limit equilibrium does not use it: it takes an active element's force as its capacity.
