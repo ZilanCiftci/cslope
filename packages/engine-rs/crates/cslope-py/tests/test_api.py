@@ -28,10 +28,10 @@ from cslope import examples
 EXPECTED = {
     ("simple_slope", "Bishop"): 1.6225110637396323,
     ("simple_slope", "Morgenstern-Price"): 1.620713156398642,
-    ("slope_with_water_table", "Bishop"): 1.3659823197741354,
-    ("slope_with_water_table", "Morgenstern-Price"): 1.3673458256223812,
-    ("clay_crust_with_load", "Bishop"): 1.3041718488281702,
-    ("clay_crust_with_load", "Morgenstern-Price"): 1.3041768931980282,
+    ("slope_with_water_table", "Bishop"): 1.3666772357829378,
+    ("slope_with_water_table", "Morgenstern-Price"): 1.367993607806179,
+    ("clay_crust_with_load", "Bishop"): 1.3054681397872558,
+    ("clay_crust_with_load", "Morgenstern-Price"): 1.3054732951160273,
     ("two_layer_cut_left", "Bishop"): 1.833429728065641,
     ("two_layer_cut_left", "Morgenstern-Price"): 1.8033185044681899,
 }
@@ -62,12 +62,11 @@ def test_examples(name, method):
     assert math.isclose(r["minFOS"], EXPECTED[(name, method)], rel_tol=1e-6, abs_tol=0)
     assert r["criticalSurface"]["fos"] == r["minFOS"]
     assert r["criticalSlices"] and r["allSurfaces"]
-    # Bishop's critical circle of the loaded clay crust enters at 77°; with
-    # chord bases (2026-11-10) its steepest slice has N' < 0, which the
-    # engine reports. Every other example runs without a warning.
-    steep = (name, method) == ("clay_crust_with_load", "Bishop")
-    codes = {w["code"] for w in r["warnings"]}
-    assert codes == ({"negative-effective-normal", "steep-entry-tension"} if steep else set())
+    # Every example runs without a warning. (Bishop's critical circle of the
+    # loaded clay crust had a steepest slice with N' < 0, reported as
+    # negative-effective-normal and steep-entry-tension, while the steep
+    # ends of a circle were cut into narrower slices, until 2026-11-11.)
+    assert [w["code"] for w in r["warnings"]] == []
 
 
 def test_left_sliding_model_in_model_coordinates():

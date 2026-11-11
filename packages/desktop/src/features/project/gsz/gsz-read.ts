@@ -82,6 +82,13 @@ export interface GszStability {
    * from +x).
    */
   block?: { left: GszBlockGrid; right: GszBlockGrid };
+  /**
+   * The smallest sliding mass a slip surface may have (MinimumVolume): an
+   * area per unit width, in the file's length unit squared.
+   */
+  minimumVolume?: number;
+  /** The smallest depth a slip surface may have (MinimumDepth), in the file's length unit. */
+  minimumDepth?: number;
   axis?: Pt;
   /** Piezometric surface id → its points. */
   piezometric: Map<number, Pt[]>;
@@ -250,6 +257,18 @@ export interface GszBlockGrid {
   angles: [number, number];
 }
 
+/**
+ * Keep a point of an analysis's point list (DataPoints, by Number). A
+ * number the list has already given is a repeat, which some files have:
+ * that point takes its position in the list (1-based) as its number, as
+ * the search objects' references to it do, so no point is lost. A list
+ * without repeats is read by its numbers alone.
+ */
+function setPoint(points: Map<number, Pt>, n: number, index: number, p: Pt) {
+  const key = points.has(n) ? index + 1 : n;
+  if (!points.has(key)) points.set(key, p);
+}
+
 /** Parse the model XML of a .gsz. */
 export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   // A model never has a document type declaration; one can only carry
@@ -355,10 +374,10 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     if (aid === undefined || !entry) continue;
     // the analysis's own point list, which the water, loads and crack refer to
     const local = new Map<number, Pt>();
-    for (const d of children(entry, "DataPoints/DataPoint")) {
+    children(entry, "DataPoints/DataPoint").forEach((d, i) => {
       const n = num(d.getAttribute("Number")), x = num(d.getAttribute("X")), y = num(d.getAttribute("Y"));
-      if (n !== undefined && x !== undefined && y !== undefined) local.set(n, [x, y]);
-    }
+      if (n !== undefined && x !== undefined && y !== undefined) setPoint(local, n, i, [x, y]);
+    });
     const pointsOf = (el: Element | null): Pt[] =>
       children(el, "DataPoints/DataPoint").flatMap((d) => {
         const n = Number(d.textContent?.trim());
@@ -436,6 +455,8 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
         const left = grid("LeftGrid"), right = grid("RightGrid");
         return left && right ? { left, right } : undefined;
       })(),
+      minimumVolume: num(childText(slip, "MinimumVolume")),
+      minimumDepth: num(childText(slip, "MinimumDepth")),
       fullySpecified: [
         ...children(slip, "FullySpecifiedSlips/FullySpecifiedSlip"),
         // version 8
