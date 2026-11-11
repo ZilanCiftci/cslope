@@ -96,11 +96,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-11 | Slice base of a circle: the straight chord, with the base shear's moment arm to the chord, R·cos(Δθ/2) (Fredlund & Krahn 1977); the steep ends still cut; arc-consistent base removed | 285 | 0.323 → 0.317 | 0.455 → 0.449 | 0.938 → 0.936 | 1.521 → 1.520 | 534 s (4 workers, load 4.7 at start) |
 | 2026-11-11 | Unit weight of water 9.807 kN/m³ (ρw·g with standard gravity), was 9.81 | 112 | 0.317 → 0.316 | 0.449 → 0.447 | 0.936 → 0.936 | 1.520 → 1.519 | 550 s (4 workers, load 4.4 at start) |
 | 2026-11-11 | Unit weight of water as a model setting (default 9.807, nothing moves) | 0 | 0.316 → 0.316 | 0.447 → 0.447 | 0.936 → 0.936 | 1.519 → 1.519 | 573 s (4 workers, load 1.1 at start) |
+| 2026-11-11 | Rapid drawdown: Kc = 1 envelope from the R envelope per Duncan, Wright & Brandon (2014) Eqs. 9.6–9.7; .gsz import reads the phreatic correction | 0 | 0.316 → 0.316 | 0.447 → 0.447 | 0.936 → 0.936 | 1.519 → 1.519 | 560 s (4 workers, load 3.8 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-11: Rapid drawdown: Kc = 1 envelope from the R envelope per Duncan, Wright & Brandon (2014) Eqs. 9.6–9.7; .gsz import reads the phreatic correction
+
+Compared with e5687a3d. Errors are relative to the reference, in percent. Verification run time: 560 s (4 workers, load 3.8 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.215 % | -0.215 % |
+| **Mean absolute error** | | | | 0.316 % | 0.316 % |
+| **RMS error** | | | | 0.447 % | 0.447 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.153 % | -0.153 % |
+| **Mean absolute error** | | | | 0.936 % | 0.936 % |
+| **RMS error** | | | | 1.519 % | 1.519 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-11: Unit weight of water as a model setting (default 9.807, nothing moves)
 

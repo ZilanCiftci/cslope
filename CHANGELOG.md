@@ -7,6 +7,11 @@ All notable changes to cSlope. Versions follow [semantic versioning](https://sem
 - The unit weight of water is a setting of each model: **Unit weight of water (kN/m³)** under Water and tension crack in Model › Analysis › Options (default 9.807; for example 9.82 for local gravity or 10 as a simplification). It sets the pore pressure, free water, water in a tension crack, head lines, reinforcement and the finite element analyses, and the analysis summary and PDF show it. Projects store it only when a model sets its own; older projects open unchanged. Imports from .gsz, .sli and .stix take the file's value instead of noting it, and the exports write the model's. Python: `Options.water_unit_weight`; analysis documents: `options.waterUnitWeight`.
 - The unit weight of water is 9.807 kN/m³ (ρw·g with standard gravity), was 9.81; results with water move by a few hundredths of a percent. Exported files carry 9.807.
 - The slices of a circle stand on the straight chord between their base points, with the base shear's moment arm the distance from the centre to the chord (Fredlund & Krahn 1977), as the conventional method has it; the arc-consistent base is gone (the steep ends of a circle are still cut into narrower slices). Factors of safety of circular surfaces rise slightly, typically 0.01–0.15 %; non-circular surfaces do not change.
+- .gsz import takes an analysis's phreatic correction (IsPiezPhreatic) as the pore pressure head *phreatic correction*, and the .gsz export writes it for a model that uses it.
+
+### Fixed
+
+- Rapid drawdown (three-stage): the strength at isotropic consolidation (Kc = 1) is taken from the R envelope as in Duncan, Wright & Brandon (2014), Eqs. 9.6–9.7, with the factor cos φ′ on both its intercept and its slope; it had cos φR in its place and was too high by cos φR / cos φ′ (30 % for φ′ = 45°, φR = 23°). Factors of safety of models with a drawdown (R) envelope fall: on the Walter Bouldin Dam example from 1.046 to 1.023 on the reference circle (reference value 1.026). Models without an R envelope do not change.
 
 ## [0.1.0-beta.2] - 2026-11-04
 
