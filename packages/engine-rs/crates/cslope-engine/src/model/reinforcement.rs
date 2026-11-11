@@ -196,7 +196,9 @@ pub fn effective_vertical_stress_with_loads(slope: &Slope, x: f64, y: f64) -> f6
     base + q
 }
 
-/// cos 88°: the movement's component along an element that counts as pushing it.
+/// cos 88°: the movement's component along a passive element beyond which
+/// it counts as pushed (2° past the normal to the base, cSlope's own
+/// tolerance; see `apply_reinforcement`).
 fn near_normal() -> f64 {
     js::math::cos((88.0 * PI) / 180.0)
 }
@@ -494,8 +496,10 @@ fn add_force(s: &mut Slice, force: ReinforcementForce, cx: f64, cy: f64, at: Opt
 /// Apply the reinforcement forces to the slices of a slip surface: where
 /// an element crosses a slice base, its force acts on that slice at the
 /// crossing. The force pulls the sliding mass towards the part of the
-/// element in stable ground; an element that the movement would push
-/// (compress) carries nothing. (cx, cy) is the centre / axis point for
+/// element in stable ground. A passive element that the movement would
+/// push (compress) more than 2° past the normal to the base carries
+/// nothing; an active element always carries its force (the rules and
+/// their sources are in the loop). (cx, cy) is the centre / axis point for
 /// moments, the solvers' convention: driving moment of a force
 /// (Fx, Fdown) at (x, y) is Fdown·(cx − x) + Fx·(cy − y).
 ///
@@ -538,12 +542,31 @@ pub fn apply_reinforcement(
             let into = tx * ay - ty * ax > 0.0;
             let dx = if into { -ax } else { ax };
             let dy = if into { -ay } else { ay };
-            // Tension only: the movement must pull away from the stable part. An
-            // element within 2° of the normal to the base (the movement neither
-            // pulls nor pushes it appreciably) still carries its force along
-            // itself, as commercial programs apply it whatever the angle.
+            // Direction of movement. `along` > 0: the element lies on the pushed
+            // side, the movement would shorten it; it is asin(along) past the
+            // normal to the base.
+            //
+            // Passive elements (application "passive", divided by F) act in
+            // tension only: compression in a nail is not counted (Recommendations
+            // Clouterre 1991, §3.2.2.3, pp. 124–126; nails steeper than about
+            // 40–45° may be in compression, FHWA GEC 7, Lazarte et al. 2015,
+            // §6.3.3c, p. 149). Clouterre finds a nail still in tension up to
+            // 10–20° past the normal, the tension falling gradually (§2.2.3);
+            // cSlope keeps a passive element up to 2° past the normal (its own,
+            // conservative tolerance), along itself, and drops it beyond.
+            //
+            // Active elements (application "active" or absent, not divided by F:
+            // prestressed anchors) are known external forces whatever the
+            // direction of movement (FHWA GEC 4, Sabatini et al. 1999, §5.7.3.1,
+            // p. 97; Duncan, Wright & Brandon 2014, ch. 8, §8.1–8.2; Wright &
+            // Duncan 1991, TRR 1330): the full force acts, along the element on
+            // the pushed side. Where part of it then acts in the direction of
+            // sliding it lowers F, as in Hoek's plane failure with a tensioned
+            // anchor (Practical Rock Engineering), which takes the anchor at its
+            // real angle to the normal.
             let along = dx * tx + dy * ty;
-            if along >= near_normal {
+            let passive = is_passive(r.application.as_ref());
+            if passive && along >= near_normal {
                 continue;
             }
             let magnitude = envelope_at(env, t * env.length) / r.spacing.unwrap_or(1.0);
@@ -576,7 +599,7 @@ pub fn apply_reinforcement(
                 fx: fx * magnitude,
                 fy: fy * magnitude,
                 force: magnitude,
-                passive: is_passive(r.application.as_ref()),
+                passive,
             };
             add_force(&mut slices[slice], force.clone(), cx, cy, None);
             forces.push(force);
