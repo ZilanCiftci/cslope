@@ -653,6 +653,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   // A slip surface below the bottom of the geometry follows it there in
   // .gsz files (the material below is taken as impenetrable).
   options.compositeBase = true;
+  // the phreatic correction of the pore pressure; otherwise the default
+  // (the vertical head)
+  if (stab?.phreaticCorrection) options.porePressureHead = "phreatic-correction";
 
   const results = file.results.get(analysis.name.toLowerCase()) ?? [];
   const best = results.slice().sort((a, b) => a.fos - b.fos)[0];

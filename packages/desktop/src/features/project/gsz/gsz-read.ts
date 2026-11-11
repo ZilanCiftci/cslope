@@ -97,6 +97,8 @@ export interface GszStability {
   seismicV: number;
   /** A rapid drawdown analysis (Control/IsRapidDrawdown). */
   rapidDrawdown?: boolean;
+  /** The phreatic correction of the pore pressure (Control/IsPiezPhreatic). */
+  phreaticCorrection?: boolean;
   /** The reinforcement lines: the reinforcement's id, end 1 (the head) and end 2. */
   reinforcementLines?: { reinforcement: number; p1: Pt; p2: Pt }[];
   /**
@@ -443,6 +445,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       seismicH: num(seis?.getAttribute("Horizontal")) ?? 0,
       seismicV: num(seis?.getAttribute("Vertical")) ?? 0,
       rapidDrawdown: childText(child(entry, "Control"), "IsRapidDrawdown") === "true",
+      phreaticCorrection: childText(child(entry, "Control"), "IsPiezPhreatic") === "true",
       bBar: new Map(
         children(entry, "MaterialUsesBBarParams/MaterialUsesBBarParam").flatMap((b) => {
           const id = num(childText(b, "ID"));

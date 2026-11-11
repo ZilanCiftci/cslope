@@ -245,6 +245,15 @@ describe(".gsz import", () => {
     expect(modelToGszXml(modelFromDefinition(imp.definition, { id: "d", name: "D" })).xml).toContain("<UnitWaterWeight>9.807</UnitWaterWeight>");
   });
 
+  it("takes the phreatic correction (IsPiezPhreatic) as the pore pressure head", () => {
+    const withControl = (v: string) => XML.replace("<Entry>\n        <DataPoints", `<Entry>\n        <Control><IsPiezPhreatic>${v}</IsPiezPhreatic></Control>\n        <DataPoints`);
+    expect(withControl("true")).not.toBe(XML);
+    expect(gszToDefinition({ ...parseGszXml(withControl("true")), results: new Map() }, 1).options.porePressureHead).toBe("phreatic-correction");
+    // false or absent: the default (the vertical head)
+    expect(gszToDefinition({ ...parseGszXml(withControl("false")), results: new Map() }, 1).options.porePressureHead).toBeUndefined();
+    expect(gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1).options.porePressureHead).toBeUndefined();
+  });
+
   it("reads the default search (no Option) and an exit given as a point", () => {
     const xml = XML.replace("<Option>EntryExit</Option>", "")
       .replace('<RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />', '<RightOption>Point</RightOption><RightSideLeftPt X="21" Y="5" />');
@@ -655,6 +664,18 @@ describe(".gsz export", () => {
     const cut = { ...lens, materialBoundaries: [...lens.materialBoundaries!, { coordinates: [[7.5, 3], [7.5, 5]], materialName: "" }, { coordinates: [[7.5, 8], [7.5, 10]], materialName: "" }] } as SlopeDefinition;
     expect(onCircle(imp.definition)).toBeCloseTo(onCircle(cut), 6);
     expect(Math.abs(onCircle(imp.definition) / onCircle(lens) - 1)).toBeLessThan(1e-3);
+  });
+
+  it("writes the phreatic correction as IsPiezPhreatic and reads it back; nothing for the vertical head", async () => {
+    const corrected = { ...model, options: { ...model.options, porePressureHead: "phreatic-correction" as const } };
+    expect(modelToGszXml(corrected).xml).toContain("<Control>\n          <IsPiezPhreatic>true</IsPiezPhreatic>\n        </Control>");
+    const [imp] = await gszImports(modelToGsz(corrected).bytes, "P.gsz");
+    expect(imp.options.porePressureHead).toBe("phreatic-correction");
+    // the default: no Control block, as before
+    expect(modelToGszXml(model).xml).not.toContain("<Control>");
+    expect(modelToGszXml({ ...model, options: { ...model.options, porePressureHead: "vertical" as const } }).xml).not.toContain("<Control>");
+    const [plain] = await gszImports(modelToGsz(model).bytes, "P.gsz");
+    expect(plain.options.porePressureHead).toBeUndefined();
   });
 
   it("writes the seismic coefficients and reads them back", async () => {

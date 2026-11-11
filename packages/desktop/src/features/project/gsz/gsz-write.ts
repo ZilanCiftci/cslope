@@ -380,6 +380,11 @@ ${ids.map((d) => `                <DataPoint>${d}</DataPoint>`).join("\n")}
 ${item.join("\n")}
         </${tag}>
 ` : "");
+  // the phreatic correction of the pore pressure; left out for the default (the vertical head)
+  const controlXml = opts.porePressureHead === "phreatic-correction" ? `        <Control>
+          <IsPiezPhreatic>true</IsPiezPhreatic>
+        </Control>
+` : "";
   const waterOption = main ? (bBarXml.length > 0 ? "PiezoSurfaceBbar" : "PiezoSurface") : undefined;
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -441,7 +446,7 @@ ${materialsXml.join("\n")}
     <StabilityItem>
       <AnalysisID>1</AnalysisID>
       <Entry>
-${list("DataPoints", local.map((p, i) => `          <DataPoint Number="${i + 1}" X="${n(p[0])}" Y="${n(p[1])}" />`))}        <SlipSurface>
+${controlXml}${list("DataPoints", local.map((p, i) => `          <DataPoint Number="${i + 1}" X="${n(p[0])}" Y="${n(p[1])}" />`))}        <SlipSurface>
 ${slipXml}          <EntryExit>
             <LeftSideLeftPt ${gp(left[0])} />
             <LeftSideRightPt ${gp(left[1])} />
