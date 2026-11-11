@@ -11,7 +11,7 @@
  * a starting point to check there, not a guaranteed round trip.
  */
 
-import { MATERIAL_MODEL_LABELS, suctionAngle, type MaterialModel } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, WATER_UNIT_WEIGHT, suctionAngle, type MaterialModel } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -458,7 +458,7 @@ ${list("LineLoadPoints", lineLoadXml)}${list("Surcharges", surchargeXml)}${seism
     <WaterItem>
       <AnalysisID>1</AnalysisID>
       <Entry>
-        <UnitWaterWeight>9.81</UnitWaterWeight>
+        <UnitWaterWeight>${WATER_UNIT_WEIGHT}</UnitWaterWeight>
 ${waterOption ? `        <ResultInputInfo>
           <Option>${waterOption}</Option>
         </ResultInputInfo>

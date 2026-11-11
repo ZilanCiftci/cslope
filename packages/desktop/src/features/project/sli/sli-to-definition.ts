@@ -14,7 +14,7 @@
  * What does not carry over is listed in the notes.
  */
 
-import type { AnalysisOptions, MaterialModel, SlopeDefinition } from "@cslope/engine";
+import { WATER_UNIT_WEIGHT, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { fields, num, vertexLists, type Fields, type Pt, type SliFile, type SliScenario } from "./sli-read";
 import { MAX_REGIONS } from "../gsz/gsz-to-definition";
 
@@ -638,9 +638,9 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const raw = file.scenarios[index];
   if (!raw) throw new Error(`The file has no model ${index + 1}.`);
   // imperial units to SI
-  // (a file marked imperial whose water weighs 9.81 has metric numbers)
+  // (a file marked imperial whose water weighs about 9.81 has metric numbers)
   const gw = num(raw.description.get("gammaw"));
-  const metricWater = gw !== undefined && Math.abs(gw - 9.81) < 0.5;
+  const metricWater = gw !== undefined && Math.abs(gw - WATER_UNIT_WEIGHT) < 0.5;
   const u = raw.description.get("units") === "imperial" && !metricWater ? IMPERIAL : SI;
   const sc: SliScenario = u === SI ? raw : { ...raw, vertices: new Map([...raw.vertices].map(([k, [x, y]]) => [k, [x * u.L, y * u.L] as Pt])) };
   const notes: string[] = [];
@@ -652,7 +652,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   }
   const units = d("units");
   if (units === "imperial" && u === IMPERIAL) notes.push("The model is in imperial units; it is converted to SI (ft to m, psf to kPa, pcf to kN/m³, lbf to kN).");
-  else if (units === "imperial") notes.push("The file is marked as in imperial units, but its unit weight of water is 9.81; its numbers are taken as SI (kN, kPa, m) as they are.");
+  else if (units === "imperial") notes.push("The file is marked as in imperial units, but its unit weight of water is about 9.81; its numbers are taken as SI (kN, kPa, m) as they are.");
   else if (units && units !== "metric") notes.push(`The model is in ${units} units; the numbers are imported as they are (cSlope works in kN, kPa and m).`);
 
   const geo = cellRegions({ vertices: squareSides(sc, notes), cells: sc.cells }, notes);
@@ -677,7 +677,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   }
   if (waterUsed && (sc.sections.get("pore pressures") ?? []).some((l) => /\bv:/.test(l))) notes.push("The grid of pore pressure points is not imported.");
   const gammaW = dn("gammaw");
-  if (gammaW !== undefined && Math.abs(gammaW * u.G - 9.81) > 0.02) notes.push(`The unit weight of water is ${+(gammaW * u.G).toFixed(3)} kN/m³ in the file; cSlope uses 9.81.`);
+  if (gammaW !== undefined && Math.abs(gammaW * u.G - WATER_UNIT_WEIGHT) > 0.02) notes.push(`The unit weight of water is ${+(gammaW * u.G).toFixed(3)} kN/m³ in the file; cSlope uses ${WATER_UNIT_WEIGHT}.`);
 
   // materials: one per material key used by the cells
   const usedKeys = [...new Set(geo.regions.map((r) => r.material))].sort((a, b) => Number(a.replace(/\D/g, "")) - Number(b.replace(/\D/g, "")));

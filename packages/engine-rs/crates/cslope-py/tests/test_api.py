@@ -28,8 +28,8 @@ from cslope import examples
 EXPECTED = {
     ("simple_slope", "Bishop"): 1.6225110637396323,
     ("simple_slope", "Morgenstern-Price"): 1.620713156398642,
-    ("slope_with_water_table", "Bishop"): 1.3659087690215739,
-    ("slope_with_water_table", "Morgenstern-Price"): 1.3672770607769689,
+    ("slope_with_water_table", "Bishop"): 1.3659823197741354,
+    ("slope_with_water_table", "Morgenstern-Price"): 1.3673458256223812,
     ("clay_crust_with_load", "Bishop"): 1.3041718488281702,
     ("clay_crust_with_load", "Morgenstern-Price"): 1.3041768931980282,
     ("two_layer_cut_left", "Bishop"): 1.833429728065641,

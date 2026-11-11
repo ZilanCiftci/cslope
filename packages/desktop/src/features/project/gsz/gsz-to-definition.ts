@@ -6,7 +6,7 @@
  * `notes`, never dropped in silence.
  */
 
-import { calculatePolygonArea, getYAtXStrict, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
+import { calculatePolygonArea, getYAtXStrict, WATER_UNIT_WEIGHT, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
 import { surfaceYAtX } from "../../view/surface";
 import { regionInteriorPoint } from "../../../utils/regions";
 import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
@@ -500,8 +500,8 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   const water = file.water.get(analysis.id);
   const waterOption = water?.option ?? "None";
   const gw = water?.gammaWater;
-  if (gw !== undefined && Math.abs(gw * scale.weight - 9.81) > 0.02) {
-    notes.push(`The file's unit weight of water is ${(gw * scale.weight).toFixed(3)} kN/m³; cSlope uses 9.81.`);
+  if (gw !== undefined && Math.abs(gw * scale.weight - WATER_UNIT_WEIGHT) > 0.02) {
+    notes.push(`The file's unit weight of water is ${(gw * scale.weight).toFixed(3)} kN/m³; cSlope uses ${WATER_UNIT_WEIGHT}.`);
   }
   const xs = geo.outline.map((p) => p[0]), ys = geo.outline.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), yMin = Math.min(...ys);

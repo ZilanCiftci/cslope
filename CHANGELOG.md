@@ -4,6 +4,7 @@ All notable changes to cSlope. Versions follow [semantic versioning](https://sem
 
 ## [Unreleased]
 
+- The unit weight of water is 9.807 kN/m³ (ρw·g with standard gravity), was 9.81; results with water move by a few hundredths of a percent. Exported files carry 9.807.
 - The slices of a circle stand on the straight chord between their base points, with the base shear's moment arm the distance from the centre to the chord (Fredlund & Krahn 1977), as the conventional method has it; the arc-consistent base is gone (the steep ends of a circle are still cut into narrower slices). Factors of safety of circular surfaces rise slightly, typically 0.01–0.15 %; non-circular surfaces do not change.
 
 ## [0.1.0-beta.2] - 2026-11-04

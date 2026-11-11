@@ -12,7 +12,7 @@
  * to check there, not a guaranteed round trip.
  */
 
-import { MATERIAL_MODEL_LABELS, suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, WATER_UNIT_WEIGHT, suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -260,7 +260,7 @@ function stageDocs(
   return {
     geometry: { Layers: layers.map((l) => ({ Id: l.id, Label: l.label, Notes: null, Points: l.ring.map(xz) })) },
     soilLayers: { SoilLayers: layers.map((l) => ({ LayerId: l.id, SoilId: soilOf(l.material)?.soilId })) },
-    waternet: { UnitWeightWater: 9.81, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
+    waternet: { UnitWeightWater: WATER_UNIT_WEIGHT, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
     state: { StatePoints: statePoints, StateLines: [] },
     loads: {
       LayerLoads: layerLoads, UniformLoads: uniformLoads, LineLoads: lineLoads, Trees: [],

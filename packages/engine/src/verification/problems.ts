@@ -2600,7 +2600,7 @@ export const PROBLEMS: RawCase[] = [
     ],
     paper: [{"value": 1.049, "method": "rigid block, force equilibrium", "source": "Priest (1993)"}],
     notes: [
-      "Crest at (17.321, 30) as in Priest's fig. 8.2 and solution (his corners A (0, 0), B (17.32, 30), C (25.98, 30), D (25.98, 15); G = 8119 kN, U = 551 kN, V = 68.9 kN; γw = 9.8 in his solution, 9.81 here, 0.0001 on F) and in commercial program B's Fig. 106; V079 is the other programs' version with the crest at 17.0. commercial program B Janbu 1.049.",
+      "Crest at (17.321, 30) as in Priest's fig. 8.2 and solution (his corners A (0, 0), B (17.32, 30), C (25.98, 30), D (25.98, 15); G = 8119 kN, U = 551 kN, V = 68.9 kN; γw = 9.8 in his solution, 9.807 here, 0.0001 on F) and in commercial program B's Fig. 106; V079 is the other programs' version with the crest at 17.0. commercial program B Janbu 1.049.",
     ],
   },
   {
