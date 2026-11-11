@@ -62,7 +62,9 @@ fn accepts_no_pair_with_fm_le_0_or_a_gap_above_the_capped_tolerance_also_after_1
             .unwrap();
         let [x0, x1, cx, cy, r] = PLANE;
         let slices = get_slices(&slope, x0, x1, cx, cy, r, None, &mut SliceScratch::new()).unwrap();
-        assert_eq!(slices.len(), 26);
+        // 25 slices since the steep ends of a circle are no longer cut (26
+        // with the cuts, until 2026-11-11).
+        assert_eq!(slices.len(), 25);
         let mut runs = vec![slices.clone()];
         runs.extend(perturbations(&slices));
         for mut s in runs {

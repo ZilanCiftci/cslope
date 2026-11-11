@@ -991,6 +991,17 @@ const canvasScenes: Scene[] = [
     },
   },
   {
+    id: "canvas-wall-exit",
+    title: "Canvas: an exit at a single x on a vertical face, marked at its foot",
+    area: "canvas",
+    open: async (ctx) => {
+      await ctx.store(
+        `(s) => { s.setCoordinates([[0, 0], [0, 15], [20, 15], [20, 5], [40, 5], [40, 0]]); s.setAnalysisLimits({ enabled: true, entryLeftX: 11, entryRightX: 16, exitLeftX: 20, exitRightX: 20 }); s.selectCanvasObject({ type: "searchLimits" }); }`,
+      );
+      await ctx.page.getByTitle("Fit to screen").click();
+    },
+  },
+  {
     id: "canvas-water-line",
     title: "Canvas: a selected water line (review model)",
     area: "canvas",

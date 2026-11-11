@@ -1,26 +1,26 @@
 {
   "clay-2m": {
-    "fos": 1.447110976585321,
+    "fos": 1.4484277021665308,
     "fosLabel": "factor of safety"
   },
   "clay-3m": {
-    "fos": 1.465951683539678,
+    "fos": 1.4677223791296754,
     "fosLabel": "factor of safety"
   },
   "clay-3m-traffic": {
-    "fos": 1.1280040303041963,
+    "fos": 1.1286062483406933,
     "fosLabel": "factor of safety"
   },
   "clay-increasing": {
-    "fos": 1.095762792262455,
+    "fos": 1.0967116044777683,
     "fosLabel": "factor of safety"
   },
   "crust-over-clay": {
-    "fos": 1.267620574231702,
+    "fos": 1.2680602279346775,
     "fosLabel": "factor of safety"
   },
   "clay-over-rock": {
-    "fos": 1.0589318518345863,
+    "fos": 1.059723273358312,
     "fosLabel": "factor of safety"
   },
   "steep-on-stiff-clay": {
@@ -28,11 +28,11 @@
     "fosLabel": "factor of safety"
   },
   "wide-high": {
-    "fos": 1.1506258207017221,
+    "fos": 1.1511111954347275,
     "fosLabel": "factor of safety"
   },
   "three-layers": {
-    "fos": 1.1255628229698045,
+    "fos": 1.126316070783504,
     "fosLabel": "factor of safety"
   },
   "clay-3m-ponded": {

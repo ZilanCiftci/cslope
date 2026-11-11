@@ -346,11 +346,12 @@ describe("Slice generation", () => {
     const first = slices[0];
     expect(first.xLeft).toBeCloseTo(7.087, 2);
     expect(first.yTop).toBeCloseTo(0, 2);
-    // The steep entry is cut into narrower slices (no more arc than twice
-    // a slice at the bottom of the circle): x 7.09–7.76, not –8.52.
-    expect(first.xRight).toBeCloseTo(7.761, 2);
-    expect(first.yBottom).toBeCloseTo(-0.710, 2); // the chord's middle (-0.739 on the arc)
-    expect(first.alpha).toBeCloseTo(1.128, 2);
+    // The steep entry is not cut into narrower slices (since 2026-11-11, as
+    // in other programs): the first slice has the nominal width, x 7.09–8.52
+    // (7.09–7.76 while the steep ends were cut).
+    expect(first.xRight).toBeCloseTo(8.522, 2);
+    expect(first.yBottom).toBeCloseTo(-1.397, 2); // the chord's middle (-0.710 on the cut slice)
+    expect(first.alpha).toBeCloseTo(1.096, 2); // the chord's inclination (1.128 on the cut slice)
 
     // Last slice properties
     const last = slices[slices.length - 1];

@@ -26,10 +26,10 @@ needs_examples = pytest.mark.skipif(not EXAMPLES.is_dir(), reason="the skill's e
 # defaults do not move them.
 PINNED = {
     "single_slope": 1.6205913376603949,
-    "layered_soil": 1.8026242201315132,
+    "layered_soil": 1.8027804337477604,
     "water_table": 1.0158537043392202,
-    "distributed_load": 1.2979670768500866,
-    "swedish_partial_factors": 1.3871036072682073,
+    "distributed_load": 1.2993105869298305,
+    "swedish_partial_factors": 1.3872286356243877,
 }
 
 

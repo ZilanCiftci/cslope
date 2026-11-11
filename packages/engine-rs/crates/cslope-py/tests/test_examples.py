@@ -59,18 +59,18 @@ def test_the_examples_in_order(tmp_path, monkeypatch, capsys):
     out = {name: run_script(EXAMPLES / name, args, monkeypatch, capsys) for name, args in CRATE_EXAMPLES}
 
     # new_project.py: a project the app opens with its result current
-    assert out["new_project.py"].startswith("F 1.139 ")
+    assert out["new_project.py"].startswith("F 1.140 ")
     assert "factor of safety, Morgenstern-Price" in out["new_project.py"]
 
     # change_and_rerun.py: the change makes the result out of date; the run makes it current
     lines = out["change_and_rerun.py"].splitlines()
     assert lines[0].endswith("current: True")
     assert lines[1] == "after the change, current: False"
-    assert lines[2] == "F 1.278 (Bishop), current: True"
+    assert lines[2] == "F 1.279 (Bishop), current: True"
     p = cslope.Project.open(tmp_path / "site.cslp")
     m = p.model("Section A")
     assert m.result_is_current and m.material("Clay").su == 45
-    assert abs(m.result.fos - 1.277594063109087) < 1e-6
+    assert abs(m.result.fos - 1.278588525600526) < 1e-6
 
     # read_results.py: the saved result and the slice table
     assert "factor of safety Bishop" in out["read_results.py"]

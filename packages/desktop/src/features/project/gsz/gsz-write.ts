@@ -1,6 +1,7 @@
 /**
  * Writing a model as a .gsz project file: the regions (a region around a
- * lens in pieces without holes), materials (SHANSEP with its functions),
+ * lens in pieces without holes), materials (SHANSEP with its functions, an
+ * anisotropic function with its function),
  * piezometric lines, distributed loads, point loads, seismic coefficients,
  * method, entry and exit ranges or the given slip surfaces, with the tag
  * paths and order of the format's own files. What has no counterpart in
@@ -19,6 +20,7 @@ import { holeFreeRegions, sharedRings } from "../../../utils/region-rings";
 import { writeZip } from "../../../utils/zip";
 import { mainPiezoLine } from "../../../utils/piezo";
 import { surfaceYAtX } from "../../view/surface";
+import { anisotropyFromGsz } from "./gsz-to-definition";
 
 type Pt = [number, number];
 
@@ -53,14 +55,16 @@ function fnDefinition(fn: Fn2D): string {
 
 /**
  * The format's strength model and fields for a cSlope material. `addFn`
- * adds a material function and gives its id; `elevations` is the range
- * of the model's elevations (for an OCR constant with elevation).
+ * adds a material function and gives its id, `addAnisoFn` an anisotropy
+ * function; `elevations` is the range of the model's elevations (for an OCR
+ * constant with elevation).
  */
 function materialXml(
   name: string,
   model: MaterialModel,
   notes: string[],
   addFn: (fn: Fn2D) => number,
+  addAnisoFn: (fn: { name: string; points: Pt[] }) => number,
   elevations: [number, number],
 ): { slopeModel: string; fields: [string, number | string][] } {
   const gamma = model.unitWeightSat ?? model.unitWeight;
@@ -110,9 +114,14 @@ function materialXml(
       // OCR = 1: Su/σ′v constant
       return { slopeModel: "SHANSEP", fields: [["UnitWeight", gamma], ["TauSigmaRatio", model.ratio], ["NCUndrainedStrengthRatio", model.ratio], ["SHANSEPExponent", m]] };
     }
-    case "anisotropic-function":
-      notes.push(`Material "${name}": the anisotropy is not written; Mohr-Coulomb with c and φ only.`);
-      return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", model.cohesion], ["PhiPrime", model.frictionAngle], ...phiBField(model)] };
+    case "anisotropic-function": {
+      // one function on c and φ, with the format's sign of the inclination
+      if (model.modifierFunction.length === 0) {
+        return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", model.cohesion], ["PhiPrime", model.frictionAngle], ...phiBField(model)] };
+      }
+      const id = addAnisoFn({ name: `${name} anisotropy`, points: anisotropyFromGsz(model.modifierFunction) });
+      return { slopeModel: "AnisotropicFn", fields: [["CAnisoFnNum", id], ["PhiAnisoFnNum", id], ["UnitWeight", gamma], ["CohesionPrime", model.cohesion], ["PhiPrime", model.frictionAngle], ...phiBField(model)] };
+    }
     default:
       notes.push(`Material "${name}": the material model "${MATERIAL_MODEL_LABELS[model.kind as MaterialModel["kind"]] ?? model.kind}" has no counterpart in the export; written as Mohr-Coulomb with no strength, to be entered by hand.`);
       return { slopeModel: "MohrCoulomb", fields: [["UnitWeight", gamma], ["CohesionPrime", 0], ["PhiPrime", 0]] };
@@ -155,10 +164,12 @@ export function modelToGszXml(model: ModelEntry): { xml: string; notes: string[]
   const matIndex = new Map(model.materials.map((m, i) => [m.id, i + 1]));
   const functions: Fn2D[] = [];
   const addFn = (fn: Fn2D) => functions.push(fn);
+  const anisoFns: { name: string; points: Pt[] }[] = [];
+  const addAnisoFn = (fn: { name: string; points: Pt[] }) => anisoFns.push(fn);
   const ys = outline.map((c) => c[1]);
   const elevations: [number, number] = [Math.min(...ys), Math.max(...ys)];
   const materialsXml = model.materials.map((m, i) => {
-    const { slopeModel, fields } = materialXml(m.name, m.model, notes, addFn, elevations);
+    const { slopeModel, fields } = materialXml(m.name, m.model, notes, addFn, addAnisoFn, elevations);
     return `    <Material>
       <ID>${i + 1}</ID>
       <Color>${rgb(m.color)}</Color>
@@ -169,10 +180,24 @@ ${fields.map(([k, v]) => `        <${k}>${typeof v === "number" ? n(v) : esc(v)}
       </StressStrain>
     </Material>`;
   });
-  const functionsXml = functions.length > 0
-    ? `  <Functions>
-    <Material>
-      <Fn2Ds Len="${functions.length}">
+  // the anisotropy functions (the format's AnisoFns, under StressStrain)
+  const anisoXml = anisoFns.length > 0
+    ? `      <StressStrain>
+        <AnisoFns Len="${anisoFns.length}">
+${anisoFns.map((fn, i) => `          <AnisoFn>
+            <ID>${i + 1}</ID>
+            <Name>${esc(fn.name)}</Name>
+            <Function>Linear(OutputParam=ModifierFactor,InputParam=Inclination,SlopeBefore=0,SlopeAfter=0)</Function>
+            <Points Len="${fn.points.length}">
+${fn.points.map(([x, y]) => `              <Point X="${n(x)}" Y="${n(y)}" />`).join("\n")}
+            </Points>
+          </AnisoFn>`).join("\n")}
+        </AnisoFns>
+      </StressStrain>
+`
+    : "";
+  const fn2dXml = functions.length > 0
+    ? `      <Fn2Ds Len="${functions.length}">
 ${functions.map((fn, i) => `        <Fn2D>
           <ID>${i + 1}</ID>
           <Name>${esc(fn.name)}</Name>
@@ -182,7 +207,12 @@ ${fn.points.map(([x, y]) => `            <Point X="${n(x)}" Y="${n(y)}" />`).joi
           </Points>
         </Fn2D>`).join("\n")}
       </Fn2Ds>
-    </Material>
+`
+    : "";
+  const functionsXml = fn2dXml || anisoXml
+    ? `  <Functions>
+    <Material>
+${fn2dXml}${anisoXml}    </Material>
   </Functions>
 `
     : "";
@@ -385,6 +415,11 @@ ${item.join("\n")}
           <IsPiezPhreatic>true</IsPiezPhreatic>
         </Control>
 ` : "";
+  // the limits on the slip surfaces: the smallest sliding mass (per unit width, m²) and depth; left out when not set
+  const limitsXml = [
+    (opts.minSlipArea ?? 0) > 0 ? `          <MinimumVolume>${n(opts.minSlipArea!)}</MinimumVolume>\n` : "",
+    (opts.minSlipDepth ?? 0) > 0 ? `          <MinimumDepth>${n(opts.minSlipDepth!)}</MinimumDepth>\n` : "",
+  ].join("");
   const waterOption = main ? (bBarXml.length > 0 ? "PiezoSurfaceBbar" : "PiezoSurface") : undefined;
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -455,7 +490,7 @@ ${slipXml}          <EntryExit>
           </EntryExit>
 ${axisXml}${rtl ? `          <DirectionOfSlip>RightToLeft</DirectionOfSlip>
 ` : ""}${fullyXml}          <NumberOfSlicesPerSlip>${Math.round(opts.slices ?? 30)}</NumberOfSlicesPerSlip>
-        </SlipSurface>
+${limitsXml}        </SlipSurface>
 ${list("LineLoadPoints", lineLoadXml)}${list("Surcharges", surchargeXml)}${seismicXml}${crackXml}${list("PiezometricSurfaces", piezoXml)}${list("MaterialUsesPiezs", usesXml)}${list("MaterialUsesBBarParams", bBarXml)}      </Entry>
     </StabilityItem>
   </StabilityItems>
