@@ -1,39 +1,49 @@
 name: CI
 
 on:
-  push:
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
-# Kept lean (the engine port to Rust is done and verified):
-# - The engine jobs (rust, engine) run only when the engine changed
-#   (packages/engine-rs, packages/engine); the app's own changes do not
-#   rebuild or retest the engine. The weekly verification-full workflow
-#   runs everything on a schedule.
-# - The engine's verification checks run once, in Rust, against the golden
-#   results (golden/verification.json); the TypeScript test suite runs its
-#   quick set (the API over the engine), not the verification problems again.
+# A new push to a pull request stops the run of the push before it.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+# Kept to what a pull request needs (the Actions budget, 2026-11): the full
+# gate is run locally before a push (.claude/skills/verify), CI is the check
+# that it was.
+# - Pull requests only: no run for a push to a working branch, and none on
+#   main after the merge (a squash merge of an up-to-date branch is the
+#   code the pull request tested).
+# - Each job runs only when its part changed (the changes job); `check`
+#   (types, lint, names, the committed builds are fresh) always runs, and
+#   `ci` sums the jobs up as the one required check.
+# - Linux only, the quick test sets. The weekly verification-full workflow
+#   runs what is left out here: the desktop app's whole suite on Windows,
+#   where it ships, the verification problems with the full search, the
+#   dependency audits and the byte-for-byte rebuild of the WebAssembly
+#   engine. The release workflow builds and tests on Windows too.
 # - No coverage runs (it measured thin wrappers and slowed the jobs).
-# - Pushes to working branches test the desktop app on Linux; main and pull
-#   requests on Windows, where it ships. The desktop leaves out the full
-#   engine searches on working branches (CSLOPE_QUICK_TESTS).
 env:
-  CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
+  CSLOPE_QUICK_TESTS: "1"
 
 # Time limits: each job stops a few times its usual run time (check about
-# 1 min, desktop 6, engine 2, rust 11 and python 5 with their cache), and
-# Install after 5 min, so a hung step fails within minutes instead of
+# 1 min, site 3, desktop 6, engine 2, rust 8 and python 5 with their cache),
+# and Install after 5 min, so a hung step fails within minutes instead of
 # GitHub's 6 hours.
 jobs:
-  # Which parts changed: the engine jobs are skipped when the engine did not.
+  # Which parts changed: a job is skipped when its part did not.
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       engine: ${{ steps.filter.outputs.engine }}
       python: ${{ steps.filter.outputs.python }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      site: ${{ steps.filter.outputs.site }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,6 +67,19 @@ jobs:
               - 'packages/desktop/src/features/project/fixtures/**'
               - 'packages/web/src/templates/fixtures/**'
               - '.github/workflows/ci.yml'
+            # The app, and the engine it runs.
+            desktop:
+              - 'packages/desktop/**'
+              - 'packages/engine/**'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
+            # The website and the browser app, and the engine they run.
+            site:
+              - 'packages/website/**'
+              - 'packages/web/**'
+              - 'packages/engine/**'
+              - 'bun.lock'
+              - '.github/workflows/ci.yml'
 
   check:
     runs-on: ubuntu-latest
@@ -71,17 +94,9 @@ jobs:
       - name: Install
         run: bun install --frozen-lockfile
         timeout-minutes: 5
-      # A high or critical advisory on a production dependency fails the
-      # job (the root package.json's audit script). No advisory is ignored:
-      # when one appears, upgrade the dependency (Dependabot opens the pull
-      # request) and add an --ignore only for an advisory reviewed as not
-      # reachable, with the reason here. The weekly verification-full
-      # workflow audits the Rust crates too.
-      - name: Audit dependencies
-        run: bun run audit
       # The committed WebAssembly engine was built from the Rust sources as
-      # they are (BUILD-INFO.json; no Rust needed). The rust job reproduces
-      # it byte for byte when the engine changes.
+      # they are (BUILD-INFO.json; no Rust needed). The weekly
+      # verification-full workflow reproduces it byte for byte.
       - name: Engine build is fresh
         run: |
           bun packages/engine-rs/tools/check-wasm-fresh.ts
@@ -106,6 +121,23 @@ jobs:
       # The repository is public: no other program is named in any file.
       - name: Check names
         run: bun packages/website/scripts/check-names.ts --repo
+
+  # The website and the browser app: their tests, builds and smoke tests.
+  site:
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version-file: package.json
+      - name: Install
+        run: bun install --frozen-lockfile
+        timeout-minutes: 5
       - name: Test website
         run: bun run --filter @cslope/website test
       # Also fails when another product is named on the site.
@@ -140,8 +172,6 @@ jobs:
     if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      CSLOPE_QUICK_TESTS: "1"
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -168,8 +198,12 @@ jobs:
       - name: Test
         run: bun run --filter @cslope/engine test
 
+  # The desktop app's quick set on Linux (the whole suite runs on Windows
+  # in the weekly workflow and before a release).
   desktop:
-    runs-on: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && 'ubuntu-latest' || 'windows-latest' }}
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
@@ -185,13 +219,14 @@ jobs:
         run: bun run --filter @cslope/desktop test
 
   # The Rust engine (packages/engine-rs): format, lints, tests including the
-  # verification checks against the golden results, and the WebAssembly build
-  # (its generated glue must match the committed one; size budget).
+  # verification checks against the golden results, the schemas and the size
+  # budget of the committed WebAssembly build. The crates' audit and the
+  # byte-for-byte rebuild run in the weekly verification-full workflow.
   rust:
     needs: changes
     if: needs.changes.outputs.engine == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -210,19 +245,6 @@ jobs:
         uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: packages/engine-rs
-      # The CLI of the version in Cargo.lock (build-wasm.ts fails if they
-      # differ), built from its own lockfile like the developer's (--locked),
-      # so that it transforms the engine exactly as the developer's did and
-      # the bytes can be compared; rust-cache keeps the binary between runs.
-      - name: Install wasm-bindgen
-        run: |
-          if ! wasm-bindgen --version 2>/dev/null | grep -q ' 0\.2\.130$'; then
-            cargo install wasm-bindgen-cli --version 0.2.130 --locked --force
-          fi
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@b80e2bb2635f28eb98b9fce1e2f0887e1535c6b2 # v2.90.0
-        with:
-          tool: cargo-audit
       - name: Format
         working-directory: packages/engine-rs
         run: cargo fmt --check
@@ -242,38 +264,6 @@ jobs:
       # types, as the committed WebAssembly build matches its sources.
       - name: Schemas are fresh
         run: bun packages/engine-rs/tools/schema.ts --check
-      # Crates with a RustSec advisory fail the job (the weekly
-      # verification-full workflow runs this too).
-      - name: Audit crates
-        working-directory: packages/engine-rs
-        run: cargo audit
-      - name: Build WebAssembly
-        run: |
-          bun packages/engine-rs/tools/build-wasm.ts product
-          bun packages/engine-rs/tools/build-wasm.ts project
-      # The committed build (the wasm, the glue and BUILD-INFO.json) is
-      # reproduced byte for byte: the build remaps machine paths, leaves the
-      # producers section out, and the same wasm-bindgen CLI runs on both
-      # sides (tools/build-wasm.ts). A difference fails the job and uploads
-      # this build, to compare or to commit.
-      - name: Committed build matches the rebuild
-        id: compare
-        run: git diff --exit-code --stat -- packages/engine/src/wasm packages/engine/src/wasm-project
-      - name: Show the difference
-        if: failure() && steps.compare.outcome == 'failure'
-        run: |
-          git show HEAD:packages/engine/src/wasm/cslope_wasm_bg.wasm > committed.wasm
-          echo "$(cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | wc -l) bytes differ; the first:"
-          cmp -l packages/engine/src/wasm/cslope_wasm_bg.wasm committed.wasm | head -20
-          git diff -- packages/engine/src/wasm/BUILD-INFO.json packages/engine/src/wasm-project/BUILD-INFO.json
-      - name: Upload the rebuild
-        if: failure() && steps.compare.outcome == 'failure'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: engine-wasm-rebuild
-          path: |
-            packages/engine/src/wasm
-            packages/engine/src/wasm-project
       # The size budget of the product build (ARCHITECTURE.md §3.5)
       - name: Size budget
         run: test "$(stat -c %s packages/engine/src/wasm/cslope_wasm_bg.wasm)" -le 4194304
@@ -324,3 +314,18 @@ jobs:
       - name: Test
         working-directory: ${{ env.CRATE }}
         run: ../../../../.venv/bin/python -m pytest -q -p no:cacheprovider
+
+  # The one required check: fails when a job failed or was cancelled; a job
+  # skipped because its part did not change counts as passed.
+  ci:
+    needs: [changes, check, site, engine, desktop, rust, python]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: All jobs passed or were skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          case " $RESULTS " in *" failure "*|*" cancelled "*) exit 1 ;; esac
