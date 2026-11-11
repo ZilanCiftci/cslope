@@ -300,6 +300,27 @@ function suctionOf(m: GszMaterial, phiB: number | undefined, water: MaterialWate
   return { phiB, ...(water.maxSuction !== undefined && water.maxSuction > 0 ? { maxSuction: water.maxSuction } : {}) };
 }
 
+/**
+ * An anisotropy function of the format ([inclination °, factor]) in cSlope's
+ * convention, and back (the conversion is its own inverse): the inclination
+ * changes sign. cSlope's α is positive where the slice base dips down in the
+ * direction of sliding (the scarp) and negative at the toe; the format's
+ * inclination is negative at the scarp and positive at the toe.
+ *
+ * Measured for a model sliding right to left: the strengths of the slices
+ * stored with the results of an example file (a scarp base rising at +60°
+ * towards +x, a toe base at −18°) are those of the function at the opposite
+ * inclination, for c and φ alike (and for a function on the shear strength):
+ * so the inclination is not the geometric angle there. Derived, not measured,
+ * for a model sliding left to right (no example with results slides that way
+ * through such a function): the scarp base's geometric angle is negative
+ * there too, so the same sign change holds whether the format takes the
+ * inclination relative to the sliding direction or geometrically.
+ */
+export function anisotropyFromGsz(points: readonly (readonly [number, number])[]): [number, number][] {
+  return points.map(([a, k]): [number, number] => [0 - a, k]).sort((p, q) => p[0] - q[0]);
+}
+
 function materialModel(
   m: GszMaterial,
   scale: { len: number; weight: number; stress: number },
@@ -318,13 +339,16 @@ function materialModel(
   const unitWeight = gamma > 0 ? gamma : 20;
   if (!(gamma > 0) && m.model !== "Bedrock") notes.push(`Material "${m.name}": no unit weight in the file; 20 kN/m³ used.`);
   // An anisotropy function on the shear strength: on the undrained models
-  // as their anisotropy (interpolated linearly; the file uses a spline).
+  // as their anisotropy (interpolated linearly; the file uses a spline), its
+  // inclination's sign changed to cSlope's (anisotropyFromGsz).
   const anisoId = f("ShearAnisoFnNum");
   const aniso = anisoId !== undefined ? anisotropyFunctions?.get(anisoId) : undefined;
+  const linearNote = (n: number) =>
+    `Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${n} points (the file uses a spline), with the sign of the inclination changed to cSlope's (positive where the base dips down in the direction of sliding).`;
   const undrainedAniso = (): { anisotropy?: [number, number][] } => {
     if (!aniso) return {};
-    notes.push(`Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${aniso.length} points (the file uses a spline).`);
-    return { anisotropy: aniso };
+    notes.push(linearNote(aniso.length));
+    return { anisotropy: anisotropyFromGsz(aniso) };
   };
   if (aniso && m.model !== "UndrainedPhiZero" && m.model !== "SFnDepth" && m.model !== "SHANSEP") {
     notes.push(`Material "${m.name}": the anisotropy function on the shear strength is not imported for the model "${m.model}".`);
@@ -435,6 +459,27 @@ function materialModel(
       } else {
         const ratio = f("TauSigmaRatio");
         if (ratio !== undefined) return { kind: "shansep", unitWeight, ratio, ocr: 1, ...undrainedAniso() };
+      }
+      break;
+    }
+    case "AnisotropicFn": {
+      // c and φ (in degrees) times one function of the base inclination; a
+      // separate function for φ has no counterpart (read below with a note)
+      const cId = f("CAnisoFnNum"), phiId = f("PhiAnisoFnNum");
+      const fn = cId !== undefined ? anisotropyFunctions?.get(cId) : undefined;
+      if (fn && phiId === cId) {
+        notes.push(linearNote(fn.length));
+        return {
+          kind: "anisotropic-function",
+          unitWeight,
+          cohesion: (f("CohesionPrime") ?? 0) * scale.stress,
+          frictionAngle: f("PhiPrime") ?? 0,
+          modifierFunction: anisotropyFromGsz(fn),
+          ...suctionOf(m, f("UnsatPhiB"), water, notes),
+        };
+      }
+      if (fn && phiId !== undefined && anisotropyFunctions?.has(phiId)) {
+        notes.push(`Material "${m.name}": c and φ have different anisotropy functions; cSlope's anisotropic function applies one to both.`);
       }
       break;
     }

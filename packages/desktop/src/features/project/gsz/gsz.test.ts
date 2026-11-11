@@ -121,6 +121,40 @@ const XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 const CSV = "SlipNum,SlipFOS,SlipCenterX,SlipCenterY,SlipRadiusX,SlipWeight,SlipOrigSearchMethod,MobilizedShearDirection\n1,1.5,15,18,14,900,5,-1.5707963\n2,999,15,18,1,0,5,-1.57\n3,1.4,14,17,13.5,800,5,-1.5707963\n";
 
+/**
+ * A slope of one material from y = 10 down to y = 5, facing right (sliding
+ * left to right) or its mirror image about x = 15 (sliding right to left).
+ * `material` is the material's <SlopeModel> and fields, `functions` the
+ * file's <Functions>.
+ */
+const slopeXml = (rtl: boolean, material: string, functions = "") => {
+  const X = (x: number) => (rtl ? 30 - x : x);
+  const pts = [[0, 10], [10, 10], [20, 5], [30, 5], [30, 0], [0, 0]];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<GSIData Version="11.11">
+  <Analyses Len="1"><Analysis><ID>1</ID><Name>Slope</Name><Kind>Slope stability</Kind><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis></Analyses>
+  <Contexts Len="1"><Context><AnalysisID>1</AnalysisID><GeometryUsesMaterials Len="1"><GeometryUsesMaterial ID="Regions-1" Entry="1" /></GeometryUsesMaterials></Context></Contexts>
+  <Coordinates><EngCoords UnitSystem="Metric" /></Coordinates>
+  ${functions}
+  <Geometries Len="1"><Geometry>
+    <Points Len="6">${pts.map(([x, y], i) => `<Point ID="${i + 1}" X="${X(x)}" Y="${y}" />`).join("")}</Points>
+    <Regions Len="1"><Region><ID>1</ID><PointIDs>1,2,3,4,5,6</PointIDs></Region></Regions>
+  </Geometry></Geometries>
+  <Materials Len="1"><Material><ID>1</ID><Name>Clay</Name>${material}</Material></Materials>
+  <StabilityItems Len="1"><StabilityItem><AnalysisID>1</AnalysisID><Entry><SlipSurface>
+    <DirectionOfSlip>${rtl ? "RightToLeft" : "LeftToRight"}</DirectionOfSlip>
+    <Option>EntryExit</Option>
+    <EntryExit><LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" /><RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" /></EntryExit>
+  </SlipSurface></Entry></StabilityItem></StabilityItems>
+</GSIData>`;
+};
+/** The format's anisotropy functions: [inclination °, factor] points by id. */
+const anisoFnsXml = (...fns: [number, number][][]) =>
+  `<Functions><Material><StressStrain><AnisoFns Len="${fns.length}">${fns.map((pts, i) => `<AnisoFn><ID>${i + 1}</ID><Points Len="${pts.length}">${pts.map(([x, y]) => `<Point X="${x}" Y="${y}" />`).join("")}</Points></AnisoFn>`).join("")}</AnisoFns></StressStrain></Material></Functions>`;
+// strong where the format's inclination is negative, weak where it is positive
+const ANISO_FN: [number, number][] = [[-60, 1.3], [0, 1], [60, 0.8]];
+const ANISO_FN_MATERIAL = "<SlopeModel>AnisotropicFn</SlopeModel><StressStrain><CAnisoFnNum>1</CAnisoFnNum><PhiAnisoFnNum>1</PhiAnisoFnNum><UnitWeight>18</UnitWeight><CohesionPrime>8</CohesionPrime><PhiPrime>28</PhiPrime></StressStrain>";
+
 const fos = (def: SlopeDefinition, options: object = {}) => {
   const s = buildSlope(toCanonicalSlopeDefinition(def));
   // circles only: a short search, so that the import, not the search, is compared
@@ -372,6 +406,55 @@ describe(".gsz import", () => {
     const m = imp.definition.materials.find((x) => x.model?.kind === "s-f-depth")!;
     expect(m.model).toMatchObject({ suRef: 12, depthRef: 0, rate: 2, depthReference: "layer-top", anisotropy: [[-10, 1], [0, 0.7], [10, 1]] });
     expect(imp.notes.join(" ")).toMatch(/anisotropy function is imported as factors interpolated linearly/);
+  });
+
+  it("imports AnisotropicFn as an anisotropic function, the inclination's sign changed to cSlope's", () => {
+    for (const rtl of [false, true]) {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      expect(imp.definition.orientation).toBe(rtl ? "rtl" : "ltr");
+      // the file's inclination is negative at the scarp, cSlope's α positive there, in both directions
+      expect(imp.definition.materials[0].model).toEqual({ kind: "anisotropic-function", unitWeight: 18, cohesion: 8, frictionAngle: 28, modifierFunction: [[-60, 0.8], [0, 1], [60, 1.3]] });
+      const notes = imp.notes.join(" ");
+      expect(notes).not.toMatch(/Enter it by hand/);
+      expect(notes).toMatch(/"Clay": the anisotropy function is imported as factors interpolated linearly between its 3 points \(the file uses a spline\), with the sign of the inclination changed/);
+    }
+    // an Imperial file: c in kPa
+    const imperial = slopeXml(false, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN)).replace('UnitSystem="Metric"', 'UnitSystem="Imperial"').replace("<CohesionPrime>8<", "<CohesionPrime>200<");
+    const m = gszToDefinition({ ...parseGszXml(imperial), results: new Map() }, 1).definition.materials[0].model as { cohesion: number; frictionAngle: number };
+    expect(m.cohesion).toBeCloseTo(200 * 0.0478802589, 9);
+    expect(m.frictionAngle).toBe(28);
+  });
+
+  it("gives the same factor of safety for an AnisotropicFn slope facing right and its mirror image facing left", () => {
+    const run = (rtl: boolean) => {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      const circle = { cx: rtl ? 16 : 14, cy: 17, radius: 13.5 };
+      return { d: { ...imp.definition, customSearchPlanes: [circle], customPlanesOnly: true }, options: imp.options };
+    };
+    const ltr = run(false), rtl = run(true);
+    const f = fos(ltr.d, ltr.options);
+    expect(Number.isFinite(f)).toBe(true);
+    expect(fos(rtl.d, rtl.options)).toBeCloseTo(f, 6);
+    // the sign matters: the function as written in the file gives another factor of safety
+    const unchanged = (d: SlopeDefinition) => ({ ...d, materials: d.materials.map((x) => ({ ...x, model: { ...x.model!, modifierFunction: ANISO_FN } as SlopeDefinition["materials"][number]["model"] })) });
+    expect(Math.abs(fos(unchanged(ltr.d), ltr.options) - f)).toBeGreaterThan(0.01);
+  });
+
+  it("keeps Mohr-Coulomb with a note for an AnisotropicFn whose function is missing or differs for c and φ", () => {
+    const missing = gszToDefinition({ ...parseGszXml(slopeXml(false, ANISO_FN_MATERIAL)), results: new Map() }, 1);
+    expect(missing.definition.materials[0].model).toEqual({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 8, frictionAngle: 28 });
+    expect(missing.notes.join(" ")).toMatch(/"Clay": the strength model "AnisotropicFn" has no counterpart in the import yet; it is read as Mohr-Coulomb with c = 8.00 kPa, φ = 28°.*Enter it by hand/);
+    const two = gszToDefinition({ ...parseGszXml(slopeXml(false, ANISO_FN_MATERIAL.replace("<PhiAnisoFnNum>1<", "<PhiAnisoFnNum>2<"), anisoFnsXml(ANISO_FN, [[0, 1], [45, 1.2]]))), results: new Map() }, 1);
+    expect(two.definition.materials[0].model?.kind).toBe("mohr-coulomb");
+    expect(two.notes.join(" ")).toMatch(/"Clay": c and φ have different anisotropy functions; cSlope's anisotropic function applies one to both\..*"Clay": the strength model "AnisotropicFn" has no counterpart/);
+  });
+
+  it("changes the sign of the inclination of an anisotropy function on an undrained strength", () => {
+    const material = "<SlopeModel>UndrainedPhiZero</SlopeModel><StressStrain><ShearAnisoFnNum>1</ShearAnisoFnNum><UnitWeight>18</UnitWeight><Cohesion>30</Cohesion></StressStrain>";
+    for (const rtl of [false, true]) {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, material, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      expect(imp.definition.materials[0].model).toEqual({ kind: "undrained", unitWeight: 18, undrainedShearStrength: 30, anisotropy: [[-60, 0.8], [0, 1], [60, 1.3]] });
+    }
   });
 
   it("imports Hoek-Brown from GSI, mi (10 when not given) and D, or from mb, s and a", () => {
@@ -882,6 +965,38 @@ describe(".gsz export", () => {
     const pop = await back({ ratio: 0.25, pop: 20 });
     expect(pop.notes.join(" ")).toMatch(/"Clay": the POP of its SHANSEP strength is not written/);
     expect(pop.model).toMatchObject({ ratio: 0.25, ocr: 1 });
+  });
+
+  it("writes an anisotropic function as AnisotropicFn with the format's sign of the inclination, and reads it back with the same factor of safety", async () => {
+    const clay = { kind: "anisotropic-function", unitWeight: 17, cohesion: 6, frictionAngle: 24, modifierFunction: [[-45, 0.8], [0, 1], [60, 1.4]] } as const;
+    for (const orientation of ["ltr", "rtl"] as const) {
+      const coordinates = orientation === "ltr" ? def.coordinates : def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]);
+      const d = {
+        ...def,
+        orientation,
+        coordinates,
+        materials: [def.materials[0], { name: "Clay", model: clay }],
+        materialBoundaries: [{ coordinates: [[0, 3], [30, 3]], materialName: "" }],
+        regionAssignments: [{ point: [orientation === "ltr" ? 5 : 25, 6], materialName: "Fill" }, { point: [5, 1], materialName: "Clay" }],
+        waterTable: { mode: "custom", value: orientation === "ltr" ? [[0, 6], [30, 4]] : [[0, 4], [30, 6]] },
+        udls: [],
+        lineLoads: [],
+        analysisLimits: orientation === "ltr" ? def.analysisLimits : { entryLeftX: 21, entryRightX: 29, exitLeftX: 1, exitRightX: 9 },
+      } as SlopeDefinition;
+      const m = modelFromDefinition(d, { id: "a", name: "Aniso", options: { method: "Bishop" } });
+      const { xml, notes } = modelToGszXml(m);
+      expect(xml).toContain("<SlopeModel>AnisotropicFn</SlopeModel>");
+      expect(xml).toMatch(/<CAnisoFnNum>1<\/CAnisoFnNum>\s*<PhiAnisoFnNum>1<\/PhiAnisoFnNum>\s*<UnitWeight>17<\/UnitWeight>\s*<CohesionPrime>6<\/CohesionPrime>\s*<PhiPrime>24<\/PhiPrime>/);
+      expect(xml).toMatch(/<Functions>\s*<Material>\s*<StressStrain>\s*<AnisoFns Len="1">\s*<AnisoFn>\s*<ID>1<\/ID>/);
+      expect(xml).toContain("<Function>Linear(OutputParam=ModifierFactor,InputParam=Inclination,SlopeBefore=0,SlopeAfter=0)</Function>");
+      expect(xml).toMatch(/<Point X="-60" Y="1.4" \/>\s*<Point X="0" Y="1" \/>\s*<Point X="45" Y="0.8" \/>/);
+      expect(notes.join(" ")).not.toMatch(/"Clay"/);
+      const [imp] = await gszImports(modelToGsz(m).bytes, "A.gsz");
+      expect(imp.definition.orientation ?? "ltr").toBe(orientation);
+      expect(imp.definition.materials[1].model).toEqual(clay);
+      const circle = { cx: orientation === "ltr" ? 14 : 16, cy: 17, radius: 13.5 };
+      const alone = (x: SlopeDefinition) => ({ ...x, customSearchPlanes: [circle], customPlanesOnly: true });      expect(fos(alone(imp.definition), { method: "Bishop" })).toBeCloseTo(fos(alone(d), { method: "Bishop" }), 6);
+    }
   });
 
   it("writes what the format's files leave out only when it differs from their default, in their order", async () => {
