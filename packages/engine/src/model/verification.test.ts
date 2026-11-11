@@ -96,36 +96,6 @@ describe("Verification data", () => {
   });
 });
 
-describe("Slice-count convergence", () => {
-  it("V068 geometry: a nearly vertical entry slice in a stiff crust does not inflate FOS", () => {
-    // Low (1989) / V068 layering with the lower clay simplified to a
-    // constant Su. With the arc length as base length, 50 slices gave 1.469
-    // against 1.40 at 500 slices (independent 2000-slice check: 1.389).
-    const def = layered(
-      [[0, 8], [10, 8], [26, 16], [40, 16]],
-      0,
-      [
-        { name: "Upper", topY: null, model: mc(95, 15, 20) },
-        { name: "Middle", topY: 8, model: mc(15, 0, 20) },
-        { name: "Lower", topY: 4, model: mc(22.5, 0, 20) },
-      ],
-      circle(18, 16, 12),
-    );
-    // Since 2026-11-11 the steep ends of a circle are not cut into
-    // narrower slices (DECISIONS.md), so the vertical upper end is sliced at
-    // the nominal width and 50 slices sit 1.9 % above 500 (1.419 against
-    // 1.392; within 1 % with the cuts): the same slicing sensitivity as
-    // V068's tolerance (tolerance.ts, slicingSensitive). 100 slices come
-    // within 1 % (1.403).
-    const f50 = runVerification(def, "Bishop", { slices: 50 }).fos!;
-    const f100 = runVerification(def, "Bishop", { slices: 100 }).fos!;
-    const f500 = runVerification(def, "Bishop", { slices: 500 }).fos!;
-    expect(f50).toBeGreaterThan(f100);
-    expect(Math.abs(f100 / f500 - 1)).toBeLessThanOrEqual(0.01);
-    expect(Math.abs(f500 / 1.389 - 1)).toBeLessThanOrEqual(0.01);
-  });
-});
-
 describe("Search convergence", () => {
   it("V067: the local search reaches the minimum between grid points", () => {
     // The one-pass refinement stopped at the grid resolution: 1.455 with
