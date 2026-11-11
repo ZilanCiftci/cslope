@@ -2,7 +2,7 @@
   "flavour": "project",
   "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
   "wasmBindgen": "0.2.130",
-  "sourceHash": "b8495d22bca50903f347b870b78806ab73f5df776e3a5a9ac14d58f2be240ac6",
+  "sourceHash": "479da9a55eb3b76300e6c476eb7c9899b107691dfe5a87d4c6ec4678fadf259d",
   "wasmSha256": "7c0cc0c7dd0eb48a1eda4e62c43f1a3c673e999361999db3fac4b05f73f51113",
   "bytes": 2171193,
   "brotliBytes": 439742
