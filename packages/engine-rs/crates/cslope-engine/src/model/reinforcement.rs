@@ -20,7 +20,6 @@ use crate::model::composite::unique_numbers;
 use crate::model::geometry_ops::material_layer_top_at;
 use crate::model::slope::Slope;
 use crate::model::waternet::waternet_pore_pressure;
-use crate::types::constants::WATER_UNIT_WEIGHT;
 use crate::types::geometry::Slice;
 use crate::types::material::MaterialId;
 use crate::types::material_models::MaterialModel;
@@ -122,7 +121,7 @@ pub fn vertical_stress(slope: &Slope, x: f64, y: f64, effective: bool) -> f64 {
     let soil = sigma;
     let y_top = y_ground - 1e-6 * js::math::max(1.0, (surf.x[surf.x.len() - 1] - surf.x[0]).abs());
     let pond = water_line_at(slope, material_at(slope, x, y_top), x);
-    sigma += js::math::max(0.0, pond - y_ground) * WATER_UNIT_WEIGHT;
+    sigma += js::math::max(0.0, pond - y_ground) * slope.water_unit_weight();
     if !effective {
         return sigma;
     }
@@ -131,7 +130,7 @@ pub fn vertical_stress(slope: &Slope, x: f64, y: f64, effective: bool) -> f64 {
         .and_then(|m| slope.material(m).model.base().ru)
         .unwrap_or(0.0);
     let u = match slope.waternet() {
-        Some(wn) => waternet_pore_pressure(wn, x, y),
+        Some(wn) => waternet_pore_pressure(wn, x, y, slope.water_unit_weight()),
         None => water_pore_pressure(slope, here, x, y),
     };
     js::math::max(0.0, sigma - u - ru * soil)
@@ -139,7 +138,7 @@ pub fn vertical_stress(slope: &Slope, x: f64, y: f64, effective: bool) -> f64 {
 
 /// Pore pressure at (x, y) below the water line of the material there (no waternet).
 fn water_pore_pressure(slope: &Slope, m: Option<MaterialId>, x: f64, y: f64) -> f64 {
-    js::math::max(0.0, water_line_at(slope, m, x) - y) * WATER_UNIT_WEIGHT
+    js::math::max(0.0, water_line_at(slope, m, x) - y) * slope.water_unit_weight()
 }
 
 /// Effective vertical stress at (x, y) with the slope's distributed loads:
@@ -183,7 +182,7 @@ pub fn effective_vertical_stress_with_loads(slope: &Slope, x: f64, y: f64) -> f6
             if let Some(e) = e {
                 let w = *wet.get_or_insert_with(|| {
                     (match slope.waternet() {
-                        Some(wn) => waternet_pore_pressure(wn, x, y),
+                        Some(wn) => waternet_pore_pressure(wn, x, y, slope.water_unit_weight()),
                         None => water_pore_pressure(slope, h, x, y),
                     }) > 0.0
                 });

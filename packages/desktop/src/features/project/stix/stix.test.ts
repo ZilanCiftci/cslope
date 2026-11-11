@@ -122,6 +122,22 @@ describe(".stix export and import", () => {
     expect(F(imp.definition, imp.options)).toBeCloseTo(f0, 6);
   });
 
+  it("writes the model's unit weight of water and takes the file's back into the model", () => {
+    const waterOf = (docs: Map<string, Json>) =>
+      [...docs.entries()].filter(([k]) => k.startsWith("waternets/")).map(([, d]) => d.UnitWeightWater);
+    const plain = modelToStixDocuments(model(dike)).docs;
+    expect(waterOf(plain)).toEqual([9.807]);
+    expect(stixToDefinition(reread(plain), 0, "x.stix").options.waterUnitWeight).toBeUndefined();
+    const m = model(dike);
+    m.options = { ...m.options, waterUnitWeight: 9.82 };
+    const docs = modelToStixDocuments(m).docs;
+    expect(waterOf(docs)).toEqual([9.82]);
+    const imp = stixToDefinition(reread(docs), 0, "x.stix");
+    expect(imp.options.waterUnitWeight).toBe(9.82);
+    expect(imp.notes.join(" ")).not.toMatch(/unit weight of water/);
+    expect(F(imp.definition, imp.options)).toBeCloseTo(F(dike, { method: "Bishop", waterUnitWeight: 9.82 }), 6);
+  });
+
   it("writes a waternet with its head and reference lines", () => {
     const wn: SlopeDefinition = {
       ...dike,

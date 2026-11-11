@@ -59,7 +59,6 @@ use crate::fem::model::{build_fe_model, ignored_input_warnings, polyline_y, FeMo
 use crate::js;
 use crate::model::geometry_ops::Polyline;
 use crate::model::slope::Slope;
-use crate::types::WATER_UNIT_WEIGHT;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::f64::consts::PI;
@@ -795,7 +794,7 @@ pub fn lower_bound_problem(slope: &Slope, options: &LowerBoundOptions) -> Result
         for k in 0..3 {
             let n = el[3 * e + k];
             let i = 3 * e + k;
-            n_u[i] = pore_pressure_at(head, n, wl, x[n], y[n]);
+            n_u[i] = pore_pressure_at(head, n, wl, x[n], y[n], slope.water_unit_weight());
             if el_elastic[e] {
                 continue;
             }
@@ -827,7 +826,8 @@ pub fn lower_bound_problem(slope: &Slope, options: &LowerBoundOptions) -> Result
     for n in 0..x.len() {
         y_lo = js::math::min(y_lo, y[n]);
     }
-    let stress_scale = js::math::max(g_max, WATER_UNIT_WEIGHT) * js::math::max(y_hi - y_lo, 1e-9);
+    let stress_scale =
+        js::math::max(g_max, slope.water_unit_weight()) * js::math::max(y_hi - y_lo, 1e-9);
     let mut pb = ProgramBuilder::new();
     for i in 0..9 * ne {
         pb.col(&format!("s{i}"), false, stress_scale);
@@ -953,7 +953,7 @@ pub fn lower_bound_problem(slope: &Slope, options: &LowerBoundOptions) -> Result
             if let Some(pl) = pond_line {
                 let yw = polyline_y(pl, x[node]);
                 pw = if yw.is_finite() {
-                    WATER_UNIT_WEIGHT * js::math::max(0.0, yw - y[node])
+                    slope.water_unit_weight() * js::math::max(0.0, yw - y[node])
                 } else {
                     0.0
                 };

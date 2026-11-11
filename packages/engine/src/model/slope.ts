@@ -572,6 +572,11 @@ export class Slope {
     return this._get("seismicVertical");
   }
 
+  /** Unit weight of water γw (kN/m³): the `waterUnitWeight` option, `WATER_UNIT_WEIGHT` without it. */
+  get waterUnitWeight(): number {
+    return this._get("waterUnitWeight");
+  }
+
   /** Whether composite circles also follow the bare base of the model. */
   get compositeBase(): boolean {
     return this._get("compositeBase");

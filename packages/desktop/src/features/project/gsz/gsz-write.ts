@@ -458,7 +458,7 @@ ${list("LineLoadPoints", lineLoadXml)}${list("Surcharges", surchargeXml)}${seism
     <WaterItem>
       <AnalysisID>1</AnalysisID>
       <Entry>
-        <UnitWaterWeight>${WATER_UNIT_WEIGHT}</UnitWaterWeight>
+        <UnitWaterWeight>${opts.waterUnitWeight ?? WATER_UNIT_WEIGHT}</UnitWaterWeight>
 ${waterOption ? `        <ResultInputInfo>
           <Option>${waterOption}</Option>
         </ResultInputInfo>

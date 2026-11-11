@@ -145,7 +145,7 @@ function stageDocs(
   id: () => string,
   soilOf: (material: string) => { soilId: string; state?: SoilStrength["state"] } | undefined,
   inherits: (material: string) => boolean,
-  options: { seismicHorizontal?: number; seismicVertical?: number },
+  options: { seismicHorizontal?: number; seismicVertical?: number; waterUnitWeight?: number },
   notes: string[],
 ): StageDocs {
   const outline = def.coordinates;
@@ -260,7 +260,7 @@ function stageDocs(
   return {
     geometry: { Layers: layers.map((l) => ({ Id: l.id, Label: l.label, Notes: null, Points: l.ring.map(xz) })) },
     soilLayers: { SoilLayers: layers.map((l) => ({ LayerId: l.id, SoilId: soilOf(l.material)?.soilId })) },
-    waternet: { UnitWeightWater: WATER_UNIT_WEIGHT, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
+    waternet: { UnitWeightWater: options.waterUnitWeight ?? WATER_UNIT_WEIGHT, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
     state: { StatePoints: statePoints, StateLines: [] },
     loads: {
       LayerLoads: layerLoads, UniformLoads: uniformLoads, LineLoads: lineLoads, Trees: [],
@@ -316,7 +316,7 @@ export function modelToStixDocuments(model: ModelEntry): { docs: Map<string, Jso
     if (missing.length > 0) notes.push(`${missing.join(", ")} take the stress history of the earlier stage, which has no material of that name (renamed?); the receiving program matches layers by their names, so the history may not carry over.`);
   }
   const opts = model.options;
-  const seismic = { seismicHorizontal: opts.seismicHorizontal, seismicVertical: opts.seismicVertical };
+  const seismic = { seismicHorizontal: opts.seismicHorizontal, seismicVertical: opts.seismicVertical, waterUnitWeight: opts.waterUnitWeight };
 
   // stages: the earlier one (its stress history) and the model's
   const stages: { label: string; docs: StageDocs }[] = [];

@@ -232,6 +232,19 @@ describe(".gsz import", () => {
     expect(back.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
   });
 
+  it("takes the file's unit weight of water into the model and exports the model's", async () => {
+    expect(gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1).options.waterUnitWeight).toBeUndefined();
+    const imp = gszToDefinition({ ...parseGszXml(XML.replace("<UnitWaterWeight>9.807<", "<UnitWaterWeight>9.82<")), results: new Map() }, 1);
+    expect(imp.options.waterUnitWeight).toBe(9.82);
+    expect(imp.notes.join(" ")).not.toMatch(/unit weight of water/);
+    const model = modelFromDefinition(imp.definition, { id: "w", name: "W", options: imp.options });
+    expect(modelToGszXml(model).xml).toContain("<UnitWaterWeight>9.82</UnitWaterWeight>");
+    const [back] = await gszImports(modelToGsz(model).bytes, "W.gsz");
+    expect(back.options.waterUnitWeight).toBe(9.82);
+    // without a setting the exporter writes 9.807
+    expect(modelToGszXml(modelFromDefinition(imp.definition, { id: "d", name: "D" })).xml).toContain("<UnitWaterWeight>9.807</UnitWaterWeight>");
+  });
+
   it("reads the default search (no Option) and an exit given as a point", () => {
     const xml = XML.replace("<Option>EntryExit</Option>", "")
       .replace('<RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />', '<RightOption>Point</RightOption><RightSideLeftPt X="21" Y="5" />');

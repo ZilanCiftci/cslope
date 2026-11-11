@@ -1501,6 +1501,10 @@ function normalizeAnalysisOptions(raw: unknown): AnalysisOptions {
     ...(typeof o.seismicVertical === "number" && Number.isFinite(o.seismicVertical) && o.seismicVertical !== 0 && Math.abs(o.seismicVertical) <= 1
       ? { seismicVertical: o.seismicVertical }
       : {}),
+    // the unit weight of water (kN/m³); absent: the engine's 9.807
+    ...(typeof o.waterUnitWeight === "number" && Number.isFinite(o.waterUnitWeight) && o.waterUnitWeight > 0
+      ? { waterUnitWeight: o.waterUnitWeight }
+      : {}),
     ...(typeof o.tensionCrackAngle === "number" && Number.isFinite(o.tensionCrackAngle) && o.tensionCrackAngle > 0 && o.tensionCrackAngle < 90
       ? { tensionCrackAngle: o.tensionCrackAngle }
       : {}),

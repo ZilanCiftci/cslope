@@ -3127,13 +3127,16 @@ export function waternet_new(waternet) {
 }
 
 /**
+ * The pore pressure at (x, z) with the unit weight of water `gw`
+ * (`WATER_UNIT_WEIGHT` when not given).
  * @param {number} handle
  * @param {number} x
  * @param {number} z
+ * @param {number | null} [gw]
  * @returns {number}
  */
-export function waternet_pore_pressure_at(handle, x, z) {
-    const ret = wasm.waternet_pore_pressure_at(handle, x, z);
+export function waternet_pore_pressure_at(handle, x, z, gw) {
+    const ret = wasm.waternet_pore_pressure_at(handle, x, z, !isLikeNone(gw), isLikeNone(gw) ? 0 : gw);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }

@@ -495,7 +495,7 @@ export function buildAnalysisSummary(input: AnalysisSummaryInput): SummarySectio
         "for all materials, instead of the piezometric lines (which still give the phreatic level)",
     });
   }
-  water.push({ label: "Unit weight of water", value: `${WATER_UNIT_WEIGHT} kN/m³` });
+  water.push({ label: "Unit weight of water", value: `${options.waterUnitWeight ?? WATER_UNIT_WEIGHT} kN/m³` });
   if (options.tensionCrackAuto || options.tensionCrackDepth || options.tensionCrackAngle) {
     const parts = [
       ...(options.tensionCrackAuto

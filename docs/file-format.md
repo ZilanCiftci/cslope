@@ -127,10 +127,12 @@ A reader validates every member by name as the app does for a JSON project (`par
 | `udls`, `lineLoads` | distributed and line loads |
 | `reinforcements`, `piles` | reinforcement and piles |
 | `customSearchPlanes`, `customPlanesOnly`, `blockSearchObjects`, `analysisLimits` | the search: custom surfaces, block search objects, entry and exit ranges |
-| `options` | the engine's `AnalysisOptions` (method, slices, tolerances, partial factors, seismic loads, finite element settings, 3D effects) |
+| `options` | the engine's `AnalysisOptions` (method, slices, tolerances, partial factors, seismic loads, the unit weight of water, finite element settings, 3D effects) |
 | `earlierStage`, `importNotes` | an earlier construction stage; what an import from another program's file noted |
 | `editViewOffset`, `editViewScale`, `resultViewOffset`, `resultViewScale`, `viewOffset`, `viewScale`, `mode` | the views |
 | `resultViewSettings` | the result sheet: annotations, paper frame, extents, what is drawn |
+
+`options.waterUnitWeight` (optional, since 2026-11-11) is the model's unit weight of water γw in kN/m³; a reader keeps it when it is a number greater than 0 and drops any other value without an error. Absent (every file saved before it, and a model left at the default) is 9.807 kN/m³, so older files open and run unchanged. The app does not write it when the model uses the default.
 
 The user documentation (`packages/website/src/docs/file-format.mdx` and the reference pages it links) describes the meaning of these; the TypeScript types are the exact schema.
 

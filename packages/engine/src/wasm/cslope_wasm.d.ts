@@ -628,7 +628,11 @@ export function waternet_free(handle: number): boolean;
  */
 export function waternet_new(waternet: any): number;
 
-export function waternet_pore_pressure_at(handle: number, x: number, z: number): number;
+/**
+ * The pore pressure at (x, z) with the unit weight of water `gw`
+ * (`WATER_UNIT_WEIGHT` when not given).
+ */
+export function waternet_pore_pressure_at(handle: number, x: number, z: number, gw?: number | null): number;
 
 /**
  * The definition's material with its model and without the flat fields
@@ -858,7 +862,7 @@ export interface InitOutput {
     readonly waternet_count: () => number;
     readonly waternet_free: (a: number) => number;
     readonly waternet_new: (a: any) => [number, number, number];
-    readonly waternet_pore_pressure_at: (a: number, b: number, c: number) => [number, number, number];
+    readonly waternet_pore_pressure_at: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly with_material_model: (a: any) => [number, number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

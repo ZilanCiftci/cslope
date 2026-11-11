@@ -113,6 +113,13 @@ export interface AnalysisOptions {
    */
   seismicVertical?: number;
   /**
+   * Unit weight of water γw (kN/m³, > 0): pore pressure u = γw·h from a
+   * head h, the weight of free water and the water in a tension crack.
+   * Default `WATER_UNIT_WEIGHT` (9.807, ρw·g with standard gravity); a
+   * model may set its own (9.82 for local gravity, 10 as a simplification).
+   */
+  waterUnitWeight?: number;
+  /**
    * Partial factors (Eurocode 7 design values). When set, strengths are
    * divided and variable loads multiplied by them, and the FOS is the
    * over-design factor on design values (≥ 1.0 satisfies the design).
