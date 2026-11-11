@@ -206,13 +206,14 @@ fn a_pile_keeps_the_given_angle_when_no_direction_is_set() {
 #[test]
 fn a_pile_acts_along_the_slip_surface_with_direction_tangent() {
     // A commercial program on cSlope's V095c input, pile passive and tangential,
-    // the force at the slip surface: 1.1989.
+    // the force at the slip surface: 1.1989. cSlope gives 1.1994 since the
+    // slice base of a circle is the chord (2026-11-10), 0.04 % above it.
     close(
         pile_run(
             json!({ "application": "passive", "direction": "tangent", "location": "slip-surface" }),
         )
         .unwrap(),
-        1.1989,
+        1.1994,
         3,
     );
 }

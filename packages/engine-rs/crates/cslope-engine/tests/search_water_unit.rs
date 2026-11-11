@@ -252,7 +252,8 @@ fn gives_the_pool_as_the_materials_line_the_fos_of_the_pool_as_the_main_line() {
     let mut d = dry();
     d["waterTable"] = json!({ "mode": "custom", "value": POOL, "followBoundary": false });
     let main = pool_fos(d).unwrap();
-    close(main, 1.597, 3);
+    // 1.597 with the arc base of a circle; the chord (2026-11-10).
+    close(main, 1.5988, 3);
     close(
         pool_fos(own(
             json!({ "waterTables": [{ "id": "p", "coordinates": POOL, "followBoundary": false }] }),
