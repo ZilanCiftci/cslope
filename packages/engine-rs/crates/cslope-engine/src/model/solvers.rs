@@ -680,7 +680,7 @@ pub fn analyse_ordinary(_slope: &Slope, slices: &[Slice]) -> Option<f64> {
     let mut pushing = 0.0;
     let mut resisting = 0.0;
     // External moments as forces along the base: divided by the mean shear
-    // arm (the radius on a circle; per-slice arms on a polyline can be ~0).
+    // arm (per-slice arms on a polyline can be ~0).
     let mut arm_sum = 0.0;
     let mut len_sum = 0.0;
     for s in slices {
@@ -692,10 +692,11 @@ pub fn analyse_ordinary(_slope: &Slope, slices: &[Slice]) -> Option<f64> {
     } else {
         0.0
     };
-    // A composite circle (arc and slices along the floor): one moment balance
-    // about the centre, each force with its own arm, over the mean arm.
-    let composite = slices.iter().any(|s| s.circular == Some(true))
-        && slices.iter().any(|s| s.circular != Some(true));
+    // A circle, also a composite one (arc and slices along the floor): one
+    // moment balance about the centre, each force with its own arm (on the
+    // circle the perpendicular distance to the slice's chord, R·cos(Δθ/2)),
+    // over the mean arm.
+    let about_centre = slices.iter().any(|s| s.circular == Some(true));
 
     for s in slices {
         // Reinforcement: active forces load the slice; passive ones (divided
@@ -714,7 +715,7 @@ pub fn analyse_ordinary(_slope: &Slope, slices: &[Slice]) -> Option<f64> {
             }
         }
 
-        let arm = if composite && mean_arm > 1e-9 {
+        let arm = if about_centre && mean_arm > 1e-9 {
             s.r / mean_arm
         } else {
             1.0
@@ -737,18 +738,13 @@ pub fn analyse_ordinary(_slope: &Slope, slices: &[Slice]) -> Option<f64> {
         }
 
         // Driving force along the base: on a circle the weight's moment W·dx
-        // over the radius (the same moment as the other methods; α is at the
-        // middle of the arc, where R sin α differs slightly from dx); on a
+        // over the mean arm (the same moment as the other methods), on a
         // composite circle with the floor slices' normal forces' moments too.
-        let drive = if composite && mean_arm > 1e-9 {
+        let drive = if about_centre && mean_arm > 1e-9 {
             (w * s.dx + (w * js::math::cos(s.alpha) - h_normal) * s.normal_arm.unwrap_or(0.0))
                 / mean_arm
         } else {
-            w * if s.circular == Some(true) {
-                s.dx / s.r
-            } else {
-                js::math::sin(s.alpha)
-            }
+            w * js::math::sin(s.alpha)
         };
         pushing += drive
             + if mean_arm > 1e-9 {

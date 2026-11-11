@@ -13,7 +13,7 @@ $$
 
 where $\ell$ is the length of the slice base, $N$ the normal force on it, $u$ the pore pressure at its midpoint, and $c'$, $\varphi'$ the strength of the material at the base. For an undrained material $\varphi' = 0$ and $c'$ is the undrained strength $S_u$.
 
-On a circle the base of a slice is its arc: $\ell$ is the arc length, $\alpha$ the inclination at the middle of the arc, and the weight that of the soil above the arc. Where the circle turns steep toward its ends, the slices are cut narrower, so that none spans more than twice the arc of a slice at the bottom of the circle (and at least 2°): a single base inclination cannot follow an arc that turns 20–30° within one slice.
+The base of every slice is straight. On a circle it is the chord between the slice's two points on the circle: $\ell$ is the chord's length, $\alpha$ its inclination, the weight that of the soil above the chord, and the pore pressure and strength are taken at the chord's midpoint. Where the circle turns steep toward its ends, the slices are cut narrower, so that none spans more than twice the arc of a slice at the bottom of the circle (and at least 2°): a single chord cannot follow an arc that turns 20–30° within one slice. In the moment equilibrium about the center of the circle, the weight $W$ has the arm $x - x_c$ (the horizontal distance from the center to the middle of the slice), and the base shear force has the perpendicular distance from the center to the chord, $R\cos(\Delta\theta/2)$, where $\Delta\theta$ is the angle the slice subtends at the center; the normal force on the chord passes through the center. This is the general limit equilibrium formulation of Fredlund and Krahn (1977), in which the shear force's arm is measured to the base of the slice.
 
 The methods differ in which equilibrium conditions they satisfy and in what they assume about the forces between slices.
 
@@ -27,7 +27,7 @@ F = \frac{\sum \left[c' b + (W - u b)\tan\varphi'\right] / m_\alpha}{\sum W \sin
 m_\alpha = \cos\alpha + \frac{\sin\alpha \tan\varphi'}{F}
 $$
 
-with $b$ the slice width, $W$ its weight and $\alpha$ the inclination of its base. External loads, water forces and reinforcement add their moments to the numerator or denominator. On a non-circular surface cSlope takes moments about an axis point above the surface, with the moment arms of the base normal forces included (Fredlund and Krahn 1977). With no interslice shear force the slices are then not in horizontal equilibrium, so $F$ depends on the axis point; the result carries a warning, and Spencer or Morgenstern-Price is the method to use there.
+with $b$ the slice width, $W$ its weight and $\alpha$ the inclination of its base. This is the textbook form with every arm equal to $R$; cSlope solves the moment balance itself, each base shear force with its own arm to the chord and each weight with its arm $x - x_c$. External loads, water forces and reinforcement add their moments to the numerator or denominator. On a non-circular surface cSlope takes moments about an axis point above the surface, with the moment arms of the base normal forces included (Fredlund and Krahn 1977). With no interslice shear force the slices are then not in horizontal equilibrium, so $F$ depends on the axis point; the result carries a warning, and Spencer or Morgenstern-Price is the method to use there.
 
 ## Janbu simplified
 

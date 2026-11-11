@@ -3,8 +3,7 @@
 //! filter a substring of the check's options. With `--all` instead of a
 //! problem, every check runs (one analysis per thread) and is printed as a
 //! TSV line: id, label, method, slices, published, publishedBy, tolerance,
-//! F; for comparing engine settings check by check (e.g. with
-//! `CSLOPE_SLICE_BASE=chord`).
+//! F; for comparing engine settings check by check.
 use cslope_engine::api::ctx::RunCtx;
 use cslope_engine::model::build_slope::build_slope;
 use cslope_engine::model::canonical::to_canonical_slope_definition;

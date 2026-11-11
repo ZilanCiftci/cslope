@@ -42,57 +42,9 @@ const LOCAL_ORIGIN_GRID: f64 = 4096.0;
 /// Largest arc a slice of a circle spans, at least (rad); see get_slices.
 const MAX_SLICE_ARC: f64 = (2.0 * PI) / 180.0;
 
-/// Most segments of the arc under a slice (create_slice).
-const MAX_ARC_SEGMENTS: usize = 32;
-
-/// The base of a slice of a circle (not a port: an experiment switch, see
-/// PORTING.md "Slice base of a circle"). `Arc` is the engine's: the arc
-/// length, α at the middle of the arc and the weight of the soil above the
-/// arc. `Chord` is the conventional straight chord between the slice's
-/// edges, as most limit equilibrium programs discretise a circle: the
-/// chord's length and inclination (the same α: a chord is parallel to the
-/// tangent at the middle of its arc) and the weight of the polygon above the
-/// chord, with the base point (pore pressure, strength) at the chord's
-/// middle. `ChordEven` is the chord without the steep ends of the circle
-/// cut into narrower slices (get_slices), i.e. the nominal slices only.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SliceBase {
-    Arc,
-    Chord,
-    ChordEven,
-}
-
-thread_local! {
-    static SLICE_BASE_OVERRIDE: std::cell::Cell<Option<SliceBase>> = const { std::cell::Cell::new(None) };
-}
-
-/// The slice base of a circle in force: the override of `with_slice_base`
-/// on this thread, else the environment variable `CSLOPE_SLICE_BASE`
-/// (`chord`, `chord-even`; read once; absent in WebAssembly), else `Arc`.
-pub fn slice_base() -> SliceBase {
-    if let Some(b) = SLICE_BASE_OVERRIDE.with(|c| c.get()) {
-        return b;
-    }
-    static FROM_ENV: std::sync::OnceLock<SliceBase> = std::sync::OnceLock::new();
-    *FROM_ENV.get_or_init(|| match std::env::var("CSLOPE_SLICE_BASE").as_deref() {
-        Ok("chord") => SliceBase::Chord,
-        Ok("chord-even") => SliceBase::ChordEven,
-        _ => SliceBase::Arc,
-    })
-}
-
-/// Runs `f` with the slices of circles built on `base` on this thread (a
-/// serial analysis; the evaluator's worker threads read the environment).
-pub fn with_slice_base<T>(base: SliceBase, f: impl FnOnce() -> T) -> T {
-    let before = SLICE_BASE_OVERRIDE.with(|c| c.replace(Some(base)));
-    let out = f();
-    SLICE_BASE_OVERRIDE.with(|c| c.set(before));
-    out
-}
-
 // ── Clipping buffers ──────────────────────────────────────────────
 // A slice clips every material polygon by the vertical strip, then by
-// each slip-surface edge (two on a straight base, more along an arc).
+// each slip-surface edge (two: the slice's straight base).
 // Done with fresh arrays and `map` passes, the allocation was a fifth of a
 // whole search. The clips below write into two reused buffers instead, with
 // the same arithmetic in the same order, so the results are identical to
@@ -394,15 +346,12 @@ pub fn create_slice(
         Some(f) => f(x1),
         None => get_circle_y_coordinate_at_x(cx, cy, radius, x1),
     };
-    // A straight base: a non-circular surface, or a circle under the chord
-    // experiment switch (SliceBase::Chord: the chord's middle is the base
-    // point, its inclination α and its length the base's).
-    let straight = base.is_some() || slice_base() != SliceBase::Arc;
-    let y_bottom = if straight {
-        (y0_bottom + y1_bottom) / 2.0
-    } else {
-        get_circle_y_coordinate_at_x(cx, cy, radius, x)
-    };
+    // The base is straight: on a circle the chord between the slice's two
+    // base points, the conventional discretisation of a circle (Fredlund &
+    // Krahn 1977). The chord's middle is the base point (pore pressure,
+    // strength), its inclination α and its length the base's, and the weight
+    // is that of the soil above the chord.
+    let y_bottom = (y0_bottom + y1_bottom) / 2.0;
 
     if y_bottom > y_top {
         return Ok(None); // Invalid: bottom above top
@@ -412,45 +361,36 @@ pub fn create_slice(
     let e = cy - (y_top + y_bottom) / 2.0;
 
     // Alpha angle: positive where the base descends towards +x (the
-    // sliding direction). On a circle the tangent at the middle of the
-    // slice's arc (θ the angle of a point from the downward vertical through
-    // the centre, x = cx + R sin θ; α = −θ), which with the arc length below
-    // is the slice's base as the circle has it.
-    let theta =
-        |xx: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (xx - cx) / radius)));
-    let th0 = if straight { 0.0 } else { theta(x0) };
-    let th1 = if straight { 0.0 } else { theta(x1) };
-    let alpha = if straight {
-        js::math::atan((y0_bottom - y1_bottom) / width)
-    } else {
-        -(th0 + th1) / 2.0
+    // sliding direction).
+    let alpha = js::math::atan((y0_bottom - y1_bottom) / width);
+
+    // Moment arms about the centre / axis point: the perpendicular distance
+    // from it to the base line for the base shear, and the arm of the base
+    // normal force (Fredlund & Krahn 1977, the general limit equilibrium
+    // formulation: R and f measured to the base). On a circle the chord's
+    // shear arm is R·cos(Δθ/2), Δθ the angle the slice subtends at the
+    // centre (θ the angle of a point from the downward vertical through the
+    // centre, x = cx + R sin θ), and the normal at the chord's middle passes
+    // through the centre (arm 0).
+    let (shear_arm, normal_arm) = match base {
+        Some(_) => {
+            let bx = x - cx;
+            let by = y_bottom - cy;
+            (
+                -(bx * js::math::sin(alpha) + by * js::math::cos(alpha)),
+                bx * js::math::cos(alpha) - by * js::math::sin(alpha),
+            )
+        }
+        None => {
+            let theta = |xx: f64| {
+                js::math::asin(js::math::max(-1.0, js::math::min(1.0, (xx - cx) / radius)))
+            };
+            let d_theta = (theta(x1) - theta(x0)).abs();
+            (radius * js::math::cos(d_theta / 2.0), 0.0)
+        }
     };
 
-    // Moment arms about the centre / axis point. The base shear resists
-    // with arm R; the normal force has arm `normalArm` (0 on a circle,
-    // where it passes through the centre).
-    let mut shear_arm = radius;
-    let mut normal_arm = 0.0;
-    if base.is_some() {
-        let bx = x - cx;
-        let by = y_bottom - cy;
-        shear_arm = -(bx * js::math::sin(alpha) + by * js::math::cos(alpha));
-        normal_arm = bx * js::math::cos(alpha) - by * js::math::sin(alpha);
-    }
-
-    // Base length: on a circle the arc length R·|θ1 − θ0|, with α at the
-    // middle of the arc and the weight under the arc (below), so that base,
-    // inclination and weight are the circle's own; a straight base b/cos α.
-    // (Before 2026-11: α the tangent at the x-midpoint with b/cos α, which
-    // under-credited cohesion on a steep slice, by 0.3 % of the resisting
-    // moment on an undrained clay with a steep crest, partly offset by the
-    // weight under one arc node. With the steep ends cut (get_slices), the
-    // error against 4000 slices is 0.013 % on average, 0.16 % at most.)
-    let base_length = if straight {
-        width / js::math::cos(alpha)
-    } else {
-        radius * (th1 - th0).abs()
-    };
+    let base_length = width / js::math::cos(alpha);
 
     // Pore water pressure
     let mut u = 0.0;
@@ -463,45 +403,15 @@ pub fn create_slice(
     // geometry_for_area: [(x0, 10000), (x1, 10000), (x1, y1_bottom), (xm, ym_bottom), (x0, y0_bottom)]
     // The top at y = 10000 is a fixed ceiling: material above it is not
     // counted, so model elevations must stay below 10000 m.
-    // On a circle the base follows the arc with a node every ≤ 1° (an even
-    // number of segments up to 32), so that the weight is that under the
-    // arc. One node is always the base point (x, yBottom): the base material
-    // is looked up just above it, and a chord there would lie above the arc.
-    let arc_segments = if straight {
-        2.0
-    } else {
-        js::math::min(
-            32.0,
-            2.0 * js::math::max(1.0, ((th1 - th0).abs() / (PI / 90.0)).ceil()),
-        )
-    };
-    // (Array.from({ length: NaN }) is empty)
-    let arc_nodes = arc_segments - 1.0;
-    let mut clip_poly = [[0.0f64; 2]; MAX_ARC_SEGMENTS + 3];
-    let mut np = 0;
-    let mut push = |pt: [f64; 2]| {
-        clip_poly[np] = pt;
-        np += 1;
-    };
-    push([x0, 10000.0]);
-    push([x1, 10000.0]);
-    push([x1, y1_bottom]);
-    if arc_nodes == 1.0 {
-        push([x, y_bottom]);
-    } else if arc_nodes >= 1.0 {
-        let count = arc_nodes as usize;
-        for k in 0..count {
-            let kk = (k + 1) as f64;
-            if 2.0 * kk == arc_segments {
-                push([x, y_bottom]);
-            } else {
-                let xx = x1 - (kk / arc_segments) * (x1 - x0);
-                push([xx, get_circle_y_coordinate_at_x(cx, cy, radius, xx)]);
-            }
-        }
-    }
-    push([x0, y0_bottom]);
-    let clip_poly = &clip_poly[..np];
+    // One node is the base point (x, yBottom): the base material is looked
+    // up just above it.
+    let clip_poly: [[f64; 2]; 5] = [
+        [x0, 10000.0],
+        [x1, 10000.0],
+        [x1, y1_bottom],
+        [x, y_bottom],
+        [x0, y0_bottom],
+    ];
 
     // Compute edge coefficients for the slip-surface edges (from index 2 on),
     // relative to a local origin (ox, oy) near the slice: with real-world
@@ -511,7 +421,7 @@ pub fn create_slice(
     // that models near the global origin are computed exactly as before.
     let ox = js::math::round(x / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
     let oy = js::math::round(y_bottom / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
-    let mut edge_coeffs = [[0.0f64; 3]; MAX_ARC_SEGMENTS + 1];
+    let mut edge_coeffs = [[0.0f64; 3]; 2];
     let mut ne = 0;
     for i in 2..clip_poly.len() - 1 {
         let p1 = [clip_poly[i][0] - ox, clip_poly[i][1] - oy];
@@ -1464,7 +1374,7 @@ pub fn get_slices(
     // (2026-11) this took the largest error from 0.87 % (V068, a vertical
     // tangent at the crest) to 0.16 %, with 3 % more slices; 65 or 80
     // even slices left 0.53 % and 0.35 %.
-    if poly.is_none() && slice_base() != SliceBase::ChordEven {
+    if poly.is_none() {
         let max_arc = js::math::max(MAX_SLICE_ARC, (2.0 * b) / radius);
         let theta =
             |x: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (x - cx) / radius)));

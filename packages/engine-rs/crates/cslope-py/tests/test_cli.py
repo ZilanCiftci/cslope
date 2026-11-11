@@ -46,7 +46,7 @@ def doc_path(tmp_path):
 def test_analyse_prints_the_summary(doc_path):
     code, out, err = run("analyse", doc_path)
     assert code == 0, err
-    assert out.startswith("F 1.802: factor of safety on characteristic values\n")
+    assert out.startswith("F 1.803: factor of safety on characteristic values\n")
     assert "Method: Morgenstern-Price" in out
     assert "Critical surface: circle, center (" in out
     assert "Entry / exit: (" in out
@@ -60,7 +60,7 @@ def test_analyse_json(doc_path):
     assert set(data) == {"summary", "result"}
     s = data["summary"]
     assert s["fos"] == pytest.approx(data["result"]["minFOS"])
-    assert s["fos"] == pytest.approx(1.8020625879151726, abs=1e-6)
+    assert s["fos"] == pytest.approx(1.8026242201315132, abs=1e-6)
     assert s["methodName"] == "Morgenstern-Price"
     assert s["fosLabel"] == "factor of safety"
     assert isinstance(s["warnings"], list)

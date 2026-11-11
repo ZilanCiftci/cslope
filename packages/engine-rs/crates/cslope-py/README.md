@@ -52,9 +52,9 @@ r["minFOS"], r["criticalSurface"], r["criticalSlices"][0]
 ```
 $ python examples/parameter_study.py
 phi'             Bishop  Morgenstern-Price
-  20              1.134              1.132
-  30              1.622              1.620
-  40              2.204              2.203   (every 2° in the script)
+  20              1.134              1.133
+  30              1.622              1.621
+  40              2.205              2.203   (every 2° in the script)
 ```
 
 ### API

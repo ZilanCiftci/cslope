@@ -22,7 +22,7 @@
      "method": "Bishop simplified",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Bishop simplified",
-     "computed": 1.4041
+     "computed": 1.4043
     },
     {
      "value": 1.265,
@@ -49,7 +49,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4041,
+     "computed": 1.4043,
      "programs": {
       "min": 1.409,
       "max": 1.417
@@ -57,7 +57,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.401,
+     "computed": 1.4011,
      "programs": {
       "min": 1.414,
       "max": 1.414
@@ -223,7 +223,7 @@
      "method": "Bishop simplified",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Bishop simplified",
-     "computed": 1.113
+     "computed": 1.1134
     },
     {
      "value": 0.995,
@@ -237,7 +237,7 @@
      "method": "Janbu corrected, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
-     "computed": 1.0469
+     "computed": 1.047
     },
     {
      "value": 1.09,
@@ -250,7 +250,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.113,
+     "computed": 1.1134,
      "programs": {
       "min": 1.112,
       "max": 1.118
@@ -258,7 +258,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1138,
+     "computed": 1.1142,
      "programs": {
       "min": 1.118,
       "max": 1.118
@@ -266,7 +266,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.129,
+     "computed": 1.1303,
      "programs": {
       "min": 1.131,
       "max": 1.131
@@ -279,7 +279,7 @@
     },
     {
      "method": "Janbu corrected, non-circular",
-     "computed": 1.0469,
+     "computed": 1.047,
      "programs": null
     },
     {
@@ -322,7 +322,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 2.8019,
+     "computed": 2.8021,
      "programs": {
       "min": 2.794,
       "max": 2.794
@@ -330,7 +330,7 @@
     },
     {
      "method": "Janbu simplified",
-     "computed": 2.6765,
+     "computed": 2.6771,
      "programs": {
       "min": 2.662,
       "max": 2.662
@@ -364,7 +364,7 @@
    "results": [
     {
      "method": "Janbu simplified",
-     "computed": 2.6089,
+     "computed": 2.6091,
      "programs": {
       "min": 2.61,
       "max": 2.61
@@ -395,30 +395,30 @@
      "source": "Theory",
      "method": "infinite slope",
      "analysis": "Bishop simplified",
-     "computed": 2.5126
+     "computed": 2.5121
     },
     {
      "value": 2.41,
      "method": "Spencer, non-circular (dynamic programming)",
      "source": "Baker, Frydman & Talesnick (1993)",
      "analysis": "Spencer, non-circular",
-     "computed": 2.5043
+     "computed": 2.5046
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.5126,
+     "computed": 2.5121,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 2.5126,
+     "computed": 2.5121,
      "programs": null
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 2.5043,
+     "computed": 2.5046,
      "programs": null
     }
    ]
@@ -477,7 +477,7 @@
    "results": [
     {
      "method": "Janbu simplified",
-     "computed": 1.4683,
+     "computed": 1.4686,
      "programs": {
       "min": 1.469,
       "max": 1.469
@@ -511,7 +511,7 @@
    "results": [
     {
      "method": "Janbu simplified",
-     "computed": 0.9553,
+     "computed": 0.9554,
      "programs": {
       "min": 0.957,
       "max": 0.957
@@ -547,7 +547,7 @@
    "results": [
     {
      "method": "Janbu simplified",
-     "computed": 1.2901,
+     "computed": 1.2902,
      "programs": {
       "min": 1.291,
       "max": 1.291
@@ -575,7 +575,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.5188,
+     "computed": 1.5189,
      "programs": {
       "min": 1.536,
       "max": 1.536
@@ -603,7 +603,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.3647,
+     "computed": 1.3648,
      "programs": {
       "min": 1.366,
       "max": 1.366
@@ -624,7 +624,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.926,
+     "computed": 1.9264,
      "programs": {
       "min": 1.925,
       "max": 1.925
@@ -699,7 +699,7 @@
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1627,
+     "computed": 1.1623,
      "programs": {
       "min": 1.171,
       "max": 1.171
@@ -707,7 +707,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.164,
+     "computed": 1.1637,
      "programs": {
       "min": 1.17,
       "max": 1.17
@@ -729,7 +729,7 @@
      "source": "Borges & Cardoso",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1588
+     "computed": 1.1586
     },
     {
      "value": 1.19,
@@ -747,7 +747,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1588,
+     "computed": 1.1586,
      "programs": null
     }
    ],
@@ -771,7 +771,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2198,
+     "computed": 1.2196,
      "programs": {
       "min": 1.23,
       "max": 1.23
@@ -798,7 +798,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2167,
+     "computed": 1.2165,
      "programs": {
       "min": 1.22,
       "max": 1.22
@@ -832,7 +832,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 0.9818,
+     "computed": 0.9816,
      "programs": {
       "min": 0.98,
       "max": 0.98
@@ -877,7 +877,7 @@
      "source": "Cai & Ugai",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1429
+     "computed": 1.143
     },
     {
      "value": 1.14,
@@ -890,7 +890,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1429,
+     "computed": 1.143,
      "programs": {
       "min": 1.14,
       "max": 1.14
@@ -938,7 +938,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5408,
+     "computed": 1.541,
      "programs": {
       "min": 1.54,
       "max": 1.54
@@ -965,7 +965,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4371,
+     "computed": 1.4373,
      "programs": {
       "min": 1.43,
       "max": 1.43
@@ -992,7 +992,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3314,
+     "computed": 1.3316,
      "programs": {
       "min": 1.33,
       "max": 1.33
@@ -1019,7 +1019,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2528,
+     "computed": 1.253,
      "programs": {
       "min": 1.25,
       "max": 1.25
@@ -1098,7 +1098,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.7905,
+     "computed": 1.7904,
      "programs": {
       "min": 1.787,
       "max": 1.79
@@ -1106,7 +1106,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.7975,
+     "computed": 1.7974,
      "programs": {
       "min": 1.791,
       "max": 1.791
@@ -1156,7 +1156,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.7905,
+     "computed": 1.7903,
      "programs": {
       "min": 1.79,
       "max": 1.79
@@ -1290,7 +1290,7 @@
      "source": "Cheng et al.",
      "method": "Spencer",
      "analysis": "Spencer (vertical pore-pressure head)",
-     "computed": 1.3985
+     "computed": 1.3986
     },
     {
      "value": 1.47,
@@ -1303,7 +1303,7 @@
    "results": [
     {
      "method": "Spencer (40 slices, vertical pore-pressure head)",
-     "computed": 1.3985,
+     "computed": 1.3986,
      "programs": {
       "min": 1.38,
       "max": 1.398
@@ -1311,12 +1311,12 @@
     },
     {
      "method": "Spencer (vertical pore-pressure head)",
-     "computed": 1.3985,
+     "computed": 1.3986,
      "programs": null
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.401,
+     "computed": 1.4011,
      "programs": {
       "min": 1.401,
       "max": 1.401
@@ -1360,7 +1360,7 @@
      "source": "Cheng et al.",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.3329
+     "computed": 1.333
     },
     {
      "value": 1.327,
@@ -1373,7 +1373,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.3329,
+     "computed": 1.333,
      "programs": {
       "min": 1.336,
       "max": 1.338
@@ -1381,7 +1381,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.3373,
+     "computed": 1.3374,
      "programs": {
       "min": 1.342,
       "max": 1.342
@@ -1425,13 +1425,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1283
+     "computed": 1.1286
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1283,
+     "computed": 1.1286,
      "programs": {
       "min": 1.132,
       "max": 1.132
@@ -1439,12 +1439,12 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.1283,
+     "computed": 1.1286,
      "programs": null
     },
     {
      "method": "Bishop simplified (60 slices)",
-     "computed": 1.1283,
+     "computed": 1.1285,
      "programs": {
       "min": 1.128,
       "max": 1.128
@@ -1466,13 +1466,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1098
+     "computed": 1.1102
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1098,
+     "computed": 1.1102,
      "programs": {
       "min": 1.116,
       "max": 1.116
@@ -1480,12 +1480,12 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.1098,
+     "computed": 1.1102,
      "programs": null
     },
     {
      "method": "Bishop simplified (60 slices)",
-     "computed": 1.1098,
+     "computed": 1.1101,
      "programs": {
       "min": 1.109,
       "max": 1.109
@@ -1507,13 +1507,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1084
+     "computed": 1.1087
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1084,
+     "computed": 1.1087,
      "programs": {
       "min": 1.11,
       "max": 1.11
@@ -1521,7 +1521,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.1084,
+     "computed": 1.1087,
      "programs": {
       "min": 1.108,
       "max": 1.108
@@ -1543,13 +1543,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.058
+     "computed": 1.0584
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.058,
+     "computed": 1.0584,
      "programs": {
       "min": 1.063,
       "max": 1.063
@@ -1557,7 +1557,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.058,
+     "computed": 1.0584,
      "programs": {
       "min": 1.058,
       "max": 1.058
@@ -1579,13 +1579,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 2.2449
+     "computed": 2.2456
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.2449,
+     "computed": 2.2456,
      "programs": {
       "min": 2.248,
       "max": 2.248
@@ -1593,7 +1593,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 2.2449,
+     "computed": 2.2456,
      "programs": {
       "min": 2.245,
       "max": 2.245
@@ -1615,13 +1615,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 2.1281
+     "computed": 2.1288
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.1281,
+     "computed": 2.1288,
      "programs": {
       "min": 2.138,
       "max": 2.138
@@ -1629,7 +1629,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 2.1281,
+     "computed": 2.1288,
      "programs": {
       "min": 2.128,
       "max": 2.128
@@ -1651,13 +1651,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.4279
+     "computed": 1.4284
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.4281,
+     "computed": 1.4286,
      "programs": {
       "min": 1.422,
       "max": 1.422
@@ -1665,7 +1665,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.4279,
+     "computed": 1.4284,
      "programs": null
     }
    ]
@@ -1684,13 +1684,13 @@
      "source": "Chowdhury & Xu",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1586
+     "computed": 1.1587
     }
    ],
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1571,
+     "computed": 1.1573,
      "programs": {
       "min": 1.158,
       "max": 1.158
@@ -1698,7 +1698,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.1586,
+     "computed": 1.1587,
      "programs": null
     },
     {
@@ -1731,7 +1731,7 @@
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1746,
+     "computed": 1.1747,
      "programs": {
       "min": 1.178,
       "max": 1.178
@@ -1766,7 +1766,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.1381,
+     "computed": 1.1382,
      "programs": {
       "min": 1.145,
       "max": 1.145
@@ -1789,13 +1789,13 @@
      "source": "Duncan & Wright",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.5718
+     "computed": 1.5721
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5718,
+     "computed": 1.5721,
      "programs": {
       "min": 1.563,
       "max": 1.572
@@ -1803,7 +1803,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5622,
+     "computed": 1.5625,
      "programs": {
       "min": 1.557,
       "max": 1.557
@@ -1829,7 +1829,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1324,
+     "computed": 1.1326,
      "programs": {
       "min": 1.142,
       "max": 1.142
@@ -1837,7 +1837,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1325,
+     "computed": 1.1327,
      "programs": {
       "min": 1.142,
       "max": 1.142
@@ -1859,7 +1859,7 @@
      "source": "Duncan & Wright",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.2198
+     "computed": 1.2197
     },
     {
      "value": 1.19,
@@ -1879,7 +1879,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2198,
+     "computed": 1.2197,
      "programs": {
       "min": 1.228,
       "max": 1.228
@@ -1892,7 +1892,7 @@
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 1.1702,
+     "computed": 1.1701,
      "programs": {
       "min": 1.19,
       "max": 1.19
@@ -1932,13 +1932,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.1345
+     "computed": 1.1348
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.123,
+     "computed": 1.1232,
      "programs": {
       "min": 1.126,
       "max": 1.126
@@ -1946,7 +1946,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1345,
+     "computed": 1.1348,
      "programs": null
     }
    ]
@@ -1965,13 +1965,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.123
+     "computed": 1.1234
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1235,
+     "computed": 1.1238,
      "programs": {
       "min": 1.126,
       "max": 1.126
@@ -1979,7 +1979,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.123,
+     "computed": 1.1234,
      "programs": null
     }
    ]
@@ -1998,13 +1998,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.1183
+     "computed": 1.1185
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1183,
+     "computed": 1.1185,
      "programs": {
       "min": 1.125,
       "max": 1.125
@@ -2012,7 +2012,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1183,
+     "computed": 1.1185,
      "programs": null
     }
    ]
@@ -2031,13 +2031,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.3989
+     "computed": 1.3988
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4083,
+     "computed": 1.4082,
      "programs": {
       "min": 1.412,
       "max": 1.412
@@ -2045,7 +2045,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3989,
+     "computed": 1.3988,
      "programs": null
     }
    ]
@@ -2064,13 +2064,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 2.5306
+     "computed": 2.5307
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.5336,
+     "computed": 2.5338,
      "programs": {
       "min": 2.549,
       "max": 2.549
@@ -2078,7 +2078,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 2.5306,
+     "computed": 2.5307,
      "programs": {
       "min": 2.545,
       "max": 2.545
@@ -2106,7 +2106,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3894,
+     "computed": 1.3893,
      "programs": {
       "min": 1.398,
       "max": 1.398
@@ -2142,7 +2142,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.224,
+     "computed": 1.2239,
      "programs": {
       "min": 1.23,
       "max": 1.23
@@ -2208,13 +2208,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.5328
+     "computed": 1.5331
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5209,
+     "computed": 1.5212,
      "programs": {
       "min": 1.533,
       "max": 1.533
@@ -2222,7 +2222,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5328,
+     "computed": 1.5331,
      "programs": null
     },
     {
@@ -2249,13 +2249,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.2762
+     "computed": 1.2759
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.306,
+     "computed": 1.3057,
      "programs": {
       "min": 1.313,
       "max": 1.313
@@ -2263,12 +2263,12 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2762,
+     "computed": 1.2759,
      "programs": null
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 1.26,
+     "computed": 1.2595,
      "programs": {
       "min": 1.262,
       "max": 1.262
@@ -2290,13 +2290,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.328
+     "computed": 1.3278
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3299,
+     "computed": 1.3296,
      "programs": {
       "min": 1.335,
       "max": 1.335
@@ -2304,12 +2304,12 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.328,
+     "computed": 1.3278,
      "programs": null
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 1.1686,
+     "computed": 1.1683,
      "programs": {
       "min": 1.182,
       "max": 1.182
@@ -2335,7 +2335,7 @@
    "results": [
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.5682,
+     "computed": 1.5685,
      "programs": {
       "min": 1.575,
       "max": 1.575
@@ -2358,13 +2358,13 @@
      "source": "Duncan & Wright",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.3206
+     "computed": 1.3207
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3206,
+     "computed": 1.3207,
      "programs": {
       "min": 1.324,
       "max": 1.324
@@ -2386,13 +2386,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 0.7521
+     "computed": 0.7518
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 0.7568,
+     "computed": 0.7565,
      "programs": {
       "min": 0.761,
       "max": 0.761
@@ -2400,7 +2400,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 0.7521,
+     "computed": 0.7518,
      "programs": {
       "min": 0.756,
       "max": 0.756
@@ -2430,13 +2430,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 0.8982
+     "computed": 0.8978
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 0.9059,
+     "computed": 0.9055,
      "programs": {
       "min": 0.909,
       "max": 0.909
@@ -2444,7 +2444,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 0.8982,
+     "computed": 0.8978,
      "programs": {
       "min": 0.898,
       "max": 0.898
@@ -2466,13 +2466,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.0286
+     "computed": 1.0281
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.0425,
+     "computed": 1.0419,
      "programs": {
       "min": 1.045,
       "max": 1.045
@@ -2480,7 +2480,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.0286,
+     "computed": 1.0281,
      "programs": {
       "min": 1.032,
       "max": 1.032
@@ -2510,13 +2510,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.1315
+     "computed": 1.1311
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1521,
+     "computed": 1.1514,
      "programs": {
       "min": 1.154,
       "max": 1.154
@@ -2524,7 +2524,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1315,
+     "computed": 1.1311,
      "programs": {
       "min": 1.134,
       "max": 1.134
@@ -2532,7 +2532,7 @@
     },
     {
      "method": "Spencer, non-circular",
-     "computed": 1.1193,
+     "computed": 1.1191,
      "programs": {
       "min": 1.116,
       "max": 1.116
@@ -2554,13 +2554,13 @@
      "method": "Spencer",
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Spencer",
-     "computed": 1.6073
+     "computed": 1.6074
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.6134,
+     "computed": 1.6135,
      "programs": {
       "min": 1.629,
       "max": 1.629
@@ -2568,7 +2568,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.6073,
+     "computed": 1.6074,
      "programs": {
       "min": 1.62,
       "max": 1.62
@@ -2594,7 +2594,7 @@
    "results": [
     {
      "method": "Bishop simplified, circles only",
-     "computed": 1.0694,
+     "computed": 1.0704,
      "programs": {
       "min": 1.07,
       "max": 1.09
@@ -2602,7 +2602,7 @@
     },
     {
      "method": "Spencer, circles only",
-     "computed": 1.0768,
+     "computed": 1.0776,
      "programs": {
       "min": 1.1,
       "max": 1.1
@@ -2625,14 +2625,14 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.1569
+     "computed": 1.1575
     },
     {
      "value": 1.19,
      "method": "Spencer, finite-element pore pressures",
      "source": "Duncan, Wright & Brandon (2014)",
      "analysis": "Spencer",
-     "computed": 1.1569
+     "computed": 1.1575
     },
     {
      "value": 1.07,
@@ -2645,7 +2645,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.1569,
+     "computed": 1.1575,
      "programs": null
     },
     {
@@ -2687,14 +2687,14 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer, circles only",
-     "computed": 1.4472
+     "computed": 1.4473
     },
     {
      "value": 1.17,
      "source": "Duncan & Wright",
      "method": "Spencer, composite circle, composite surface",
      "analysis": "Spencer",
-     "computed": 1.1659
+     "computed": 1.1663
     },
     {
      "value": 1.16,
@@ -2714,12 +2714,12 @@
    "results": [
     {
      "method": "Spencer, circles only",
-     "computed": 1.4472,
+     "computed": 1.4473,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 1.1659,
+     "computed": 1.1663,
      "programs": null
     },
     {
@@ -2764,13 +2764,13 @@
      "method": "Bishop simplified",
      "source": "El-Ramly et al. (2002)",
      "analysis": "Bishop simplified, circles only",
-     "computed": 1.4593
+     "computed": 1.4594
     }
    ],
    "results": [
     {
      "method": "Bishop simplified, circles only",
-     "computed": 1.4593,
+     "computed": 1.4594,
      "programs": {
       "min": 1.461,
       "max": 1.461
@@ -2792,13 +2792,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.5937
+     "computed": 1.5957
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5966,
+     "computed": 1.5985,
      "programs": {
       "min": 1.603,
       "max": 1.603
@@ -2806,7 +2806,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5937,
+     "computed": 1.5957,
      "programs": {
       "min": 1.599,
       "max": 1.599
@@ -2836,13 +2836,13 @@
      "source": "Duncan & Wright",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.5931
+     "computed": 1.5951
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5964,
+     "computed": 1.5983,
      "programs": {
       "min": 1.603,
       "max": 1.603
@@ -2850,7 +2850,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5931,
+     "computed": 1.5951,
      "programs": {
       "min": 1.599,
       "max": 1.599
@@ -2884,7 +2884,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.582,
+     "computed": 1.5822,
      "programs": {
       "min": 1.584,
       "max": 1.584
@@ -2892,7 +2892,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.6492,
+     "computed": 1.6493,
      "programs": {
       "min": 1.648,
       "max": 1.648
@@ -2942,21 +2942,21 @@
      "source": "Fredlund & Krahn",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 2.076
+     "computed": 2.0762
     },
     {
      "value": 2.076,
      "source": "Fredlund & Krahn",
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 2.0717
+     "computed": 2.0719
     },
     {
      "value": 2.073,
      "source": "Fredlund & Krahn",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 2.0721
+     "computed": 2.0724
     },
     {
      "value": 2,
@@ -2969,17 +2969,17 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.076,
+     "computed": 2.0762,
      "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.0717,
+     "computed": 2.0719,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 2.0721,
+     "computed": 2.0724,
      "programs": null
     },
     {
@@ -3016,37 +3016,37 @@
      "source": "Fredlund & Krahn",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.7595
+     "computed": 1.7597
     },
     {
      "value": 1.764,
      "source": "Fredlund & Krahn",
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.7569
+     "computed": 1.7572
     },
     {
      "value": 1.761,
      "source": "Fredlund & Krahn",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.7576
+     "computed": 1.7579
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.7595,
+     "computed": 1.7597,
      "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.7569,
+     "computed": 1.7572,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 1.7576,
+     "computed": 1.7579,
      "programs": null
     }
    ]
@@ -3065,21 +3065,21 @@
      "source": "Fredlund & Krahn",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.829
+     "computed": 1.8294
     },
     {
      "value": 1.832,
      "source": "Fredlund & Krahn",
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.8267
+     "computed": 1.8271
     },
     {
      "value": 1.83,
      "source": "Fredlund & Krahn",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.8275
+     "computed": 1.8279
     },
     {
      "value": 1.78,
@@ -3092,17 +3092,17 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.829,
+     "computed": 1.8294,
      "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.8267,
+     "computed": 1.8271,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 1.8275,
+     "computed": 1.8279,
      "programs": null
     },
     {
@@ -3363,7 +3363,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 0.9855,
+     "computed": 0.9856,
      "programs": {
       "min": 0.99,
       "max": 0.99
@@ -3420,7 +3420,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.6591,
+     "computed": 1.6592,
      "programs": {
       "min": 1.664,
       "max": 1.664
@@ -3428,7 +3428,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.6559,
+     "computed": 1.6561,
      "programs": {
       "min": 1.66,
       "max": 1.66
@@ -3454,7 +3454,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5869,
+     "computed": 1.5868,
      "programs": {
       "min": 1.596,
       "max": 1.596
@@ -3462,7 +3462,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5824,
+     "computed": 1.5825,
      "programs": {
       "min": 1.592,
       "max": 1.592
@@ -3470,7 +3470,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.4748,
+     "computed": 1.4751,
      "programs": {
       "min": 1.489,
       "max": 1.489
@@ -3512,7 +3512,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3721,
+     "computed": 1.3723,
      "programs": {
       "min": 1.375,
       "max": 1.375
@@ -3520,7 +3520,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.355,
+     "computed": 1.3555,
      "programs": {
       "min": 1.357,
       "max": 1.357
@@ -3528,7 +3528,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.3716,
+     "computed": 1.3718,
      "programs": {
       "min": 1.382,
       "max": 1.382
@@ -3702,7 +3702,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.9479,
+     "computed": 1.9481,
      "programs": {
       "min": 1.948,
       "max": 1.951
@@ -3710,7 +3710,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.9478,
+     "computed": 1.948,
      "programs": {
       "min": 1.948,
       "max": 1.948
@@ -3718,7 +3718,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.9508,
+     "computed": 1.9516,
      "programs": {
       "min": 1.949,
       "max": 1.949
@@ -3778,7 +3778,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 2.0728,
+     "computed": 2.0729,
      "programs": {
       "min": 2.073,
       "max": 2.073
@@ -3786,7 +3786,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.2994,
+     "computed": 2.2993,
      "programs": {
       "min": 2.299,
       "max": 2.299
@@ -3861,7 +3861,7 @@
      "method": "Spencer, local minimum (nearly circular surface from the toe)",
      "source": "Greco (1996)",
      "analysis": "Spencer",
-     "computed": 1.0913
+     "computed": 1.0915
     },
     {
      "value": 1.02,
@@ -3882,7 +3882,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.0913,
+     "computed": 1.0915,
      "programs": null
     },
     {
@@ -3920,13 +3920,13 @@
      "method": "Spencer, local minimum (nearly circular surface from the toe)",
      "source": "Greco (1996)",
      "analysis": "Spencer",
-     "computed": 1.0913
+     "computed": 1.0915
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.0856,
+     "computed": 1.0858,
      "programs": {
       "min": 1.087,
       "max": 1.087
@@ -3934,7 +3934,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.0913,
+     "computed": 1.0915,
      "programs": {
       "min": 1.093,
       "max": 1.093
@@ -3957,7 +3957,7 @@
      "source": "Griffiths & Lane",
      "method": "finite elements",
      "analysis": "Spencer",
-     "computed": 1.3662
+     "computed": 1.3665
     },
     {
      "value": 1.4,
@@ -3970,7 +3970,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.3662,
+     "computed": 1.3665,
      "programs": {
       "min": 1.366,
       "max": 1.366
@@ -4069,7 +4069,7 @@
      "source": "Griffiths & Lane",
      "method": "limit-equilibrium chart",
      "analysis": "Spencer",
-     "computed": 1.4721
+     "computed": 1.4726
     },
     {
      "value": 1.47,
@@ -4088,7 +4088,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.4721,
+     "computed": 1.4726,
      "programs": {
       "min": 1.468,
       "max": 1.468
@@ -4191,7 +4191,7 @@
      "source": "Griffiths & Lane",
      "method": "finite elements",
      "analysis": "Spencer",
-     "computed": 1.9152
+     "computed": 1.9161
     },
     {
      "value": 1.9,
@@ -4204,7 +4204,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.9152,
+     "computed": 1.9161,
      "programs": {
       "min": 1.915,
       "max": 1.915
@@ -4408,7 +4408,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.9743,
+     "computed": 2.9745,
      "programs": {
       "min": 2.973,
       "max": 2.973
@@ -4471,7 +4471,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.5485,
+     "computed": 2.5486,
      "programs": {
       "min": 2.551,
       "max": 2.56
@@ -4498,7 +4498,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.8155,
+     "computed": 2.816,
      "programs": {
       "min": 2.806,
       "max": 2.82
@@ -4525,7 +4525,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.7792,
+     "computed": 2.7795,
      "programs": {
       "min": 2.771,
       "max": 2.777
@@ -4552,7 +4552,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.5769,
+     "computed": 2.5768,
      "programs": {
       "min": 2.583,
       "max": 2.589
@@ -4579,7 +4579,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.6902,
+     "computed": 2.6901,
      "programs": {
       "min": 2.692,
       "max": 2.703
@@ -4606,7 +4606,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.6732,
+     "computed": 2.6736,
      "programs": {
       "min": 2.672,
       "max": 2.673
@@ -4633,7 +4633,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 3.5918,
+     "computed": 3.5928,
      "programs": {
       "min": 3.586,
       "max": 3.598
@@ -4660,7 +4660,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 6.063,
+     "computed": 6.0652,
      "programs": {
       "min": 6.069,
       "max": 6.074
@@ -4687,7 +4687,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 11.5667,
+     "computed": 11.5708,
      "programs": {
       "min": 11.583,
       "max": 11.583
@@ -4710,7 +4710,7 @@
      "source": "Huang & Jia",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 2.4528
+     "computed": 2.453
     },
     {
      "value": 2.5,
@@ -4723,7 +4723,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 2.4511,
+     "computed": 2.4513,
      "programs": {
       "min": 2.455,
       "max": 2.455
@@ -4731,7 +4731,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 2.4528,
+     "computed": 2.453,
      "programs": null
     },
     {
@@ -4863,7 +4863,7 @@
      "method": "Bishop simplified, circular",
      "source": "Leshchinsky & Han (2004)",
      "analysis": "Bishop simplified",
-     "computed": 0.9772
+     "computed": 0.9769
     },
     {
      "value": 0.86,
@@ -4876,20 +4876,20 @@
      "method": "Bishop simplified, deep circle (read from fig. 7a)",
      "source": "Leshchinsky & Han (2004)",
      "analysis": "Bishop simplified",
-     "computed": 0.9772
+     "computed": 0.9769
     },
     {
      "value": 0.92,
      "method": "Spencer, three-part wedge",
      "source": "Leshchinsky & Han (2004)",
      "analysis": "Spencer",
-     "computed": 0.9585
+     "computed": 0.9584
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 0.9585,
+     "computed": 0.9584,
      "programs": {
       "min": 0.964,
       "max": 0.964
@@ -4897,7 +4897,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 0.9772,
+     "computed": 0.9769,
      "programs": null
     }
    ],
@@ -4917,7 +4917,7 @@
      "method": "Bishop simplified, circular",
      "source": "Leshchinsky & Han (2004)",
      "analysis": "Bishop simplified",
-     "computed": 1.0305
+     "computed": 1.0306
     },
     {
      "value": 0.99,
@@ -4929,7 +4929,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.0305,
+     "computed": 1.0306,
      "programs": {
       "min": 1.04,
       "max": 1.04
@@ -5094,13 +5094,13 @@
      "source": "Hassan & Wolff",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.3337
+     "computed": 1.3338
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3337,
+     "computed": 1.3338,
      "programs": {
       "min": 1.34,
       "max": 1.343
@@ -5122,13 +5122,13 @@
      "source": "Loukidis, Bandini & Salgado",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.0009
+     "computed": 1.001
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.0009,
+     "computed": 1.001,
      "programs": {
       "min": 1.001,
       "max": 1.001
@@ -5136,7 +5136,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 0.9912,
+     "computed": 0.9913,
      "programs": {
       "min": 0.991,
       "max": 0.993
@@ -5167,13 +5167,13 @@
      "source": "Loukidis, Bandini & Salgado",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.0006
+     "computed": 1.0007
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.0006,
+     "computed": 1.0007,
      "programs": {
       "min": 1.001,
       "max": 1.001
@@ -5181,7 +5181,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 0.9864,
+     "computed": 0.9865,
      "programs": {
       "min": 0.987,
       "max": 0.988
@@ -5224,7 +5224,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4359,
+     "computed": 1.4361,
      "programs": {
       "min": 1.439,
       "max": 1.439
@@ -5268,7 +5268,7 @@
      "source": "Low",
      "method": "Bishop simplified",
      "analysis": "Bishop simplified",
-     "computed": 1.1429
+     "computed": 1.1423
     },
     {
      "value": 1.36,
@@ -5307,7 +5307,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1429,
+     "computed": 1.1423,
      "programs": null
     },
     {
@@ -5350,18 +5350,18 @@
      "source": "Morgenstern",
      "method": "stability chart",
      "analysis": "Bishop simplified",
-     "computed": 1.1999
+     "computed": 1.2003
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1999,
+     "computed": 1.2003,
      "programs": null
     },
     {
      "method": "Spencer",
-     "computed": 1.2053,
+     "computed": 1.2057,
      "programs": null
     }
    ]
@@ -5385,7 +5385,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2095,
+     "computed": 1.2099,
      "programs": {
       "min": 1.212,
       "max": 1.212
@@ -5408,7 +5408,7 @@
      "source": "Morgenstern",
      "method": "stability chart",
      "analysis": "Bishop simplified",
-     "computed": 1.4147
+     "computed": 1.4152
     },
     {
      "value": 1.52,
@@ -5426,7 +5426,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4147,
+     "computed": 1.4152,
      "programs": {
       "min": 1.417,
       "max": 1.417
@@ -5434,7 +5434,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.421,
+     "computed": 1.4215,
      "programs": {
       "min": 1.422,
       "max": 1.422
@@ -5455,7 +5455,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2896,
+     "computed": 1.2901,
      "programs": {
       "min": 1.293,
       "max": 1.293
@@ -5463,7 +5463,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2964,
+     "computed": 1.2969,
      "programs": {
       "min": 1.3,
       "max": 1.3
@@ -5484,7 +5484,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2884,
+     "computed": 1.2888,
      "programs": {
       "min": 1.293,
       "max": 1.293
@@ -5492,7 +5492,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2944,
+     "computed": 1.2948,
      "programs": {
       "min": 1.3,
       "max": 1.3
@@ -5500,7 +5500,7 @@
     },
     {
      "method": "Janbu simplified",
-     "computed": 1.1478,
+     "computed": 1.1486,
      "programs": {
       "min": 1.151,
       "max": 1.151
@@ -5521,7 +5521,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2821,
+     "computed": 1.2825,
      "programs": {
       "min": 1.285,
       "max": 1.285
@@ -5529,7 +5529,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2875,
+     "computed": 1.2879,
      "programs": {
       "min": 1.29,
       "max": 1.29
@@ -5550,7 +5550,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2815,
+     "computed": 1.2819,
      "programs": {
       "min": 1.285,
       "max": 1.285
@@ -5558,7 +5558,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2871,
+     "computed": 1.2875,
      "programs": {
       "min": 1.29,
       "max": 1.29
@@ -5566,7 +5566,7 @@
     },
     {
      "method": "Janbu simplified",
-     "computed": 1.1352,
+     "computed": 1.136,
      "programs": {
       "min": 1.141,
       "max": 1.141
@@ -5587,7 +5587,7 @@
    "results": [
     {
      "method": "Bishop simplified, circles only",
-     "computed": 1.41,
+     "computed": 1.4105,
      "programs": {
       "min": 1.417,
       "max": 1.417
@@ -5595,7 +5595,7 @@
     },
     {
      "method": "Spencer, circles only",
-     "computed": 1.4146,
+     "computed": 1.4151,
      "programs": {
       "min": 1.422,
       "max": 1.422
@@ -5603,7 +5603,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.3873,
+     "computed": 1.3878,
      "programs": {
       "min": 1.392,
       "max": 1.392
@@ -5611,7 +5611,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3952,
+     "computed": 1.3957,
      "programs": {
       "min": 1.4,
       "max": 1.4
@@ -5690,7 +5690,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1406,
+     "computed": 1.1407,
      "programs": {
       "min": 1.145,
       "max": 1.145
@@ -5881,7 +5881,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5012,
+     "computed": 1.501,
      "programs": {
       "min": 1.504,
       "max": 1.504
@@ -5902,7 +5902,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5338,
+     "computed": 1.534,
      "programs": {
       "min": 1.532,
       "max": 1.532
@@ -5910,7 +5910,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5331,
+     "computed": 1.5332,
      "programs": {
       "min": 1.532,
       "max": 1.532
@@ -5918,7 +5918,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.5331,
+     "computed": 1.5332,
      "programs": {
       "min": 1.532,
       "max": 1.532
@@ -5926,7 +5926,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.5462,
+     "computed": 1.5464,
      "programs": {
       "min": 1.544,
       "max": 1.544
@@ -5947,7 +5947,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.5126,
+     "computed": 1.5128,
      "programs": {
       "min": 1.511,
       "max": 1.511
@@ -5955,7 +5955,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.5118,
+     "computed": 1.5119,
      "programs": {
       "min": 1.51,
       "max": 1.51
@@ -5963,7 +5963,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.5118,
+     "computed": 1.512,
      "programs": {
       "min": 1.51,
       "max": 1.51
@@ -5971,7 +5971,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.5215,
+     "computed": 1.5217,
      "programs": {
       "min": 1.52,
       "max": 1.52
@@ -5992,7 +5992,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3959,
+     "computed": 1.3962,
      "programs": {
       "min": 1.396,
       "max": 1.396
@@ -6000,7 +6000,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.4022,
+     "computed": 1.4025,
      "programs": {
       "min": 1.402,
       "max": 1.402
@@ -6008,7 +6008,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.3917,
+     "computed": 1.3921,
      "programs": {
       "min": 1.391,
       "max": 1.391
@@ -6016,7 +6016,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.3981,
+     "computed": 1.3985,
      "programs": {
       "min": 1.398,
       "max": 1.398
@@ -6037,7 +6037,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3693,
+     "computed": 1.3697,
      "programs": {
       "min": 1.376,
       "max": 1.376
@@ -6045,7 +6045,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3758,
+     "computed": 1.3762,
      "programs": {
       "min": 1.382,
       "max": 1.382
@@ -6053,7 +6053,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.371,
+     "computed": 1.3714,
      "programs": {
       "min": 1.378,
       "max": 1.378
@@ -6061,7 +6061,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.3429,
+     "computed": 1.3434,
      "programs": {
       "min": 1.345,
       "max": 1.345
@@ -6287,7 +6287,7 @@
      "method": "Janbu simplified",
      "source": "Duncan & Wright",
      "analysis": "Janbu simplified",
-     "computed": 1.6268
+     "computed": 1.6267
     }
    ],
    "results": [
@@ -6309,7 +6309,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.7351,
+     "computed": 1.735,
      "programs": {
       "min": 1.736,
       "max": 1.736
@@ -6317,7 +6317,7 @@
     },
     {
      "method": "Janbu simplified",
-     "computed": 1.6268,
+     "computed": 1.6267,
      "programs": {
       "min": 1.628,
       "max": 1.628
@@ -6378,7 +6378,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.333,
+     "computed": 1.3332,
      "programs": {
       "min": 1.332,
       "max": 1.35
@@ -6400,13 +6400,13 @@
      "method": "Spencer",
      "source": "Tandjiria, Low & Teh (2002)",
      "analysis": "Spencer (2 m tension crack)",
-     "computed": 0.9683
+     "computed": 0.9684
     }
    ],
    "results": [
     {
      "method": "Spencer (2 m tension crack)",
-     "computed": 0.9683,
+     "computed": 0.9684,
      "programs": {
       "min": 0.975,
       "max": 0.975
@@ -6414,7 +6414,7 @@
     },
     {
      "method": "Spencer (tension crack of automatic depth)",
-     "computed": 0.9665,
+     "computed": 0.9666,
      "programs": {
       "min": 0.975,
       "max": 0.975
@@ -6422,7 +6422,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 0.9683,
+     "computed": 0.9684,
      "programs": {
       "min": 0.975,
       "max": 0.975
@@ -6444,13 +6444,13 @@
      "method": "Spencer",
      "source": "Tandjiria, Low & Teh (2002)",
      "analysis": "Spencer",
-     "computed": 1.2064
+     "computed": 1.2062
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.2064,
+     "computed": 1.2062,
      "programs": {
       "min": 1.209,
       "max": 1.209
@@ -6458,7 +6458,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.2151,
+     "computed": 1.215,
      "programs": {
       "min": 1.218,
       "max": 1.218
@@ -6480,13 +6480,13 @@
      "source": "Tandjiria, Low & Teh",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 0.973
+     "computed": 0.9731
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 0.973,
+     "computed": 0.9731,
      "programs": null
     }
    ],
@@ -6536,7 +6536,7 @@
    "results": [
     {
      "method": "Janbu corrected",
-     "computed": 2.2476,
+     "computed": 2.2484,
      "programs": {
       "min": 2.29,
       "max": 2.29
@@ -6558,13 +6558,13 @@
      "method": "Spencer",
      "source": "USACE EM 1110-2-1902",
      "analysis": "Spencer",
-     "computed": 2.4416
+     "computed": 2.442
     }
    ],
    "results": [
     {
      "method": "Spencer",
-     "computed": 2.4416,
+     "computed": 2.442,
      "programs": {
       "min": 2.445,
       "max": 2.445
@@ -6572,7 +6572,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 2.4423,
+     "computed": 2.4427,
      "programs": {
       "min": 2.447,
       "max": 2.447
@@ -6580,7 +6580,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 2.4438,
+     "computed": 2.4443,
      "programs": {
       "min": 2.43,
       "max": 2.43
@@ -6588,7 +6588,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.4416,
+     "computed": 2.442,
      "programs": {
       "min": 2.447,
       "max": 2.447
@@ -6610,13 +6610,13 @@
      "method": "Bishop simplified",
      "source": "USACE EM 1110-2-1902",
      "analysis": "Bishop simplified",
-     "computed": 2.6982
+     "computed": 2.6989
     }
    ],
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.6982,
+     "computed": 2.6989,
      "programs": {
       "min": 2.716,
       "max": 2.716
@@ -6624,7 +6624,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 2.7208,
+     "computed": 2.7214,
      "programs": {
       "min": 2.736,
       "max": 2.736
@@ -6632,7 +6632,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 2.6473,
+     "computed": 2.6482,
      "programs": {
       "min": 2.65,
       "max": 2.65
@@ -6640,7 +6640,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.727,
+     "computed": 2.7277,
      "programs": {
       "min": 2.744,
       "max": 2.744
@@ -6666,7 +6666,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3205,
+     "computed": 1.3207,
      "programs": {
       "min": 1.332,
       "max": 1.332
@@ -6674,7 +6674,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3167,
+     "computed": 1.3169,
      "programs": {
       "min": 1.328,
       "max": 1.328
@@ -6682,7 +6682,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.3405,
+     "computed": 1.3408,
      "programs": {
       "min": 1.345,
       "max": 1.345
@@ -6690,7 +6690,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.3164,
+     "computed": 1.3166,
      "programs": {
       "min": 1.327,
       "max": 1.327
@@ -6717,7 +6717,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2364,
+     "computed": 1.2368,
      "programs": {
       "min": 1.241,
       "max": 1.241
@@ -6725,7 +6725,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.2364,
+     "computed": 1.2368,
      "programs": {
       "min": 1.241,
       "max": 1.241
@@ -6733,7 +6733,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.2364,
+     "computed": 1.2368,
      "programs": {
       "min": 1.244,
       "max": 1.244
@@ -6741,7 +6741,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.3904,
+     "computed": 1.3916,
      "programs": {
       "min": 1.385,
       "max": 1.385
@@ -6775,7 +6775,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.9904,
+     "computed": 1.9913,
      "programs": {
       "min": 2.011,
       "max": 2.011
@@ -6783,7 +6783,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 2.0046,
+     "computed": 2.0055,
      "programs": {
       "min": 2.026,
       "max": 2.026
@@ -6791,7 +6791,7 @@
     },
     {
      "method": "Janbu corrected",
-     "computed": 1.8232,
+     "computed": 1.8244,
      "programs": {
       "min": 1.83,
       "max": 1.83
@@ -6799,7 +6799,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 2.0048,
+     "computed": 2.0056,
      "programs": {
       "min": 2.027,
       "max": 2.027
@@ -6822,7 +6822,7 @@
      "method": "Bishop simplified",
      "source": "Yamagami & Ueta (1988)",
      "analysis": "Bishop simplified",
-     "computed": 1.3427
+     "computed": 1.343
     },
     {
      "value": 1.282,
@@ -6862,7 +6862,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3427,
+     "computed": 1.343,
      "programs": {
       "min": 1.344,
       "max": 1.344
@@ -6988,7 +6988,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1007,
+     "computed": 1.1009,
      "programs": {
       "min": 1.102,
       "max": 1.102
@@ -7014,7 +7014,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1957,
+     "computed": 1.1959,
      "programs": {
       "min": 1.193,
       "max": 1.193
@@ -7034,7 +7034,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.7935,
+     "computed": 1.7932,
      "programs": {
       "min": 1.804,
       "max": 1.804
@@ -7042,7 +7042,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.7944,
+     "computed": 1.7941,
      "programs": {
       "min": 1.804,
       "max": 1.804
@@ -7050,7 +7050,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.78,
+     "computed": 1.7796,
      "programs": {
       "min": 1.79,
       "max": 1.79
@@ -7071,7 +7071,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1734,
+     "computed": 1.1736,
      "programs": {
       "min": 1.176,
       "max": 1.176
@@ -7079,7 +7079,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1868,
+     "computed": 1.187,
      "programs": {
       "min": 1.189,
       "max": 1.189
@@ -7087,7 +7087,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.172,
+     "computed": 1.1722,
      "programs": {
       "min": 1.174,
       "max": 1.174
@@ -7108,7 +7108,7 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.7997,
+     "computed": 1.7993,
      "programs": {
       "min": 1.804,
       "max": 1.804
@@ -7116,7 +7116,7 @@
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.7992,
+     "computed": 1.7989,
      "programs": {
       "min": 1.804,
       "max": 1.804
@@ -7139,14 +7139,14 @@
      "source": "Zhu & Lee",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.8239
+     "computed": 1.8238
     },
     {
      "value": 1.823,
      "source": "Zhu & Lee",
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.8084
+     "computed": 1.8083
     },
     {
      "value": 1.744,
@@ -7160,7 +7160,7 @@
      "source": "Zhu & Lee (2002)",
      "disputed": "Confirmed in Zhu & Lee (2002), Table II, which also gives Spencer 1.836 and Morgenstern-Price 1.823 for the same circle; the authors read the gap as simplified Bishop underestimating deep circles by up to 18 %. On a circle simplified Bishop satisfies moment equilibrium about the center as the rigorous methods do and normally comes within a few per cent of them; cSlope gives 1.823 on the paper's circle. Not counted in the error statistics.",
      "analysis": "Bishop simplified",
-     "computed": 1.8229
+     "computed": 1.8227
     },
     {
      "value": 1.229,
@@ -7172,17 +7172,17 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.8239,
+     "computed": 1.8238,
      "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.8084,
+     "computed": 1.8083,
      "programs": null
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.8229,
+     "computed": 1.8227,
      "programs": null
     }
    ],
@@ -7202,14 +7202,14 @@
      "source": "Zhu & Lee",
      "method": "Spencer",
      "analysis": "Spencer",
-     "computed": 1.212
+     "computed": 1.2122
     },
     {
      "value": 1.197,
      "source": "Zhu & Lee",
      "method": "Morgenstern-Price (half-sine)",
      "analysis": "Morgenstern-Price (half-sine)",
-     "computed": 1.1969
+     "computed": 1.1972
     },
     {
      "value": 1.166,
@@ -7223,7 +7223,7 @@
      "source": "Zhu & Lee (2002)",
      "disputed": "Zhu & Lee (2002), Table II: 11 % below their own Spencer (1.211) and Morgenstern-Price (1.197) for the same circle, as their dry Bishop value is; cSlope gives 1.199 on the paper's circle with the water table. Not counted in the error statistics.",
      "analysis": "Bishop simplified",
-     "computed": 1.1986
+     "computed": 1.1989
     },
     {
      "value": 0.922,
@@ -7235,17 +7235,17 @@
    "results": [
     {
      "method": "Spencer",
-     "computed": 1.212,
+     "computed": 1.2122,
      "programs": null
     },
     {
      "method": "Morgenstern-Price (half-sine)",
-     "computed": 1.1969,
+     "computed": 1.1972,
      "programs": null
     },
     {
      "method": "Bishop simplified",
-     "computed": 1.1986,
+     "computed": 1.1989,
      "programs": null
     }
    ],
@@ -7263,7 +7263,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1721,
+     "computed": 1.1724,
      "programs": {
       "min": 1.173,
       "max": 1.173
@@ -7284,7 +7284,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1723,
+     "computed": 1.1725,
      "programs": {
       "min": 1.173,
       "max": 1.173
@@ -7292,7 +7292,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.1736,
+     "computed": 1.1738,
      "programs": {
       "min": 1.174,
       "max": 1.174
@@ -7321,7 +7321,7 @@
     },
     {
      "method": "Spencer",
-     "computed": 1.3721,
+     "computed": 1.3723,
      "programs": {
       "min": 1.372,
       "max": 1.372
@@ -7384,7 +7384,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.4619,
+     "computed": 1.4618,
      "programs": {
       "min": 1.47,
       "max": 1.47
@@ -7405,7 +7405,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.3324,
+     "computed": 1.3325,
      "programs": {
       "min": 1.33,
       "max": 1.33
@@ -7426,7 +7426,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.2851,
+     "computed": 1.285,
      "programs": {
       "min": 1.285,
       "max": 1.285
@@ -7447,7 +7447,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.0039,
+     "computed": 1.0038,
      "programs": {
       "min": 1.004,
       "max": 1.004
@@ -7506,7 +7506,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.239,
+     "computed": 0.2388,
      "published": [],
      "programs": {
       "min": 0.2461,
@@ -7515,7 +7515,7 @@
     },
     {
      "quantity": "beta-mc",
-     "computed": 0.6717,
+     "computed": 0.6727,
      "published": [],
      "programs": {
       "min": 0.65,
@@ -7530,7 +7530,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.2817,
+     "computed": 0.2811,
      "published": [],
      "programs": {
       "min": 0.2789,
@@ -7539,7 +7539,7 @@
     },
     {
      "quantity": "beta-mc",
-     "computed": 0.5533,
+     "computed": 0.5544,
      "published": [],
      "programs": {
       "min": 0.537,
@@ -7554,7 +7554,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.206,
+     "computed": 0.2059,
      "published": [],
      "programs": {
       "min": 0.206,
@@ -7563,7 +7563,7 @@
     },
     {
      "quantity": "beta-mc",
-     "computed": 0.8117,
+     "computed": 0.8122,
      "published": [],
      "programs": {
       "min": 0.799,
@@ -7572,7 +7572,7 @@
     },
     {
      "quantity": "beta-taylor",
-     "computed": 0.7884,
+     "computed": 0.7888,
      "published": [],
      "programs": {
       "min": 0.787,
@@ -7587,7 +7587,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.2119,
+     "computed": 0.212,
      "published": [],
      "programs": {
       "min": 0.1992,
@@ -7596,7 +7596,7 @@
     },
     {
      "quantity": "beta-mc",
-     "computed": 0.7898,
+     "computed": 0.7896,
      "published": [],
      "programs": {
       "min": 0.789,
@@ -7605,7 +7605,7 @@
     },
     {
      "quantity": "beta-taylor",
-     "computed": 0.8028,
+     "computed": 0.8026,
      "published": [],
      "programs": {
       "min": 0.798,
@@ -7620,7 +7620,7 @@
    "rows": [
     {
      "quantity": "beta-taylor",
-     "computed": 3.3536,
+     "computed": 3.3539,
      "published": [],
      "programs": {
       "min": 3.353,
@@ -7635,7 +7635,7 @@
    "rows": [
     {
      "quantity": "beta-taylor",
-     "computed": 0.8919,
+     "computed": 0.8925,
      "published": [
       {
        "value": 0.9,
@@ -7646,7 +7646,7 @@
     },
     {
      "quantity": "pf-taylor",
-     "computed": 0.1862,
+     "computed": 0.1861,
      "published": [
       {
        "value": 0.18,
@@ -7663,7 +7663,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 11.0342,
+     "computed": 11.0325,
      "published": [],
      "programs": {
       "min": 10.953,
@@ -7678,7 +7678,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 4.4018,
+     "computed": 4.4021,
      "published": [],
      "programs": {
       "min": 4.351,
@@ -7693,7 +7693,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 4.3248,
+     "computed": 4.3249,
      "published": [],
      "programs": {
       "min": 4.263,
@@ -7708,7 +7708,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 11.0758,
+     "computed": 11.0742,
      "published": [],
      "programs": {
       "min": 11.092,
@@ -7723,7 +7723,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 10.3293,
+     "computed": 10.3277,
      "published": [],
      "programs": {
       "min": 10.281,
@@ -7753,7 +7753,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 5.5279,
+     "computed": 5.5283,
      "published": [],
      "programs": {
       "min": 5.485,
@@ -7768,7 +7768,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 5.4903,
+     "computed": 5.4907,
      "published": [],
      "programs": {
       "min": 5.563,
@@ -7783,7 +7783,7 @@
    "rows": [
     {
      "quantity": "beta-mc",
-     "computed": 6.4314,
+     "computed": 6.4318,
      "published": [],
      "programs": {
       "min": 6.394,
@@ -7798,7 +7798,7 @@
    "rows": [
     {
      "quantity": "pf-mc",
-     "computed": 0.2453,
+     "computed": 0.2449,
      "published": [],
      "programs": {
       "min": 0.2531,
