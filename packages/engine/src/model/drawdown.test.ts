@@ -7,7 +7,9 @@ describe("rapid drawdown (three-stage)", () => {
   it("τff between the R envelope at Kc = 1 and the effective envelope at Kc = Kf", () => {
     const c = 10, phi = 25, cR = 20, phiR = 15, sfc = 100;
     const r = (phiR * Math.PI) / 180;
-    const tau1 = (cR * Math.cos(r)) / (1 - Math.sin(r)) + sfc * ((Math.sin(r) * Math.cos(r)) / (1 - Math.sin(r)));
+    const p = (phi * Math.PI) / 180;
+    // the Kc = 1 envelope by Duncan, Wright & Brandon (2014), Eqs. 9.6–9.7
+    const tau1 = (cR * Math.cos(r) * Math.cos(p)) / (1 - Math.sin(r)) + sfc * ((Math.sin(r) * Math.cos(p)) / (1 - Math.sin(r)));
     const tauKf = c + sfc * Math.tan((phi * Math.PI) / 180);
     // isotropic consolidation (no shear): the R envelope
     expect(drawdownStrength(sfc, 0, c, phi, cR, phiR)).toBeCloseTo(tau1, 9);
@@ -17,6 +19,17 @@ describe("rapid drawdown (three-stage)", () => {
     const mid = drawdownStrength(sfc, tauKf / 2, c, phi, cR, phiR);
     expect(mid).toBeGreaterThan(Math.min(tau1, tauKf));
     expect(mid).toBeLessThan(Math.max(tau1, tauKf));
+  });
+
+  it("the Kc = 1 envelope of Pilarcitos Dam: d = 64 psf, ψ = 24.4°", () => {
+    // Duncan, Wright & Wong (1990): c′ = 0, φ′ = 45°, cR = 60 psf, φR = 23°
+    // (64.10 and 24.39° by Eqs. 9.6–9.7 of Duncan, Wright & Brandon 2014)
+    // with τfc = 0 (Kc = 1) τff is on that envelope
+    const tau = (sfc: number) => drawdownStrength(sfc, 0, 0, 45, 60, 23);
+    const tanPsi = (tau(1500) - tau(500)) / 1000;
+    expect(tau(500) - 500 * tanPsi).toBeCloseTo(64.1, 2);
+    expect((Math.atan(tanPsi) * 180) / Math.PI).toBeCloseTo(24.39, 2);
+    expect(tau(1000)).toBeCloseTo(64.1 + 1000 * Math.tan((24.39 * Math.PI) / 180), 0);
   });
 
   it("an upstream slope after drawdown: no higher than drained throughout; free-draining soil unchanged", () => {

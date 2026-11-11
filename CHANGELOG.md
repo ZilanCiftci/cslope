@@ -8,6 +8,10 @@ All notable changes to cSlope. Versions follow [semantic versioning](https://sem
 - The unit weight of water is 9.807 kN/m³ (ρw·g with standard gravity), was 9.81; results with water move by a few hundredths of a percent. Exported files carry 9.807.
 - The slices of a circle stand on the straight chord between their base points, with the base shear's moment arm the distance from the centre to the chord (Fredlund & Krahn 1977), as the conventional method has it; the arc-consistent base is gone (the steep ends of a circle are still cut into narrower slices). Factors of safety of circular surfaces rise slightly, typically 0.01–0.15 %; non-circular surfaces do not change.
 
+### Fixed
+
+- Rapid drawdown (three-stage): the strength at isotropic consolidation (Kc = 1) is taken from the R envelope as in Duncan, Wright & Brandon (2014), Eqs. 9.6–9.7, with the factor cos φ′ on both its intercept and its slope; it had cos φR in its place and was too high by cos φR / cos φ′ (30 % for φ′ = 45°, φR = 23°). Factors of safety of models with a drawdown (R) envelope fall: on the Walter Bouldin Dam example from 1.046 to 1.023 on the reference circle (reference value 1.026). Models without an R envelope do not change.
+
 ## [0.1.0-beta.2] - 2026-11-04
 
 Second beta of 0.1.0. It has the contents listed under 0.1.0 below; since beta 1:

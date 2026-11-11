@@ -114,6 +114,12 @@ fn solve(
 /// (1 − sin φ′)) the ratio at failure on the effective envelope; τff is
 /// interpolated by Kc between the envelope at Kc = 1 (from the R envelope)
 /// and at Kc = Kf (the effective envelope).
+///
+/// The Kc = 1 envelope follows Duncan, Wright & Brandon (2014, ch. 9,
+/// Eqs. 9.6–9.7), with the R envelope drawn tangent to the Mohr circles
+/// and τff = ½(σ1f − σ3f)·cos φ′ (Eq. 9.5):
+/// d = cR·cos φR·cos φ′ / (1 − sin φR),
+/// tan ψ = sin φR·cos φ′ / (1 − sin φR).
 pub fn drawdown_strength(
     sfc: f64,
     tfc: f64,
@@ -125,9 +131,10 @@ pub fn drawdown_strength(
     let phi = (phi_deg * PI) / 180.0;
     let phi_r = (phi_r_deg * PI) / 180.0;
     let sn = js::math::max(0.0, sfc);
-    // Kc = 1: the R envelope expressed against σ′fc
-    let d1 = (c_r * js::math::cos(phi_r)) / (1.0 - js::math::sin(phi_r));
-    let tan1 = (js::math::sin(phi_r) * js::math::cos(phi_r)) / (1.0 - js::math::sin(phi_r));
+    // Kc = 1: the R envelope expressed against σ′fc (Duncan, Wright &
+    // Brandon 2014, Eqs. 9.6–9.7)
+    let d1 = (c_r * js::math::cos(phi_r) * js::math::cos(phi)) / (1.0 - js::math::sin(phi_r));
+    let tan1 = (js::math::sin(phi_r) * js::math::cos(phi)) / (1.0 - js::math::sin(phi_r));
     let tau1 = d1 + sn * tan1;
     // Kc = Kf: the effective envelope
     let tau_kf = c + sn * js::math::tan(phi);

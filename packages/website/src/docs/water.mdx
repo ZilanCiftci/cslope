@@ -58,7 +58,9 @@ With the box unticked, the lines are clipped to the ground surface and no water 
 With **Rapid drawdown** on, the model's water is the state after drawdown and **Water before drawdown** gives the water table before it, as a level across the model. A line imported with the model is shown as "Imported line (N points)" and kept until you click **Replace with level**, which starts the level at the line's highest point. Materials with a [drawdown envelope](/docs/materials#drawdown-envelope-rapid-drawdown) do not drain; the analysis follows the three-stage procedure of Duncan, Wright & Wong (1990):
 
 1. Before drawdown, with the drained strengths and the water (and reservoir) before it, the effective normal stress $\sigma'_{fc}$ and the shear stress $\tau_{fc}$ on each slice base.
-2. After drawdown, the undrained strength $\tau_{ff}$ at those consolidation stresses, interpolated by the consolidation ratio $K_c$ between the drawdown envelope ($K_c = 1$) and the effective envelope ($K_c = K_f$).
+2. After drawdown, the undrained strength $\tau_{ff}$ at those consolidation stresses, interpolated by the consolidation ratio $K_c$ between the drawdown envelope ($K_c = 1$) and the effective envelope ($K_c = K_f$). The drawdown envelope is expressed against $\sigma'_{fc}$ as $\tau_{ff} = d_{K_c=1} + \sigma'_{fc} \tan\psi_{K_c=1}$ with
+   $d_{K_c=1} = c_R \cos\phi_R \cos\phi' / (1 - \sin\phi_R)$ and $\tan\psi_{K_c=1} = \sin\phi_R \cos\phi' / (1 - \sin\phi_R)$
+   (Duncan, Wright & Brandon 2014, Eqs. 9.6–9.7: the R envelope tangent to the Mohr circles, and $\tau_{ff} = \tfrac12(\sigma_{1f} - \sigma_{3f}) \cos\phi'$).
 3. Where the drained strength with the water after drawdown is lower than $\tau_{ff}$, the drained strength.
 
 Free-draining materials take their drained strength with the water after drawdown.
