@@ -459,7 +459,7 @@ function materialModel(
 }
 
 /** The slip surface settings of a stability analysis (its <SlipSurface>). */
-const SLIP_SURFACE_FIELDS = ["direction", "slipOption", "entryExit", "slices", "optimised", "projected", "fullySpecified", "block", "axis"] as const;
+const SLIP_SURFACE_FIELDS = ["direction", "slipOption", "entryExit", "slices", "optimised", "projected", "fullySpecified", "block", "axis", "minimumVolume", "minimumDepth"] as const;
 
 /**
  * The stability settings of an analysis with the slip surface settings it
@@ -756,6 +756,19 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     const from = slipFrom.from ? `, taken from analysis "${slipFrom.from.name}"` : "";
     notes.push(`The file's slip surface search ("${stab.slipOption}"${from}) is not imported; cSlope's own search over the whole slope is used.`);
   }
+  // The file's limits on the slip surfaces: the smallest sliding mass (a
+  // volume per unit width, an area in the file's length unit squared) and
+  // the smallest depth.
+  const limits: string[] = [];
+  if (stab?.minimumVolume !== undefined && stab.minimumVolume > 0) {
+    options.minSlipArea = Number((stab.minimumVolume * scale.len * scale.len).toPrecision(6));
+    limits.push(`minimum slip volume (${options.minSlipArea} m²)`);
+  }
+  if (stab?.minimumDepth !== undefined && stab.minimumDepth > 0) {
+    options.minSlipDepth = Number((stab.minimumDepth * scale.len).toPrecision(6));
+    limits.push(`minimum slip depth (${options.minSlipDepth} m)`);
+  }
+  if (limits.length > 0) notes.push(`The file's ${limits.join(" and ")} ${limits.length === 1 ? "is" : "are"} carried over.`);
   if (slipFrom.from && /entry|fully|block/i.test(stab?.slipOption ?? "")) {
     notes.push(`The slip surface search is taken from analysis "${slipFrom.from.name}", as the file specifies.`);
   }

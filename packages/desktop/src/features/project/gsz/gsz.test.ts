@@ -303,8 +303,8 @@ describe(".gsz import", () => {
     `<StabilityItem><AnalysisID>${id}</AnalysisID><Entry><InitialInputInfo>${inputInfo}</InitialInputInfo><SlipSurface><Option>FromOther</Option>` +
     `<EntryExit><LeftSideLeftPt X="0" Y="10" /><LeftSideRightPt X="2" Y="10" /><RightSideLeftPt X="28" Y="5" /><RightSideRightPt X="30" Y="5" /></EntryExit></SlipSurface></Entry></StabilityItem>`;
   const path = (name: string) => `<Path path=";;&quot;${name}&quot;;(last)" />`;
-  const withFromOther = (items: { id: number; name: string; parent?: number; input: string }[]) => {
-    let xml = XML;
+  const withFromOther = (items: { id: number; name: string; parent?: number; input: string }[], base = XML) => {
+    let xml = base;
     for (const a of items) {
       xml = xml
         .replace("</Analyses>", `${analysisXml(a.id, a.name, a.parent)}</Analyses>`)
@@ -527,6 +527,65 @@ describe(".gsz import", () => {
     const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
     expect(imp.definition.coordinates).toEqual(expect.arrayContaining([[30 * 0.3048, 0]]));
     expect(imp.definition.materials[1].model).toMatchObject({ unitWeight: 17 * 0.157087463, undrainedShearStrength: 25 * 0.0478802589 });
+  });
+
+  const withLimits = (limits: string, xml = XML) => xml.replace("<NumberOfSlicesPerSlip>40</NumberOfSlicesPerSlip>", `<NumberOfSlicesPerSlip>40</NumberOfSlicesPerSlip>${limits}`);
+
+  it("imports the minimum slip volume as the smallest sliding area and the minimum depth, with a note", () => {
+    const imp = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>1</MinimumVolume><MinimumDepth>0.5</MinimumDepth>")), results: new Map() }, 1);
+    expect(parseGszXml(withLimits("<MinimumVolume>1</MinimumVolume>")).stability.get(1)!.minimumVolume).toBe(1);
+    expect(imp.options).toMatchObject({ minSlipArea: 1, minSlipDepth: 0.5 });
+    expect(imp.notes).toContain("The file's minimum slip volume (1 m²) and minimum slip depth (0.5 m) are carried over.");
+    // one of them: one limit in the line
+    const volume = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>0.1</MinimumVolume>")), results: new Map() }, 1);
+    expect(volume.options.minSlipArea).toBe(0.1);
+    expect(volume.options.minSlipDepth).toBeUndefined();
+    expect(volume.notes).toContain("The file's minimum slip volume (0.1 m²) is carried over.");
+    // Imperial: a volume per unit width in ft², the depth in ft
+    const ft = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>35.3147</MinimumVolume><MinimumDepth>1</MinimumDepth>", XML.replace('UnitSystem="Metric"', 'UnitSystem="Imperial"'))), results: new Map() }, 1);
+    expect(ft.options.minSlipArea).toBe(3.28084);
+    expect(ft.options.minSlipDepth).toBe(0.3048);
+    expect(ft.notes).toContain("The file's minimum slip volume (3.28084 m²) and minimum slip depth (0.3048 m) are carried over.");
+  });
+
+  it("sets no limit and no note when the file has none or gives 0", () => {
+    for (const xml of [XML, withLimits("<MinimumVolume>0</MinimumVolume><MinimumDepth>0</MinimumDepth>"), withLimits('<MinimumVolume Missing="true" /><MinimumDepth />')]) {
+      const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+      expect(imp.options).not.toHaveProperty("minSlipArea");
+      expect(imp.options).not.toHaveProperty("minSlipDepth");
+      expect(imp.notes.join(" ")).not.toMatch(/minimum slip/);
+    }
+  });
+
+  it("gives an analysis whose search is FromOther the other analysis's limits", () => {
+    // analysis 1 has both limits; analysis 3 has none of its own and takes its slip surfaces from 1
+    const f = withFromOther([{ id: 3, name: "Probability", input: `<Option>Parent</Option>${path("Short term")}` }], withLimits("<MinimumVolume>2</MinimumVolume><MinimumDepth>1.5</MinimumDepth>"));
+    expect(f.stability.get(3)!.minimumVolume).toBeUndefined();
+    const imp = gszToDefinition(f, 3);
+    expect(imp.options).toMatchObject({ minSlipArea: 2, minSlipDepth: 1.5 });
+    expect(imp.notes).toContain("The file's minimum slip volume (2 m²) and minimum slip depth (1.5 m) are carried over.");
+  });
+
+  it("keeps every point of a list that repeats a number: the repeat takes its position as its number", () => {
+    // the analysis's points 1–5, then 6, 6 (the seventh), 8 and 9–11; the block grids refer to 6–11
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="6" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
+      .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="115" Angle2="135" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="30" Angle2="45" PointUL="9" PointLL="10" PointLR="11" /></Block>');
+    const f = parseGszXml(xml);
+    const st = f.stability.get(1)!;
+    expect(st.block?.left).toMatchObject({ ul: [6, 6], ll: [6, 3], lr: [10, 3] });
+    // the points the water, load and surcharge refer to are read as before
+    expect(st.piezometric.get(1)).toEqual([[0, 6], [30, 4]]);
+    expect(st.lineLoads[0]).toMatchObject({ x: 5, y: 10 });
+    const imp = gszToDefinition({ ...f, results: new Map() }, 1);
+    expect(imp.definition.blockSearchObjects).toEqual([
+      { points: [[6, 6], [6, 3], [10, 3], [10, 6]] },
+      { points: [[18, 4], [18, 2], [24, 2], [24, 4]] },
+    ]);
+    // the geometry's points by ID: point 9 (the T-junction) written with a repeated ID 8
+    const geometry = parseGszXml(XML.replace('<Point ID="9" X="15" Y="3" />', '<Point ID="8" X="15" Y="3" />'));
+    expect(geometry.geometries.get(1)!.points.get(8)).toEqual([30, 0]);
+    expect(geometry.geometries.get(1)!.points.get(9)).toEqual([15, 3]);
+    expect(gszToDefinition({ ...geometry, results: new Map() }, 1).definition.coordinates).toHaveLength(8);
   });
 
   it("imports every stability analysis of a ZIP and skips the seepage one", async () => {
@@ -855,6 +914,22 @@ describe(".gsz export", () => {
     expect(tags(parse(dryXml).querySelector("StabilityItem > Entry"))).toEqual(["SlipSurface", "Seismic"]);
     const [d] = await gszImports(modelToGsz(dry).bytes, "D.gsz");
     expect(d.definition.waterTable).toBeUndefined();
+  });
+
+  it("writes the minimum slip area and depth as the minimum volume and depth, and reads them back; nothing without them", async () => {
+    const limited = { ...model, options: { ...model.options, minSlipArea: 2.5, minSlipDepth: 0.75 } };
+    const { xml } = modelToGszXml(limited);
+    expect(xml).toContain("<MinimumVolume>2.5</MinimumVolume>");
+    expect(xml).toContain("<MinimumDepth>0.75</MinimumDepth>");
+    const [imp] = await gszImports(modelToGsz(limited).bytes, "M.gsz");
+    expect(imp.options).toMatchObject({ minSlipArea: 2.5, minSlipDepth: 0.75 });
+    // without them (absent, 0 or none): the same file as before, the two lines aside
+    const plain = modelToGszXml(model).xml;
+    expect(plain).not.toMatch(/MinimumVolume|MinimumDepth/);
+    expect(xml.replace("          <MinimumVolume>2.5</MinimumVolume>\n          <MinimumDepth>0.75</MinimumDepth>\n", "")).toBe(plain);
+    expect(modelToGszXml({ ...model, options: { ...model.options, minSlipArea: null, minSlipDepth: 0 } }).xml).toBe(plain);
+    const [back] = await gszImports(modelToGsz(model).bytes, "M.gsz");
+    expect(back.options).not.toHaveProperty("minSlipArea");
   });
 
   it("notes that the direction convention of an inclined line load is unverified", () => {

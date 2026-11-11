@@ -385,6 +385,11 @@ ${item.join("\n")}
           <IsPiezPhreatic>true</IsPiezPhreatic>
         </Control>
 ` : "";
+  // the limits on the slip surfaces: the smallest sliding mass (per unit width, m²) and depth; left out when not set
+  const limitsXml = [
+    (opts.minSlipArea ?? 0) > 0 ? `          <MinimumVolume>${n(opts.minSlipArea!)}</MinimumVolume>\n` : "",
+    (opts.minSlipDepth ?? 0) > 0 ? `          <MinimumDepth>${n(opts.minSlipDepth!)}</MinimumDepth>\n` : "",
+  ].join("");
   const waterOption = main ? (bBarXml.length > 0 ? "PiezoSurfaceBbar" : "PiezoSurface") : undefined;
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -455,7 +460,7 @@ ${slipXml}          <EntryExit>
           </EntryExit>
 ${axisXml}${rtl ? `          <DirectionOfSlip>RightToLeft</DirectionOfSlip>
 ` : ""}${fullyXml}          <NumberOfSlicesPerSlip>${Math.round(opts.slices ?? 30)}</NumberOfSlicesPerSlip>
-        </SlipSurface>
+${limitsXml}        </SlipSurface>
 ${list("LineLoadPoints", lineLoadXml)}${list("Surcharges", surchargeXml)}${seismicXml}${crackXml}${list("PiezometricSurfaces", piezoXml)}${list("MaterialUsesPiezs", usesXml)}${list("MaterialUsesBBarParams", bBarXml)}      </Entry>
     </StabilityItem>
   </StabilityItems>
