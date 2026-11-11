@@ -60,6 +60,13 @@ export interface GszLineLoad {
 export interface GszStability {
   direction?: string;
   slipOption?: string;
+  /**
+   * Where the analysis takes its initial input from (InitialInputInfo):
+   * the option (Parent, Other, …) and the analysis named in its path, as
+   * written. A slip surface search "FromOther" takes its slip surfaces
+   * from that analysis.
+   */
+  inputFrom?: { option?: string; name?: string };
   /** Entry/exit ranges [x1, x2] on the left and the right side. */
   entryExit?: { left: [number, number]; right: [number, number] };
   slices?: number;
@@ -398,8 +405,12 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const l2 = /point/i.test(childText(ee, "LeftOption") ?? "") ? (l2Given ?? l1) : l2Given;
     const r2 = /point/i.test(childText(ee, "RightOption") ?? "") ? (r2Given ?? r1) : r2Given;
     const seis = child(entry, "Seismic");
+    const input = child(entry, "InitialInputInfo");
+    // the path names the analysis in quotes: ;;"name";(last)
+    const inputName = input ? child(input, "Path")?.getAttribute("path")?.match(/"(.*)"/)?.[1] : undefined;
     stability.set(aid, {
       direction: childText(slip, "DirectionOfSlip"),
+      ...(input ? { inputFrom: { option: childText(input, "Option"), name: inputName } } : {}),
       // The default search (Entry and Exit) is not written.
       slipOption: childText(slip, "Option") ?? (ee ? "EntryExit" : undefined),
       entryExit:

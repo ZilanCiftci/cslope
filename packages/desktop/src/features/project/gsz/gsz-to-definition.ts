@@ -9,7 +9,7 @@
 import { calculatePolygonArea, getYAtXStrict, WATER_UNIT_WEIGHT, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
 import { surfaceYAtX } from "../../view/surface";
 import { regionInteriorPoint } from "../../../utils/regions";
-import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
+import type { GszAnalysis, GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
 
 type Pt = [number, number];
 
@@ -458,6 +458,48 @@ function materialModel(
   return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
 }
 
+/** The slip surface settings of a stability analysis (its <SlipSurface>). */
+const SLIP_SURFACE_FIELDS = ["direction", "slipOption", "entryExit", "slices", "optimised", "projected", "fullySpecified", "block", "axis"] as const;
+
+/**
+ * The stability settings of an analysis with the slip surface settings it
+ * uses. A search "FromOther" takes the slip surfaces of the analysis its
+ * input comes from (named in InitialInputInfo, or the parent analysis
+ * when no other is named), through a chain of such analyses. When that
+ * analysis cannot be found, or the chain loops, the analysis keeps its
+ * own settings and `note` says why.
+ */
+function slipSurfaceSettings(
+  file: GszFile, analysis: GszAnalysis, own: GszStability | undefined,
+): { stab: GszStability | undefined; from?: GszAnalysis; note?: string } {
+  const fallback = "cSlope's own search over the whole slope is used.";
+  let current = analysis;
+  let stab = own;
+  const seen = new Set([analysis.id]);
+  while (stab && /^fromother$/i.test(stab.slipOption ?? "")) {
+    const ref = stab.inputFrom;
+    const parent = current.parentId;
+    const name = ref?.name;
+    const source = name !== undefined
+      ? file.analyses.find((a) => a.name === name) ?? file.analyses.find((a) => a.name.toLowerCase() === name.toLowerCase())
+      : /^parent$/i.test(ref?.option ?? "Parent") && parent !== undefined ? file.analyses.find((a) => a.id === parent) : undefined;
+    const sourceStab = source && file.stability.get(source.id);
+    if (!source || !sourceStab) {
+      const named = name !== undefined ? `"${name}"` : current === analysis ? "another analysis" : `another analysis (from "${current.name}")`;
+      return { stab: own, note: `The file's slip surface search takes its slip surfaces from ${named}, which the file does not give as a stability analysis; ${fallback}` };
+    }
+    if (seen.has(source.id)) {
+      return { stab: own, note: `The file's slip surface search takes its slip surfaces from other analyses in a loop (back to "${source.name}"), so none gives them; ${fallback}` };
+    }
+    seen.add(source.id);
+    current = source;
+    stab = sourceStab;
+  }
+  if (current === analysis || !own || !stab) return { stab: own };
+  const slip = Object.fromEntries(SLIP_SURFACE_FIELDS.map((k) => [k, stab[k]])) as Pick<GszStability, (typeof SLIP_SURFACE_FIELDS)[number]>;
+  return { stab: { ...own, ...slip }, from: current };
+}
+
 /** One stability analysis of a .gsz file as a slope definition. */
 export function gszToDefinition(file: GszFile, analysisId: number, fileName = "gsz"): GszImport {
   const analysis = file.analyses.find((a) => a.id === analysisId);
@@ -496,7 +538,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   }
 
   // water: one line per piezometric surface; materials without one get none
-  const stab = file.stability.get(analysis.id);
+  // a search "FromOther" uses another analysis's slip surface settings
+  const slipFrom = slipSurfaceSettings(file, analysis, file.stability.get(analysis.id));
+  const stab = slipFrom.stab;
   const water = file.water.get(analysis.id);
   const waterOption = water?.option ?? "None";
   // the file's unit weight of water, in kN/m³, as the model's (absent: 9.807)
@@ -706,8 +750,14 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     }
     if (stab.optimised) options.nonCircularOptimization = true;
     notes.push("The block search grids are imported as block search windows, with their end angles.");
+  } else if (slipFrom.note) {
+    notes.push(slipFrom.note);
   } else if (stab?.slipOption) {
-    notes.push(`The file's slip surface search ("${stab.slipOption}") is not imported; cSlope's own search over the whole slope is used.`);
+    const from = slipFrom.from ? `, taken from analysis "${slipFrom.from.name}"` : "";
+    notes.push(`The file's slip surface search ("${stab.slipOption}"${from}) is not imported; cSlope's own search over the whole slope is used.`);
+  }
+  if (slipFrom.from && /entry|fully|block/i.test(stab?.slipOption ?? "")) {
+    notes.push(`The slip surface search is taken from analysis "${slipFrom.from.name}", as the file specifies.`);
   }
   // Fully specified surfaces: the polylines with their moment axis, and
   // only they are analysed, as in the file.
