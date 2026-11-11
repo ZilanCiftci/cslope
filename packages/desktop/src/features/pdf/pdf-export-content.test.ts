@@ -4,7 +4,7 @@ import type { SlipSurfaceResult } from "@cslope/engine";
 const { saved } = vi.hoisted(() => ({ saved: [] as { doc: jsPDF; filename: string }[] }));
 
 vi.mock("jspdf", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import("jspdf");
+  const actual = await importOriginal<typeof import("jspdf")>();
   class RecordingJsPdf extends actual.jsPDF {
     constructor(...args: ConstructorParameters<typeof actual.jsPDF>) {
       super(...args);

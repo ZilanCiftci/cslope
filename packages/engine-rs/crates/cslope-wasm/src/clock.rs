@@ -47,9 +47,3 @@ impl Default for WasmClock {
         Self::new()
     }
 }
-
-/// The engine clock's reading (ms), for the facade's check of the clock.
-#[wasm_bindgen::prelude::wasm_bindgen]
-pub fn engine_now_ms() -> f64 {
-    WasmClock::new().now_ms()
-}

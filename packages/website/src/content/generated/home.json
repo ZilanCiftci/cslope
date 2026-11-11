@@ -15,7 +15,7 @@
    },
    "result": {
     "method": "Spencer",
-    "computed": 1.3721,
+    "computed": 1.3724,
     "programs": {
      "min": 1.375,
      "max": 1.375
@@ -34,7 +34,7 @@
    },
    "result": {
     "method": "Bishop simplified",
-    "computed": 1.058,
+    "computed": 1.0584,
     "programs": {
      "min": 1.058,
      "max": 1.058
@@ -45,7 +45,7 @@
     "source": "Chowdhury & Xu",
     "method": "Bishop simplified",
     "analysis": "Bishop simplified",
-    "computed": 1.058
+    "computed": 1.0584
    }
   },
   {
@@ -55,7 +55,7 @@
    },
    "result": {
     "method": "Spencer, non-circular",
-    "computed": 1.0061,
+    "computed": 1.0062,
     "programs": {
      "min": 1.01,
      "max": 1.01
@@ -67,7 +67,7 @@
     "method": "Spencer, non-circular (test problem 3)",
     "source": "Chen & Shao (1988)",
     "analysis": "Spencer, non-circular",
-    "computed": 1.0061
+    "computed": 1.0062
    }
   }
  ]

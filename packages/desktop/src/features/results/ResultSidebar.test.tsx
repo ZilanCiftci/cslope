@@ -90,7 +90,7 @@ describe("ResultSidebar summary", () => {
               count: 2,
             },
           ],
-        } as Partial<AnalysisResult>),
+        }),
       })),
     );
     render(<ResultSidebar />);
@@ -595,7 +595,7 @@ describe("ResultSidebar paper frame properties", () => {
     expect(rvs().gridSpacing).toBe(5);
 
     // The grid: on/off, and a spacing of its own while on.
-    const grid = screen.getByRole("checkbox", { name: "Grid lines" }) as HTMLInputElement;
+    const grid = screen.getByRole<HTMLInputElement>("checkbox", { name: "Grid lines" });
     if (!grid.checked) fireEvent.click(grid);
     const gridSpacing = field("Grid spacing (m)");
     fireEvent.change(gridSpacing, { target: { value: "2" } });
@@ -641,7 +641,7 @@ describe("ResultSidebar annotation properties", () => {
   it("moves the anchor point so the annotation box stays in place", () => {
     const spy = vi
       .spyOn(HTMLCanvasElement.prototype, "getContext")
-      .mockImplementation(() => createRecordingContext(1200, 800).ctx as never);
+      .mockImplementation(() => createRecordingContext(1200, 800).ctx);
     select(["p"]);
     render(<ResultSidebar />);
     fireEvent.click(screen.getByTitle("Bottom right"));
@@ -856,7 +856,7 @@ describe("ResultSidebar reference lines", () => {
     expect(screen.queryByText("X (%)")).toBeNull();
     fireEvent.change(field("Label"), { target: { value: "F = 0.664 (other program)" } });
     expect(ref("rl").label).toBe("F = 0.664 (other program)");
-    const points = screen.getByLabelText("Reference polyline points") as HTMLTextAreaElement;
+    const points = screen.getByLabelText<HTMLTextAreaElement>("Reference polyline points");
     expect(points.value).toBe("2, 10; 12, 4");
     fireEvent.change(points, { target: { value: "1, 9; 11, 3; 21, 4" } });
     expect(ref("rl").points).toEqual([

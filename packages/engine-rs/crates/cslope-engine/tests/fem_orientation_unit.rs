@@ -63,7 +63,7 @@ fn run(def: &SlopeDefinition) -> FemResultSummary {
 /// Centroid of the elements with at least half the largest strain increment.
 fn plastic_centroid(r: &FemResultSummary) -> [f64; 2] {
     let field = r.shear_increment.as_ref().unwrap_or(&r.plastic_shear);
-    let max = field.iter().cloned().fold(0.0, jsm::max);
+    let max = field.iter().copied().fold(0.0, jsm::max);
     let (mut sx, mut sy, mut n) = (0.0, 0.0, 0.0);
     for (e, &v) in field.iter().enumerate() {
         if v < 0.5 * max {

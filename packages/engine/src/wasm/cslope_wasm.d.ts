@@ -125,11 +125,6 @@ export function engine_build(): string;
 
 export function engine_constants(): any;
 
-/**
- * The engine clock's reading (ms), for the facade's check of the clock.
- */
-export function engine_now_ms(): number;
-
 export function entry_inclination(plane: any): number;
 
 export function envelope_at(env: any, s: number): number;
@@ -253,8 +248,6 @@ export function lognormal_beta(f: number, cov: number): number;
 export function lower_bound(slope: any, options: any, size_field?: number | null): any;
 
 export function map_analysis_result_to_model_space(result: any, def: any): any;
-
-export function material_colors(): string[];
 
 /**
  * `MATERIAL_MODEL_LABELS` as [kind, label] pairs.
@@ -404,12 +397,6 @@ export function shallow_depth_limit(local_relief: number): number;
 export function size_field_at(handle: number, x: number, y: number): number;
 
 /**
- * A constant size field (`() => value`, with `min` when given): the
- * one closure the facade can turn into data.
- */
-export function size_field_constant(value: number, min?: number | null): number;
-
-/**
  * Live size field handles (for the facade's leak test).
  */
 export function size_field_count(): number;
@@ -440,11 +427,6 @@ export function slope_assign_material_water_table(handle: number, m: any, id: an
  * handle, or `undefined`.
  */
 export function slope_child(handle: number, which: string): number | undefined;
-
-/**
- * A copy of the slope under a new handle.
- */
-export function slope_clone(handle: number): number;
 
 /**
  * Live slope handles (for the facade's leak test).
@@ -646,7 +628,11 @@ export function waternet_free(handle: number): boolean;
  */
 export function waternet_new(waternet: any): number;
 
-export function waternet_pore_pressure_at(handle: number, x: number, z: number): number;
+/**
+ * The pore pressure at (x, z) with the unit weight of water `gw`
+ * (`WATER_UNIT_WEIGHT` when not given).
+ */
+export function waternet_pore_pressure_at(handle: number, x: number, z: number, gw?: number | null): number;
 
 /**
  * The definition's material with its model and without the flat fields
@@ -704,7 +690,6 @@ export interface InitOutput {
     readonly effective_vertical_stress_with_loads: (a: number, b: number, c: number) => [number, number, number];
     readonly engine_build: () => [number, number];
     readonly engine_constants: () => [number, number, number];
-    readonly engine_now_ms: () => number;
     readonly entry_inclination: (a: any) => [number, number, number];
     readonly envelope_at: (a: any, b: number) => [number, number, number];
     readonly evaluate_planes: (a: number, b: any) => [number, number, number];
@@ -750,7 +735,6 @@ export interface InitOutput {
     readonly lognormal_beta: (a: number, b: number) => number;
     readonly lower_bound: (a: any, b: any, c: number) => [number, number, number];
     readonly map_analysis_result_to_model_space: (a: any, b: any) => [number, number, number];
-    readonly material_colors: () => [number, number];
     readonly material_model_labels: () => [number, number, number];
     readonly material_model_of: (a: any) => [number, number, number];
     readonly material_new: (a: any) => [number, number, number];
@@ -799,7 +783,6 @@ export interface InitOutput {
     readonly shallow_cohesionless_message: (a: any, b: any, c: number, d: number) => [number, number, number, number];
     readonly shallow_depth_limit: (a: number) => number;
     readonly size_field_at: (a: number, b: number, c: number) => [number, number, number];
-    readonly size_field_constant: (a: number, b: number, c: number) => [number, number, number];
     readonly size_field_count: () => number;
     readonly size_field_free: (a: number) => number;
     readonly size_field_min: (a: number) => [number, number, number, number];
@@ -811,7 +794,6 @@ export interface InitOutput {
     readonly slope_assign_material: (a: number, b: any, c: any) => [number, number];
     readonly slope_assign_material_water_table: (a: number, b: any, c: any) => [number, number];
     readonly slope_child: (a: number, b: number, c: number) => [number, number, number];
-    readonly slope_clone: (a: number) => [number, number, number];
     readonly slope_count: () => number;
     readonly slope_free: (a: number) => number;
     readonly slope_get: (a: number, b: number, c: number) => [number, number, number];
@@ -880,7 +862,7 @@ export interface InitOutput {
     readonly waternet_count: () => number;
     readonly waternet_free: (a: number) => number;
     readonly waternet_new: (a: any) => [number, number, number];
-    readonly waternet_pore_pressure_at: (a: number, b: number, c: number) => [number, number, number];
+    readonly waternet_pore_pressure_at: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly with_material_model: (a: any) => [number, number, number];
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

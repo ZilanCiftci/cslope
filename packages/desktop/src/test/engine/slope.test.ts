@@ -337,20 +337,21 @@ describe("Slice generation", () => {
     const ints = slope.getCircleExternalIntersection(cx, cy, radius);
     const slices = getSlices(slope, ints[0][0], ints[1][0], cx, cy, radius);
 
-    // expected total weight: 5378.11 under the arc (with unitWeight=18;
-    // 5376.06 with one arc node per slice before 2026-11)
+    // expected total weight: 5370.21 above the chords (with unitWeight=18;
+    // 5378.11 under the arc before 2026-11-10)
     const totalWeight = slices.reduce((s, sl) => s + sl.weight, 0);
-    expect(totalWeight).toBeCloseTo(5376, -1); // within ±5 kN
+    expect(totalWeight).toBeCloseTo(5370, -1); // within ±5 kN
 
     // First slice properties
     const first = slices[0];
     expect(first.xLeft).toBeCloseTo(7.087, 2);
     expect(first.yTop).toBeCloseTo(0, 2);
-    // The steep entry is cut into narrower slices (no more arc than twice
-    // a slice at the bottom of the circle): x 7.09–7.76, not –8.52.
-    expect(first.xRight).toBeCloseTo(7.761, 2);
-    expect(first.yBottom).toBeCloseTo(-0.739, 2);
-    expect(first.alpha).toBeCloseTo(1.128, 2);
+    // The steep entry is not cut into narrower slices (since 2026-11-11, as
+    // in other programs): the first slice has the nominal width, x 7.09–8.52
+    // (7.09–7.76 while the steep ends were cut).
+    expect(first.xRight).toBeCloseTo(8.522, 2);
+    expect(first.yBottom).toBeCloseTo(-1.397, 2); // the chord's middle (-0.710 on the cut slice)
+    expect(first.alpha).toBeCloseTo(1.096, 2); // the chord's inclination (1.128 on the cut slice)
 
     // Last slice properties
     const last = slices[slices.length - 1];

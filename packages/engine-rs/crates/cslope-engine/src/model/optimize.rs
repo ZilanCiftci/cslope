@@ -1159,7 +1159,12 @@ impl OptimisePoints {
             } {
                 return Ok(None);
             }
-            let g = slope.get_external_y_intersection(x)?;
+            // (an exit given as a single x on a vertical face stays at its foot)
+            let [x, g] = if k == 0 {
+                [x, slope.get_external_y_intersection(x)?]
+            } else {
+                slope.exit_ground_point(x)?
+            };
             return Ok(if g.is_finite() { Some([x, g]) } else { None });
         }
         // Normal to the surface at the vertex: the bisector of the normals of

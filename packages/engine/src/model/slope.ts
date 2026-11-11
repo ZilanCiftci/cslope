@@ -159,7 +159,7 @@ export class Slope {
   constructor() {
     const given = adopting;
     adopting = undefined;
-    this._handle = given ?? (wasm().slope_new() as number);
+    this._handle = given ?? (wasm().slope_new());
     this._epoch = engineEpoch();
     finalizer.register(this, { handle: this._handle, epoch: this._epoch }, this);
     if (given !== undefined) {
@@ -189,7 +189,7 @@ export class Slope {
   // ── cache ──────────────────────────────────────────────────────
 
   private _fresh(): void {
-    const stamp = wasm().slope_stamp(this._h) as number;
+    const stamp = wasm().slope_stamp(this._h);
     if (stamp !== this._seen) {
       this._cache.clear();
       this._table = null;
@@ -200,7 +200,7 @@ export class Slope {
   private _get<T>(name: string, decode?: (v: unknown) => T): T {
     this._fresh();
     if (!this._cache.has(name)) {
-      const raw = wasm().slope_get(this._h, name);
+      const raw: unknown = wasm().slope_get(this._h, name);
       this._cache.set(name, decode ? decode(raw) : raw);
     }
     return this._cache.get(name) as T;
@@ -239,7 +239,7 @@ export class Slope {
     const i = this._table.findIndex((e) => e.key === m._key);
     if (i >= 0) return i;
     this._table = null;
-    return wasm().slope_material_index(this._h, materialWire(m)) as number;
+    return wasm().slope_material_index(this._h, materialWire(m));
   }
 
   /** @internal Gives every table entry its JavaScript object (before a callback runs). */
@@ -273,7 +273,7 @@ export class Slope {
       if ((p.slices as unknown) === LAZY) this._lazySlices(p, list!, i);
       else if (p.slices) this._bindSlices(p.slices, known);
     });
-    return planes as SearchPlane[];
+    return planes;
   }
 
   /**
@@ -523,7 +523,7 @@ export class Slope {
 
   private _child(which: "earlierStage" | "drawdownBefore"): Slope | null {
     return this._memo(which, () => {
-      const h = wasm().slope_child(this._h, which) as number | undefined;
+      const h = wasm().slope_child(this._h, which);
       return h === undefined ? null : Slope._wrap(h);
     });
   }
@@ -570,6 +570,11 @@ export class Slope {
   /** Pseudostatic vertical seismic coefficient kv (positive downward). */
   get seismicVertical(): number {
     return this._get("seismicVertical");
+  }
+
+  /** Unit weight of water γw (kN/m³): the `waterUnitWeight` option, `WATER_UNIT_WEIGHT` without it. */
+  get waterUnitWeight(): number {
+    return this._get("waterUnitWeight");
   }
 
   /** Whether composite circles also follow the bare base of the model. */
@@ -679,7 +684,7 @@ export class Slope {
    * results, `analyse` with `mapAnalysisResultToModelSpace` gives model space.
    */
   toModelX(x: number): number {
-    return wasm().slope_to_model_x(this._h, x) as number;
+    return wasm().slope_to_model_x(this._h, x);
   }
 
   /**
@@ -762,7 +767,7 @@ export class Slope {
 
   /** Split by a boundary polyline; returns true when any piece was split. */
   setMaterialBoundary(coordinates: [number, number][]): boolean {
-    return wasm().slope_set_material_boundary(this._h, coordinates) as boolean;
+    return wasm().slope_set_material_boundary(this._h, coordinates);
   }
 
   /**
@@ -901,21 +906,21 @@ export class Slope {
    * Get the y-coordinate of the slope surface at a given x.
    */
   getExternalYIntersection(x: number): number {
-    return wasm().slope_get_external_y_intersection(this._h, x) as number;
+    return wasm().slope_get_external_y_intersection(this._h, x);
   }
 
   /**
    * Check whether a point lies inside the external boundary polygon.
    */
   isInsideExternalBoundary(x: number, y: number): boolean {
-    return wasm().slope_is_inside_external_boundary(this._h, x, y) as boolean;
+    return wasm().slope_is_inside_external_boundary(this._h, x, y);
   }
 
   /**
    * Get the y-coordinate of the water table at a given x.
    */
   getWaterYIntersection(x: number): number {
-    return wasm().slope_get_water_y_intersection(this._h, x) as number;
+    return wasm().slope_get_water_y_intersection(this._h, x);
   }
 
   /**
@@ -930,14 +935,14 @@ export class Slope {
    * Get the minimum factor of safety from the analysis results.
    */
   getMinFOS(): number {
-    return wasm().slope_get_min_fos(this._h) as number;
+    return wasm().slope_get_min_fos(this._h);
   }
 
   /**
    * Get the maximum factor of safety from the analysis results.
    */
   getMaxFOS(): number {
-    return wasm().slope_get_max_fos(this._h) as number;
+    return wasm().slope_get_max_fos(this._h);
   }
 
   /**

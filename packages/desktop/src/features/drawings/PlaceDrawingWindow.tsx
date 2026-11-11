@@ -1116,7 +1116,7 @@ export function PointsInputs({ form, setForm, target, setTarget, residuals }: In
           <input className={fieldClass} placeholder="y (m)" value={p.y} aria-label={`Point ${i + 1} y`} onChange={(e) => setRow(i, { y: e.target.value })} inputMode="decimal" />
           {showMisfit && (
             <span className="text-[10px] w-[58px] shrink-0 text-right whitespace-nowrap" style={muted} title="Misfit of this point">
-              {residuals![filled.indexOf(p)] !== undefined ? `${residuals![filled.indexOf(p)].toFixed(3)} m` : ""}
+              {residuals[filled.indexOf(p)] !== undefined ? `${residuals[filled.indexOf(p)].toFixed(3)} m` : ""}
             </span>
           )}
           {removable && (

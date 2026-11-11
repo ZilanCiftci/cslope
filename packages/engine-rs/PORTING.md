@@ -1,5 +1,7 @@
 # Porting the engine to Rust
 
+> Since 2026-11-10 the Rust engine is the only reference: it need not reproduce the removed TypeScript engine bit for bit, only the golden verification results (ARCHITECTURE.md, amendment of 2026-11-10). The fixture comparisons below are a record of the port.
+
 The TypeScript engine in `packages/engine/src` was rewritten in Rust here,
 and the Rust engine replaced it at the cutover (2026-11-04, see "Cutover"
 at the end): the app, the tests, the website's data and the report call it
@@ -342,34 +344,30 @@ porters. Each names where it lives.
   TypeScript's NaN-aware `!(x > 0)` and `x >= a && x <= b`); tests/common
   allows `clippy::disallowed_methods` for its tolerance helper.
 
-- **Slice base of a circle** (model/slices.rs `SliceBase`, `slice_base`,
-  `with_slice_base`; not a port: an experiment switch, 2026-11-04). The
-  engine's base of a slice of a circle is the arc (the arc length, α at
-  the middle of the arc, the weight of the soil above the arc, the steep
-  ends of the circle cut into narrower slices; CHANGELOG 2026-11-02). The
-  environment variable `CSLOPE_SLICE_BASE=chord` makes it the
-  conventional straight chord between the slice's edges, as the other
-  programs discretise a circle (the chord's length and inclination, the
-  weight of the polygon above the chord, the base point at the chord's
-  middle for the pore pressure and the strength); `chord-even` also
-  leaves the steep ends uncut (the nominal slices only). It is read once
-  per process; absent in WebAssembly (no environment), so the app always
-  analyses on the arc; `with_slice_base` overrides it on one thread for a
-  test (tests/slice_base_unit.rs). The moment arm of the weight stays
-  W·dx (the other programs take W·R·sin α of the chord, +0.03–0.1 % on F
-  at 30 slices). Measured on the verification (tests/verification_native
-  checks, `cargo run --release --example run_check -- --all`): against
-  the programs' values the mean absolute error is 0.333 % on the arc,
-  0.316 % on the chord and 0.307 % on the chord without the end cut
-  (RMS 0.464 → 0.445 → 0.438 %); against the papers 0.485 → 0.480 →
-  0.505 %. Against the converged value (500 slices) on 38 .gsz example
-  surfaces the arc is within 0.03 % on average at 30 slices, the chord
-  +0.11 % and the chord without the end cut +0.17 %, which is where the
-  programs' own values sit (+0.16 %); with `chord-even` and the files'
-  slice counts cSlope reproduces the files' slice weights, base angles
-  and base lengths exactly and their F within 0.1 %. The arc stays the
-  default: it converges from the first slice count, and the chord only
-  reproduces the other programs' discretisation error.
+- **Slice base of a circle** (model/slices.rs `create_slice`; not a port,
+  2026-11-10, DECISIONS.md). The base of a slice of a circle is the
+  straight chord between the slice's two base points, the conventional
+  discretisation of a circle: the weight of the soil above the chord, the
+  chord's length as base length, its inclination as α and its middle as
+  the base point (pore pressure, strength). The base shear's moment arm
+  about the centre (`Slice::r`) is the perpendicular distance from the
+  centre to the chord, R·cos(Δθ/2) with Δθ the angle the slice subtends,
+  and the normal force's arm is 0 (the normal at the chord's middle passes
+  through the centre): the general limit equilibrium formulation of
+  Fredlund & Krahn (1977), where the shear force's arm is measured to the
+  base line. Every moment equation takes the per-slice arm (Bishop,
+  Spencer, Morgenstern-Price and the ordinary method, which balances
+  moments about the centre over the mean arm). The weight's arm is
+  W·(x − xc) (`dx`), as in the conventional method (an earlier note here
+  said the conventional method takes W·R·sin α of the chord; it takes
+  W·(x − xc) too, and the difference lay in the shear arm). The steep ends of
+  a circle are not cut narrower (from 2026-11-11; they were cut so that no
+  slice spanned more than max(2°, 2b/R) of arc from 2026-11-02): the slices
+  are the nominal division plus the geometry, material and water breaks,
+  as in other programs. From
+  2026-11-02 to 2026-11-10 the base was the arc (arc length, α at the
+  middle of the arc, the weight above the arc, shear arm R), with the chord as an experiment switch (`CSLOPE_SLICE_BASE`); both
+  were removed. On the same circle the chord raises F by about 0.01–0.15 %.
 - **jsts replacement (geometry).** `model/geometry_ops/jts/` ports exactly
   the jsts 2.12.1 code paths `geometry-ops.ts` reaches, not a general
   geometry library and not the `geo` crate: the order of faces, their start

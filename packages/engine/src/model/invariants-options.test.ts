@@ -64,7 +64,7 @@ describe("partial factors on strength", () => {
         const janbu = method === "Janbu" ? { janbuCorrection: i % 2 === 0 } : {};
         const f = fosOf(def, method, { ...crack, ...janbu });
         const fk = fosOf(def, method, { ...crack, ...janbu, partialFactors: strengthFactors(k) });
-        const label = `seed 9001 case ${i} ${method} [${[...features]}] k ${k}`;
+        const label = `seed 9001 case ${i} ${method} [${[...features].join(",")}] k ${k}`;
         expect(fk === null, label).toBe(f === null);
         if (f === null || fk === null) continue;
         expect(relDiff(fk * k, f), `${label}: ${fk}·k vs ${f}`).toBeLessThan(2e-5);

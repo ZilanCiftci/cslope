@@ -131,7 +131,7 @@ describe("AnalysisClient", () => {
   });
 
   it("tries to load the engine again after a failure", async () => {
-    const loadEngine = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({} as WebAssembly.Module);
+    const loadEngine = vi.fn().mockRejectedValueOnce(new Error("offline")).mockResolvedValueOnce({});
     const c = new AnalysisClient({ loadEngine, createWorker: fakeWorker });
     await expect(c.ready()).rejects.toThrow("offline");
     await expect(c.ready()).resolves.toBeDefined();
@@ -162,7 +162,7 @@ describe("AnalysisClient", () => {
       const { c, engine, workers } = loading();
       const first = c.run(doc);
       const second = c.run(doc);
-      engine.resolve({} as WebAssembly.Module);
+      engine.resolve({});
       await expect(first).rejects.toBeInstanceOf(CancelledError);
       await tick();
       expect(workers).toHaveLength(1);
@@ -175,7 +175,7 @@ describe("AnalysisClient", () => {
       const { c, engine, workers } = loading();
       const run = c.run(doc);
       c.cancel();
-      engine.resolve({} as WebAssembly.Module);
+      engine.resolve({});
       await expect(run).rejects.toBeInstanceOf(CancelledError);
       expect(workers).toHaveLength(0);
       expect(c.running).toBe(false);

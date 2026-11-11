@@ -78,6 +78,7 @@ class AnalysisOptions(TypedDict):
     tensionCrackDepth: NotRequired[Optional[float]]
     tensionCrackWater: NotRequired[Optional[float]]
     tolerance: NotRequired[Optional[float]]
+    waterUnitWeight: NotRequired[Optional[float]]
 
 class AnalysisResult(TypedDict):
     """Full analysis result."""

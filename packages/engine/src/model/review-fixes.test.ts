@@ -8,7 +8,6 @@ import { Slope } from "./slope";
 import { getSlices } from "./slices";
 import { buildEnvelope, envelopeAt, pileForceDirection } from "./reinforcement";
 import type { Pile } from "../types/reinforcement";
-import type { AnalysisOptions } from "../types/analysis";
 import { Material } from "../types/index";
 import type { SlopeDefinition } from "../types/slope-definition";
 
@@ -203,7 +202,7 @@ describe("pile force direction", () => {
     customPlanesOnly: true,
   };
   const run = (extra: Partial<Pile>) =>
-    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", pileCase.checks[0].options as Partial<AnalysisOptions>).fos!;
+    runVerification({ ...definition, piles: [{ ...definition.piles![0], ...extra }] }, "Bishop", pileCase.checks[0].options).fos!;
 
   it("keeps the given angle when no direction is set", () => {
     expect(run({})).toBeCloseTo(run({ direction: "angle" }), 9);
@@ -212,8 +211,9 @@ describe("pile force direction", () => {
 
   it("acts along the slip surface with direction tangent (the usual default)", () => {
     // A commercial program on cSlope's V095c input, pile passive and tangential,
-    // the force at the slip surface: 1.1989.
-    expect(run({ application: "passive", direction: "tangent", location: "slip-surface" })).toBeCloseTo(1.1989, 3);
+    // the force at the slip surface: 1.1989. cSlope gives 1.1994 since the
+    // slice base of a circle is the chord (2026-11-10), 0.04 % above it.
+    expect(run({ application: "passive", direction: "tangent", location: "slip-surface" })).toBeCloseTo(1.1994, 3);
   });
 
   it("is horizontal perpendicular to a vertical pile", () => {

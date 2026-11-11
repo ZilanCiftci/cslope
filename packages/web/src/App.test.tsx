@@ -300,15 +300,21 @@ describe("App", () => {
       fireEvent.click(screen.getByRole("button", { name: "Remove Layer 2" }));
       // Undo brings back the last one removed only, within 8 s.
       expect(within(card()).getByText("Removed Layer 2.")).toBeInTheDocument();
-      act(() => vi.advanceTimersByTime(7900));
+      act(() => {
+        vi.advanceTimersByTime(7900);
+      });
       fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
       expect(screen.getByRole("button", { name: /^Layer 2/ })).toBeInTheDocument();
       expect(screen.queryByRole("button", { name: /^Clay/ })).toBeNull();
       // After 8 s the message and its Undo are gone.
       fireEvent.click(screen.getByRole("button", { name: "Remove Layer 2" }));
-      act(() => vi.advanceTimersByTime(7900));
+      act(() => {
+        vi.advanceTimersByTime(7900);
+      });
       expect(within(card()).getByRole("button", { name: "Undo" })).toBeInTheDocument();
-      act(() => vi.advanceTimersByTime(200));
+      act(() => {
+        vi.advanceTimersByTime(200);
+      });
       expect(within(card()).queryByRole("button", { name: "Undo" })).toBeNull();
       expect(within(card()).queryByText("Removed Layer 2.")).toBeNull();
     } finally {
@@ -634,7 +640,7 @@ describe("App", () => {
     expect(await screen.findByText('The project could not be written: Water table mode "x" is not supported')).toBeInTheDocument();
   });
 
-  it("switches the theme and remembers it", async () => {
+  it("switches the theme and remembers it", () => {
     renderApp({ loadEngine: () => new Promise(() => {}) });
     fireEvent.click(screen.getByRole("button", { name: "Switch to dark theme" }));
     expect(document.documentElement.classList.contains("dark")).toBe(true);

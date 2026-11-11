@@ -35,7 +35,9 @@
 use crate::convert::ConvertError;
 use crate::model::{ModelEntry, MATERIAL_COLORS};
 use crate::options::app_default_options;
+use cslope_engine::js::math::{max as jmax, min as jmin};
 use cslope_engine::model::canonical::{resolve_orientation, SlopeOrientation};
+use cslope_engine::types::json::js_truthy;
 use cslope_engine::types::{
     default_fem_settings, supports_anisotropy, supports_suction_strength, swedish_partial_factors,
     try_validate_material_model, MaterialModel, SwedishFactorBasis, ITERATIONS_RANGE,
@@ -164,26 +166,7 @@ fn array(v: Option<&Value>) -> impl Iterator<Item = &Value> {
     v.and_then(Value::as_array).into_iter().flatten()
 }
 
-/// JavaScript truthiness of a JSON value.
-fn js_truthy(v: &Value) -> bool {
-    match v {
-        Value::Null => false,
-        Value::Bool(b) => *b,
-        Value::Number(n) => n.as_f64().is_some_and(|x| x != 0.0),
-        Value::String(s) => !s.is_empty(),
-        _ => true,
-    }
-}
-
 /// `Math.max` / `Math.min`.
-fn jmax(a: f64, b: f64) -> f64 {
-    cslope_engine::js::math::max(a, b)
-}
-
-fn jmin(a: f64, b: f64) -> f64 {
-    cslope_engine::js::math::min(a, b)
-}
-
 fn clamp(v: f64, lo: f64, hi: f64) -> f64 {
     jmax(lo, jmin(hi, v))
 }
@@ -528,7 +511,7 @@ fn model(raw: &Value, cx: &Ctx) -> Result<Value, ConvertError> {
     out.insert(
         "options".into(),
         Value::Object(match model.get("options") {
-            Some(o) if js_truthy(o) => analysis_options(o, cx),
+            Some(o) if js_truthy(Some(o)) => analysis_options(o, cx),
             _ => app_default_options(),
         }),
     );
@@ -1569,7 +1552,7 @@ fn custom_plane(raw: &Value, index: usize, cx: &Ctx) -> Option<Value> {
 
 // ── Options ─────────────────────────────────────────────────────
 
-const OPTION_KEYS: [&str; 29] = [
+const OPTION_KEYS: [&str; 30] = [
     "slices",
     "iterations",
     "refinedIterations",
@@ -1589,6 +1572,7 @@ const OPTION_KEYS: [&str; 29] = [
     "compositeBase",
     "seismicHorizontal",
     "seismicVertical",
+    "waterUnitWeight",
     "partialFactors",
     "bothDirections",
     "nonCircularOptimization",
@@ -1732,6 +1716,9 @@ fn analysis_options(raw: &Value, cx: &Ctx) -> Obj {
     }
     if let Some(k) = num(o.get("seismicVertical")).filter(|k| *k != 0.0 && k.abs() <= 1.0) {
         set(&mut out, "seismicVertical", json!(k));
+    }
+    if let Some(g) = num(o.get("waterUnitWeight")).filter(|g| *g > 0.0) {
+        set(&mut out, "waterUnitWeight", json!(g));
     }
     if let Some(a) = num(o.get("tensionCrackAngle")).filter(|a| *a > 0.0 && *a < 90.0) {
         set(&mut out, "tensionCrackAngle", json!(a));
@@ -2731,5 +2718,34 @@ mod tests {
             "materials[2].model.x"
         );
         assert_eq!(pointer_to_path(""), "");
+    }
+
+    #[test]
+    fn the_unit_weight_of_water_is_kept_when_positive_and_dropped_otherwise() {
+        let cx = Ctx {
+            strict: true,
+            today: "2026-11-11",
+            next_id: Cell::new(100),
+            unknown: RefCell::new(Vec::new()),
+        };
+        let read = |v: Value| analysis_options(&serde_json::json!({ "waterUnitWeight": v }), &cx);
+        assert_eq!(
+            read(serde_json::json!(9.82)).get("waterUnitWeight"),
+            Some(&serde_json::json!(9.82))
+        );
+        for bad in [
+            serde_json::json!(0),
+            serde_json::json!(-10),
+            serde_json::json!("10"),
+            Value::Null,
+        ] {
+            assert_eq!(read(bad).get("waterUnitWeight"), None);
+        }
+        assert!(cx.unknown.borrow().is_empty());
+        // absent: absent (the engine's 9.807)
+        assert_eq!(
+            analysis_options(&serde_json::json!({}), &cx).get("waterUnitWeight"),
+            None
+        );
     }
 }

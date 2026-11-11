@@ -25,7 +25,7 @@ const MATERIALS: MaterialRow[] = [
     color: "#c084fc",
     modelExpressions: {},
     model: { kind: "mohr-coulomb", unitWeight: 19, cohesion: 8, frictionAngle: 28 },
-  } as MaterialRow,
+  },
 ];
 
 function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fosFilterMax: number }) {
@@ -38,7 +38,7 @@ function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fo
   pdf.rect = ((x: number, y: number, w: number, h: number, style?: string | null) => {
     rects.push({ w, h, style });
     return rect(x, y, w, h, style);
-  }) as typeof pdf.rect;
+  });
   const text = pdf.text.bind(pdf);
   pdf.text = ((...args: Parameters<typeof pdf.text>) => {
     texts.push(String(args[0]));
@@ -53,13 +53,13 @@ function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fo
   pdf.setFontSize = ((size: number) => {
     fontSizes.push(size);
     return setFontSize(size);
-  }) as typeof pdf.setFontSize;
+  });
   const circle = pdf.circle.bind(pdf);
   let circles = 0;
   pdf.circle = ((...args: Parameters<typeof pdf.circle>) => {
     circles++;
     return circle(...args);
-  }) as typeof pdf.circle;
+  });
   drawAnnotations(
     pdf,
     PAPER as never,
@@ -77,14 +77,14 @@ function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fo
 
 describe("PDF annotations match the canvas proportions", () => {
   it("draws the material table at the canvas size (364 units wide)", () => {
-    const { rects } = record({ id: "t", type: "material-table", x: 0.1, y: 0.1 } as Annotation);
+    const { rects } = record({ id: "t", type: "material-table", x: 0.1, y: 0.1 });
     // The outline is stroked last, after the fills and the rules.
     const outline = rects.filter((r) => r.style === "S").at(-1)!;
     expect(outline.w).toBeCloseTo(364 * SCALE, 1); // ≈ 127 mm, was ≈ 35 mm
   });
 
   it("draws the colour bar 20 × 200 units, also for a single surface", () => {
-    const { rects } = record({ id: "c", type: "color-bar", x: 0.8, y: 0.2 } as Annotation);
+    const { rects } = record({ id: "c", type: "color-bar", x: 0.8, y: 0.2 });
     const border = rects.find((r) => r.style === "S")!;
     expect(border.w).toBeCloseTo(20 * SCALE, 6);
     expect(border.h).toBeCloseTo(200 * SCALE, 6);
@@ -119,7 +119,7 @@ describe("PDF annotations match the canvas proportions", () => {
       y: 0.5,
       text: "small\nlines",
       fontSize: 6,
-    } as Annotation);
+    });
     expect(fontSizes.at(-1)).toBeCloseTo((6 * SCALE) / 0.3528, 6);
   });
 
@@ -190,13 +190,13 @@ describe("PDF material regions", () => {
     pdf.clip = ((rule?: "evenodd") => {
       rules.push(rule);
       return clip(rule);
-    }) as typeof pdf.clip;
+    });
     const bedrock: MaterialRow = {
       ...MATERIALS[0],
       id: "rock",
       name: "Rock",
       model: { kind: "impenetrable", unitWeight: 22 },
-    } as MaterialRow;
+    };
     const clay: MaterialRow = { ...MATERIALS[0], id: "clay" };
     const tf = {
       worldToPdf: (x: number, y: number) => [20 + x * 5, 150 - y * 5],

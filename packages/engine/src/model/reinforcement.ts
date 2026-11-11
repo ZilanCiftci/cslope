@@ -125,8 +125,10 @@ export function envelopeAt(env: ReinforcementEnvelope, s: number): number {
  * Apply the reinforcement forces to the slices of a slip surface: where
  * an element crosses a slice base, its force acts on that slice at the
  * crossing. The force pulls the sliding mass towards the part of the
- * element in stable ground; an element that the movement would push
- * (compress) carries nothing. (cx, cy) is the centre / axis point for
+ * element in stable ground. A passive element that the movement would
+ * push (compress) more than 2° past the normal to the base carries
+ * nothing; an active element always carries its force, along itself
+ * where it is pushed. (cx, cy) is the centre / axis point for
  * moments, the solvers' convention: driving moment of a force
  * (Fx, Fdown) at (x, y) is Fdown·(cx − x) + Fx·(cy − y).
  *

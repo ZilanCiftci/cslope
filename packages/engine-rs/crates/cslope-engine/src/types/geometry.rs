@@ -82,7 +82,7 @@ pub struct Slice {
     pub area: f64,
     /// Base inclination angle (rad).
     pub alpha: f64,
-    /// Arc length of slice base (m).
+    /// Length of the slice's straight base (m): on a circle the chord.
     pub base_length: f64,
     /// Slice weight (kN).
     pub weight: f64,
@@ -90,15 +90,15 @@ pub struct Slice {
     pub dx: f64,
     /// Height from center of rotation to midpoint.
     pub e: f64,
-    /// `R`: moment arm of the base shear about the centre (m): the radius on
-    /// a circle, the perpendicular distance to the base on a non-circular
-    /// surface.
+    /// `R`: moment arm of the base shear about the centre (m): the
+    /// perpendicular distance from the centre to the base line, on a circle
+    /// R·cos(Δθ/2) with Δθ the angle the slice subtends (Fredlund & Krahn
+    /// 1977).
     pub r: f64,
     /// Moment arm of the base normal force about the axis point (m),
     /// positive where the normal force drives; 0 on a circle.
     pub normal_arm: Option<f64>,
-    /// On a circle: the weight's arm about the centre is `dx`, while α is
-    /// the inclination at the middle of the slice's arc (R sin α ≠ dx).
+    /// The slice is on a circle (its base a chord of the circle).
     pub circular: Option<bool>,
     /// UDL force on slice (kN).
     pub udl: f64,
@@ -172,30 +172,4 @@ pub struct Slice {
     /// When `true`, the slip surface has entered impenetrable material
     /// and the entire surface must be rejected.
     pub impenetrable: Option<bool>,
-}
-
-/// Mutable solver state for a slice during FOS iteration.
-/// Kept separate from the immutable Slice geometry.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct SliceSolverState {
-    /// `FS`: factor of safety (current iteration).
-    pub fs: f64,
-    /// m-alpha coefficient.
-    pub malpha: f64,
-    /// `N`: base normal force (kN).
-    pub n: f64,
-    /// Left horizontal interslice force.
-    pub e_left: f64,
-    /// Right horizontal interslice force.
-    pub e_right: f64,
-    /// Left vertical interslice force.
-    pub x_left: f64,
-    /// Right vertical interslice force.
-    pub x_right: f64,
-    /// Lambda for Morgenstern-Price.
-    pub lambda: f64,
-    /// Interslice function value.
-    pub func: f64,
-    /// Cached cohesion term for N calculation.
-    pub cohesion_term: f64,
 }

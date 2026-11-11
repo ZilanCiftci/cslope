@@ -12,7 +12,7 @@
  * to check there, not a guaranteed round trip.
  */
 
-import { MATERIAL_MODEL_LABELS, suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, WATER_UNIT_WEIGHT, suctionAngle, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -82,7 +82,7 @@ function soilJson(id: string, name: string, model: MaterialModel, notes: string[
   if (above !== below && above.type === below.type && JSON.stringify(above) !== JSON.stringify(below)) {
     notes.push(`Material "${name}": the strength above the water line is of the same kind as below it with other parameters; the format has one set per kind, so the one below the water is written for both.`);
   }
-  const pick = <K extends keyof SoilStrength>(k: K) => (below[k] ?? above[k]) as SoilStrength[K];
+  const pick = <K extends keyof SoilStrength>(k: K) => (below[k] ?? above[k]);
   const mc = pick("mc") ?? { c: 0, phi: 0 };
   const su = pick("su") ?? { ratio: 0, exponent: 0 };
   const table = (pts: Pt[] | undefined, key: string) => (pts ?? []).map(([s, v]) => ({ EffectiveStress: s, [key]: v }));
@@ -145,7 +145,7 @@ function stageDocs(
   id: () => string,
   soilOf: (material: string) => { soilId: string; state?: SoilStrength["state"] } | undefined,
   inherits: (material: string) => boolean,
-  options: { seismicHorizontal?: number; seismicVertical?: number },
+  options: { seismicHorizontal?: number; seismicVertical?: number; waterUnitWeight?: number },
   notes: string[],
 ): StageDocs {
   const outline = def.coordinates;
@@ -260,7 +260,7 @@ function stageDocs(
   return {
     geometry: { Layers: layers.map((l) => ({ Id: l.id, Label: l.label, Notes: null, Points: l.ring.map(xz) })) },
     soilLayers: { SoilLayers: layers.map((l) => ({ LayerId: l.id, SoilId: soilOf(l.material)?.soilId })) },
-    waternet: { UnitWeightWater: 9.81, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
+    waternet: { UnitWeightWater: options.waterUnitWeight ?? WATER_UNIT_WEIGHT, PhreaticLineId: phreaticId, HeadLines: headLines, ReferenceLines: referenceLines },
     state: { StatePoints: statePoints, StateLines: [] },
     loads: {
       LayerLoads: layerLoads, UniformLoads: uniformLoads, LineLoads: lineLoads, Trees: [],
@@ -316,11 +316,11 @@ export function modelToStixDocuments(model: ModelEntry): { docs: Map<string, Jso
     if (missing.length > 0) notes.push(`${missing.join(", ")} take the stress history of the earlier stage, which has no material of that name (renamed?); the receiving program matches layers by their names, so the history may not carry over.`);
   }
   const opts = model.options;
-  const seismic = { seismicHorizontal: opts.seismicHorizontal, seismicVertical: opts.seismicVertical };
+  const seismic = { seismicHorizontal: opts.seismicHorizontal, seismicVertical: opts.seismicVertical, waterUnitWeight: opts.waterUnitWeight };
 
   // stages: the earlier one (its stress history) and the model's
   const stages: { label: string; docs: StageDocs }[] = [];
-  if (earlier) stages.push({ label: "Earlier stage", docs: stageDocs(earlier as SlopeDefinition, id, soilOf, () => false, seismic, notes) });
+  if (earlier) stages.push({ label: "Earlier stage", docs: stageDocs(earlier, id, soilOf, () => false, seismic, notes) });
   stages.push({ label: earlier ? "Stage 2" : "Stage 1", docs: stageDocs(def, id, soilOf, (name) => !!earlier && fromEarlier(name), seismic, notes) });
   if (model.piezometricLine?.rapidDrawdown) notes.push("Rapid drawdown is not written; the water written is the water after drawdown.");
 

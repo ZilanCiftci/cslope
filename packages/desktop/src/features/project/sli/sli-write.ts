@@ -18,7 +18,7 @@
  * to check there, not a guaranteed round trip.
  */
 
-import { MATERIAL_MODEL_LABELS, hoekBrownOf, toCanonicalSlopeDefinition, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { MATERIAL_MODEL_LABELS, WATER_UNIT_WEIGHT, hoekBrownOf, toCanonicalSlopeDefinition, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { buildSlopeDTOFromModel } from "../../../store/helpers";
 import type { ModelEntry } from "../../../store/types";
 import { computeRegions } from "../../../utils/regions";
@@ -453,7 +453,7 @@ export function modelToSli(model: ModelEntry): { text: string; notes: string[] }
   const sec = (name: string, lines: string[] = []) => L.push(`${name}:`, ...lines, "");
   sec("model description", [
     "  version: 7.010", `  methods: ${bits}`, "  units: metric", `  seismic: ${n(kh)}`, `  seismicv: ${n(kv)}`, "  seismic_advanced: 0", "  seismic_pseudostatic: 0",
-    "  water: hu", `  direction: ${direction}`, "  tolerance: 0.005", "  maxiter: 75", "  gammaw: 9.81", "  mode: 0", "  search: 0", "  circularsearch: 0", "  datamode: 1",
+    "  water: hu", `  direction: ${direction}`, "  tolerance: 0.005", "  maxiter: 75", `  gammaw: ${opts.waterUnitWeight ?? WATER_UNIT_WEIGHT}`, "  mode: 0", "  search: 0", "  circularsearch: 0", "  datamode: 1",
     ...(bBarWritten ? ["  advanced_options: yes", "  advanced_options_type: 1"] : []),
     `  nummaterials: ${def.materials.length}`, `  numanchors: ${anchorTypes.length}`, "  probability_analysis: 0", "  sensitivity analysis: no", `  with_ru: ${def.materials.some((m) => ((m.model as { ru?: number } | undefined)?.ru ?? 0) > 0) ? 1 : 0}`, "  transient: no", "  design_selection: 0", "  use_profile: 0", "  slices_type: 0",
   ]);

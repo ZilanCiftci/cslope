@@ -11,6 +11,7 @@ import { Material, Udl } from "../types/index";
 import { Slope } from "./slope";
 import { analyseSlope } from "./solvers";
 import { addSingleCircularPlane } from "./search";
+import type { AnalysisOptions } from "../types/analysis";
 
 // ── Helpers ──────────────────────────────────────────────────────
 
@@ -155,7 +156,7 @@ describe("T-ACADS Validation", () => {
 // ── Prandtl Bearing Capacity ─────────────────────────────────────
 
 describe("Prandtl Bearing Capacity", () => {
-  function createPrandtlSlope(method: string): Slope {
+  function createPrandtlSlope(method: AnalysisOptions["method"]): Slope {
     const s = new Slope();
     const m = new Material({
       name: "Soil",
@@ -179,8 +180,7 @@ describe("Prandtl Bearing Capacity", () => {
       exitLeftX: 30,
       exitRightX: 50,
     });
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    s.updateAnalysisOptions({ slices: 30, method: method as any });
+    s.updateAnalysisOptions({ slices: 30, method });
     return s;
   }
 

@@ -77,7 +77,7 @@ describe("facade", () => {
 
   it("reads a field that is undefined as absent and null as null, as TypeScript", () => {
     const mc = { kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30 };
-    const validate = (m: unknown) => engine().validate_material_model(m) as string[];
+    const validate = (m: unknown) => engine().validate_material_model(m);
     expect(validate({ ...mc, unitWeightSat: undefined, aboveWater: undefined })).toEqual([]);
     expect(validate({ ...mc, unitWeightSat: null })).toEqual(["Saturated unit weight (γsat) must be a positive number up to 500 kN/m³."]);
     expect(validate([{ ...mc, cohesionRateOfChange: undefined }][0])).toEqual([]);

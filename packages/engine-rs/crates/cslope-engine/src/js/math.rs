@@ -42,21 +42,6 @@ pub fn exp(x: f64) -> f64 {
 pub fn log(x: f64) -> f64 {
     libm::log(x)
 }
-pub fn log10(x: f64) -> f64 {
-    libm::log10(x)
-}
-pub fn sinh(x: f64) -> f64 {
-    libm::sinh(x)
-}
-pub fn cosh(x: f64) -> f64 {
-    libm::cosh(x)
-}
-pub fn tanh(x: f64) -> f64 {
-    libm::tanh(x)
-}
-pub fn cbrt(x: f64) -> f64 {
-    libm::cbrt(x)
-}
 
 /// `x ** y` and `Math.pow(x, y)`. Always use this, never `x * x` or `powi`
 /// (fdlibm's `pow(x, 2)` is not always `x * x`). JavaScript differs from

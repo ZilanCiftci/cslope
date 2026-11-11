@@ -4,6 +4,7 @@
  * and the pile force limits.
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { Material } from "../types/index";
 import type { MaterialModel } from "../types/material-models";
 import type { Reinforcement, Pile } from "../types/reinforcement";
@@ -82,9 +83,9 @@ describe("capacity envelopes", () => {
     const sat = slopeOf({ kind: "mohr-coulomb", unitWeight: 18, unitWeightSat: 20, cohesion: 5, frictionAngle: 30 });
     sat.setWaterTable({ height: 5, followBoundary: false });
     // At x = 5: 5 m dry (18) + 3 m saturated (20) − u (3 m of water).
-    expect(effectiveVerticalStress(sat, 5, 2)).toBeCloseTo(5 * 18 + 3 * 20 - 3 * 9.81, 6);
+    expect(effectiveVerticalStress(sat, 5, 2)).toBeCloseTo(5 * 18 + 3 * 20 - 3 * WATER_UNIT_WEIGHT, 6);
     // At x = 35 (ground 0) under 5 m of free water: buoyant column only.
-    expect(effectiveVerticalStress(sat, 35, -2)).toBeCloseTo(2 * (20 - 9.81), 6);
+    expect(effectiveVerticalStress(sat, 35, -2)).toBeCloseTo(2 * (20 - WATER_UNIT_WEIGHT), 6);
   });
 });
 
@@ -113,25 +114,56 @@ describe("forces on the slices", () => {
     for (const f of [axial, tangent, bis]) expect(f.fx).toBeLessThan(0);
   });
 
-  it("an element the movement would push carries nothing; so does one that misses the surface or has no length", () => {
+  it("a passive element the movement would push carries nothing; so does one that misses the surface or has no length", () => {
     // Pointing down-slope out of the mass: compressed by the movement.
-    expect(forcesFor({ x1: 20, y1: 3.33, x2: 34, y2: -6, tensileCapacity: 100 })).toHaveLength(0);
+    expect(forcesFor({ x1: 20, y1: 3.33, x2: 34, y2: -6, tensileCapacity: 100, application: "passive" })).toHaveLength(0);
+    expect(forcesFor({ x1: 35, y1: -1, x2: 38, y2: -3, tensileCapacity: 100, application: "passive" })).toHaveLength(0);
+    expect(forcesFor({ x1: 20, y1: 0, x2: 20, y2: 0, tensileCapacity: 100, application: "passive" })).toHaveLength(0);
+    // Zero capacity.
+    expect(forcesFor({ ...nail, tensileCapacity: 0, application: "passive" })).toHaveLength(0);
+  });
+
+  it("an active element the movement would push carries its force along itself; one that misses the surface or has no length does not", () => {
+    // A prestressed anchor acts whatever the direction of movement (issue #143).
+    const pushed = forcesFor({ x1: 20, y1: 3.33, x2: 34, y2: -6, tensileCapacity: 100, direction: "tangent" });
+    expect(pushed).toHaveLength(1);
+    expect(pushed[0].force).toBeCloseTo(100, 12);
+    expect(pushed[0].passive).toBe(false);
+    const len = Math.hypot(14, 9.33);
+    expect(pushed[0].fx).toBeCloseTo((100 * 14) / len, 9);
+    expect(pushed[0].fy).toBeCloseTo((-100 * 9.33) / len, 9);
     expect(forcesFor({ x1: 35, y1: -1, x2: 38, y2: -3, tensileCapacity: 100 })).toHaveLength(0);
     expect(forcesFor({ x1: 20, y1: 0, x2: 20, y2: 0, tensileCapacity: 100 })).toHaveLength(0);
-    // Zero capacity.
     expect(forcesFor({ ...nail, tensileCapacity: 0 })).toHaveLength(0);
   });
 
-  it("an element within 2° of the normal to the base carries its force (along itself when pushed); one pushed more steeply does not", () => {
-    // the circle's lowest point is (22, −0.5), its base level there
-    const at = (deg: number) => {
-      const t = (deg * Math.PI) / 180;
-      // through the lowest point, tilted deg from the vertical: the lower end towards +x (pushed by the movement to +x)
-      return forcesFor({ x1: 22 - 6 * Math.sin(t), y1: -0.5 + 6 * Math.cos(t), x2: 22 + 6 * Math.sin(t), y2: -0.5 - 6 * Math.cos(t), tensileCapacity: 100 });
-    };
-    expect(at(0)).toHaveLength(1);
+  // the circle's lowest point is (22, −0.5), its base level there
+  const tilted = (deg: number, r: Partial<Reinforcement> = {}) => {
+    const t = (deg * Math.PI) / 180;
+    // through the lowest point, tilted deg from the vertical: the lower end towards +x (pushed by the movement to +x)
+    return forcesFor({ x1: 22 - 6 * Math.sin(t), y1: -0.5 + 6 * Math.cos(t), x2: 22 + 6 * Math.sin(t), y2: -0.5 - 6 * Math.cos(t), tensileCapacity: 100, ...r });
+  };
+
+  it("a passive element within 2° of the normal to the base carries its force (along itself when pushed); one pushed more steeply does not", () => {
+    expect(tilted(0, { application: "passive" })).toHaveLength(1);
     // (the slice base there is within about 1° of level)
-    expect(at(6)).toHaveLength(0);
+    expect(tilted(6, { application: "passive" })).toHaveLength(0);
+  });
+
+  it("an active element carries its full force along itself whatever its angle past the normal to the base", () => {
+    expect(tilted(0)).toHaveLength(1);
+    // (pushed: the base is within about 1° of level, so the bisector setting gives way to the element's own direction)
+    for (const deg of [6, 10, 30]) {
+      for (const r of [{}, { application: "active" as const, direction: "bisector" as const }]) {
+        const f = tilted(deg, r);
+        expect(f).toHaveLength(1);
+        expect(f[0].force).toBeCloseTo(100, 12);
+        // along the element, towards its lower end in the stable ground
+        const t = (deg * Math.PI) / 180;
+        expect(f[0].fx).toBeCloseTo(100 * Math.sin(t), 9);
+        expect(f[0].fy).toBeCloseTo(-100 * Math.cos(t), 9);
+      }
+    }
   });
 
   it("passive elements go to the passive loads, divided by the spacing", () => {

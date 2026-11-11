@@ -166,6 +166,178 @@ fn a_range_that_starts_at_the_corner_reaches_it() {
     assert_eq!(s.search_limits(), [17.0, 21.5, 30.5 - w, 35.0]);
 }
 
+// ── An exit given as a single x on a vertical face (issue 141) ────
+
+/// Ground with steps, sliding towards the right (or, mirrored about
+/// x = 20, the same model sliding to the left): a crest at y = 15, a 10 m
+/// vertical face at x = 20, a floor at y = 5. With `rise`, a second,
+/// rising face of 3 m at x = 30 beyond the floor.
+fn wall_def(rtl: bool, rise: bool, limits: Value) -> Value {
+    let m = |x: f64| if rtl { 40.0 - x } else { x };
+    let pts: &[[f64; 2]] = if rise {
+        &[
+            [0.0, 0.0],
+            [0.0, 15.0],
+            [20.0, 15.0],
+            [20.0, 5.0],
+            [30.0, 5.0],
+            [30.0, 8.0],
+            [40.0, 8.0],
+            [40.0, 0.0],
+        ]
+    } else {
+        &[
+            [0.0, 0.0],
+            [0.0, 15.0],
+            [20.0, 15.0],
+            [20.0, 5.0],
+            [40.0, 5.0],
+            [40.0, 0.0],
+        ]
+    };
+    let mut pts: Vec<Value> = pts.iter().map(|&[x, y]| json!([m(x), y])).collect();
+    if rtl {
+        pts.reverse();
+    }
+    let mut limits = limits;
+    if rtl {
+        let f = |k: &str| limits[k].as_f64().unwrap();
+        let (el, er, xl, xr) = (
+            f("entryLeftX"),
+            f("entryRightX"),
+            f("exitLeftX"),
+            f("exitRightX"),
+        );
+        limits = json!({ "entryLeftX": m(er), "entryRightX": m(el), "exitLeftX": m(xr), "exitRightX": m(xl) });
+    }
+    json!({
+        "orientation": if rtl { "rtl" } else { "ltr" },
+        "coordinates": pts,
+        "materials": [{ "name": "S", "model": { "kind": "mohr-coulomb", "unitWeight": 18, "cohesion": 5, "frictionAngle": 30 } }],
+        "analysisLimits": limits,
+    })
+}
+
+fn constant() -> Value {
+    json!({ "intersliceFunction": "constant" })
+}
+
+#[test]
+fn a_single_exit_x_on_a_vertical_face_exits_at_its_foot() {
+    let limits = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 20, "exitRightX": 20 });
+    let foot = [20.0, 5.0 + 1e-5 * 40.0];
+    for rtl in [false, true] {
+        let (fos, s) = run_verification(
+            wall_def(rtl, false, limits.clone()),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let fos = fos.unwrap();
+        // In canonical space either way: the face at x = 20 descends to the right.
+        assert_eq!(s.exit_face_point(), Some(foot));
+        assert_eq!(s.search_limits(), [11.0, 16.0, 20.0, 20.0]);
+        assert_eq!(s.exit_ground_point(20.0).unwrap(), foot);
+        assert!(!s.search().is_empty());
+        // Every trial surface ends at the foot of the face (before the rule
+        // they ended at mid-face, (20, 10), and the search gave F = 0.698).
+        for p in s.search() {
+            assert!(
+                (p.rc[0] - foot[0]).abs() < 1e-9 && (p.rc[1] - foot[1]).abs() < 1e-9,
+                "exit {:?}",
+                p.rc
+            );
+        }
+        if rtl {
+            continue;
+        }
+        // The critical circle ends there: the same arc, from its entry to
+        // the foot, as a polyline with the circle's centre as its axis gives
+        // the same F.
+        let mut solved: Vec<_> = s
+            .search()
+            .iter()
+            .filter(|p| p.fos.is_some())
+            .cloned()
+            .collect();
+        cslope_engine::model::solvers::sort_by_fos(&mut solved);
+        let crit = &solved[0];
+        assert_eq!(fos, crit.fos.unwrap());
+        let points: Vec<Value> = match &crit.points {
+            Some(pts) => pts.iter().map(|p| json!(p)).collect(),
+            None => {
+                let a0 = (crit.lc[1] - crit.cy).atan2(crit.lc[0] - crit.cx);
+                let a1 = (crit.rc[1] - crit.cy).atan2(crit.rc[0] - crit.cx);
+                (0..=400)
+                    .map(|i| {
+                        let a = a0 + (a1 - a0) * i as f64 / 400.0;
+                        json!([
+                            crit.cx + crit.radius * a.cos(),
+                            crit.cy + crit.radius * a.sin()
+                        ])
+                    })
+                    .collect()
+            }
+        };
+        let mut again = wall_def(false, false, limits.clone());
+        again["customSurfaces"] = json!([{ "points": points, "axis": [crit.cx, crit.cy] }]);
+        again["customPlanesOnly"] = json!(true);
+        let (f_poly, _) = run_verification(again, "Morgenstern-Price", constant());
+        assert!(
+            (f_poly.unwrap() / fos - 1.0).abs() < 1e-4,
+            "{fos} vs {f_poly:?}"
+        );
+    }
+}
+
+#[test]
+fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
+    // A single exit x on a face that rises in the sliding direction: the
+    // corner rule as before (the range starts just below the corner).
+    let w = 1e-5 * 40.0;
+    let (fos, s) = run_verification(
+        wall_def(
+            false,
+            true,
+            json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 30, "exitRightX": 30 }),
+        ),
+        "Morgenstern-Price",
+        constant(),
+    );
+    // (the factors of safety of these three are those before the rule, to the bit)
+    close(fos.unwrap(), 1.150_043_595_810_847, 12);
+    assert_eq!(s.exit_face_point(), None);
+    assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
+    // An exit range across the face: the ground at each x, as before.
+    let (fos, s) = run_verification(
+        wall_def(
+            false,
+            false,
+            json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 18, "exitRightX": 30 }),
+        ),
+        "Morgenstern-Price",
+        constant(),
+    );
+    close(fos.unwrap(), 0.392_698_221_225_512, 12);
+    assert_eq!(s.exit_face_point(), None);
+    assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
+    assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
+    // A single exit x at the toe of a sloping face (no vertical face).
+    let (fos, s) = run_verification(
+        point_slope(Some(
+            json!({ "entryLeftX": 17, "entryRightX": 21.5, "exitLeftX": 30.5, "exitRightX": 30.5 }),
+        )),
+        "Morgenstern-Price",
+        mp(),
+    );
+    close(fos.unwrap(), 1.251_587_687_149_846, 12);
+    assert_eq!(s.exit_face_point(), None);
+    // The model's own end face is no exit face.
+    let end = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 40, "exitRightX": 40 });
+    let d = def(wall_def(false, false, end));
+    let s = build_slope(&to_canonical_slope_definition(&d, None).unwrap()).unwrap();
+    assert_eq!(s.exit_face_point(), None);
+}
+
 // ── real-world-coordinates.test.ts ────────────────────────────────
 
 fn world_model(dx: f64, dy: f64) -> Value {

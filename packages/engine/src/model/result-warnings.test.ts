@@ -221,7 +221,7 @@ describe("the critical surface on the edge of the search limits", () => {
       materialBoundaries: [],
       regionAssignments: [{ point: [30, 1], materialName: "Clay" }],
       analysisLimits: { entryLeftX: 2, entryRightX: 19, exitLeftX: exit[0], exitRightX: exit[1] },
-    }) as SlopeDefinition;
+    });
   const edge = (exit: [number, number]) =>
     analysisWarnings(runVerification(slope(exit), "Bishop").slope).find((x) => x.code === "search-edge");
 

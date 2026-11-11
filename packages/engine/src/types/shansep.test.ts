@@ -48,7 +48,7 @@ describe("SHANSEP", () => {
 describe("shear-normal function", () => {
   it("the analysis updates the tangent strength from the normal stress it finds", () => {
     const def = layered([[0, 10], [10, 10], [20, 0], [40, 0]], -10, [
-      { name: "S", topY: null, model: { kind: "shear-normal", unitWeight: 19, points: [[0, 5], [50, 35], [200, 100]] } as MaterialModel },
+      { name: "S", topY: null, model: { kind: "shear-normal", unitWeight: 19, points: [[0, 5], [50, 35], [200, 100]] } },
     ]);
     const r = runVerification({ ...def, customSearchPlanes: [{ cx: 18, cy: 18, radius: 19 }], customPlanesOnly: true }, "Morgenstern-Price", { slices: 30 });
     expect(r.fos).not.toBeNull();

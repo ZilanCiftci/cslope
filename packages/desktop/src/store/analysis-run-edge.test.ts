@@ -124,7 +124,7 @@ describe("single run", () => {
     expect(store().progress).toBe(0.3);
   });
 
-  it("clamps worker progress and never moves it backwards", async () => {
+  it("clamps worker progress and never moves it backwards", () => {
     store().runAnalysis();
     const [w] = FakeWorker.instances;
     w.emit({ type: "analysis-progress", progress: 0.5 });

@@ -34,13 +34,13 @@ describe("model-space surfaces", () => {
       const circle = s.toModelCircle(crit);
       // in model space the circle's centre lies over the slope as drawn: left of x = 10 facing right, right of it facing left
       expect(rtl ? circle.cx > 10 : circle.cx < 10).toBe(true);
-      const again = run({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition);
+      const again = run({ ...def, customSearchPlanes: [circle], customPlanesOnly: true });
       expect(again.F).toBeCloseTo(F, 6);
       // about the middle of the model's extent, as the canonical definition was mirrored
       const [lo, hi] = getDomainX(def.coordinates);
       expect(s.toModelX(crit.cx)).toBeCloseTo(rtl ? mirrorX(crit.cx, lo, hi) : crit.cx, 12);
       // a non-circular surface is not passed off as a circle
-      expect(() => s.toModelCircle({ ...crit, points: [[0, 0], [1, -1]] } as never)).toThrow(/non-circular/);
+      expect(() => s.toModelCircle({ ...crit, points: [[0, 0], [1, -1]] })).toThrow(/non-circular/);
     }, 120000);
   }
 });

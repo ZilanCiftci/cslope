@@ -14,7 +14,7 @@ import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
 import { LAYER_PARAMETERS, type Layer, type LayerMaterial } from "../templates/common";
 import { defaultLayerColor, LAYER_COLORS, layerColorOf } from "../templates/colors";
 import { bottomLevels, newThickness, thicknesses, thicknessProblems } from "./layers";
-import { groupsOf, specOf, type GroupSpec, type TemplateId } from "./specs";
+import { groupsOf, specOf, type GroupSpec, type TemplateId, type TemplateParams } from "./specs";
 
 export type { TemplateId } from "./specs";
 
@@ -170,8 +170,7 @@ export function parseNumber(text: string): number | null {
 /** What the form makes of a draft. */
 export interface FormState {
   /** The template's parameter set (empty fields are NaN in it): to build when `ready`. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any;
+  params: TemplateParams;
   /** The problems of fields the user filled in, by field ("layers.0.su"). */
   errors: Map<string, string>;
   /** Fields that must be filled in and are empty. */
@@ -329,7 +328,7 @@ function modelOf(m: LayerMaterial): LayerModel {
 }
 
 /** The draft of a template's parameter set (the form filled in with it). */
-export function draftOf(template: TemplateId, params: { groundLevel: number; layers: Layer[]; ponded?: boolean }): Draft {
+export function draftOf(template: TemplateId, params: TemplateParams): Draft {
   const t = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
   const { fields, on } = specOf(template).toFields(params);
   const ts = thicknesses(params.groundLevel, params.layers.map((l) => l.bottomLevel));

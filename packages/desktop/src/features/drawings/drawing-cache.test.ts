@@ -12,21 +12,21 @@ const opened: string[] = [];
 
 vi.mock("./sources", async (orig) => ({
   ...(await orig<typeof import("./sources")>()),
-  openDrawingSource: async (bytes: Uint8Array): Promise<DrawingSource> => {
+  openDrawingSource: (bytes: Uint8Array): Promise<DrawingSource> => {
     const name = new TextDecoder().decode(bytes);
     opened.push(name);
-    return {
+    return Promise.resolve({
       kind: "image",
       unit: "px",
       pageCount: 1,
       fixedResolution: true,
       pageSize: () => ({ width: 10, height: 10 }),
-      loadPageSize: async () => ({ width: 10, height: 10 }),
-      render: async () => ({ image: {} as CanvasImageSource, width: 10, height: 10, region: { x0: 0, y0: 0, x1: 10, y1: 10 }, scale: 1 }),
-      vectors: async () => null,
-      texts: async () => [],
+      loadPageSize: () => Promise.resolve({ width: 10, height: 10 }),
+      render: () => Promise.resolve({ image: {} as CanvasImageSource, width: 10, height: 10, region: { x0: 0, y0: 0, x1: 10, y1: 10 }, scale: 1 }),
+      vectors: () => Promise.resolve(null),
+      texts: () => Promise.resolve([]),
       dispose: () => disposed.push(name),
-    };
+    });
   },
 }));
 
@@ -42,7 +42,7 @@ afterEach(() => {
 describe("the drawing cache across projects", () => {
   it("is cleared, its opened files disposed, when another project's drawings are adopted", async () => {
     let project = "first";
-    setAssetLoader(async (id) => ({ bytes: new TextEncoder().encode(`${project}:${id}`), mime: "image/png" }));
+    setAssetLoader((id) => Promise.resolve({ bytes: new TextEncoder().encode(`${project}:${id}`), mime: "image/png" }));
     await drawingSource("a1");
     expect(peekSource("a1")).not.toBeNull();
     expect(opened).toEqual(["first:a1"]);

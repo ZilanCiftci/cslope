@@ -6,10 +6,10 @@
  * `notes`, never dropped in silence.
  */
 
-import { calculatePolygonArea, getYAtXStrict, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
+import { calculatePolygonArea, getYAtXStrict, WATER_UNIT_WEIGHT, type AnalysisOptions, type MaterialModel, type Pile, type Reinforcement, type SlopeDefinition } from "@cslope/engine";
 import { surfaceYAtX } from "../../view/surface";
 import { regionInteriorPoint } from "../../../utils/regions";
-import type { GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
+import type { GszAnalysis, GszBlockGrid, GszFile, GszMaterial, GszSlipResult, GszStability } from "./gsz-read";
 
 type Pt = [number, number];
 
@@ -300,6 +300,27 @@ function suctionOf(m: GszMaterial, phiB: number | undefined, water: MaterialWate
   return { phiB, ...(water.maxSuction !== undefined && water.maxSuction > 0 ? { maxSuction: water.maxSuction } : {}) };
 }
 
+/**
+ * An anisotropy function of the format ([inclination °, factor]) in cSlope's
+ * convention, and back (the conversion is its own inverse): the inclination
+ * changes sign. cSlope's α is positive where the slice base dips down in the
+ * direction of sliding (the scarp) and negative at the toe; the format's
+ * inclination is negative at the scarp and positive at the toe.
+ *
+ * Measured for a model sliding right to left: the strengths of the slices
+ * stored with the results of an example file (a scarp base rising at +60°
+ * towards +x, a toe base at −18°) are those of the function at the opposite
+ * inclination, for c and φ alike (and for a function on the shear strength):
+ * so the inclination is not the geometric angle there. Derived, not measured,
+ * for a model sliding left to right (no example with results slides that way
+ * through such a function): the scarp base's geometric angle is negative
+ * there too, so the same sign change holds whether the format takes the
+ * inclination relative to the sliding direction or geometrically.
+ */
+export function anisotropyFromGsz(points: readonly (readonly [number, number])[]): [number, number][] {
+  return points.map(([a, k]): [number, number] => [0 - a, k]).sort((p, q) => p[0] - q[0]);
+}
+
 function materialModel(
   m: GszMaterial,
   scale: { len: number; weight: number; stress: number },
@@ -318,13 +339,16 @@ function materialModel(
   const unitWeight = gamma > 0 ? gamma : 20;
   if (!(gamma > 0) && m.model !== "Bedrock") notes.push(`Material "${m.name}": no unit weight in the file; 20 kN/m³ used.`);
   // An anisotropy function on the shear strength: on the undrained models
-  // as their anisotropy (interpolated linearly; the file uses a spline).
+  // as their anisotropy (interpolated linearly; the file uses a spline), its
+  // inclination's sign changed to cSlope's (anisotropyFromGsz).
   const anisoId = f("ShearAnisoFnNum");
   const aniso = anisoId !== undefined ? anisotropyFunctions?.get(anisoId) : undefined;
+  const linearNote = (n: number) =>
+    `Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${n} points (the file uses a spline), with the sign of the inclination changed to cSlope's (positive where the base dips down in the direction of sliding).`;
   const undrainedAniso = (): { anisotropy?: [number, number][] } => {
     if (!aniso) return {};
-    notes.push(`Material "${m.name}": the anisotropy function is imported as factors interpolated linearly between its ${aniso.length} points (the file uses a spline).`);
-    return { anisotropy: aniso };
+    notes.push(linearNote(aniso.length));
+    return { anisotropy: anisotropyFromGsz(aniso) };
   };
   if (aniso && m.model !== "UndrainedPhiZero" && m.model !== "SFnDepth" && m.model !== "SHANSEP") {
     notes.push(`Material "${m.name}": the anisotropy function on the shear strength is not imported for the model "${m.model}".`);
@@ -438,6 +462,27 @@ function materialModel(
       }
       break;
     }
+    case "AnisotropicFn": {
+      // c and φ (in degrees) times one function of the base inclination; a
+      // separate function for φ has no counterpart (read below with a note)
+      const cId = f("CAnisoFnNum"), phiId = f("PhiAnisoFnNum");
+      const fn = cId !== undefined ? anisotropyFunctions?.get(cId) : undefined;
+      if (fn && phiId === cId) {
+        notes.push(linearNote(fn.length));
+        return {
+          kind: "anisotropic-function",
+          unitWeight,
+          cohesion: (f("CohesionPrime") ?? 0) * scale.stress,
+          frictionAngle: f("PhiPrime") ?? 0,
+          modifierFunction: anisotropyFromGsz(fn),
+          ...suctionOf(m, f("UnsatPhiB"), water, notes),
+        };
+      }
+      if (fn && phiId !== undefined && anisotropyFunctions?.has(phiId)) {
+        notes.push(`Material "${m.name}": c and φ have different anisotropy functions; cSlope's anisotropic function applies one to both.`);
+      }
+      break;
+    }
     case "Bedrock":
       return { kind: "impenetrable", unitWeight };
     case "HighStrength":
@@ -456,6 +501,48 @@ function materialModel(
     `Material "${m.name}": the strength model "${m.model || "unnamed"}" has no counterpart in the import yet; it is read as Mohr-Coulomb with ${placeholder ? "a placeholder c = 0.001 kPa (the file gives the strength as a function)" : `c = ${c.toFixed(2)} kPa, φ = ${phi}°`}, which is not the same strength. Enter it by hand. The file gives: ${params}.`,
   );
   return { kind: "mohr-coulomb", unitWeight, cohesion: placeholder ? 0.001 : c, frictionAngle: phi };
+}
+
+/** The slip surface settings of a stability analysis (its <SlipSurface>). */
+const SLIP_SURFACE_FIELDS = ["direction", "slipOption", "entryExit", "slices", "optimised", "projected", "fullySpecified", "block", "axis", "minimumVolume", "minimumDepth"] as const;
+
+/**
+ * The stability settings of an analysis with the slip surface settings it
+ * uses. A search "FromOther" takes the slip surfaces of the analysis its
+ * input comes from (named in InitialInputInfo, or the parent analysis
+ * when no other is named), through a chain of such analyses. When that
+ * analysis cannot be found, or the chain loops, the analysis keeps its
+ * own settings and `note` says why.
+ */
+function slipSurfaceSettings(
+  file: GszFile, analysis: GszAnalysis, own: GszStability | undefined,
+): { stab: GszStability | undefined; from?: GszAnalysis; note?: string } {
+  const fallback = "cSlope's own search over the whole slope is used.";
+  let current = analysis;
+  let stab = own;
+  const seen = new Set([analysis.id]);
+  while (stab && /^fromother$/i.test(stab.slipOption ?? "")) {
+    const ref = stab.inputFrom;
+    const parent = current.parentId;
+    const name = ref?.name;
+    const source = name !== undefined
+      ? file.analyses.find((a) => a.name === name) ?? file.analyses.find((a) => a.name.toLowerCase() === name.toLowerCase())
+      : /^parent$/i.test(ref?.option ?? "Parent") && parent !== undefined ? file.analyses.find((a) => a.id === parent) : undefined;
+    const sourceStab = source && file.stability.get(source.id);
+    if (!source || !sourceStab) {
+      const named = name !== undefined ? `"${name}"` : current === analysis ? "another analysis" : `another analysis (from "${current.name}")`;
+      return { stab: own, note: `The file's slip surface search takes its slip surfaces from ${named}, which the file does not give as a stability analysis; ${fallback}` };
+    }
+    if (seen.has(source.id)) {
+      return { stab: own, note: `The file's slip surface search takes its slip surfaces from other analyses in a loop (back to "${source.name}"), so none gives them; ${fallback}` };
+    }
+    seen.add(source.id);
+    current = source;
+    stab = sourceStab;
+  }
+  if (current === analysis || !own || !stab) return { stab: own };
+  const slip = Object.fromEntries(SLIP_SURFACE_FIELDS.map((k) => [k, stab[k]])) as Pick<GszStability, (typeof SLIP_SURFACE_FIELDS)[number]>;
+  return { stab: { ...own, ...slip }, from: current };
 }
 
 /** One stability analysis of a .gsz file as a slope definition. */
@@ -496,13 +583,15 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   }
 
   // water: one line per piezometric surface; materials without one get none
-  const stab = file.stability.get(analysis.id);
+  // a search "FromOther" uses another analysis's slip surface settings
+  const slipFrom = slipSurfaceSettings(file, analysis, file.stability.get(analysis.id));
+  const stab = slipFrom.stab;
   const water = file.water.get(analysis.id);
   const waterOption = water?.option ?? "None";
+  // the file's unit weight of water, in kN/m³, as the model's (absent: 9.807)
   const gw = water?.gammaWater;
-  if (gw !== undefined && Math.abs(gw * scale.weight - 9.81) > 0.02) {
-    notes.push(`The file's unit weight of water is ${(gw * scale.weight).toFixed(3)} kN/m³; cSlope uses 9.81.`);
-  }
+  const gammaW = gw !== undefined ? Number((gw * scale.weight).toFixed(4)) : undefined;
+  if (gammaW !== undefined && !(gammaW > 0)) notes.push(`The file's unit weight of water (${gw}) is not valid; ${WATER_UNIT_WEIGHT} kN/m³ is used.`);
   const xs = geo.outline.map((p) => p[0]), ys = geo.outline.map((p) => p[1]);
   const x0 = Math.min(...xs), x1 = Math.max(...xs), yMin = Math.min(...ys);
   const clipLine = (line: Pt[]): Pt[] => {
@@ -639,6 +728,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   });
 
   const options: Partial<AnalysisOptions> = {};
+  if (gammaW !== undefined && gammaW > 0 && gammaW !== WATER_UNIT_WEIGHT) options.waterUnitWeight = gammaW;
   const method = analysis.method.toLowerCase().replace(/[^a-z]/g, "");
   if (method === "spencer") Object.assign(options, { method: "Morgenstern-Price", intersliceFunction: "constant" });
   else if (method === "morgensternprice") Object.assign(options, { method: "Morgenstern-Price", intersliceFunction: "half-sine" });
@@ -652,6 +742,9 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
   // A slip surface below the bottom of the geometry follows it there in
   // .gsz files (the material below is taken as impenetrable).
   options.compositeBase = true;
+  // the phreatic correction of the pore pressure; otherwise the default
+  // (the vertical head)
+  if (stab?.phreaticCorrection) options.porePressureHead = "phreatic-correction";
 
   const results = file.results.get(analysis.name.toLowerCase()) ?? [];
   const best = results.slice().sort((a, b) => a.fos - b.fos)[0];
@@ -702,8 +795,27 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
     }
     if (stab.optimised) options.nonCircularOptimization = true;
     notes.push("The block search grids are imported as block search windows, with their end angles.");
+  } else if (slipFrom.note) {
+    notes.push(slipFrom.note);
   } else if (stab?.slipOption) {
-    notes.push(`The file's slip surface search ("${stab.slipOption}") is not imported; cSlope's own search over the whole slope is used.`);
+    const from = slipFrom.from ? `, taken from analysis "${slipFrom.from.name}"` : "";
+    notes.push(`The file's slip surface search ("${stab.slipOption}"${from}) is not imported; cSlope's own search over the whole slope is used.`);
+  }
+  // The file's limits on the slip surfaces: the smallest sliding mass (a
+  // volume per unit width, an area in the file's length unit squared) and
+  // the smallest depth.
+  const limits: string[] = [];
+  if (stab?.minimumVolume !== undefined && stab.minimumVolume > 0) {
+    options.minSlipArea = Number((stab.minimumVolume * scale.len * scale.len).toPrecision(6));
+    limits.push(`minimum slip volume (${options.minSlipArea} m²)`);
+  }
+  if (stab?.minimumDepth !== undefined && stab.minimumDepth > 0) {
+    options.minSlipDepth = Number((stab.minimumDepth * scale.len).toPrecision(6));
+    limits.push(`minimum slip depth (${options.minSlipDepth} m)`);
+  }
+  if (limits.length > 0) notes.push(`The file's ${limits.join(" and ")} ${limits.length === 1 ? "is" : "are"} carried over.`);
+  if (slipFrom.from && /entry|fully|block/i.test(stab?.slipOption ?? "")) {
+    notes.push(`The slip surface search is taken from analysis "${slipFrom.from.name}", as the file specifies.`);
   }
   // Fully specified surfaces: the polylines with their moment axis, and
   // only they are analysed, as in the file.
@@ -811,7 +923,7 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
         ? { customSurfaces: [truncatedReference] }
         : {}),
     ...(blockSearchObjects ? { blockSearchObjects } : {}),
-  } as SlopeDefinition;
+  };
   const base = fileName.replace(/\.gsz$/i, "");
   return { name: stabilityAnalyses(file).length > 1 ? `${analysis.name} (${base})` : base, definition, options, notes, reference };
 }

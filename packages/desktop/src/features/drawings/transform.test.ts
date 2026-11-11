@@ -80,7 +80,8 @@ describe("3+ point least-squares affine", () => {
     const pairs = src.map((s, i) => {
       const [x, y] = apply(truth, s);
       // one point clicked 0.3 m off
-      return { source: s, model: (i === 3 ? [x + 0.3, y] : [x, y]) as Pt };
+      const model: Pt = i === 3 ? [x + 0.3, y] : [x, y];
+      return { source: s, model };
     });
     const fit = fitPoints(pairs);
     expect(fit.ok).toBe(true);

@@ -693,15 +693,6 @@ export function engine_constants() {
 }
 
 /**
- * The engine clock's reading (ms), for the facade's check of the clock.
- * @returns {number}
- */
-export function engine_now_ms() {
-    const ret = wasm.engine_now_ms();
-    return ret;
-}
-
-/**
  * @param {any} plane
  * @returns {number}
  */
@@ -1421,16 +1412,6 @@ export function map_analysis_result_to_model_space(result, def) {
 }
 
 /**
- * @returns {string[]}
- */
-export function material_colors() {
-    const ret = wasm.material_colors();
-    var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]);
-    wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
-    return v1;
-}
-
-/**
  * `MATERIAL_MODEL_LABELS` as [kind, label] pairs.
  * @returns {any}
  */
@@ -2128,21 +2109,6 @@ export function size_field_at(handle, x, y) {
 }
 
 /**
- * A constant size field (`() => value`, with `min` when given): the
- * one closure the facade can turn into data.
- * @param {number} value
- * @param {number | null} [min]
- * @returns {number}
- */
-export function size_field_constant(value, min) {
-    const ret = wasm.size_field_constant(value, !isLikeNone(min), isLikeNone(min) ? 0 : min);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] >>> 0;
-}
-
-/**
  * Live size field handles (for the facade's leak test).
  * @returns {number}
  */
@@ -2273,19 +2239,6 @@ export function slope_child(handle, which) {
         throw takeFromExternrefTable0(ret[1]);
     }
     return ret[0] === Number.MAX_SAFE_INTEGER ? undefined : ret[0];
-}
-
-/**
- * A copy of the slope under a new handle.
- * @param {number} handle
- * @returns {number}
- */
-export function slope_clone(handle) {
-    const ret = wasm.slope_clone(handle);
-    if (ret[2]) {
-        throw takeFromExternrefTable0(ret[1]);
-    }
-    return ret[0] >>> 0;
 }
 
 /**
@@ -3174,13 +3127,16 @@ export function waternet_new(waternet) {
 }
 
 /**
+ * The pore pressure at (x, z) with the unit weight of water `gw`
+ * (`WATER_UNIT_WEIGHT` when not given).
  * @param {number} handle
  * @param {number} x
  * @param {number} z
+ * @param {number | null} [gw]
  * @returns {number}
  */
-export function waternet_pore_pressure_at(handle, x, z) {
-    const ret = wasm.waternet_pore_pressure_at(handle, x, z);
+export function waternet_pore_pressure_at(handle, x, z, gw) {
+    const ret = wasm.waternet_pore_pressure_at(handle, x, z, !isLikeNone(gw), isLikeNone(gw) ? 0 : gw);
     if (ret[2]) {
         throw takeFromExternrefTable0(ret[1]);
     }

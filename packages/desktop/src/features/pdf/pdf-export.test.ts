@@ -15,12 +15,12 @@ const { pdfInstances } = vi.hoisted(() => ({
 }));
 
 vi.mock("jspdf", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import("jspdf");
+  const actual = await importOriginal<typeof import("jspdf")>();
 
   class WrappedJsPdf extends actual.jsPDF {
     constructor(...args: ConstructorParameters<typeof actual.jsPDF>) {
       super(...args);
-      pdfInstances.push(this as unknown as PdfWithSavedFilename);
+      pdfInstances.push(this);
 
       this.save = ((filename: string) => {
         (this as unknown as PdfWithSavedFilename).__savedFilename = filename;
@@ -129,7 +129,7 @@ describe("exportVectorPdf", () => {
         minFOS: 0,
         maxFOS: 0,
         criticalSurface:
-          null as unknown as PdfExportData["result"]["criticalSurface"],
+          null,
         allSurfaces: [],
         criticalSlices: [],
         method: "Bishop",
@@ -178,7 +178,7 @@ describe("exportVectorPdf", () => {
         minFOS: 1.2,
         maxFOS: 1.6,
         criticalSurface:
-          null as unknown as PdfExportData["result"]["criticalSurface"],
+          null,
         allSurfaces: [
           {
             cx: 10,

@@ -60,7 +60,7 @@ describe("analysis run lifecycle", () => {
     Object.defineProperty(globalThis, "Worker", {
       configurable: true,
       writable: true,
-      value: FakeWorker as unknown as typeof Worker,
+      value: FakeWorker,
     });
     resetStore();
   });

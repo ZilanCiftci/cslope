@@ -56,9 +56,9 @@ beforeEach(() => {
     x: 0,
     y: 0,
     toJSON: () => ({}),
-  } as DOMRect);
+  });
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
-    () => createRecordingContext(W, H).ctx as never,
+    () => createRecordingContext(W, H).ctx,
   );
   HTMLElement.prototype.setPointerCapture = vi.fn();
   HTMLElement.prototype.releasePointerCapture = vi.fn();

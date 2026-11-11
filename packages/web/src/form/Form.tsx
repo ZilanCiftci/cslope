@@ -12,7 +12,7 @@ import { LAYER_PARAMETERS } from "@/templates/common";
 import { draftLevels, emptyText, formState, headerIdOf, LAYER_FIELDS, LAYER_KINDS, moveLayer, parseNumber, strengthSummary, withGroup, withNewLayer, type Draft, type LayerDraft } from "./draft";
 import { ColorPicker, Swatch } from "./ColorPicker";
 import { LAYER_THICKNESS, rangeText } from "./layers";
-import { descOf, type AnySpec, type GroupSpec } from "./specs";
+import { descOf, type AnySpec, type GroupSpec, type TemplateParams } from "./specs";
 
 export interface FormProps {
   /** The template's spec: its groups and fields. */
@@ -344,7 +344,7 @@ function LayerFields({ layer, index, count, thicknessRule, top, bottom, open, on
  * a level is entered; its hint says when the level is below all the ground,
  * where it does nothing.
  */
-function PondedField({ spec, draft, params, onChange }: { spec: AnySpec; draft: Draft; params: unknown; onChange: (ponded: boolean) => void }) {
+function PondedField({ spec, draft, params, onChange }: { spec: AnySpec; draft: Draft; params: TemplateParams; onChange: (ponded: boolean) => void }) {
   const id = useId();
   const level = parseNumber(draft.fields.waterLevel ?? "");
   if (level === null || Number.isNaN(level)) return null;

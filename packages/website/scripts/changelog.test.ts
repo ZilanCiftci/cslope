@@ -39,7 +39,7 @@ describe("changelog", () => {
 
   it("has a section for the desktop app's version", () => {
     const root = join(import.meta.dirname, "../../..");
-    const version = JSON.parse(readFileSync(join(root, "packages/desktop/package.json"), "utf8")).version;
+    const { version } = JSON.parse(readFileSync(join(root, "packages/desktop/package.json"), "utf8")) as { version: string };
     expect(parseChangelog(readFileSync(join(root, "CHANGELOG.md"), "utf8")).map((r) => r.version)).toContain(version);
   });
 });

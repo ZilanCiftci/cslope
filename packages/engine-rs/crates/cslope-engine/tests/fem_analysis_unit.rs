@@ -277,7 +277,7 @@ fn staged_construction_builds_the_embankment_in_layers_the_same_factor_with_asso
     let s = slope(staged_embankment());
     let opts = json!({ "flowRule": "associated", "elementSize": 1.5, "fTolerance": 0.005 });
     let once = analyze_fem(&s, &fem_options(opts.clone()), &mut ctx()).unwrap();
-    let mut staged_o = opts.clone();
+    let mut staged_o = opts;
     staged_o["materialStages"] = json!({ "fill1": 1, "fill2": 2 });
     let staged = analyze_fem(&s, &fem_options(staged_o), &mut ctx()).unwrap();
     assert_eq!(staged.warnings, once.warnings);

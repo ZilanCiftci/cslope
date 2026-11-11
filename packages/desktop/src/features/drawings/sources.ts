@@ -17,7 +17,7 @@
 import type { Crop } from "./transform";
 import { readDxfVectors } from "../../utils/dxf";
 import { fromDrawingCoordinates, type NeutralVectors, type VectorDrawing, type VectorText } from "./vectors";
-import { pathsFromOperatorList, pdfVectorDrawing, textsFromContent, type PdfOps } from "./pdf-vectors";
+import { pathsFromOperatorList, pdfVectorDrawing, textsFromContent } from "./pdf-vectors";
 import { vectorPath, drawVectorTexts } from "./vector-render";
 import { BundledPdfData, PDF_DATA_URL } from "./pdf-data";
 
@@ -157,18 +157,18 @@ function imageSource(pages: { image: CanvasImageSource; width: number; height: n
       const p = pages[page - 1];
       return p ? { width: p.width, height: p.height } : null;
     },
-    loadPageSize: async (page) => {
+    loadPageSize: (page) => {
       const p = pages[page - 1];
-      if (!p) throw new Error(`The image has no page ${page}.`);
-      return { width: p.width, height: p.height };
+      if (!p) return Promise.reject(new Error(`The image has no page ${page}.`));
+      return Promise.resolve({ width: p.width, height: p.height });
     },
-    render: async (page) => {
+    render: (page) => {
       const p = pages[page - 1];
-      if (!p) throw new Error(`The image has no page ${page}.`);
-      return { image: p.image, width: p.width, height: p.height, region: { x0: 0, y0: 0, x1: p.width, y1: p.height }, scale: 1 };
+      if (!p) return Promise.reject(new Error(`The image has no page ${page}.`));
+      return Promise.resolve({ image: p.image, width: p.width, height: p.height, region: { x0: 0, y0: 0, x1: p.width, y1: p.height }, scale: 1 });
     },
-    vectors: async () => null,
-    texts: async () => [],
+    vectors: () => Promise.resolve(null),
+    texts: () => Promise.resolve([]),
     dispose: () => {
       for (const p of pages) p.close?.();
     },
@@ -254,7 +254,7 @@ async function decodeTiff(bytes: Uint8Array): Promise<DrawingSource> {
     if (!(w > 0 && h > 0) || w !== ifd.t256![0] || h !== ifd.t257![0]) throw new Error("The TIFF image is damaged.");
     const rgba = UTIF.toRGBA8(ifd);
     const canvas = makeCanvas(w, h);
-    const ctx = canvas.getContext("2d") as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+    const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("No 2D canvas.");
     const pixels = new Uint8ClampedArray(w * h * 4);
     pixels.set(rgba.subarray(0, w * h * 4));
@@ -334,7 +334,7 @@ async function openPdf(bytes: Uint8Array): Promise<DrawingSource> {
         const page = await doc.getPage(n);
         const base = page.getViewport({ scale: 1 }).transform as [number, number, number, number, number, number];
         const list = await page.getOperatorList();
-        const paths = pathsFromOperatorList(list, lib.OPS as unknown as PdfOps, base);
+        const paths = pathsFromOperatorList(list, lib.OPS, base);
         const texts = await pageTexts(n).catch(() => []);
         return pdfVectorDrawing(paths, texts);
       })();
@@ -440,13 +440,12 @@ export function vectorSource(drawing: VectorDrawing): DrawingSource {
     pageCount: 1,
     fixedResolution: false,
     pageSize: (n) => (n === 1 ? size : null),
-    loadPageSize: async (n) => {
-      if (n !== 1) throw new Error(`The drawing has no page ${n}.`);
-      return size;
-    },
-    render: async (_n, scale, region, hiddenLayers) => renderVectorRaster(drawing, scale, region ?? pageRect(size), hiddenLayers),
-    vectors: async () => drawing,
-    texts: async () => drawing.texts,
+    loadPageSize: (n) => (n === 1 ? Promise.resolve(size) : Promise.reject(new Error(`The drawing has no page ${n}.`))),
+    // (a throw while drawing rejects the promise, as from the other sources)
+    render: (_n, scale, region, hiddenLayers) =>
+      new Promise((resolve) => resolve(renderVectorRaster(drawing, scale, region ?? pageRect(size), hiddenLayers))),
+    vectors: () => Promise.resolve(drawing),
+    texts: () => Promise.resolve(drawing.texts),
     dispose: () => {},
   };
 }

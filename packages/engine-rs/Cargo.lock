@@ -156,7 +156,6 @@ dependencies = [
  "flate2",
  "ryu-js",
  "serde",
- "serde_ignored",
  "serde_json",
  "serde_path_to_error",
  "sha2",

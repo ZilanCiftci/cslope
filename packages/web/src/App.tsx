@@ -8,7 +8,7 @@ import { projectFileName, writeProject as writeEngineProject, type ProjectFile }
 import { draftFields, formState, fromQuery, headerIdOf, initialDraft, toQuery, type Draft, type FormState, type TemplateId } from "@/form/draft";
 import { Choices, Form } from "@/form/Form";
 import { issuesByField } from "@/form/issues";
-import { SPECS, specOf, type AnySpec } from "@/form/specs";
+import { SPECS, specOf, type AnySpec, type TemplateParams } from "@/form/specs";
 import { ResultBar } from "@/result/ResultBar";
 import { ResultCard, type CardState, type Notice } from "@/result/ResultCard";
 import { Section } from "@/section/Section";
@@ -37,8 +37,7 @@ const UNDO_TIME = 8000;
 const firstField = () => document.querySelector<HTMLElement>('form[aria-label="Parameters"] :is(input, select)');
 
 /** The parameters to draw, or null when a field of the geometry is empty or wrong. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function drawable(spec: AnySpec, form: FormState): any {
+function drawable(spec: AnySpec, form: FormState): TemplateParams | null {
   const bad = (f: string) => spec.geometry.test(f);
   if (form.missing.some(bad) || [...form.errors.keys()].some(bad)) return null;
   return spec.drawable(form.params, (f: string) => !form.errors.has(f) && !form.missing.includes(f));
@@ -297,10 +296,11 @@ export function App({ client, writeProject = writeEngineProject }: AppProps) {
               canDownloadProject={!!doc && !writing}
               onDownloadProject={downloadProject}
               onCopyLink={() => {
-                const copied = navigator.clipboard?.writeText(window.location.href);
-                if (!copied) setNotice("Copy the address from the address bar.");
+                // (no clipboard outside a secure context)
+                const clipboard = navigator.clipboard as Clipboard | undefined;
+                if (!clipboard) setNotice("Copy the address from the address bar.");
                 else
-                  copied.then(
+                  clipboard.writeText(window.location.href).then(
                     () => setNotice("Link copied."),
                     () => setNotice("The link could not be copied; copy the address from the address bar."),
                   );

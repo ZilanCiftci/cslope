@@ -7,15 +7,15 @@ import { validateMaterialModel } from "./validation";
 import type { MaterialModel } from "./material-models";
 
 const mc = (o: Record<string, unknown> = {}): MaterialModel =>
-  ({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30, ...o }) as MaterialModel;
+  ({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 5, frictionAngle: 30, ...o });
 const su = (o: Record<string, unknown> = {}): MaterialModel =>
-  ({ kind: "undrained", unitWeight: 18, undrainedShearStrength: 30, ...o }) as MaterialModel;
+  ({ kind: "undrained", unitWeight: 18, undrainedShearStrength: 30, ...o });
 const sfd = (o: Record<string, unknown> = {}): MaterialModel =>
-  ({ kind: "s-f-depth", unitWeight: 18, suRef: 20, depthRef: 0, rate: 2, ...o }) as MaterialModel;
+  ({ kind: "s-f-depth", unitWeight: 18, suRef: 20, depthRef: 0, rate: 2, ...o });
 const sfy = (o: Record<string, unknown> = {}): MaterialModel =>
-  ({ kind: "s-f-datum", unitWeight: 18, suRef: 20, yRef: 0, rate: 2, ...o }) as MaterialModel;
+  ({ kind: "s-f-datum", unitWeight: 18, suRef: 20, yRef: 0, rate: 2, ...o });
 const lcc = (o: Record<string, unknown> = {}): MaterialModel =>
-  ({ kind: "lime-cement-columns", unitWeight: 18, soilSu: 15, columnSu: 100, areaRatio: 0.2, ...o }) as MaterialModel;
+  ({ kind: "lime-cement-columns", unitWeight: 18, soilSu: 15, columnSu: 100, areaRatio: 0.2, ...o });
 const aniso = (o: Record<string, unknown> = {}): MaterialModel =>
   ({
     kind: "anisotropic-function",
@@ -27,7 +27,7 @@ const aniso = (o: Record<string, unknown> = {}): MaterialModel =>
       [90, 1],
     ],
     ...o,
-  }) as MaterialModel;
+  });
 const spatial = (dataPoints: unknown): MaterialModel =>
   ({ kind: "spatial-mohr-coulomb", unitWeight: 18, dataPoints }) as MaterialModel;
 
@@ -92,7 +92,7 @@ const rejected: [string, MaterialModel, RegExp][] = [
   ["lcc: c′ < 0", lcc({ columnCohesion: -1, columnFrictionAngle: 30 }), /Drained column cohesion/],
   ["lcc: φ′ = 90", lcc({ columnCohesion: 10, columnFrictionAngle: 90 }), /friction angle must be 0–90/],
   ["lcc: φ′ < 0", lcc({ columnCohesion: 10, columnFrictionAngle: -1 }), /friction angle must be 0–90/],
-  ["shansep: both POP and yield stress", { kind: "shansep", unitWeight: 18, ratio: 0.25, pop: 10, yieldStress: 80 } as MaterialModel, /either POP or the yield stress/],
+  ["shansep: both POP and yield stress", { kind: "shansep", unitWeight: 18, ratio: 0.25, pop: 10, yieldStress: 80 }, /either POP or the yield stress/],
   ["rᵤ = 1", mc({ ru: 1 }), /^The pore pressure ratio rᵤ must be at least 0 and below 1\.$/],
   ["B̄ > 1.5", mc({ bBar: 1.6 }), /^B̄ must be between 0 and 1\.5\.$/],
   ["unknown kind", { kind: "granite", unitWeight: 18 } as unknown as MaterialModel, /Unknown material model kind "granite"/],

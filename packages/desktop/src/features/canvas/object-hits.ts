@@ -9,6 +9,7 @@ import type { CanvasObjectsState } from "../../store/canvas-selection";
 import { EDGE_THRESHOLD, SNAP_THRESHOLD } from "./constants";
 import { loadArrowLifts } from "./overlay-geometry";
 import { lineLoadArrow } from "../rendering/overlay-layout";
+import { limitGroundY } from "../rendering/search-markers";
 import { distanceToSegment } from "./label-layout";
 import { projectOnSegment } from "./custom-plane-geometry";
 import type { EdgeHit, LimitHandle, PointHit } from "./types";
@@ -104,7 +105,8 @@ export function findCanvasObjectsAt(
     let bestD = SNAP_THRESHOLD + 4;
     for (const h of LIMIT_HANDLES) {
       const x = state.analysisLimits[h];
-      const y = surfaceYAtX(x);
+      const kind = h.startsWith("exit") ? "exit" : "entry";
+      const y = limitGroundY(state.analysisLimits, state.coordinates, kind, x, surfaceYAtX);
       if (y === null) continue;
       const [px, py] = toPx(x, y);
       const d = Math.hypot(px - mx, py - my);

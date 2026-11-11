@@ -56,7 +56,7 @@ function run(def: SlopeDefinition, options: Partial<AnalysisOptions> = {}) {
   const slope = buildSlope(canonical);
   slope.updateAnalysisOptions({ ...spencer, ...options });
   const fos = analyseSlope(slope);
-  const valid = slope.search.filter((p) => p.fos != null) as SearchPlane[];
+  const valid = slope.search.filter((p): p is SearchPlane => p.fos != null);
   return { fos, slope, valid, canonical };
 }
 
@@ -138,11 +138,11 @@ describe("block search", () => {
     const ltr = run({
       ...acads3a,
       orientation: "ltr",
-      coordinates: mirror(acads3a.coordinates as [number, number][]),
+      coordinates: mirror(acads3a.coordinates),
       materialBoundaries: acads3a.materialBoundaries!.map((b) => ({ ...b, coordinates: mirror(b.coordinates) })),
       regionAssignments: acads3a.regionAssignments!.map((r) => ({ ...r, point: [mirrorX(r.point[0]), r.point[1]] as [number, number] })),
       blockSearchObjects: layerLines.map((o) => ({ points: mirror(o.points) })),
-    } as SlopeDefinition);
+    });
     expect(ltr.fos).toBeCloseTo(rtl.fos!, 9);
   });
 
@@ -164,7 +164,7 @@ describe("block search", () => {
       ...acads3a,
       blockSearchObjects: layerLines,
       analysisLimits: { entryLeftX: 72, entryRightX: 80, exitLeftX: 40, exitRightX: 46 },
-    } as SlopeDefinition, { blockActiveAngle: [35, 80], blockPassiveAngle: [5, 60] });
+    }, { blockActiveAngle: [35, 80], blockPassiveAngle: [5, 60] });
     expect(valid.length).toBeGreaterThan(0);
     for (const p of valid) {
       // Canonical: entry on the left, mirrored from the model's crest side.

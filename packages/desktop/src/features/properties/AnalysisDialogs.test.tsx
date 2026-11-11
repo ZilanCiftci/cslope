@@ -130,7 +130,7 @@ describe("OptionsDialogApp", () => {
     expect(screen.queryByLabelText("Interslice data points")).toBeNull();
   });
 
-  it("clamps iterations, refined iterations and tolerance on blur", async () => {
+  it("clamps iterations, refined iterations and tolerance on blur", () => {
     render(<OptionsDialogApp />);
     hydrate();
     const iters = screen.getByLabelText("Number of iterations");
@@ -319,7 +319,7 @@ function lastSentOrState() {
 }
 
 describe("SearchLimitsDialogApp", () => {
-  it("names the crest and toe sides for the sliding direction", async () => {
+  it("names the crest and toe sides for the sliding direction", () => {
     render(<SearchLimitsDialogApp />);
     hydrate({ analysisLimits: { enabled: true }, orientation: "rtl" });
     expect(screen.getByText("Entry range (crest side, right)")).toBeInTheDocument();
@@ -390,7 +390,7 @@ describe("CustomSearchPlanesDialogApp", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "+ Add non-circular surface" }),
     );
-    const pts = screen.getByLabelText("Non-circular surface points") as HTMLInputElement;
+    const pts = screen.getByLabelText<HTMLInputElement>("Non-circular surface points");
     // Not flagged before anything is typed.
     expect(pts).toHaveAttribute("aria-invalid", "false");
     await userEvent.type(pts, "5, 10; 20, 2");

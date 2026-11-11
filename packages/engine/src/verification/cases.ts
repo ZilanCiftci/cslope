@@ -6,7 +6,7 @@
  *
  * Imperial problems without water are entered in their own units (FOS is
  * dimensionless); problems with water are converted to SI because the
- * engine uses γw = 9.81 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).
+ * engine uses γw = 9.807 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).
  *
  * Used by the verification tests, the verification report and the website.
  */
@@ -79,6 +79,8 @@ export interface VerificationCase {
   inputFromFigure?: boolean;
   /** Reference values read from a chart or a figure; see tolerance.ts. */
   referenceFromFigure?: boolean;
+  /** A surface whose factor depends on the slicing of a vertical end; see tolerance.ts. */
+  slicingSensitive?: boolean;
 }
 
 /** A check as written in the data, before its tolerance is worked out. */

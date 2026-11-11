@@ -1124,14 +1124,6 @@ pub const MATERIAL_MODEL_LABELS: [(&str, &str); 12] = [
     ("shear-normal", "Shear-normal function"),
 ];
 
-/// The label of a model kind (`MATERIAL_MODEL_LABELS[kind]`).
-pub fn material_model_label(kind: &str) -> Option<&'static str> {
-    MATERIAL_MODEL_LABELS
-        .iter()
-        .find(|(k, _)| *k == kind)
-        .map(|(_, l)| *l)
-}
-
 /// Whether a model kind takes `UndrainedAnisotropy.anisotropy`.
 pub fn supports_anisotropy(kind: &str) -> bool {
     kind == "undrained" || kind == "s-f-depth" || kind == "s-f-datum" || kind == "shansep"

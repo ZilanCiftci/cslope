@@ -224,7 +224,7 @@ describe("Slope: reinforcement and pile validation", () => {
     ["coverage 0", { pullout: { kind: "interface", adhesion: 0, frictionAngle: 20, coverage: 0 } }, /adhesion/],
   ];
   it.each(bad)("reinforcement: rejects %s", (_l, change, msg) => {
-    expect(() => model().setReinforcements([{ ...nail, ...change } as Reinforcement])).toThrow(msg);
+    expect(() => model().setReinforcements([{ ...nail, ...change }])).toThrow(msg);
   });
 
   it("reinforcement: accepts the boundary values and keeps zero-capacity elements", () => {

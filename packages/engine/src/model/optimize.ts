@@ -40,7 +40,7 @@ export function optimiseNonCircular(slope: Slope, evaluated: readonly SearchPlan
 export function optimiseNonCircularSteps(slope: Slope, evaluated: readonly SearchPlane[], options: OptimiseOptions = {}): PlaneSteps<SearchPlane[]> {
   const s = facadeSlope(slope);
   function* run(): PlaneSteps<SearchPlane[]> {
-    const steps = wasm().optimise_non_circular_steps_new(s._h, s._planesOut(evaluated), options) as number;
+    const steps = wasm().optimise_non_circular_steps_new(s._h, s._planesOut(evaluated), options);
     return yield* engineSteps(s, steps, (r) => s._planes(r.planes!));
   }
   return run();
@@ -62,7 +62,7 @@ export function optimisePolylines(slope: Slope, seeds: readonly SearchPlane[], e
 export function optimisePolylinesSteps(slope: Slope, seeds: readonly SearchPlane[], options: OptimiseOptions = {}): PlaneSteps<SearchPlane[]> {
   const s = facadeSlope(slope);
   function* run(): PlaneSteps<SearchPlane[]> {
-    const steps = wasm().optimise_polylines_steps_new(s._h, s._planesOut(seeds), options) as number;
+    const steps = wasm().optimise_polylines_steps_new(s._h, s._planesOut(seeds), options);
     return yield* engineSteps(s, steps, (r) => s._planes(r.planes!));
   }
   return run();

@@ -39,8 +39,8 @@ function isModule(source: WasmSource): source is WebAssembly.Module {
  */
 function ownBytes(source: BufferSource): Uint8Array<ArrayBuffer> {
   const view = ArrayBuffer.isView(source)
-    ? new Uint8Array(source.buffer as ArrayBuffer, source.byteOffset, source.byteLength)
-    : new Uint8Array(source as ArrayBuffer);
+    ? new Uint8Array(source.buffer, source.byteOffset, source.byteLength)
+    : new Uint8Array(source);
   const copy = new Uint8Array(view.length);
   copy.set(view);
   return copy;
@@ -110,7 +110,7 @@ export async function initEngine(source?: WasmSource): Promise<void> {
     // Vite would emit the file as an asset
     const fs = "node:fs/promises";
     const file = "./wasm/cslope_wasm_bg.wasm";
-    const { readFile } = (await import(/* @vite-ignore */ fs)) as { readFile(path: URL): Promise<Uint8Array<ArrayBuffer>> };
+    const { readFile } = (await import(/* @vite-ignore */ fs)) as { readFile: (path: URL) => Promise<Uint8Array<ArrayBuffer>> };
     const bytes = await readFile(new URL(file, import.meta.url));
     module = await WebAssembly.compile(ownBytes(bytes));
   } else {

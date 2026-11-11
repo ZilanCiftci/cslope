@@ -5,7 +5,7 @@ import { waternetPorePressure, type Waternet } from "./waternet";
 import { effectiveVerticalStress, effectiveVerticalStressWithLoads } from "./reinforcement";
 import { buildSlope } from "./build-slope";
 
-const GW = 9.81;
+const GW = 9.807;
 
 describe("waternet pore pressure", () => {
   // phreatic line at 8; a clay between reference lines at 4 (head 8) and 0

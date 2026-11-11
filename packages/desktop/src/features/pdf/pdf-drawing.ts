@@ -481,8 +481,8 @@ export function drawWaterExtrasPdf(
     pdf.setTextColor(0, 0, 0);
   }
   if (waterBefore && waterBefore.length >= 2) {
-    dashed(waterBefore, PIEZO_COLOR.rgb as [number, number, number], 0.4, [2, 1.25]);
-    lineEndLabel(pdf, tf, waterBefore, "before drawdown", PIEZO_COLOR.rgb as [number, number, number]);
+    dashed(waterBefore, PIEZO_COLOR.rgb, 0.4, [2, 1.25]);
+    lineEndLabel(pdf, tf, waterBefore, "before drawdown", PIEZO_COLOR.rgb);
   }
 }
 

@@ -598,6 +598,13 @@
         "number",
         "null"
       ]
+    },
+    "waterUnitWeight": {
+      "format": "double",
+      "type": [
+        "number",
+        "null"
+      ]
     }
   },
   "title": "cSlope analysis options",

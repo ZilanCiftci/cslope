@@ -77,7 +77,7 @@ function createSplash() {
 
   // In dev the file lives in public/; in prod it's copied to dist/
   const splashPath = path.join(process.env.VITE_PUBLIC, "splash.html");
-  splash.loadFile(splashPath);
+  splash.loadFile(splashPath).catch((err: unknown) => console.error("Could not load the splash screen:", err));
 }
 
 function createWindow() {
@@ -169,11 +169,23 @@ function createWindow() {
     showMainWindow();
   }, 10000);
 
-  if (VITE_DEV_SERVER_URL) {
-    win.loadURL(VITE_DEV_SERVER_URL);
-  } else {
-    win.loadFile(path.join(RENDERER_DIST, "index.html"));
-  }
+  loadRenderer(win);
+}
+
+/**
+ * Load the app into a window: from the dev server in development, from the
+ * built files otherwise, at a dialog's hash route when one is given. A load
+ * that fails is logged (the window's did-fail-load handlers do the rest)
+ * rather than left as an unhandled rejection.
+ */
+function loadRenderer(target: BrowserWindow, hash?: string) {
+  const indexHtml = path.join(RENDERER_DIST, "index.html");
+  const loading = VITE_DEV_SERVER_URL
+    ? target.loadURL(hash ? `${VITE_DEV_SERVER_URL}#${hash}` : VITE_DEV_SERVER_URL)
+    : hash
+      ? target.loadFile(indexHtml, { hash })
+      : target.loadFile(indexHtml);
+  loading.catch((err: unknown) => console.error(`Could not load the ${hash ?? "main"} window:`, err));
 }
 
 // One width per family of dialog windows (CSS px): lists of records
@@ -255,13 +267,7 @@ function createMaterialsWindow() {
     materialsWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    materialsWin.loadURL(`${VITE_DEV_SERVER_URL}#materials-dialog`);
-  } else {
-    materialsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "materials-dialog",
-    });
-  }
+  loadRenderer(materialsWin, "materials-dialog");
 }
 
 function createMaterialAssignmentWindow() {
@@ -291,15 +297,7 @@ function createMaterialAssignmentWindow() {
     materialAssignmentWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    materialAssignmentWin.loadURL(
-      `${VITE_DEV_SERVER_URL}#material-assignment-dialog`,
-    );
-  } else {
-    materialAssignmentWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "material-assignment-dialog",
-    });
-  }
+  loadRenderer(materialAssignmentWin, "material-assignment-dialog");
 }
 
 function createGeometryWindow() {
@@ -329,13 +327,7 @@ function createGeometryWindow() {
     geometryWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    geometryWin.loadURL(`${VITE_DEV_SERVER_URL}#geometry-dialog`);
-  } else {
-    geometryWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "geometry-dialog",
-    });
-  }
+  loadRenderer(geometryWin, "geometry-dialog");
 }
 
 function createInteriorBoundariesWindow() {
@@ -365,15 +357,7 @@ function createInteriorBoundariesWindow() {
     interiorBoundariesWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    interiorBoundariesWin.loadURL(
-      `${VITE_DEV_SERVER_URL}#interior-boundaries-dialog`,
-    );
-  } else {
-    interiorBoundariesWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "interior-boundaries-dialog",
-    });
-  }
+  loadRenderer(interiorBoundariesWin, "interior-boundaries-dialog");
 }
 
 function createUdlWindow() {
@@ -403,13 +387,7 @@ function createUdlWindow() {
     udlWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    udlWin.loadURL(`${VITE_DEV_SERVER_URL}#udl-dialog`);
-  } else {
-    udlWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "udl-dialog",
-    });
-  }
+  loadRenderer(udlWin, "udl-dialog");
 }
 
 function createLineLoadsWindow() {
@@ -439,13 +417,7 @@ function createLineLoadsWindow() {
     lineLoadsWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    lineLoadsWin.loadURL(`${VITE_DEV_SERVER_URL}#line-loads-dialog`);
-  } else {
-    lineLoadsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "line-loads-dialog",
-    });
-  }
+  loadRenderer(lineLoadsWin, "line-loads-dialog");
 }
 
 function createReinforcementWindow() {
@@ -475,13 +447,7 @@ function createReinforcementWindow() {
     reinforcementWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    reinforcementWin.loadURL(`${VITE_DEV_SERVER_URL}#reinforcement-dialog`);
-  } else {
-    reinforcementWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "reinforcement-dialog",
-    });
-  }
+  loadRenderer(reinforcementWin, "reinforcement-dialog");
 }
 
 function createPiezoWindow() {
@@ -511,13 +477,7 @@ function createPiezoWindow() {
     piezoWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    piezoWin.loadURL(`${VITE_DEV_SERVER_URL}#piezo-dialog`);
-  } else {
-    piezoWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "piezo-dialog",
-    });
-  }
+  loadRenderer(piezoWin, "piezo-dialog");
 }
 
 function createParametersWindow() {
@@ -547,13 +507,7 @@ function createParametersWindow() {
     parametersWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    parametersWin.loadURL(`${VITE_DEV_SERVER_URL}#parameters-dialog`);
-  } else {
-    parametersWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "parameters-dialog",
-    });
-  }
+  loadRenderer(parametersWin, "parameters-dialog");
 }
 
 function createResultsPlotWindow() {
@@ -585,13 +539,7 @@ function createResultsPlotWindow() {
     resultsPlotWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    resultsPlotWin.loadURL(`${VITE_DEV_SERVER_URL}#results-plot-dialog`);
-  } else {
-    resultsPlotWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "results-plot-dialog",
-    });
-  }
+  loadRenderer(resultsPlotWin, "results-plot-dialog");
 }
 
 // Tool windows (Sensitivity, Probabilistic analysis, Place drawing). The
@@ -637,11 +585,7 @@ function createToolWindow(tool: ToolWindow) {
     if (win && !win.isDestroyed()) win.webContents.send(`${tool}:closed`);
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    child.loadURL(`${VITE_DEV_SERVER_URL}#${hash}`);
-  } else {
-    child.loadFile(path.join(RENDERER_DIST, "index.html"), { hash });
-  }
+  loadRenderer(child, hash);
 }
 
 function createSearchLimitsWindow() {
@@ -671,13 +615,7 @@ function createSearchLimitsWindow() {
     searchLimitsWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    searchLimitsWin.loadURL(`${VITE_DEV_SERVER_URL}#search-limits-dialog`);
-  } else {
-    searchLimitsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "search-limits-dialog",
-    });
-  }
+  loadRenderer(searchLimitsWin, "search-limits-dialog");
 }
 
 function createCustomSearchPlanesWindow() {
@@ -707,15 +645,7 @@ function createCustomSearchPlanesWindow() {
     customSearchPlanesWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    customSearchPlanesWin.loadURL(
-      `${VITE_DEV_SERVER_URL}#custom-search-planes-dialog`,
-    );
-  } else {
-    customSearchPlanesWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "custom-search-planes-dialog",
-    });
-  }
+  loadRenderer(customSearchPlanesWin, "custom-search-planes-dialog");
 }
 
 function createOptionsWindow() {
@@ -745,13 +675,7 @@ function createOptionsWindow() {
     optionsWin = null;
   });
 
-  if (VITE_DEV_SERVER_URL) {
-    optionsWin.loadURL(`${VITE_DEV_SERVER_URL}#options-dialog`);
-  } else {
-    optionsWin.loadFile(path.join(RENDERER_DIST, "index.html"), {
-      hash: "options-dialog",
-    });
-  }
+  loadRenderer(optionsWin, "options-dialog");
 }
 
 // When the renderer tells us it has mounted, show the main window
@@ -1293,7 +1217,7 @@ function readProjectFile(filePath: string): Uint8Array {
   return new Uint8Array(fs.readFileSync(filePath));
 }
 
-ipcMain.handle("file:openPath", async (event, filePath: string) => {
+ipcMain.handle("file:openPath", (event, filePath: string) => {
   // File access only for the main window (not dialogs or a page that a
   // dropped file might have navigated to).
   if (!win || event.sender !== win.webContents) return null;
@@ -1380,7 +1304,7 @@ function requestOpen(filePath: string) {
   }
 }
 
-ipcMain.handle("file:openRequested", async (event) => {
+ipcMain.handle("file:openRequested", (event) => {
   if (!win || event.sender !== win.webContents || !requestedOpenPath) return null;
   const filePath = requestedOpenPath;
   requestedOpenPath = null;
@@ -1404,7 +1328,7 @@ ipcMain.handle("file:openRequested", async (event) => {
  * existing file first, so a crash, power loss or full disk mid-write
  * would destroy the user's only copy.
  */
-async function saveToPath(filePath: string, content: Uint8Array, becomesCurrent = true) {
+function saveToPath(filePath: string, content: Uint8Array, becomesCurrent = true) {
   let target = filePath;
   try {
     target = fs.realpathSync(filePath); // keep symlinks pointing at the file
@@ -1545,7 +1469,7 @@ ipcMain.handle("dialog:saveCopy", async (event, content: unknown, suffix?: unkno
     });
     if (response !== 0) return null;
   }
-  await saveToPath(target, content, false);
+  saveToPath(target, content, false);
   return path.basename(target);
 });
 
@@ -1575,17 +1499,21 @@ ipcMain.on("menu:new", (event) => {
 // in development) and the source code repository.
 const SOURCE_URL = "https://github.com/ZilanCiftci/cslope";
 const NOTICES_URL = `${SOURCE_URL}/blob/main/packages/desktop/THIRD-PARTY-NOTICES.txt`;
-ipcMain.on("help:openAboutLink", async (event, target: unknown) => {
+ipcMain.on("help:openAboutLink", (event, target: unknown) => {
   if (!win || event.sender !== win.webContents) return;
   if (target === "source") {
     void shell.openExternal(SOURCE_URL);
   } else if (target === "licenses") {
-    const failed = app.isPackaged
-      ? await shell.openPath(path.join(process.resourcesPath, "THIRD-PARTY-NOTICES.txt"))
-      : "not installed";
-    if (failed) void shell.openExternal(NOTICES_URL);
+    openLicenses().catch((err: unknown) => console.error("Could not open the third-party notices:", err));
   }
 });
+
+async function openLicenses() {
+  const failed = app.isPackaged
+    ? await shell.openPath(path.join(process.resourcesPath, "THIRD-PARTY-NOTICES.txt"))
+    : "not installed";
+  if (failed) await shell.openExternal(NOTICES_URL);
+}
 
 // Help › Documentation, and the "?" buttons of the dialog windows: the
 // website's documentation in the default browser. The renderer can only
@@ -1676,4 +1604,8 @@ app.whenReady().then(() => {
     // In capture mode show the main window immediately (no splash to wait for)
     showMainWindow();
   }
+}).catch((err: unknown) => {
+  // Without its window the app would linger unseen: say why and quit.
+  dialog.showErrorBox("cSlope could not start", err instanceof Error ? err.message : String(err));
+  app.quit();
 });

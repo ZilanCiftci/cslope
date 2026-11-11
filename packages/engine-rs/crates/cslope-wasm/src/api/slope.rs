@@ -148,13 +148,6 @@ pub fn slope_count() -> usize {
     SLOPES.with(|r| r.borrow().len())
 }
 
-/// A copy of the slope under a new handle.
-#[wasm_bindgen]
-pub fn slope_clone(handle: u32) -> JsResult<u32> {
-    let copy = with_slope(handle, |s| s.clone())?;
-    insert_slope(copy)
-}
-
 /// Changes with every mutable access to the slope (the facade's cache key).
 #[wasm_bindgen]
 pub fn slope_stamp(handle: u32) -> JsResult<f64> {
@@ -1029,6 +1022,7 @@ pub fn slope_get(handle: u32, name: &str) -> JsResult<JsValue> {
             "waternet" => to_js(&s.waternet()),
             "seismicHorizontal" => Ok(s.seismic_horizontal().into()),
             "seismicVertical" => Ok(s.seismic_vertical().into()),
+            "waterUnitWeight" => Ok(s.water_unit_weight().into()),
             "compositeBase" => Ok(s.composite_base().into()),
             "compositeFloor" => to_js(&s.composite_floor().map(FloorDto::from)),
             "tensionCrackAuto" => Ok(s.tension_crack_auto().into()),
@@ -1106,7 +1100,7 @@ pub fn slope_remove_water_table(handle: u32) -> JsResult<()> {
 pub fn slope_set_udls(handle: u32, udls: JsValue) -> JsResult<()> {
     let u: Vec<UdlWire> = from_js(udls, "UDLs")?;
     with_slope_mut(handle, |s| {
-        s.set_udls(u.into_iter().map(Into::into).collect())
+        s.set_udls(u.into_iter().map(Into::into).collect());
     })
 }
 
@@ -1119,7 +1113,7 @@ pub fn slope_remove_udls(handle: u32) -> JsResult<()> {
 pub fn slope_set_line_loads(handle: u32, loads: JsValue) -> JsResult<()> {
     let l: Vec<LineLoadWire> = from_js(loads, "line loads")?;
     with_slope_mut(handle, |s| {
-        s.set_line_loads(l.into_iter().map(Into::into).collect())
+        s.set_line_loads(l.into_iter().map(Into::into).collect());
     })
 }
 

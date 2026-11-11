@@ -80,7 +80,7 @@ export interface Slice {
   area: number;
   /** Base inclination angle (rad). */
   alpha: number;
-  /** Arc length of slice base (m). */
+  /** Length of the slice's straight base (m): on a circle the chord. */
   baseLength: number;
   /** Slice weight (kN). */
   weight: number;
@@ -89,9 +89,9 @@ export interface Slice {
   /** Height from center of rotation to midpoint. */
   e: number;
   /**
-   * Moment arm of the base shear about the centre (m): the radius on a
-   * circle, the perpendicular distance to the base on a non-circular
-   * surface.
+   * Moment arm of the base shear about the centre (m): the perpendicular
+   * distance from the centre to the base line, on a circle R·cos(Δθ/2)
+   * with Δθ the angle the slice subtends (Fredlund & Krahn 1977).
    */
   R: number;
   /**
@@ -99,10 +99,7 @@ export interface Slice {
    * positive where the normal force drives; 0 on a circle.
    */
   normalArm?: number;
-  /**
-   * On a circle: the weight's arm about the centre is `dx`, while α is
-   * the inclination at the middle of the slice's arc (R sin α ≠ dx).
-   */
+  /** The slice is on a circle (its base a chord of the circle). */
   circular?: boolean;
   /** UDL force on slice (kN). */
   udl: number;

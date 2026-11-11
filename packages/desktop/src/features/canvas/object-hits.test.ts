@@ -81,6 +81,20 @@ describe("findCanvasObjectsAt", () => {
     expect(at(state(), 26, 5)).toEqual([{ object: { type: "exterior" }, point: null }]);
   });
 
+  it("finds an exit at a single x on a vertical face at the foot of the face", () => {
+    const wall: [number, number][] = [[0, 0], [0, 15], [20, 15], [20, 5], [40, 5], [40, 0]];
+    const st = state({
+      coordinates: wall,
+      analysisLimits: { enabled: true, entryLeftX: 11, entryRightX: 16, exitLeftX: 20, exitRightX: 20 },
+    });
+    const [px, py] = toPx(20, 5);
+    const hits = findCanvasObjectsAt(st, px, py, toPx, (x) => surfaceYAtX(wall, x));
+    expect(hits[0]).toEqual({ object: { type: "searchLimits" }, point: "exitLeftX" });
+    const [cx, cy] = toPx(20, 15);
+    const atCrest = findCanvasObjectsAt(st, cx, cy, toPx, (x) => surfaceYAtX(wall, x));
+    expect(atCrest.some((c) => c.object.type === "searchLimits")).toBe(false);
+  });
+
   it("finds a distributed load by its end arrows (handles) and its strip (body)", () => {
     const st = state({ udls: [{ id: "u", magnitude: 10, x1: 2, x2: 8 }] });
     expect(at(st, 2, 10, 0, -20)[0]).toEqual({ object: { type: "udl", id: "u" }, point: "x1" });

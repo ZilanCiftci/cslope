@@ -140,7 +140,7 @@ pub fn run_fem_summary_with_bounds(
             } else {
                 1.0
             });
-        let mut o = common.clone();
+        let mut o = common;
         o.model.material_parameters = Some(BTreeMap::from([(
             "*".to_string(),
             FeMaterialParameters {

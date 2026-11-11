@@ -96,7 +96,7 @@ def test_a_saved_result_reads_without_a_run():
     p = Project.open(APP_RESULTS)
     m = p.model("T-ACADS Simple")
     assert m.result_is_current and m.result.is_current
-    assert m.result.fos == pytest.approx(0.9843112865352412, abs=1e-12)
+    assert m.result.fos == pytest.approx(0.9844574205971577, abs=1e-12)
     assert m.result.fos_label == "factor of safety" and m.result.method == "Morgenstern-Price"
     assert m.result.critical_surface["shape"] == "circle"
     assert m.min_fos == m.result.fos and m.result.saved["runState"] == "done"
@@ -556,3 +556,26 @@ def test_the_api_covers_every_field_of_the_definition():
     # the main line carries freeWater (D-24), never the inverted followBoundary
     assert definition["waterTable"]["freeWater"] is False and "followBoundary" not in definition["waterTable"]
     assert all("waterTableId" in m for m in definition["materials"] if m["name"] == "Clay")
+
+
+def test_the_unit_weight_of_water_is_an_option_of_the_model(tmp_path):
+    m = quick(slope())
+    m.add_piezometric_line([(0, 10), (50, 4)])
+    assert m.options.water_unit_weight is None and "waterUnitWeight" not in m.data["options"]
+    f_default = m.analyse(threads=2).fos
+    m.options.water_unit_weight = 9.807
+    assert m.definition["options"]["waterUnitWeight"] == 9.807
+    assert m.analyse(threads=2).fos == f_default
+    # more pore pressure, a lower F
+    m.options.water_unit_weight = 10.5
+    assert m.analyse(threads=2).fos < f_default
+    with pytest.raises(ValueError, match="water_unit_weight must be greater than 0"):
+        m.options.water_unit_weight = 0
+    assert m.options.water_unit_weight == 10.5
+    p = Project()
+    p.add_model(m)
+    p.save(tmp_path / "w.cslp")
+    assert Project.open(tmp_path / "w.cslp").models[0].options.water_unit_weight == 10.5
+    m.options.water_unit_weight = None
+    assert "waterUnitWeight" not in m.data["options"]
+    assert Options(water_unit_weight=9.82).to_dict()["waterUnitWeight"] == 9.82

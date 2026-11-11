@@ -1,4 +1,4 @@
-import { Link, NavLink as RouterNavLink, useLocation, useNavigationType } from "react-router";
+import { Link, NavigationType, NavLink as RouterNavLink, useLocation, useNavigationType } from "react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import { Github, Menu, Moon, Sun, X } from "lucide-react";
 
@@ -177,7 +177,7 @@ export function Layout({ children }: { children: ReactNode }) {
   // Start a new page at the top, or at the heading its #fragment names.
   // Back and forward (POP) keep the browser's own scroll restoration.
   useEffect(() => {
-    if (navigation === "POP") return;
+    if (navigation === NavigationType.Pop) return;
     if (!hash) {
       window.scrollTo(0, 0);
       return;

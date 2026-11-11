@@ -108,11 +108,18 @@ pub fn waternet_count() -> usize {
     WATERNETS.with(|r| r.borrow().len())
 }
 
+/// The pore pressure at (x, z) with the unit weight of water `gw`
+/// (`WATER_UNIT_WEIGHT` when not given).
 #[wasm_bindgen]
-pub fn waternet_pore_pressure_at(handle: u32, x: f64, z: f64) -> JsResult<f64> {
+pub fn waternet_pore_pressure_at(handle: u32, x: f64, z: f64, gw: Option<f64>) -> JsResult<f64> {
     WATERNETS.with(|r| {
         let r = r.borrow();
         let wn = r.get(handle).map_err(handle_error)?;
-        Ok(waternet_pore_pressure(wn, x, z))
+        Ok(waternet_pore_pressure(
+            wn,
+            x,
+            z,
+            gw.unwrap_or(cslope_engine::types::WATER_UNIT_WEIGHT),
+        ))
     })
 }

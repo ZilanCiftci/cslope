@@ -12,12 +12,12 @@ import { Slope } from "../model/slope";
 import { decodeSlices, type PlanesWire, type SlicesWire } from "./slice-codec";
 
 /** The facade's slope of a slope argument (typed as the original's). */
-export function facadeSlope(slope: TsSlope | Slope): Slope {
-  return slope as unknown as Slope;
+export function facadeSlope(slope: TsSlope  ): Slope {
+  return slope;
 }
 
 /** The handle of a slope argument. */
-export function h(slope: TsSlope | Slope): number {
+export function h(slope: TsSlope  ): number {
   return facadeSlope(slope)._h;
 }
 
@@ -53,7 +53,7 @@ export interface WithSlices<T> {
 }
 
 /** Calls `f` with the slices for the engine and writes them back. */
-export function onSlices<T>(slope: TsSlope | Slope, slices: Slice[], f: (wire: SlicesWire) => WithSlices<T>): T {
+export function onSlices<T>(slope: TsSlope  , slices: Slice[], f: (wire: SlicesWire) => WithSlices<T>): T {
   const r = f(facadeSlope(slope)._slicesOut(slices));
   writeBackSlices(slices, r.slices);
   return r.result;
@@ -64,7 +64,7 @@ export function onSlices<T>(slope: TsSlope | Slope, slices: Slice[], f: (wire: S
  * this slope, evaluated in place by the driver and handed back to the
  * engine on the next resume.
  */
-export function* engineSteps<T>(slope: TsSlope | Slope, steps: number, done: (r: { fos?: number | null; planes?: PlanesWire }) => T): PlaneSteps<T> {
+export function* engineSteps<T>(slope: TsSlope  , steps: number, done: (r: { fos?: number | null; planes?: PlanesWire }) => T): PlaneSteps<T> {
   const s = facadeSlope(slope);
   try {
     let back: PlanesWire | undefined;

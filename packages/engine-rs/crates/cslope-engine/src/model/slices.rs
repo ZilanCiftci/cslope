@@ -22,7 +22,7 @@ use crate::model::slope::{Pt, Slope};
 use crate::model::surface::{polyline_crossings_x, polyline_y_at};
 use crate::model::waternet::waternet_pore_pressure;
 use crate::types::analysis::{PartialFactors, PorePressureHead};
-use crate::types::constants::{SLICE_DEDUP_TOLERANCE, WATER_UNIT_WEIGHT};
+use crate::types::constants::SLICE_DEDUP_TOLERANCE;
 use crate::types::geometry::{GeometryWithMaterial, Slice};
 use crate::types::loads::{Udl, UdlDirection};
 use crate::types::material::{Material, MaterialId};
@@ -39,60 +39,9 @@ use std::sync::Arc;
 /// Grid of the local origin for clipping material regions (see create_slice).
 const LOCAL_ORIGIN_GRID: f64 = 4096.0;
 
-/// Largest arc a slice of a circle spans, at least (rad); see get_slices.
-const MAX_SLICE_ARC: f64 = (2.0 * PI) / 180.0;
-
-/// Most segments of the arc under a slice (create_slice).
-const MAX_ARC_SEGMENTS: usize = 32;
-
-/// The base of a slice of a circle (not a port: an experiment switch, see
-/// PORTING.md "Slice base of a circle"). `Arc` is the engine's: the arc
-/// length, α at the middle of the arc and the weight of the soil above the
-/// arc. `Chord` is the conventional straight chord between the slice's
-/// edges, as most limit equilibrium programs discretise a circle: the
-/// chord's length and inclination (the same α: a chord is parallel to the
-/// tangent at the middle of its arc) and the weight of the polygon above the
-/// chord, with the base point (pore pressure, strength) at the chord's
-/// middle. `ChordEven` is the chord without the steep ends of the circle
-/// cut into narrower slices (get_slices), i.e. the nominal slices only.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SliceBase {
-    Arc,
-    Chord,
-    ChordEven,
-}
-
-thread_local! {
-    static SLICE_BASE_OVERRIDE: std::cell::Cell<Option<SliceBase>> = const { std::cell::Cell::new(None) };
-}
-
-/// The slice base of a circle in force: the override of `with_slice_base`
-/// on this thread, else the environment variable `CSLOPE_SLICE_BASE`
-/// (`chord`, `chord-even`; read once; absent in WebAssembly), else `Arc`.
-pub fn slice_base() -> SliceBase {
-    if let Some(b) = SLICE_BASE_OVERRIDE.with(|c| c.get()) {
-        return b;
-    }
-    static FROM_ENV: std::sync::OnceLock<SliceBase> = std::sync::OnceLock::new();
-    *FROM_ENV.get_or_init(|| match std::env::var("CSLOPE_SLICE_BASE").as_deref() {
-        Ok("chord") => SliceBase::Chord,
-        Ok("chord-even") => SliceBase::ChordEven,
-        _ => SliceBase::Arc,
-    })
-}
-
-/// Runs `f` with the slices of circles built on `base` on this thread (a
-/// serial analysis; the evaluator's worker threads read the environment).
-pub fn with_slice_base<T>(base: SliceBase, f: impl FnOnce() -> T) -> T {
-    let before = SLICE_BASE_OVERRIDE.with(|c| c.replace(Some(base)));
-    let out = f();
-    SLICE_BASE_OVERRIDE.with(|c| c.set(before));
-    out
-}
-
 // ── Clipping buffers ──────────────────────────────────────────────
 // A slice clips every material polygon by the vertical strip, then by
-// each slip-surface edge (two on a straight base, more along an arc).
+// each slip-surface edge (two: the slice's straight base).
 // Done with fresh arrays and `map` passes, the allocation was a fifth of a
 // whole search. The clips below write into two reused buffers instead, with
 // the same arithmetic in the same order, so the results are identical to
@@ -154,34 +103,20 @@ fn clip_halfplane_into(
     out_x: &mut [f64],
     out_y: &mut [f64],
 ) -> usize {
+    if n == 0 {
+        return 0;
+    }
+    let (in_x, in_y) = (&in_x[..n], &in_y[..n]);
+    // A convex clip of n vertices yields at most 2n (one crossing per edge
+    // plus the vertex): the writes stay in bounds.
+    let (out_x, out_y) = (&mut out_x[..2 * n], &mut out_y[..2 * n]);
     let mut m = 0;
-    for i in 0..n {
-        let k = if i + 1 == n { 0 } else { i + 1 };
-        let p1x = in_x[i];
-        let p1y = in_y[i];
-        let p2x = in_x[k];
-        let p2y = in_y[k];
-        let d1 = a * p1x + b * p1y + c;
+    let (mut p1x, mut p1y) = (in_x[n - 1], in_y[n - 1]);
+    let mut d1 = a * p1x + b * p1y + c;
+    for (&p2x, &p2y) in in_x.iter().zip(in_y) {
         let d2 = a * p2x + b * p2y + c;
-        let in1 = d1 >= -1e-12;
-        let in2 = d2 >= -1e-12;
-        if in1 {
-            if in2 {
-                out_x[m] = p2x;
-                out_y[m] = p2y;
-                m += 1;
-            } else {
-                let dx = p2x - p1x;
-                let dy = p2y - p1y;
-                let denom = a * dx + b * dy;
-                if denom.abs() > 1e-14 {
-                    let t = -d1 / denom;
-                    out_x[m] = p1x + t * dx;
-                    out_y[m] = p1y + t * dy;
-                    m += 1;
-                }
-            }
-        } else if in2 {
+        let (in1, in2) = (d1 >= -1e-12, d2 >= -1e-12);
+        if in1 != in2 {
             let dx = p2x - p1x;
             let dy = p2y - p1y;
             let denom = a * dx + b * dy;
@@ -191,10 +126,62 @@ fn clip_halfplane_into(
                 out_y[m] = p1y + t * dy;
                 m += 1;
             }
+        }
+        if in2 {
             out_x[m] = p2x;
             out_y[m] = p2y;
             m += 1;
         }
+        p1x = p2x;
+        p1y = p2y;
+        d1 = d2;
+    }
+    m
+}
+
+/// Clip the polygon in (in_x, in_y)[0..n) to the side of the vertical line
+/// x = xc given by `keep_right` (x ≥ xc, else x ≤ xc) into (out_x, out_y);
+/// returns the vertex count. The vertical case of `clip_halfplane_into`,
+/// with the same arithmetic for the sides and the crossings.
+fn clip_vertical_into(
+    in_x: &[f64],
+    in_y: &[f64],
+    n: usize,
+    xc: f64,
+    keep_right: bool,
+    out_x: &mut [f64],
+    out_y: &mut [f64],
+) -> usize {
+    let (in_x, in_y) = (&in_x[..n], &in_y[..n]);
+    let (out_x, out_y) = (&mut out_x[..2 * n], &mut out_y[..2 * n]);
+    let side = |x: f64| if keep_right { x - xc } else { xc - x };
+    let mut m = 0;
+    let (mut p1x, mut p1y) = match n {
+        0 => return 0,
+        _ => (in_x[n - 1], in_y[n - 1]),
+    };
+    let mut in1 = side(p1x) >= -1e-12;
+    for (&p2x, &p2y) in in_x.iter().zip(in_y) {
+        let in2 = side(p2x) >= -1e-12;
+        if in1 != in2 {
+            let dx = p2x - p1x;
+            if dx.abs() > 1e-14 {
+                // t as `clip_halfplane_into` computes it, so that the
+                // crossing is the same point to the last bit.
+                let t = (xc - p1x) / dx;
+                out_x[m] = p1x + t * dx;
+                out_y[m] = p1y + t * (p2y - p1y);
+                m += 1;
+            }
+        }
+        if in2 {
+            out_x[m] = p2x;
+            out_y[m] = p2y;
+            m += 1;
+        }
+        p1x = p2x;
+        p1y = p2y;
+        in1 = in2;
     }
     m
 }
@@ -294,6 +281,8 @@ pub struct SliceEnv<'a> {
     /// Pore pressure at a point, replacing the water lines' (a waternet,
     /// model/waternet.rs).
     pub pore_pressure_at: Option<&'a (dyn Fn(f64, f64) -> f64 + 'a)>,
+    /// Unit weight of water γw (kN/m³, `Slope::water_unit_weight`).
+    pub water_unit_weight: f64,
 }
 
 /// The numbers of one slice for `create_slice` (TypeScript's positional
@@ -342,6 +331,7 @@ pub fn create_slice(
     let materials = env.materials;
     let material_geometries = env.material_geometries;
     let base = env.base;
+    let gw = env.water_unit_weight;
 
     let x = (x0 + x1) / 2.0;
     let dx = cx - x;
@@ -356,15 +346,12 @@ pub fn create_slice(
         Some(f) => f(x1),
         None => get_circle_y_coordinate_at_x(cx, cy, radius, x1),
     };
-    // A straight base: a non-circular surface, or a circle under the chord
-    // experiment switch (SliceBase::Chord: the chord's middle is the base
-    // point, its inclination α and its length the base's).
-    let straight = base.is_some() || slice_base() != SliceBase::Arc;
-    let y_bottom = if straight {
-        (y0_bottom + y1_bottom) / 2.0
-    } else {
-        get_circle_y_coordinate_at_x(cx, cy, radius, x)
-    };
+    // The base is straight: on a circle the chord between the slice's two
+    // base points, the conventional discretisation of a circle (Fredlund &
+    // Krahn 1977). The chord's middle is the base point (pore pressure,
+    // strength), its inclination α and its length the base's, and the weight
+    // is that of the soil above the chord.
+    let y_bottom = (y0_bottom + y1_bottom) / 2.0;
 
     if y_bottom > y_top {
         return Ok(None); // Invalid: bottom above top
@@ -374,50 +361,41 @@ pub fn create_slice(
     let e = cy - (y_top + y_bottom) / 2.0;
 
     // Alpha angle: positive where the base descends towards +x (the
-    // sliding direction). On a circle the tangent at the middle of the
-    // slice's arc (θ the angle of a point from the downward vertical through
-    // the centre, x = cx + R sin θ; α = −θ), which with the arc length below
-    // is the slice's base as the circle has it.
-    let theta =
-        |xx: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (xx - cx) / radius)));
-    let th0 = if straight { 0.0 } else { theta(x0) };
-    let th1 = if straight { 0.0 } else { theta(x1) };
-    let alpha = if straight {
-        js::math::atan((y0_bottom - y1_bottom) / width)
-    } else {
-        -(th0 + th1) / 2.0
+    // sliding direction).
+    let alpha = js::math::atan((y0_bottom - y1_bottom) / width);
+
+    // Moment arms about the centre / axis point: the perpendicular distance
+    // from it to the base line for the base shear, and the arm of the base
+    // normal force (Fredlund & Krahn 1977, the general limit equilibrium
+    // formulation: R and f measured to the base). On a circle the chord's
+    // shear arm is R·cos(Δθ/2), Δθ the angle the slice subtends at the
+    // centre (θ the angle of a point from the downward vertical through the
+    // centre, x = cx + R sin θ), and the normal at the chord's middle passes
+    // through the centre (arm 0).
+    let (shear_arm, normal_arm) = match base {
+        Some(_) => {
+            let bx = x - cx;
+            let by = y_bottom - cy;
+            (
+                -(bx * js::math::sin(alpha) + by * js::math::cos(alpha)),
+                bx * js::math::cos(alpha) - by * js::math::sin(alpha),
+            )
+        }
+        None => {
+            let theta = |xx: f64| {
+                js::math::asin(js::math::max(-1.0, js::math::min(1.0, (xx - cx) / radius)))
+            };
+            let d_theta = (theta(x1) - theta(x0)).abs();
+            (radius * js::math::cos(d_theta / 2.0), 0.0)
+        }
     };
 
-    // Moment arms about the centre / axis point. The base shear resists
-    // with arm R; the normal force has arm `normalArm` (0 on a circle,
-    // where it passes through the centre).
-    let mut shear_arm = radius;
-    let mut normal_arm = 0.0;
-    if base.is_some() {
-        let bx = x - cx;
-        let by = y_bottom - cy;
-        shear_arm = -(bx * js::math::sin(alpha) + by * js::math::cos(alpha));
-        normal_arm = bx * js::math::cos(alpha) - by * js::math::sin(alpha);
-    }
-
-    // Base length: on a circle the arc length R·|θ1 − θ0|, with α at the
-    // middle of the arc and the weight under the arc (below), so that base,
-    // inclination and weight are the circle's own; a straight base b/cos α.
-    // (Before 2026-11: α the tangent at the x-midpoint with b/cos α, which
-    // under-credited cohesion on a steep slice, by 0.3 % of the resisting
-    // moment on an undrained clay with a steep crest, partly offset by the
-    // weight under one arc node. With the steep ends cut (get_slices), the
-    // error against 4000 slices is 0.013 % on average, 0.16 % at most.)
-    let base_length = if straight {
-        width / js::math::cos(alpha)
-    } else {
-        radius * (th1 - th0).abs()
-    };
+    let base_length = width / js::math::cos(alpha);
 
     // Pore water pressure
     let mut u = 0.0;
     if let (Some(wy), Some(wh)) = (water_y_mean, water_h) {
-        u = js::math::max(wy - y_bottom, 0.0) * WATER_UNIT_WEIGHT * wh;
+        u = js::math::max(wy - y_bottom, 0.0) * gw * wh;
     }
 
     // ── Material intersection and weight calculation ─────────────
@@ -425,45 +403,15 @@ pub fn create_slice(
     // geometry_for_area: [(x0, 10000), (x1, 10000), (x1, y1_bottom), (xm, ym_bottom), (x0, y0_bottom)]
     // The top at y = 10000 is a fixed ceiling: material above it is not
     // counted, so model elevations must stay below 10000 m.
-    // On a circle the base follows the arc with a node every ≤ 1° (an even
-    // number of segments up to 32), so that the weight is that under the
-    // arc. One node is always the base point (x, yBottom): the base material
-    // is looked up just above it, and a chord there would lie above the arc.
-    let arc_segments = if straight {
-        2.0
-    } else {
-        js::math::min(
-            32.0,
-            2.0 * js::math::max(1.0, ((th1 - th0).abs() / (PI / 90.0)).ceil()),
-        )
-    };
-    // (Array.from({ length: NaN }) is empty)
-    let arc_nodes = arc_segments - 1.0;
-    let mut clip_poly = [[0.0f64; 2]; MAX_ARC_SEGMENTS + 3];
-    let mut np = 0;
-    let mut push = |pt: [f64; 2]| {
-        clip_poly[np] = pt;
-        np += 1;
-    };
-    push([x0, 10000.0]);
-    push([x1, 10000.0]);
-    push([x1, y1_bottom]);
-    if arc_nodes == 1.0 {
-        push([x, y_bottom]);
-    } else if arc_nodes >= 1.0 {
-        let count = arc_nodes as usize;
-        for k in 0..count {
-            let kk = (k + 1) as f64;
-            if 2.0 * kk == arc_segments {
-                push([x, y_bottom]);
-            } else {
-                let xx = x1 - (kk / arc_segments) * (x1 - x0);
-                push([xx, get_circle_y_coordinate_at_x(cx, cy, radius, xx)]);
-            }
-        }
-    }
-    push([x0, y0_bottom]);
-    let clip_poly = &clip_poly[..np];
+    // One node is the base point (x, yBottom): the base material is looked
+    // up just above it.
+    let clip_poly: [[f64; 2]; 5] = [
+        [x0, 10000.0],
+        [x1, 10000.0],
+        [x1, y1_bottom],
+        [x, y_bottom],
+        [x0, y0_bottom],
+    ];
 
     // Compute edge coefficients for the slip-surface edges (from index 2 on),
     // relative to a local origin (ox, oy) near the slice: with real-world
@@ -473,7 +421,7 @@ pub fn create_slice(
     // that models near the global origin are computed exactly as before.
     let ox = js::math::round(x / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
     let oy = js::math::round(y_bottom / LOCAL_ORIGIN_GRID) * LOCAL_ORIGIN_GRID;
-    let mut edge_coeffs = [[0.0f64; 3]; MAX_ARC_SEGMENTS + 1];
+    let mut edge_coeffs = [[0.0f64; 3]; 2];
     let mut ne = 0;
     for i in 2..clip_poly.len() - 1 {
         let p1 = [clip_poly[i][0] - ox, clip_poly[i][1] - oy];
@@ -510,24 +458,22 @@ pub fn create_slice(
         // Step 1: Vertical clip (global coordinates), as clip_polygon_vertical.
         let n_in = m.px.len();
         scratch.ensure(2 * n_in + 8);
-        let mut n = clip_halfplane_into(
+        let mut n = clip_vertical_into(
             &m.px,
             &m.py,
             n_in,
-            1.0,
-            0.0,
-            -x0,
+            x0,
+            true,
             &mut scratch.ax,
             &mut scratch.ay,
         );
         if n > 0 {
-            n = clip_halfplane_into(
+            n = clip_vertical_into(
                 &scratch.ax,
                 &scratch.ay,
                 n,
-                -1.0,
-                0.0,
                 x1,
+                false,
                 &mut scratch.bx,
                 &mut scratch.by,
             );
@@ -684,9 +630,7 @@ pub fn create_slice(
                             },
                         };
                         let uu = match w {
-                            Some(w) => {
-                                js::math::max(w.y_mean - y_bottom, 0.0) * WATER_UNIT_WEIGHT * w.h
-                            }
+                            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * gw * w.h,
                             None => 0.0,
                         };
                         let st = resolve_strength(
@@ -697,7 +641,7 @@ pub fn create_slice(
                                 y_ground: y_top,
                                 y_layer_top: y_lt,
                                 alpha,
-                                suction: Some(base_suction(model, w, y_bottom)),
+                                suction: Some(base_suction(model, w, y_bottom, gw)),
                                 effective_vertical_stress: Some(
                                     (total_weight + udl_force + ll_force) / width - uu,
                                 ),
@@ -738,7 +682,7 @@ pub fn create_slice(
     if let Some(f) = env.water_for_material {
         base_water = f(base_material)?;
         u = match base_water {
-            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * WATER_UNIT_WEIGHT * w.h,
+            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * gw * w.h,
             None => 0.0,
         };
     }
@@ -761,7 +705,7 @@ pub fn create_slice(
             u += (ru * total_weight) / width;
         }
     }
-    let suction = base_suction(base_model, base_water, y_bottom);
+    let suction = base_suction(base_model, base_water, y_bottom, gw);
 
     // Top of the base material's layer, for depth measured from it: searched
     // in the full material regions just above the base centre.
@@ -870,14 +814,14 @@ pub fn create_slice(
 /// pore pressure below the line (1 with vertical head, cos²θ with the
 /// phreatic correction). 0 below the line, without a water line, or for a
 /// material without φb.
-fn base_suction(model: &MaterialModel, water: Option<Water>, y_bottom: f64) -> f64 {
+fn base_suction(model: &MaterialModel, water: Option<Water>, y_bottom: f64, gw: f64) -> f64 {
     let Some(water) = water else {
         return 0.0;
     };
     if !(suction_angle(model) > 0.0) {
         return 0.0;
     }
-    js::math::max(y_bottom - water.y_mean, 0.0) * WATER_UNIT_WEIGHT * water.h
+    js::math::max(y_bottom - water.y_mean, 0.0) * gw * water.h
 }
 
 // ── Water at a slice ──────────────────────────────────────────────
@@ -1419,36 +1363,6 @@ pub fn get_slices(
     }
 
     js::array::sort_by(&mut final_x, |a, b| a - b);
-    // On a circle, an end where the arc turns steep (towards a vertical
-    // tangent) is cut so that no slice spans more arc than twice a nominal
-    // slice at the bottom of the circle (2b/R), nor more than 2°: one base
-    // inclination per slice cannot follow an arc that turns 20–30° within
-    // it, while the middle of the circle keeps the nominal width. Against
-    // 4000 slices on the 150 fixed-circle checks of the verification
-    // (2026-11) this took the largest error from 0.87 % (V068, a vertical
-    // tangent at the crest) to 0.16 %, with 3 % more slices; 65 or 80
-    // even slices left 0.53 % and 0.35 %.
-    if poly.is_none() && slice_base() != SliceBase::ChordEven {
-        let max_arc = js::math::max(MAX_SLICE_ARC, (2.0 * b) / radius);
-        let theta =
-            |x: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (x - cx) / radius)));
-        let mut i = final_x.len() as isize - 2;
-        while i >= 0 {
-            let iu = i as usize;
-            let t0 = theta(final_x[iu]);
-            let t1 = theta(final_x[iu + 1]);
-            let k = ((t1 - t0) / max_arc - 1e-9).ceil();
-            if k > 1.0 {
-                // j = 1, 2, … below k, inserted in place (no vector per arc)
-                final_x.splice(
-                    iu + 1..iu + 1,
-                    (1..k as usize)
-                        .map(|j| cx + radius * js::math::sin(t0 + ((t1 - t0) * j as f64) / k)),
-                );
-            }
-            i -= 1;
-        }
-    }
     let slices_x = final_x;
     let n_slices = slices_x.len() - 1;
     let b_array: Vec<f64> = (0..n_slices)
@@ -1599,8 +1513,9 @@ pub fn get_slices(
     };
 
     // Create slices
-    let mut results: Vec<Slice> = Vec::new();
+    let mut results: Vec<Slice> = Vec::with_capacity(n_slices);
     let vertical_head = slope.pore_pressure_head() == PorePressureHead::Vertical;
+    let gw = slope.water_unit_weight();
     let has_sat_weight = slope.material_geometries().iter().any(|g| {
         slope
             .material(g.material)
@@ -1612,7 +1527,7 @@ pub fn get_slices(
     // Water y at the slice edges, once per water line (for γsat).
     let water_ys = std::cell::RefCell::new(EdgeYsCache::new(&slices_x));
     let poly_base = |x: f64| base_y(x);
-    let waternet_fn = waternet.map(|wn| move |x: f64, y: f64| waternet_pore_pressure(wn, x, y));
+    let waternet_fn = waternet.map(|wn| move |x: f64, y: f64| waternet_pore_pressure(wn, x, y, gw));
     let materials = slope.materials();
     for i in 0..n_slices {
         let mut water_y_mean: Option<f64> = None;
@@ -1682,6 +1597,7 @@ pub fn get_slices(
                 None
             },
             pore_pressure_at: waternet_fn.as_ref().map(|f| f as &dyn Fn(f64, f64) -> f64),
+            water_unit_weight: gw,
         };
         let s = create_slice(
             &SliceInput {
@@ -1706,7 +1622,7 @@ pub fn get_slices(
                 continue;
             }
             if free_lines[i].is_some() {
-                apply_free_water(&mut s, free_y_l[i], free_y_r[i], cy);
+                apply_free_water(&mut s, free_y_l[i], free_y_r[i], cy, gw);
             }
             let excess = if !excess_udls.is_empty() {
                 load_excess_pore_pressure(&s, materials, &excess_udls, load_factor)
@@ -1811,7 +1727,7 @@ pub fn get_slices(
             }
             let h1 = wy - y_lo;
             let h2 = js::math::max(wy - y_hi, 0.0);
-            let force = (WATER_UNIT_WEIGHT * (h1 * h1 - h2 * h2)) / 2.0;
+            let force = (gw * (h1 * h1 - h2 * h2)) / 2.0;
             // Centroid of the trapezoidal pressure between yLo and min(wy, yHi).
             let d = js::math::min(wy, y_hi) - y_lo;
             let yc = y_lo + (d * (h1 + 2.0 * h2)) / (3.0 * (h1 + h2));
@@ -1850,7 +1766,7 @@ pub fn get_slices(
             return Ok(Vec::new());
         }
         let y_crack_bottom = first.y0_bottom;
-        let force = 0.5 * WATER_UNIT_WEIGHT * hw * hw;
+        let force = 0.5 * gw * hw * hw;
         first.h_force = Some(first.h_force.unwrap_or(0.0) + force);
         first.extra_moment =
             Some(first.extra_moment.unwrap_or(0.0) + force * (cy - (y_crack_bottom + hw / 3.0)));
@@ -2091,7 +2007,7 @@ pub fn rankine_crack_depth(slope: &Slope, x: f64) -> Result<f64> {
     if let Some(water) = slope.get_water_line_for_material(Some(geo.material)) {
         let wy = get_y_at_x(&water.x, &water.y, x);
         if wy.is_finite() && wy > y_ground {
-            q += WATER_UNIT_WEIGHT * (wy - y_ground);
+            q += slope.water_unit_weight() * (wy - y_ground);
         }
     }
     Ok(js::math::max(
@@ -2195,7 +2111,7 @@ pub fn find_crack_x(
 /// The pressure γw·g(x), with g the water depth above the surface, is
 /// integrated over the wet part of the slice top: vertical load ∫p dx,
 /// horizontal force ∫p dy = slope·∫p dx, and their moment about the centre.
-fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64) {
+fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64, gw: f64) {
     if !wy_left.is_finite() || !wy_right.is_finite() {
         return;
     }
@@ -2227,11 +2143,9 @@ fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64) {
     let moment_density = |t: f64| depth(t) * (cx - x_at(t) + surface_slope * (cy - y_at(t)));
     let tm = (ta + tb) / 2.0;
     let len = (tb - ta) * b;
-    let load = WATER_UNIT_WEIGHT * len * ((depth(ta) + depth(tb)) / 2.0);
-    let moment = (WATER_UNIT_WEIGHT
-        * len
-        * (moment_density(ta) + 4.0 * moment_density(tm) + moment_density(tb)))
-        / 6.0;
+    let load = gw * len * ((depth(ta) + depth(tb)) / 2.0);
+    let moment =
+        (gw * len * (moment_density(ta) + 4.0 * moment_density(tm) + moment_density(tb))) / 6.0;
     s.water_load = Some(s.water_load.unwrap_or(0.0) + load);
     s.h_force = Some(s.h_force.unwrap_or(0.0) + surface_slope * load);
     // The solvers already take the vertical load at the slice centre.

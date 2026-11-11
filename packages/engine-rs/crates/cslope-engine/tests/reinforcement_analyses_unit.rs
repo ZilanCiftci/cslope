@@ -341,12 +341,33 @@ fn axial_tangent_and_bisector_directions_on_the_slices() {
 }
 
 #[test]
-fn an_element_the_movement_would_push_misses_the_surface_or_has_no_length_carries_nothing() {
+fn a_passive_element_the_movement_would_push_misses_the_surface_or_has_no_length_carries_nothing() {
+    let passive = |v: Value| with(&v, json!({ "application": "passive" }));
     // Pointing down-slope out of the mass: compressed by the movement.
-    assert!(forces_for(
+    assert!(forces_for(passive(
         json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100 })
-    )
+    ))
     .is_empty());
+    assert!(forces_for(passive(
+        json!({ "x1": 35, "y1": -1, "x2": 38, "y2": -3, "tensileCapacity": 100 })
+    ))
+    .is_empty());
+    assert!(forces_for(passive(
+        json!({ "x1": 20, "y1": 0, "x2": 20, "y2": 0, "tensileCapacity": 100 })
+    ))
+    .is_empty());
+    // Zero capacity.
+    assert!(forces_for(passive(with(&nail(), json!({ "tensileCapacity": 0 })))).is_empty());
+}
+
+#[test]
+fn an_active_element_the_movement_would_push_carries_its_force_one_that_misses_carries_nothing() {
+    // Pointing down-slope out of the mass: a prestressed anchor still acts
+    // (issue #143), along itself.
+    let f = forces_for(json!({ "x1": 20, "y1": 3.33, "x2": 34, "y2": -6, "tensileCapacity": 100 }));
+    assert_eq!(f.len(), 1);
+    close(f[0].force, 100.0, 12);
+    close(f[0].fy / f[0].fx, -9.33 / 14.0, 9);
     assert!(
         forces_for(json!({ "x1": 35, "y1": -1, "x2": 38, "y2": -3, "tensileCapacity": 100 }))
             .is_empty()
@@ -355,24 +376,227 @@ fn an_element_the_movement_would_push_misses_the_surface_or_has_no_length_carrie
         forces_for(json!({ "x1": 20, "y1": 0, "x2": 20, "y2": 0, "tensileCapacity": 100 }))
             .is_empty()
     );
-    // Zero capacity.
     assert!(forces_for(with(&nail(), json!({ "tensileCapacity": 0 }))).is_empty());
 }
 
 #[test]
 fn an_element_within_2_degrees_of_the_normal_to_the_base_carries_its_force() {
     // the circle's lowest point is (22, −0.5), its base level there
-    let at = |deg: f64| {
+    let at = |deg: f64, application: &str| {
         let t = deg * std::f64::consts::PI / 180.0;
         // through the lowest point, tilted deg from the vertical: the lower end towards +x
         forces_for(json!({
             "x1": 22.0 - 6.0 * t.sin(), "y1": -0.5 + 6.0 * t.cos(),
             "x2": 22.0 + 6.0 * t.sin(), "y2": -0.5 - 6.0 * t.cos(), "tensileCapacity": 100,
+            "application": application,
         }))
     };
-    assert_eq!(at(0.0).len(), 1);
+    assert_eq!(at(0.0, "passive").len(), 1);
     // (the slice base there is within about 1° of level)
-    assert!(at(6.0).is_empty());
+    assert!(at(6.0, "passive").is_empty());
+    // Active: carried at both (issue #143).
+    assert_eq!(at(0.0, "active").len(), 1);
+    assert_eq!(at(6.0, "active").len(), 1);
+}
+
+// ── Active anchors past the normal (issue #143) ───────────────────
+
+/// An anchor crossing the rigid block's plane at its middle, `deg` past
+/// the plane's normal on the pushed side (positive: the movement would
+/// shorten it), 100 kN/m.
+fn anchor_past_normal(deg: f64, extra: Value) -> Value {
+    // Movement down the plane (rtl: towards −x) and the normal into the
+    // stable ground.
+    let l = 8.5f64.hypot(10.0);
+    let (mx, my) = (-8.5 / l, -10.0 / l);
+    let (nx, ny) = (10.0 / l, -8.5 / l);
+    let d = deg.to_radians();
+    let (ux, uy) = (d.cos() * nx + d.sin() * mx, d.cos() * ny + d.sin() * my);
+    let (px, py) = (4.25, 5.0);
+    with(
+        &json!({ "x1": px - 3.0 * ux, "y1": py - 3.0 * uy, "x2": px + 10.0 * ux, "y2": py + 10.0 * uy, "tensileCapacity": 100 }),
+        extra,
+    )
+}
+
+#[test]
+fn an_active_anchor_past_the_normal_gives_hoeks_plane_failure_solution() {
+    // Hoek (Practical Rock Engineering), plane failure with a tensioned
+    // anchor at θ from the normal, here δ past it on the pushed side:
+    // F = (cL + (W cos ψ + T cos δ) tan φ) / (W sin ψ + T sin δ).
+    let t = 100.0;
+    for deg in [1.0, 3.0, 10.0, 30.0] {
+        let d = f64::to_radians(deg);
+        let exact =
+            (cl() + (W * psi().cos() + t * d.cos()) * tan30()) / (W * psi().sin() + t * d.sin());
+        for (m, o, digits) in methods() {
+            for extra in [json!({}), json!({ "direction": "tangent" })] {
+                let got = fos(block(json!([anchor_past_normal(deg, extra)])), m, o.clone());
+                close(got, exact, digits);
+            }
+        }
+    }
+    // The passive anchor is dropped beyond 2° past the normal (unchanged).
+    let plain = fos(block(json!([])), "Janbu", json!({}));
+    close(
+        fos(
+            block(json!([anchor_past_normal(
+                3.0,
+                json!({ "application": "passive" })
+            )])),
+            "Janbu",
+            json!({}),
+        ),
+        plain,
+        9,
+    );
+}
+
+/// The circles of the wall model: centre (34, cy), 0.3 m below the toe
+/// (20, 0) of the wall, so that they enter the crest just behind the face
+/// and cross the soil behind the wall steeply (thin wedges).
+const WALL_CX: f64 = 34.0;
+
+fn wall_radius(cy: f64) -> f64 {
+    (WALL_CX - 20.0).hypot(cy) + 0.3
+}
+
+/// A straight element: a point on it and its unit direction into the
+/// stable ground.
+type Line = ([f64; 2], [f64; 2]);
+
+/// A 10 m vertical wall (face at x = 20, sliding to +x), one circle, and
+/// the element along `line` (450 kN/m, `application`) when given.
+fn wall_model(cy: f64, element: Option<(Line, &str)>) -> Value {
+    let reinforcements = match element {
+        Some((([px, py], [ux, uy]), application)) => json!([{
+            "x1": px - 6.0 * ux, "y1": py - 6.0 * uy, "x2": px + 10.0 * ux, "y2": py + 10.0 * uy,
+            "tensileCapacity": 450, "application": application,
+        }]),
+        None => json!([]),
+    };
+    layered(
+        &[[0.0, 10.0], [20.0, 10.0], [20.0, 0.0], [70.0, 0.0]],
+        -20.0,
+        &[("S", None, mc(10.0, 30.0, 19.0))],
+        json!({
+            "customSearchPlanes": [{ "cx": WALL_CX, "cy": cy, "radius": wall_radius(cy) }],
+            "customPlanesOnly": true,
+            "reinforcements": reinforcements,
+        }),
+    )
+}
+
+/// F (Janbu) on the wall's circle with the element (or none).
+fn wall_fos(cy: f64, element: Option<(Line, &str)>) -> f64 {
+    run_verification(wall_model(cy, element), "Janbu", json!({}))
+        .0
+        .unwrap()
+}
+
+/// The slice bases of the wall's circle, as the analysis makes them: each
+/// one's start point and unit direction (+x, the direction of movement).
+fn wall_bases(cy: f64) -> Vec<([f64; 2], [f64; 2], f64)> {
+    let (_, slope) = run_verification(wall_model(cy, None), "Janbu", json!({}));
+    let r = wall_radius(cy);
+    let ints = slope
+        .get_circle_external_intersection(WALL_CX, cy, r)
+        .unwrap();
+    get_slices(
+        &slope,
+        ints[0][0],
+        ints[ints.len() - 1][0],
+        WALL_CX,
+        cy,
+        r,
+        None,
+        &mut SliceScratch::new(),
+    )
+    .unwrap()
+    .iter()
+    .map(|q| {
+        let (bx, by) = (q.x_right - q.x_left, q.y1_bottom - q.y0_bottom);
+        let l = bx.hypot(by);
+        ([q.x_left, q.y0_bottom], [bx / l, by / l], l)
+    })
+    .collect()
+}
+
+/// How far the element lies past the normal to the slice base it crosses
+/// on the wall's circle, on the pushed side (degrees; negative on the
+/// pulled side), and that base's index.
+fn angle_past_normal(cy: f64, ([px, py], [ux, uy]): Line) -> (f64, usize) {
+    for (i, ([x0, y0], [tx, ty], l)) in wall_bases(cy).into_iter().enumerate() {
+        let den = tx * uy - ty * ux;
+        let (qx, qy) = (px - x0, py - y0);
+        let s = (qx * uy - qy * ux) / den;
+        let w = (qx * ty - qy * tx) / den;
+        if (0.0..=l).contains(&s) && (-6.0..=10.0).contains(&w) {
+            return ((ux * tx + uy * ty).asin().to_degrees(), i);
+        }
+    }
+    panic!("the element misses the circle");
+}
+
+#[test]
+fn f_is_continuous_across_the_old_2_degree_threshold_for_an_active_anchor() {
+    // Issue #143: an anchor through the steep part of a circle behind the
+    // wall, 1.9° past the normal to the base it crosses (on the pushed
+    // side), and a neighbouring circle (its centre 0.1–0.3 m lower) on which
+    // it crosses the same base beyond 2°. Built from the slices the analysis
+    // makes, so that the pair does not hang on the slice layout.
+    let mut found = None;
+    'search: for k in 0..40 {
+        let c1 = 10.6 + 0.05 * k as f64;
+        let bases = wall_bases(c1);
+        // The steepest base above y = 1 and below y = 8.
+        let Some((i, &([x0, y0], [tx, ty], l))) = bases
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| b.0[1] > 1.0 && b.0[1] < 8.0)
+            .min_by(|a, b| a.1 .1[1].total_cmp(&b.1 .1[1]))
+        else {
+            continue;
+        };
+        let d = 1.9f64.to_radians();
+        let (nx, ny) = (ty, -tx);
+        let line: Line = (
+            [x0 + 0.5 * l * tx, y0 + 0.5 * l * ty],
+            [d.cos() * nx + d.sin() * tx, d.cos() * ny + d.sin() * ty],
+        );
+        let (a1, i1) = angle_past_normal(c1, line);
+        assert_eq!(i1, i);
+        close(a1, 1.9, 9);
+        for j in 1..=6 {
+            let c2 = c1 - 0.05 * j as f64;
+            let (a2, i2) = angle_past_normal(c2, line);
+            if i2 == i && a2 > 2.05 && a2 < 2.5 {
+                found = Some((c1, c2, line));
+                break 'search;
+            }
+        }
+    }
+    let (c1, c2, line) = found.expect("two neighbouring circles across 2° past the normal");
+    let (a1, a2) = (
+        wall_fos(c1, Some((line, "active"))),
+        wall_fos(c2, Some((line, "active"))),
+    );
+    let (b1, b2) = (wall_fos(c1, None), wall_fos(c2, None));
+    // The active anchor counts on both circles: F moves by no more than it
+    // does without the anchor (plus 0.5 %), where before it fell to F
+    // without it on the circle beyond 2°.
+    assert!(
+        (a1 - a2).abs() < (b1 - b2).abs() + 0.005 * a1,
+        "active {a1} {a2}, bare {b1} {b2}"
+    );
+    assert!(a2 > 1.05 * b2, "active {a2} bare {b2}");
+    // The passive anchor (unchanged): counted within 2°, not beyond.
+    let (p1, p2) = (
+        wall_fos(c1, Some((line, "passive"))),
+        wall_fos(c2, Some((line, "passive"))),
+    );
+    close(p2, b2, 9);
+    assert!(p1 > 1.01 * b1, "passive {p1} bare {b1}");
 }
 
 #[test]

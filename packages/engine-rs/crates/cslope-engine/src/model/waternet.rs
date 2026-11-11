@@ -13,7 +13,6 @@
 //! confined aquifer with another head.
 
 use crate::js;
-use crate::types::constants::WATER_UNIT_WEIGHT;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 
@@ -167,8 +166,9 @@ fn at(pts: Option<&Vec<Pt>>, x: f64) -> f64 {
     }
 }
 
-/// The pore pressure (kPa, ≥ 0) at (x, z).
-pub fn waternet_pore_pressure(wn: &Waternet, x: f64, z: f64) -> f64 {
+/// The pore pressure (kPa, ≥ 0) at (x, z): γw·(h − z) with the head h there
+/// and the model's unit weight of water γw (`Slope::water_unit_weight`).
+pub fn waternet_pore_pressure(wn: &Waternet, x: f64, z: f64, water_unit_weight: f64) -> f64 {
     let Compiled { phreatic, refs } = compile(wn);
     // the reference lines at x nearest above and below z
     let mut upper: Option<&CompiledRef> = None;
@@ -224,7 +224,7 @@ pub fn waternet_pore_pressure(wn: &Waternet, x: f64, z: f64) -> f64 {
         }
     }
     if h.is_finite() {
-        js::math::max(0.0, (h - z) * WATER_UNIT_WEIGHT)
+        js::math::max(0.0, (h - z) * water_unit_weight)
     } else {
         0.0
     }

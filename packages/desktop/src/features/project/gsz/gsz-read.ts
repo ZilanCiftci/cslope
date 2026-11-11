@@ -9,6 +9,7 @@
  */
 
 import { isZip, readZip } from "../../../utils/zip";
+import { WATER_UNIT_WEIGHT } from "@cslope/engine";
 
 type Pt = [number, number];
 
@@ -59,6 +60,13 @@ export interface GszLineLoad {
 export interface GszStability {
   direction?: string;
   slipOption?: string;
+  /**
+   * Where the analysis takes its initial input from (InitialInputInfo):
+   * the option (Parent, Other, …) and the analysis named in its path, as
+   * written. A slip surface search "FromOther" takes its slip surfaces
+   * from that analysis.
+   */
+  inputFrom?: { option?: string; name?: string };
   /** Entry/exit ranges [x1, x2] on the left and the right side. */
   entryExit?: { left: [number, number]; right: [number, number] };
   slices?: number;
@@ -74,6 +82,13 @@ export interface GszStability {
    * from +x).
    */
   block?: { left: GszBlockGrid; right: GszBlockGrid };
+  /**
+   * The smallest sliding mass a slip surface may have (MinimumVolume): an
+   * area per unit width, in the file's length unit squared.
+   */
+  minimumVolume?: number;
+  /** The smallest depth a slip surface may have (MinimumDepth), in the file's length unit. */
+  minimumDepth?: number;
   axis?: Pt;
   /** Piezometric surface id → its points. */
   piezometric: Map<number, Pt[]>;
@@ -96,6 +111,8 @@ export interface GszStability {
   seismicV: number;
   /** A rapid drawdown analysis (Control/IsRapidDrawdown). */
   rapidDrawdown?: boolean;
+  /** The phreatic correction of the pore pressure (Control/IsPiezPhreatic). */
+  phreaticCorrection?: boolean;
   /** The reinforcement lines: the reinforcement's id, end 1 (the head) and end 2. */
   reinforcementLines?: { reinforcement: number; p1: Pt; p2: Pt }[];
   /**
@@ -240,6 +257,18 @@ export interface GszBlockGrid {
   angles: [number, number];
 }
 
+/**
+ * Keep a point of an analysis's point list (DataPoints, by Number). A
+ * number the list has already given is a repeat, which some files have:
+ * that point takes its position in the list (1-based) as its number, as
+ * the search objects' references to it do, so no point is lost. A list
+ * without repeats is read by its numbers alone.
+ */
+function setPoint(points: Map<number, Pt>, n: number, index: number, p: Pt) {
+  const key = points.has(n) ? index + 1 : n;
+  if (!points.has(key)) points.set(key, p);
+}
+
 /** Parse the model XML of a .gsz. */
 export function parseGszXml(xml: string): Omit<GszFile, "results"> {
   // A model never has a document type declaration; one can only carry
@@ -345,10 +374,10 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     if (aid === undefined || !entry) continue;
     // the analysis's own point list, which the water, loads and crack refer to
     const local = new Map<number, Pt>();
-    for (const d of children(entry, "DataPoints/DataPoint")) {
+    children(entry, "DataPoints/DataPoint").forEach((d, i) => {
       const n = num(d.getAttribute("Number")), x = num(d.getAttribute("X")), y = num(d.getAttribute("Y"));
-      if (n !== undefined && x !== undefined && y !== undefined) local.set(n, [x, y]);
-    }
+      if (n !== undefined && x !== undefined && y !== undefined) setPoint(local, n, i, [x, y]);
+    });
     const pointsOf = (el: Element | null): Pt[] =>
       children(el, "DataPoints/DataPoint").flatMap((d) => {
         const n = Number(d.textContent?.trim());
@@ -395,8 +424,12 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const l2 = /point/i.test(childText(ee, "LeftOption") ?? "") ? (l2Given ?? l1) : l2Given;
     const r2 = /point/i.test(childText(ee, "RightOption") ?? "") ? (r2Given ?? r1) : r2Given;
     const seis = child(entry, "Seismic");
+    const input = child(entry, "InitialInputInfo");
+    // the path names the analysis in quotes: ;;"name";(last)
+    const inputName = input ? child(input, "Path")?.getAttribute("path")?.match(/"(.*)"/)?.[1] : undefined;
     stability.set(aid, {
       direction: childText(slip, "DirectionOfSlip"),
+      ...(input ? { inputFrom: { option: childText(input, "Option"), name: inputName } } : {}),
       // The default search (Entry and Exit) is not written.
       slipOption: childText(slip, "Option") ?? (ee ? "EntryExit" : undefined),
       entryExit:
@@ -422,6 +455,8 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
         const left = grid("LeftGrid"), right = grid("RightGrid");
         return left && right ? { left, right } : undefined;
       })(),
+      minimumVolume: num(childText(slip, "MinimumVolume")),
+      minimumDepth: num(childText(slip, "MinimumDepth")),
       fullySpecified: [
         ...children(slip, "FullySpecifiedSlips/FullySpecifiedSlip"),
         // version 8
@@ -442,6 +477,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
       seismicH: num(seis?.getAttribute("Horizontal")) ?? 0,
       seismicV: num(seis?.getAttribute("Vertical")) ?? 0,
       rapidDrawdown: childText(child(entry, "Control"), "IsRapidDrawdown") === "true",
+      phreaticCorrection: childText(child(entry, "Control"), "IsPiezPhreatic") === "true",
       bBar: new Map(
         children(entry, "MaterialUsesBBarParams/MaterialUsesBBarParam").flatMap((b) => {
           const id = num(childText(b, "ID"));
@@ -470,7 +506,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     // no stated system: from the unit weight of water, the one fixed value
     const gw = [...water.values()].find((w) => w.gammaWater !== undefined)?.gammaWater;
     if (gw !== undefined && Math.abs(gw - 62.4) < 1) units = "imperial";
-    else if (gw === undefined || Math.abs(gw - 9.81) < 0.2) units = "metric";
+    else if (gw === undefined || Math.abs(gw - WATER_UNIT_WEIGHT) < 0.2) units = "metric";
     else throw new Error(`Cannot tell the units of the file (unit weight of water ${gw}).`);
   }
 
@@ -581,7 +617,7 @@ export function parseSlipSurfaceCsv(text: string): GszSlipResult[] {
       ...(Number.isFinite(weight) ? { weight } : {}),
       ...(Number.isInteger(n) ? { num: n } : {}),
       ...(Number.isFinite(dir) && dir !== 0 ? { direction: dir < 0 ? 1 : -1 } : {}),
-    } as GszSlipResult);
+    });
   }
   return out;
 }

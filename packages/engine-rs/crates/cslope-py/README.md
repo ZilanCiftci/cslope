@@ -52,9 +52,9 @@ r["minFOS"], r["criticalSurface"], r["criticalSlices"][0]
 ```
 $ python examples/parameter_study.py
 phi'             Bishop  Morgenstern-Price
-  20              1.134              1.132
-  30              1.622              1.620
-  40              2.204              2.203   (every 2° in the script)
+  20              1.134              1.133
+  30              1.622              1.621
+  40              2.205              2.203   (every 2° in the script)
 ```
 
 ### API
@@ -203,7 +203,7 @@ reinforcement), kN/m³, degrees (also a slice's base angle). Points are
 | `search_limits(entry=(x1, x2), exit=(x1, x2))`, `search_limits(None)` | [Search limits] |
 | `add_custom_surface(center=, radius=)` / `add_custom_surface(points=)` → `CustomSurface`, `custom_surfaces_only` | [Custom surfaces] |
 | `add_block_search_object(points)` → `BlockSearchObject` | block search |
-| `options` | [Options] the builder's `Options`, with all of the app's options (snake_case of the app's keys); the app's defaults (D-23) |
+| `options` | [Options] the builder's `Options`, with all of the app's options (snake_case of the app's keys); the app's defaults (D-23); `water_unit_weight` is the unit weight of water γw in kN/m³ (None: 9.807) |
 | `analyse(*, threads=, progress=, cancel=)` → `Result` | runs as the app runs it, keeps the result; raises on an engine error and keeps nothing |
 | `result`, `error`, `result_is_current`, `input_hash` | the saved result (read without a run), the last run's error |
 | `definition`, `save_definition(path)` | the analysis document (JSON, the agents' path) |

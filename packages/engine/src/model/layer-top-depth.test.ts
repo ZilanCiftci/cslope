@@ -65,7 +65,9 @@ describe("S = f(depth) from the top of the layer", () => {
     // relaxed fixed-point inner loop; the secant inner loop converges to
     // a slightly different point within the 0.005 tolerance; 1.0890157398
     // before the arc-consistent slice base and the cut steep ends).
-    expect(fromGround).toBeCloseTo(1.0896195608, 8);
+    // 1.0896195608 with the arc base of a circle; the chord since 2026-11-10
+    // (1.0874542963); without the cut steep ends since 2026-11-11.
+    expect(fromGround).toBeCloseTo(1.0884182069, 8);
   });
 
   it("works on a right-to-left model", () => {

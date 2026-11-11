@@ -48,7 +48,7 @@ describe("verification paper frame", () => {
       const m = verificationModel(c);
       const lock = m.resultViewSettings!.viewLock!;
       const ends = (m.reinforcements ?? []).flatMap((r) => [[r.x1, r.y1], [r.x2, r.y2]] as [number, number][]);
-      const inside = { bottomLeft: [lock.bottomLeft[0] + 1e-3, lock.bottomLeft[1] + 1e-3], topRight: [lock.topRight[0] - 1e-3, lock.topRight[1] - 1e-3] } as typeof lock;
+      const inside: typeof lock = { bottomLeft: [lock.bottomLeft[0] + 1e-3, lock.bottomLeft[1] + 1e-3], topRight: [lock.topRight[0] - 1e-3, lock.topRight[1] - 1e-3] };
       expect(viewLockContains(inside, [...m.coordinates, ...ends]), c.id).toBe(true);
     }
   });

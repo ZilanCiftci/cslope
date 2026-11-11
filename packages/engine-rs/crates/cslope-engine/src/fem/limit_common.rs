@@ -11,9 +11,7 @@ use crate::fem::srm::davis_b;
 use crate::js;
 use crate::model::geometry_ops::{material_layer_top_at, Polyline};
 use crate::model::slope::Slope;
-use crate::types::{
-    design_strength, needs_layer_top, Material, MaterialId, StrengthContext, WATER_UNIT_WEIGHT,
-};
+use crate::types::{design_strength, needs_layer_top, Material, MaterialId, StrengthContext};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::f64::consts::PI;
@@ -102,17 +100,18 @@ pub fn strength_at(
     })
 }
 
-/// Pore pressure at (x, y): from the seepage heads at node n when the model has them, else from the water line.
+/// Pore pressure at (x, y): from the seepage heads at node n when the model has them, else from the water line; `gw` the unit weight of water.
 pub fn pore_pressure_at(
     head: Option<&[f64]>,
     n: usize,
     water_line: Option<&Polyline>,
     x: f64,
     y: f64,
+    gw: f64,
 ) -> f64 {
     if let Some(head) = head {
         return if head[n].is_finite() {
-            js::math::max(0.0, WATER_UNIT_WEIGHT * (head[n] - y))
+            js::math::max(0.0, gw * (head[n] - y))
         } else {
             0.0
         };
@@ -120,7 +119,7 @@ pub fn pore_pressure_at(
     if let Some(wl) = water_line {
         let yw = polyline_y(wl, x);
         return if yw.is_finite() {
-            js::math::max(0.0, WATER_UNIT_WEIGHT * (yw - y))
+            js::math::max(0.0, gw * (yw - y))
         } else {
             0.0
         };

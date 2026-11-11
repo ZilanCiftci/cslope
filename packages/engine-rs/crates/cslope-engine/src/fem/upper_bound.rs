@@ -64,7 +64,6 @@ use crate::fem::model::{build_fe_model, ignored_input_warnings, polyline_y};
 use crate::js;
 use crate::model::geometry_ops::Polyline;
 use crate::model::slope::Slope;
-use crate::types::WATER_UNIT_WEIGHT;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
@@ -429,7 +428,8 @@ pub fn upper_bound_problem(slope: &Slope, options: &UpperBoundOptions) -> Result
         let wl = water_lines[mi];
         let n = [el[3 * e], el[3 * e + 1], el[3 * e + 2]];
         for k in 0..3 {
-            n_u[3 * e + k] = pore_pressure_at(head, n[k], wl, x[n[k]], y[n[k]]);
+            n_u[3 * e + k] =
+                pore_pressure_at(head, n[k], wl, x[n[k]], y[n[k]], slope.water_unit_weight());
         }
         e_gamma[e] = mean_unit_weight(
             m,
@@ -668,7 +668,7 @@ pub fn upper_bound_problem(slope: &Slope, options: &UpperBoundOptions) -> Result
                 if let Some(pl) = pond_line {
                     let yw = polyline_y(pl, x[node]);
                     pw = if yw.is_finite() {
-                        WATER_UNIT_WEIGHT * js::math::max(0.0, yw - y[node])
+                        slope.water_unit_weight() * js::math::max(0.0, yw - y[node])
                     } else {
                         0.0
                     };

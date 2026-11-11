@@ -784,7 +784,7 @@ export function ResultSidebar() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       commitExtentField("bl_x");
-                      (e.currentTarget as HTMLInputElement).blur();
+                      (e.currentTarget).blur();
                     }
                   }}
                   className="w-full tabular-nums"
@@ -813,7 +813,7 @@ export function ResultSidebar() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       commitExtentField("tr_x");
-                      (e.currentTarget as HTMLInputElement).blur();
+                      (e.currentTarget).blur();
                     }
                   }}
                   className="w-full tabular-nums"
@@ -849,7 +849,7 @@ export function ResultSidebar() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       commitExtentField("bl_y");
-                      (e.currentTarget as HTMLInputElement).blur();
+                      (e.currentTarget).blur();
                     }
                   }}
                   className="w-full tabular-nums"
@@ -878,7 +878,7 @@ export function ResultSidebar() {
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       commitExtentField("tr_y");
-                      (e.currentTarget as HTMLInputElement).blur();
+                      (e.currentTarget).blur();
                     }
                   }}
                   className="w-full tabular-nums"

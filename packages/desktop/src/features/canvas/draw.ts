@@ -122,7 +122,7 @@ import {
   type LoadLayout,
 } from "./overlay-geometry";
 import type { PiezoSymbol } from "../rendering/piezo-layout";
-import { layoutLimitMarkers, layoutRangeDots } from "../rendering/search-markers";
+import { layoutLimitMarkers, layoutRangeDots, limitGroundY } from "../rendering/search-markers";
 import {
   crackMarkerPosition,
   limitMarkerBoxes,
@@ -307,9 +307,9 @@ export function editOverlayBoxes(
       [lim.entryLeftX, lim.entryRightX],
       [lim.exitLeftX, lim.exitRightX],
     ];
-    for (const [xa, xb] of pairs) {
+    for (const [k, [xa, xb]] of pairs.entries()) {
       for (const end of rangeMarkerEnds(xa, xb)) {
-        const y = surfaceYAtX(end.x);
+        const y = limitGroundY(lim, coordinates, k === 0 ? "entry" : "exit", end.x, surfaceYAtX);
         if (y === null) continue;
         const [cx, cy] = toC(end.x, y);
         const toward = end.toward === null ? null : toC(end.toward, y)[0];
@@ -832,7 +832,8 @@ export function drawCanvas(
       }
       case "searchLimits": {
         const key = point === "entryRightX" || point === "exitLeftX" || point === "exitRightX" ? point : "entryLeftX";
-        return at(analysisLimits[key], surfaceYAtX(analysisLimits[key]));
+        const kind = key.startsWith("exit") ? "exit" : "entry";
+        return at(analysisLimits[key], limitGroundY(analysisLimits, coordinates, kind, analysisLimits[key], surfaceYAtX));
       }
       case "reinforcement":
       case "pile": {
@@ -2364,7 +2365,8 @@ export function drawCanvas(
       case "searchLimits":
         if (analysisLimits.enabled) {
           for (const key of ["entryLeftX", "entryRightX", "exitLeftX", "exitRightX"] as const) {
-            const gy = ground(analysisLimits[key]);
+            const kind = key.startsWith("exit") ? "exit" : "entry";
+            const gy = limitGroundY(analysisLimits, coordinates, kind, analysisLimits[key], ground);
             if (gy !== null) handle(analysisLimits[key], gy, key);
           }
         }

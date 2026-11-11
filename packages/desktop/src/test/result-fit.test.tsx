@@ -36,7 +36,7 @@ describe("fit to screen in the result view", () => {
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
       left: 0, top: 0, right: W, bottom: H, width: W, height: H, x: 0, y: 0,
       toJSON: () => ({}),
-    } as DOMRect);
+    });
     vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockImplementation(
       () =>
         new Proxy(
