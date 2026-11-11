@@ -788,7 +788,7 @@ table(
 if (!PUBLIC) {
   heading("Acceptance", 2);
   paragraph(
-    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
+    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure, plus 1 % where the reference surface ends in a vertical or near-vertical scarp, so that the factor depends on how that part is sliced; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
   );
   y += 2;
 }

@@ -39,9 +39,6 @@ use std::sync::Arc;
 /// Grid of the local origin for clipping material regions (see create_slice).
 const LOCAL_ORIGIN_GRID: f64 = 4096.0;
 
-/// Largest arc a slice of a circle spans, at least (rad); see get_slices.
-const MAX_SLICE_ARC: f64 = (2.0 * PI) / 180.0;
-
 // ── Clipping buffers ──────────────────────────────────────────────
 // A slice clips every material polygon by the vertical strip, then by
 // each slip-surface edge (two: the slice's straight base).
@@ -1366,36 +1363,6 @@ pub fn get_slices(
     }
 
     js::array::sort_by(&mut final_x, |a, b| a - b);
-    // On a circle, an end where the arc turns steep (towards a vertical
-    // tangent) is cut so that no slice spans more arc than twice a nominal
-    // slice at the bottom of the circle (2b/R), nor more than 2°: one base
-    // inclination per slice cannot follow an arc that turns 20–30° within
-    // it, while the middle of the circle keeps the nominal width. Against
-    // 4000 slices on the 150 fixed-circle checks of the verification
-    // (2026-11) this took the largest error from 0.87 % (V068, a vertical
-    // tangent at the crest) to 0.16 %, with 3 % more slices; 65 or 80
-    // even slices left 0.53 % and 0.35 %.
-    if poly.is_none() {
-        let max_arc = js::math::max(MAX_SLICE_ARC, (2.0 * b) / radius);
-        let theta =
-            |x: f64| js::math::asin(js::math::max(-1.0, js::math::min(1.0, (x - cx) / radius)));
-        let mut i = final_x.len() as isize - 2;
-        while i >= 0 {
-            let iu = i as usize;
-            let t0 = theta(final_x[iu]);
-            let t1 = theta(final_x[iu + 1]);
-            let k = ((t1 - t0) / max_arc - 1e-9).ceil();
-            if k > 1.0 {
-                // j = 1, 2, … below k, inserted in place (no vector per arc)
-                final_x.splice(
-                    iu + 1..iu + 1,
-                    (1..k as usize)
-                        .map(|j| cx + radius * js::math::sin(t0 + ((t1 - t0) * j as f64) / k)),
-                );
-            }
-            i -= 1;
-        }
-    }
     let slices_x = final_x;
     let n_slices = slices_x.len() - 1;
     let b_array: Vec<f64> = (0..n_slices)

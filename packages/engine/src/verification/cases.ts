@@ -79,6 +79,8 @@ export interface VerificationCase {
   inputFromFigure?: boolean;
   /** Reference values read from a chart or a figure; see tolerance.ts. */
   referenceFromFigure?: boolean;
+  /** A surface whose factor depends on the slicing of a vertical end; see tolerance.ts. */
+  slicingSensitive?: boolean;
 }
 
 /** A check as written in the data, before its tolerance is worked out. */
