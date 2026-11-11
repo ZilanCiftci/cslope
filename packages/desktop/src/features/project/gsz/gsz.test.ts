@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { analyseSlope, buildSlope, DEFAULT_ANALYSIS_OPTIONS, toCanonicalSlopeDefinition, type SlopeDefinition } from "@cslope/engine";
+import { analyseSlope, buildSlope, DEFAULT_ANALYSIS_OPTIONS, toCanonicalSlopeDefinition, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { readZip, writeZip, writeZipDeflated } from "../../../utils/zip";
 import { parseGszXml, parseSlipSurfaceCsv, readGsz } from "./gsz-read";
 import { gszToDefinition } from "./gsz-to-definition";
@@ -1050,5 +1050,36 @@ describe(".gsz export", () => {
     const inclined = { ...model, lineLoads: [{ ...model.lineLoads[0], angle: 30 }] };
     expect(modelToGszXml(inclined).notes.join(" ")).toMatch(/direction convention of the format is unverified/);
     expect(modelToGszXml(model).notes.join(" ")).not.toMatch(/unverified/);
+  });
+});
+
+describe(".gsz export: anisotropy of the undrained strength", () => {
+  const aniso: [number, number][] = [[0, 1], [60, 0.7]];
+  const kinds: [string, (anisotropy?: [number, number][]) => MaterialModel][] = [
+    ["undrained", (anisotropy) => ({ kind: "undrained", unitWeight: 17, undrainedShearStrength: 25, anisotropy })],
+    ["s-f-depth", (anisotropy) => ({ kind: "s-f-depth", unitWeight: 17, suRef: 20, depthRef: 0, rate: 1.5, depthReference: "layer-top", anisotropy })],
+    ["s-f-datum", (anisotropy) => ({ kind: "s-f-datum", unitWeight: 17, suRef: 20, yRef: 0, rate: 1.5, anisotropy })],
+    ["shansep", (anisotropy) => ({ kind: "shansep", unitWeight: 17, ratio: 0.25, exponent: 0.8, anisotropy })],
+  ];
+  const withClay = (clay: MaterialModel) =>
+    modelFromDefinition(
+      {
+        orientation: "ltr",
+        coordinates: [[0, 0], [0, 10], [10, 10], [20, 5], [30, 5], [30, 0]],
+        materials: [{ name: "Clay", model: clay }],
+        materialBoundaries: [],
+        regionAssignments: [{ point: [5, 3], materialName: "Clay" }],
+      },
+      { id: "m", name: "Anisotropy" },
+    );
+  const anisoNotes = (clay: MaterialModel) => modelToGszXml(withClay(clay)).notes.filter((n) => /anisotropy/.test(n));
+
+  it.each(kinds)("notes once that the anisotropy of %s is not written", (_kind, make) => {
+    expect(anisoNotes(make(aniso))).toEqual(['Material "Clay": the anisotropy of the undrained strength is not written.']);
+  });
+
+  it.each(kinds)("gives no anisotropy note for %s without anisotropy or with an empty list", (_kind, make) => {
+    expect(anisoNotes(make())).toEqual([]);
+    expect(anisoNotes(make([]))).toEqual([]);
   });
 });
