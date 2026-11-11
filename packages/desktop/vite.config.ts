@@ -115,7 +115,7 @@ export default defineConfig({
   build: {
     // The main chunk carries the engine's WebAssembly as base64 (about 4 MB).
     chunkSizeWarningLimit: 7000,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         manualChunks(id) {
           if (id.includes("node_modules")) {
