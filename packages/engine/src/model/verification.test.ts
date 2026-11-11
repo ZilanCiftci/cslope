@@ -4,6 +4,7 @@
  * published checks themselves run in verification-problems-*.test.ts.
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { SHARDS } from "./verification-shard";
 import { getSlices } from "./slices";
 import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
@@ -139,7 +140,7 @@ describe("Free water above the ground", () => {
     it(`${method}: fully submerged slope = buoyant dry slope`, { timeout: 20000 }, () => {
       const buoyant = runVerification(layered(ground, -10, soil(10)), method).fos!;
       const submerged = runVerification(
-        layered(ground, -10, soil(19.81), {
+        layered(ground, -10, soil(10 + WATER_UNIT_WEIGHT), {
           waterTable: { mode: "custom", value: [[0, 30], [70, 30]], followBoundary: false },
         }),
         method,
@@ -168,7 +169,7 @@ describe("Free water against a vertical face", () => {
   it("a submerged vertical cut = the buoyant cut", () => {
     const submerged = runVerification(wall(0, 15), "Bishop").fos!;
     const buoyant = runVerification(
-      layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - 9.81) }], circle(8, 10, 11)),
+      layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - WATER_UNIT_WEIGHT) }], circle(8, 10, 11)),
       "Bishop",
     ).fos!;
     expect(Math.abs(submerged / buoyant - 1)).toBeLessThan(0.001);
@@ -504,7 +505,7 @@ describe("Automatic tension crack depth", () => {
 
   it("free water on the crest closes the crack like a surcharge", () => {
     const wet = slopeWith(su(20, 18), {}, { waterTable: { mode: "custom", value: [[0, 11], [30, 11]], followBoundary: false } });
-    expect(rankineCrackDepth(wet.slope, 5)).toBeCloseTo((40 - 9.81) / 18, 2);
+    expect(rankineCrackDepth(wet.slope, 5)).toBeCloseTo((40 - WATER_UNIT_WEIGHT) / 18, 2);
   });
 
   it("gives the same result as the same fixed depth", () => {

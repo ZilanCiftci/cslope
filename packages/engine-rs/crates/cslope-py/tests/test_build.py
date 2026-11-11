@@ -27,7 +27,7 @@ needs_examples = pytest.mark.skipif(not EXAMPLES.is_dir(), reason="the skill's e
 PINNED = {
     "single_slope": 1.6205913376603949,
     "layered_soil": 1.8026242201315132,
-    "water_table": 1.0156971092829057,
+    "water_table": 1.0158537043392202,
     "distributed_load": 1.2979670768500866,
     "swedish_partial_factors": 1.3871036072682073,
 }

@@ -18,7 +18,9 @@ use cslope_engine::model::reinforcement::{
     pile_force_direction, pile_force_with_profile, pullout_beyond, PileGoverns,
 };
 use cslope_engine::model::slope::{AnalysisOptionsPatch, Slope};
-use cslope_engine::types::{Pile, Reinforcement, ReinforcementForce, Slice, WaterTableInput};
+use cslope_engine::types::{
+    Pile, Reinforcement, ReinforcementForce, Slice, WaterTableInput, WATER_UNIT_WEIGHT,
+};
 use model_core_support::{close, def, layered, material, mc, su};
 use serde_json::{json, Value};
 use std::f64::consts::PI;
@@ -169,7 +171,7 @@ fn ponded_water_weighs_on_the_overburden() {
     );
     close(
         effective_vertical_stress(&build_slope(&def(d)).unwrap(), 20.0, 5.0),
-        100.0 - 5.0 * 9.81,
+        100.0 - 5.0 * WATER_UNIT_WEIGHT,
         6,
     );
 }
@@ -369,12 +371,12 @@ fn effective_stress_gamma_sat_below_the_water_line_ponded_water_on_the_column() 
     .unwrap();
     close(
         effective_vertical_stress(&sat, 5.0, 2.0),
-        5.0 * 18.0 + 3.0 * 20.0 - 3.0 * 9.81,
+        5.0 * 18.0 + 3.0 * 20.0 - 3.0 * WATER_UNIT_WEIGHT,
         6,
     );
     close(
         effective_vertical_stress(&sat, 35.0, -2.0),
-        2.0 * (20.0 - 9.81),
+        2.0 * (20.0 - WATER_UNIT_WEIGHT),
         6,
     );
 }
@@ -665,7 +667,7 @@ fn uses_the_effective_overburden_below_the_water_table() {
         .per_pile;
     close(f_dry, per_pile(20.0), 1);
     close(f_dry, 1053.0, 0);
-    close(f_wet, per_pile(20.0 - 9.81), 1);
+    close(f_wet, per_pile(20.0 - WATER_UNIT_WEIGHT), 1);
     close(f_wet, 593.0, 0);
 }
 

@@ -9,6 +9,7 @@
  */
 
 import { isZip, readZip } from "../../../utils/zip";
+import { WATER_UNIT_WEIGHT } from "@cslope/engine";
 
 type Pt = [number, number];
 
@@ -470,7 +471,7 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     // no stated system: from the unit weight of water, the one fixed value
     const gw = [...water.values()].find((w) => w.gammaWater !== undefined)?.gammaWater;
     if (gw !== undefined && Math.abs(gw - 62.4) < 1) units = "imperial";
-    else if (gw === undefined || Math.abs(gw - 9.81) < 0.2) units = "metric";
+    else if (gw === undefined || Math.abs(gw - WATER_UNIT_WEIGHT) < 0.2) units = "metric";
     else throw new Error(`Cannot tell the units of the file (unit weight of water ${gw}).`);
   }
 

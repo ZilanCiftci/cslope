@@ -4,6 +4,7 @@
  * and the pile force limits.
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { Material } from "../types/index";
 import type { MaterialModel } from "../types/material-models";
 import type { Reinforcement, Pile } from "../types/reinforcement";
@@ -82,9 +83,9 @@ describe("capacity envelopes", () => {
     const sat = slopeOf({ kind: "mohr-coulomb", unitWeight: 18, unitWeightSat: 20, cohesion: 5, frictionAngle: 30 });
     sat.setWaterTable({ height: 5, followBoundary: false });
     // At x = 5: 5 m dry (18) + 3 m saturated (20) − u (3 m of water).
-    expect(effectiveVerticalStress(sat, 5, 2)).toBeCloseTo(5 * 18 + 3 * 20 - 3 * 9.81, 6);
+    expect(effectiveVerticalStress(sat, 5, 2)).toBeCloseTo(5 * 18 + 3 * 20 - 3 * WATER_UNIT_WEIGHT, 6);
     // At x = 35 (ground 0) under 5 m of free water: buoyant column only.
-    expect(effectiveVerticalStress(sat, 35, -2)).toBeCloseTo(2 * (20 - 9.81), 6);
+    expect(effectiveVerticalStress(sat, 35, -2)).toBeCloseTo(2 * (20 - WATER_UNIT_WEIGHT), 6);
   });
 });
 

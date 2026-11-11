@@ -94,11 +94,158 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-07 | Web: Download .cslp (project writer in a separate WebAssembly module) | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 542 s (4 workers, load 0.8 at start) |
 | 2026-11-10 | Rust engine: faster slice builder and solvers (precomputed slice invariants, shared iteration), dead code and duplicates removed, workspace lints | 0 | 0.323 → 0.323 | 0.455 → 0.455 | 0.938 → 0.938 | 1.521 → 1.521 | 496 s (4 workers, load 1.4 at start) |
 | 2026-11-11 | Slice base of a circle: the straight chord, with the base shear's moment arm to the chord, R·cos(Δθ/2) (Fredlund & Krahn 1977); the steep ends still cut; arc-consistent base removed | 285 | 0.323 → 0.317 | 0.455 → 0.449 | 0.938 → 0.936 | 1.521 → 1.520 | 534 s (4 workers, load 4.7 at start) |
+| 2026-11-11 | Unit weight of water 9.807 kN/m³ (ρw·g with standard gravity), was 9.81 | 112 | 0.317 → 0.316 | 0.449 → 0.447 | 0.936 → 0.936 | 1.520 → 1.519 | 550 s (4 workers, load 4.4 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-11: Unit weight of water 9.807 kN/m³ (ρw·g with standard gravity), was 9.81
+
+Compared with a8b5a8de. Errors are relative to the reference, in percent. Verification run time: 550 s (4 workers, load 4.4 at start).
+
+**Against other programs (midpoint of their range):** 84 moved (50 closer to the reference, 34 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V023 Spencer | 1.145 | 1.1382 | 1.1376 | -0.594 % | -0.646 % |
+| V038 Bishop simplified, circles only | 1.080 | 1.0704 | 1.0707 | -0.889 % | -0.861 % |
+| V038 Spencer, circles only | 1.100 | 1.0776 | 1.0779 | -2.036 % | -2.009 % |
+| V069b Bishop simplified | 1.212 | 1.2099 | 1.2102 | -0.173 % | -0.149 % |
+| V105d Spencer | 1.761 | 1.7607 | 1.7611 | -0.017 % | +0.006 % |
+| V073 Bishop simplified | 1.392 | 1.3878 | 1.3881 | -0.302 % | -0.280 % |
+| V073 Spencer | 1.400 | 1.3957 | 1.3960 | -0.307 % | -0.286 % |
+| V073 Bishop simplified, circles only | 1.417 | 1.4105 | 1.4108 | -0.459 % | -0.438 % |
+| V070 Bishop simplified | 1.417 | 1.4152 | 1.4155 | -0.127 % | -0.106 % |
+| V073 Spencer, circles only | 1.422 | 1.4151 | 1.4154 | -0.485 % | -0.464 % |
+| V070 Spencer | 1.422 | 1.4215 | 1.4218 | -0.035 % | -0.014 % |
+| V054 Spencer | 1.093 | 1.0915 | 1.0917 | -0.137 % | -0.119 % |
+| V075 Spencer | 0.570 | 0.5777 | 0.5778 | +1.351 % | +1.368 % |
+| V072b Janbu simplified | 1.141 | 1.1360 | 1.1362 | -0.438 % | -0.421 % |
+| V071b Janbu simplified | 1.151 | 1.1486 | 1.1488 | -0.209 % | -0.191 % |
+| V096b Morgenstern-Price (half-sine) | 1.174 | 1.1722 | 1.1724 | -0.153 % | -0.136 % |
+| V096b Bishop simplified | 1.176 | 1.1736 | 1.1738 | -0.204 % | -0.187 % |
+| V092 Janbu corrected | 1.830 | 1.8244 | 1.8247 | -0.306 % | -0.290 % |
+| V058 Spencer | 1.915 | 1.9161 | 1.9164 | +0.057 % | +0.073 % |
+| V072a Bishop simplified | 1.285 | 1.2825 | 1.2827 | -0.195 % | -0.179 % |
+| V072b Bishop simplified | 1.285 | 1.2819 | 1.2821 | -0.241 % | -0.226 % |
+| V072a Spencer | 1.290 | 1.2879 | 1.2881 | -0.163 % | -0.147 % |
+| V072b Spencer | 1.290 | 1.2875 | 1.2877 | -0.194 % | -0.178 % |
+| V071b Bishop simplified | 1.293 | 1.2888 | 1.2890 | -0.325 % | -0.309 % |
+| V071a Bishop simplified | 1.293 | 1.2901 | 1.2903 | -0.224 % | -0.209 % |
+| V071a Spencer | 1.300 | 1.2969 | 1.2971 | -0.238 % | -0.223 % |
+| V071b Spencer | 1.300 | 1.2948 | 1.2950 | -0.400 % | -0.385 % |
+| V043 Bishop simplified | 1.320 | 1.3200 | 1.3202 | 0.000 % | +0.015 % |
+| V092 Morgenstern-Price (half-sine) | 2.027 | 2.0056 | 2.0059 | -1.056 % | -1.041 % |
+| V089 Spencer | 2.736 | 2.7214 | 2.7218 | -0.534 % | -0.519 % |
+| V051 Spencer, non-circular | 0.707 | 0.7139 | 0.7140 | +0.976 % | +0.990 % |
+| V033 Bishop simplified | 1.533 | 1.5212 | 1.5214 | -0.770 % | -0.757 % |
+| V041b Spencer, non-circular | 1.590 | 1.5892 | 1.5890 | -0.050 % | -0.063 % |
+| V041a Spencer | 1.599 | 1.5957 | 1.5955 | -0.206 % | -0.219 % |
+| V041a Bishop simplified | 1.603 | 1.5985 | 1.5983 | -0.281 % | -0.293 % |
+| V089 Janbu corrected | 2.650 | 2.6482 | 2.6485 | -0.068 % | -0.057 % |
+| V089 Bishop simplified | 2.716 | 2.6989 | 2.6992 | -0.630 % | -0.619 % |
+| V089 Morgenstern-Price (half-sine) | 2.744 | 2.7277 | 2.7280 | -0.594 % | -0.583 % |
+| V009c Spencer, non-circular | 1.868 | 1.8666 | 1.8668 | -0.075 % | -0.064 % |
+| V092 Bishop simplified | 2.011 | 1.9913 | 1.9915 | -0.980 % | -0.970 % |
+| V053 Spencer, non-circular | 1.010 | 1.0061 | 1.0062 | -0.386 % | -0.376 % |
+| V092 Spencer | 2.026 | 2.0055 | 2.0057 | -1.012 % | -1.002 % |
+| V105c Spencer | 1.085 | 1.0848 | 1.0849 | -0.018 % | -0.009 % |
+| V054 Bishop simplified | 1.087 | 1.0858 | 1.0859 | -0.110 % | -0.101 % |
+| V003 Bishop simplified | 1.115 | 1.1134 | 1.1135 | -0.143 % | -0.135 % |
+| V003 Spencer | 1.118 | 1.1142 | 1.1143 | -0.340 % | -0.331 % |
+| V003 Janbu corrected | 1.131 | 1.1303 | 1.1304 | -0.062 % | -0.053 % |
+| V025 Bishop simplified | 1.142 | 1.1326 | 1.1327 | -0.823 % | -0.814 % |
+| V025 Spencer | 1.142 | 1.1327 | 1.1328 | -0.814 % | -0.806 % |
+| V097b Bishop simplified | 1.173 | 1.1725 | 1.1726 | -0.043 % | -0.034 % |
+| V097b Spencer | 1.174 | 1.1738 | 1.1739 | -0.017 % | -0.009 % |
+| V096b Spencer | 1.189 | 1.1870 | 1.1871 | -0.168 % | -0.160 % |
+| V091 Bishop simplified | 1.241 | 1.2368 | 1.2367 | -0.338 % | -0.346 % |
+| V091 Spencer | 1.241 | 1.2368 | 1.2367 | -0.338 % | -0.346 % |
+| V091 Morgenstern-Price (half-sine) | 1.244 | 1.2368 | 1.2367 | -0.579 % | -0.587 % |
+| V105a Bishop simplified | 1.285 | 1.2850 | 1.2851 | 0.000 % | +0.008 % |
+| V082d Janbu corrected | 1.345 | 1.3434 | 1.3435 | -0.119 % | -0.112 % |
+| V017a Bishop simplified | 1.373 | 1.3822 | 1.3823 | +0.670 % | +0.677 % |
+| V082d Bishop simplified | 1.376 | 1.3697 | 1.3698 | -0.458 % | -0.451 % |
+| V017b Bishop simplified | 1.378 | 1.3822 | 1.3823 | +0.305 % | +0.312 % |
+| V082d Spencer | 1.382 | 1.3762 | 1.3763 | -0.420 % | -0.412 % |
+| V017a Spencer | 1.386 | 1.3982 | 1.3983 | +0.880 % | +0.887 % |
+| V082c Janbu corrected | 1.391 | 1.3921 | 1.3922 | +0.079 % | +0.086 % |
+| V082c Bishop simplified | 1.396 | 1.3962 | 1.3963 | +0.014 % | +0.021 % |
+| V082c Spencer | 1.402 | 1.4025 | 1.4026 | +0.036 % | +0.043 % |
+| V082b Spencer | 1.510 | 1.5119 | 1.5120 | +0.126 % | +0.132 % |
+| V082b Morgenstern-Price (half-sine) | 1.510 | 1.5120 | 1.5121 | +0.132 % | +0.139 % |
+| V082b Bishop simplified | 1.511 | 1.5128 | 1.5129 | +0.119 % | +0.126 % |
+| V082b Janbu corrected | 1.520 | 1.5217 | 1.5218 | +0.112 % | +0.118 % |
+| V082a Spencer | 1.532 | 1.5332 | 1.5333 | +0.078 % | +0.085 % |
+| V082a Morgenstern-Price (half-sine) | 1.532 | 1.5332 | 1.5333 | +0.078 % | +0.085 % |
+| V082a Bishop simplified | 1.532 | 1.5340 | 1.5341 | +0.131 % | +0.137 % |
+| V082a Janbu corrected | 1.544 | 1.5464 | 1.5465 | +0.155 % | +0.162 % |
+| V024 Spencer | 1.557 | 1.5625 | 1.5626 | +0.353 % | +0.360 % |
+| V024 Bishop simplified | 1.567 | 1.5721 | 1.5722 | +0.293 % | +0.300 % |
+| V042 Bishop simplified | 1.584 | 1.5822 | 1.5823 | -0.114 % | -0.107 % |
+| V041a Spencer, non-circular | 1.592 | 1.5912 | 1.5911 | -0.050 % | -0.057 % |
+| V048 Bishop simplified | 1.596 | 1.5868 | 1.5869 | -0.576 % | -0.570 % |
+| V041b Spencer | 1.599 | 1.5951 | 1.5950 | -0.244 % | -0.250 % |
+| V041b Bishop simplified | 1.603 | 1.5983 | 1.5982 | -0.293 % | -0.299 % |
+| V042 Spencer | 1.648 | 1.6493 | 1.6494 | +0.079 % | +0.085 % |
+| V009a Spencer | 1.925 | 1.9264 | 1.9265 | +0.073 % | +0.078 % |
+| V087 Janbu corrected | 2.290 | 2.2484 | 2.2485 | -1.817 % | -1.812 % |
+| V061 Morgenstern-Price (half-sine) | 2.343 | 2.3483 | 2.3484 | +0.226 % | +0.230 % |
+| **Mean error (n = 301)** | | | | -0.217 % | -0.215 % |
+| **Mean absolute error** | | | | 0.317 % | 0.316 % |
+| **RMS error** | | | | 0.449 % | 0.447 % |
+| **Largest error** | | | | 2.036 % | 2.009 % |
+
+**Against the papers:** 28 moved (14 closer to the reference, 14 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V069a stability chart (Morgenstern) | 1.200 | 1.2003 | 1.2007 | +0.025 % | +0.058 % |
+| V038b Spencer (Duncan & Wright) | 1.160 | 1.1575 | 1.1578 | -0.216 % | -0.190 % |
+| V038b Spencer, finite-element pore pressures (Duncan, Wright & Brandon (2014)) | 1.190 | 1.1575 | 1.1578 | -2.731 % | -2.706 % |
+| V070 stability chart (Morgenstern) | 1.410 | 1.4152 | 1.4155 | +0.369 % | +0.390 % |
+| V053 Spencer, local minimum (nearly circular surface from the toe) (Greco (1996)) | 1.080 | 1.0915 | 1.0917 | +1.065 % | +1.083 % |
+| V054 Spencer, local minimum (nearly circular surface from the toe) (Greco (1996)) | 1.080 | 1.0915 | 1.0917 | +1.065 % | +1.083 % |
+| V096e Spencer (Zhu & Lee) | 1.211 | 1.2122 | 1.2124 | +0.099 % | +0.116 % |
+| V058 finite elements (Griffiths & Lane) | 1.900 | 1.9161 | 1.9164 | +0.847 % | +0.863 % |
+| V043 Bishop simplified (El-Ramly et al.) | 1.310 | 1.3200 | 1.3202 | +0.763 % | +0.779 % |
+| V033 Spencer (Duncan & Wright) | 1.529 | 1.5331 | 1.5333 | +0.268 % | +0.281 % |
+| V041a Spencer (Duncan & Wright) | 1.600 | 1.5957 | 1.5955 | -0.269 % | -0.281 % |
+| V089 Bishop simplified (USACE EM 1110-2-1902) | 2.710 | 2.6989 | 2.6992 | -0.410 % | -0.399 % |
+| V009b Spencer (Baker & Leshchinsky) | 1.910 | 1.8817 | 1.8819 | -1.482 % | -1.471 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8666 | 1.8668 | -2.272 % | -2.262 % |
+| V053 Spencer, non-circular (global minimum along the weak layer) (Greco (1996)) | 0.970 | 1.0061 | 1.0062 | +3.722 % | +3.732 % |
+| V003 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.995 | 0.9659 | 0.9660 | -2.925 % | -2.915 % |
+| V053 Spencer, non-circular (test problem 3) (Chen & Shao (1988)) | 1.009 | 1.0061 | 1.0062 | -0.287 % | -0.278 % |
+| V003 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 1.071 | 1.0470 | 1.0471 | -2.241 % | -2.232 % |
+| V003 Bishop simplified (Arai & Tagyo (1985)) | 1.138 | 1.1134 | 1.1135 | -2.162 % | -2.153 % |
+| V096e Morgenstern-Price (half-sine) (Zhu & Lee) | 1.197 | 1.1972 | 1.1973 | +0.017 % | +0.025 % |
+| V046b Bishop simplified (Fredlund & Krahn) | 1.248 | 1.2408 | 1.2409 | -0.577 % | -0.569 % |
+| V021g Bishop simplified (Chowdhury & Xu) | 1.424 | 1.4284 | 1.4285 | +0.316 % | +0.323 % |
+| V024 Bishop simplified (Duncan & Wright) | 1.570 | 1.5721 | 1.5722 | +0.134 % | +0.140 % |
+| V041b Spencer (Duncan & Wright) | 1.600 | 1.5951 | 1.5950 | -0.306 % | -0.313 % |
+| V045 Spencer (Fredlund & Krahn) | 1.830 | 1.8279 | 1.8280 | -0.115 % | -0.109 % |
+| V045 Morgenstern-Price (half-sine) (Fredlund & Krahn) | 1.832 | 1.8271 | 1.8272 | -0.267 % | -0.262 % |
+| V045 Bishop simplified (Fredlund & Krahn) | 1.834 | 1.8294 | 1.8295 | -0.251 % | -0.245 % |
+| V061 Morgenstern-Price (half-sine) (Wolff & Harr) | 2.360 | 2.3483 | 2.3484 | -0.496 % | -0.492 % |
+| **Mean error (n = 123)** | | | | -0.156 % | -0.153 % |
+| **Mean absolute error** | | | | 0.936 % | 0.936 % |
+| **RMS error** | | | | 1.520 % | 1.519 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 2 moved (2 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V038b finite-element strength reduction, piezometric line (Duncan, Wright & Brandon (2014)) | 1.070 | 1.0655 | 1.0735 | -0.421 % | +0.327 % |
+| V045 finite-element strength reduction (verification manual, problem 17) (another program's verification manual) | 1.780 | 1.7854 | 1.7809 | +0.303 % | +0.051 % |
+| **Mean error (n = 34)** | | | | -0.288 % | -0.273 % |
+| **Mean absolute error** | | | | 2.026 % | 2.016 % |
+| **RMS error** | | | | 2.735 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-11: Slice base of a circle: the straight chord, with the base shear's moment arm to the chord, R·cos(Δθ/2) (Fredlund & Krahn 1977); the steep ends still cut; arc-consistent base removed
 

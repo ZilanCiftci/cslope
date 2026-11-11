@@ -182,7 +182,7 @@ fn constants() {
         Some(IntersliceFunctionType::HalfSine)
     );
     assert_eq!(MATERIAL_EPSILON, 1e-10);
-    assert_eq!(WATER_UNIT_WEIGHT, 9.81);
+    assert_eq!(WATER_UNIT_WEIGHT, 9.807);
     assert_eq!(FOS_TOLERANCE, 0.001);
 }
 

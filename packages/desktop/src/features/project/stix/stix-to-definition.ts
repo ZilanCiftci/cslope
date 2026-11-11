@@ -9,7 +9,7 @@
  * is listed in the notes.
  */
 
-import { waternetPorePressure, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
+import { WATER_UNIT_WEIGHT, waternetPorePressure, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { regionInteriorPoint } from "../../../utils/regions";
 import { surfaceYAtX } from "../../view/surface";
 import { MAX_REGIONS, regionsToGeometry } from "../gsz/gsz-to-definition";
@@ -283,7 +283,7 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
   };
   const waterTable = phreatic ? { mode: "custom" as const, value: extend(phreatic), followBoundary: false } : undefined;
   const waternet = refs.length > 0 || headLines.length > 1 ? { headLines, referenceLines: refs, ...(phreaticId ? { phreaticLineId: phreaticId } : {}) } : undefined;
-  if (num(wn?.UnitWeightWater) !== undefined && Math.abs(num(wn?.UnitWeightWater)! - 9.81) > 0.02) notes.push(`The unit weight of water is ${num(wn?.UnitWeightWater)} kN/m³ in the file; cSlope uses 9.81.`);
+  if (num(wn?.UnitWeightWater) !== undefined && Math.abs(num(wn?.UnitWeightWater)! - WATER_UNIT_WEIGHT) > 0.02) notes.push(`The unit weight of water is ${num(wn?.UnitWeightWater)} kN/m³ in the file; cSlope uses ${WATER_UNIT_WEIGHT}.`);
 
   // the effective vertical stress at a point (for a state given as a yield
   // stress or OCR at it): the soil column above it, γ above or below the
@@ -302,8 +302,8 @@ function stagePart(file: StixFile, st: StixStage, notes: string[], inherited?: M
     const n = 400, dz = (top - p[1]) / n;
     let sv = 0;
     for (let k = 0; k < n; k++) sv += gammaAt([p[0], p[1] + (k + 0.5) * dz]) * dz;
-    if (phreatic) sv += Math.max(0, lineAt(phreatic, p[0]) - top) * 9.81;
-    const u = waternet ? waternetPorePressure(waternet, p[0], p[1]) : phreatic ? Math.max(0, (lineAt(phreatic, p[0]) - p[1]) * 9.81) : 0;
+    if (phreatic) sv += Math.max(0, lineAt(phreatic, p[0]) - top) * WATER_UNIT_WEIGHT;
+    const u = waternet ? waternetPorePressure(waternet, p[0], p[1]) : phreatic ? Math.max(0, (lineAt(phreatic, p[0]) - p[1]) * WATER_UNIT_WEIGHT) : 0;
     return sv - u;
   };
 

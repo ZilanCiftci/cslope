@@ -782,7 +782,7 @@ table(
       "Pore pressure",
       `Piezometric line; head = vertical distance below the line (default, the usual convention). Checks marked "phreatic correction" use vertical distance × cos²θ.`,
     ],
-    ["Unit weight of water", "9.81 kN/m³"],
+    ["Unit weight of water", "9.807 kN/m³"],
   ],
 );
 if (!PUBLIC) {
@@ -794,7 +794,7 @@ if (!PUBLIC) {
 }
 heading("Units", 2);
 paragraph(
-  "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.81 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
+  "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.807 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
 );
 y += 2;
 heading("Source of the input data", 2);
