@@ -291,7 +291,7 @@ const flush = async () => {
 async function loadMain(env: Record<string, string | undefined> = {}) {
   vi.resetModules();
   fake.reset();
-  delete process.env.VITE_DEV_SERVER_URL;
+  Reflect.deleteProperty(process.env, "VITE_DEV_SERVER_URL");
   delete process.env.CSLOPE_CAPTURE;
   for (const [k, v] of Object.entries(env)) {
     if (v === undefined) delete process.env[k];
@@ -336,7 +336,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.restoreAllMocks();
-  delete process.env.VITE_DEV_SERVER_URL;
+  Reflect.deleteProperty(process.env, "VITE_DEV_SERVER_URL");
   delete process.env.CSLOPE_CAPTURE;
 });
 
