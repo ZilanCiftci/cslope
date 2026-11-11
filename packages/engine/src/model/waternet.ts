@@ -39,7 +39,10 @@ function handleOf(wn: Waternet): number {
   return entry.handle;
 }
 
-/** The pore pressure (kPa, ≥ 0) at (x, z). */
-export function waternetPorePressure(wn: Waternet, x: number, z: number): number {
-  return wasm().waternet_pore_pressure_at(handleOf(wn), x, z);
+/**
+ * The pore pressure (kPa, ≥ 0) at (x, z): γw·(h − z), with the unit weight of
+ * water `waterUnitWeight` (kN/m³; `WATER_UNIT_WEIGHT` when not given).
+ */
+export function waternetPorePressure(wn: Waternet, x: number, z: number, waterUnitWeight?: number): number {
+  return wasm().waternet_pore_pressure_at(handleOf(wn), x, z, waterUnitWeight);
 }

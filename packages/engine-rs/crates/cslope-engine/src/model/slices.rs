@@ -22,7 +22,7 @@ use crate::model::slope::{Pt, Slope};
 use crate::model::surface::{polyline_crossings_x, polyline_y_at};
 use crate::model::waternet::waternet_pore_pressure;
 use crate::types::analysis::{PartialFactors, PorePressureHead};
-use crate::types::constants::{SLICE_DEDUP_TOLERANCE, WATER_UNIT_WEIGHT};
+use crate::types::constants::SLICE_DEDUP_TOLERANCE;
 use crate::types::geometry::{GeometryWithMaterial, Slice};
 use crate::types::loads::{Udl, UdlDirection};
 use crate::types::material::{Material, MaterialId};
@@ -284,6 +284,8 @@ pub struct SliceEnv<'a> {
     /// Pore pressure at a point, replacing the water lines' (a waternet,
     /// model/waternet.rs).
     pub pore_pressure_at: Option<&'a (dyn Fn(f64, f64) -> f64 + 'a)>,
+    /// Unit weight of water γw (kN/m³, `Slope::water_unit_weight`).
+    pub water_unit_weight: f64,
 }
 
 /// The numbers of one slice for `create_slice` (TypeScript's positional
@@ -332,6 +334,7 @@ pub fn create_slice(
     let materials = env.materials;
     let material_geometries = env.material_geometries;
     let base = env.base;
+    let gw = env.water_unit_weight;
 
     let x = (x0 + x1) / 2.0;
     let dx = cx - x;
@@ -395,7 +398,7 @@ pub fn create_slice(
     // Pore water pressure
     let mut u = 0.0;
     if let (Some(wy), Some(wh)) = (water_y_mean, water_h) {
-        u = js::math::max(wy - y_bottom, 0.0) * WATER_UNIT_WEIGHT * wh;
+        u = js::math::max(wy - y_bottom, 0.0) * gw * wh;
     }
 
     // ── Material intersection and weight calculation ─────────────
@@ -630,9 +633,7 @@ pub fn create_slice(
                             },
                         };
                         let uu = match w {
-                            Some(w) => {
-                                js::math::max(w.y_mean - y_bottom, 0.0) * WATER_UNIT_WEIGHT * w.h
-                            }
+                            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * gw * w.h,
                             None => 0.0,
                         };
                         let st = resolve_strength(
@@ -643,7 +644,7 @@ pub fn create_slice(
                                 y_ground: y_top,
                                 y_layer_top: y_lt,
                                 alpha,
-                                suction: Some(base_suction(model, w, y_bottom)),
+                                suction: Some(base_suction(model, w, y_bottom, gw)),
                                 effective_vertical_stress: Some(
                                     (total_weight + udl_force + ll_force) / width - uu,
                                 ),
@@ -684,7 +685,7 @@ pub fn create_slice(
     if let Some(f) = env.water_for_material {
         base_water = f(base_material)?;
         u = match base_water {
-            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * WATER_UNIT_WEIGHT * w.h,
+            Some(w) => js::math::max(w.y_mean - y_bottom, 0.0) * gw * w.h,
             None => 0.0,
         };
     }
@@ -707,7 +708,7 @@ pub fn create_slice(
             u += (ru * total_weight) / width;
         }
     }
-    let suction = base_suction(base_model, base_water, y_bottom);
+    let suction = base_suction(base_model, base_water, y_bottom, gw);
 
     // Top of the base material's layer, for depth measured from it: searched
     // in the full material regions just above the base centre.
@@ -816,14 +817,14 @@ pub fn create_slice(
 /// pore pressure below the line (1 with vertical head, cos²θ with the
 /// phreatic correction). 0 below the line, without a water line, or for a
 /// material without φb.
-fn base_suction(model: &MaterialModel, water: Option<Water>, y_bottom: f64) -> f64 {
+fn base_suction(model: &MaterialModel, water: Option<Water>, y_bottom: f64, gw: f64) -> f64 {
     let Some(water) = water else {
         return 0.0;
     };
     if !(suction_angle(model) > 0.0) {
         return 0.0;
     }
-    js::math::max(y_bottom - water.y_mean, 0.0) * WATER_UNIT_WEIGHT * water.h
+    js::math::max(y_bottom - water.y_mean, 0.0) * gw * water.h
 }
 
 // ── Water at a slice ──────────────────────────────────────────────
@@ -1547,6 +1548,7 @@ pub fn get_slices(
     // Create slices
     let mut results: Vec<Slice> = Vec::with_capacity(n_slices);
     let vertical_head = slope.pore_pressure_head() == PorePressureHead::Vertical;
+    let gw = slope.water_unit_weight();
     let has_sat_weight = slope.material_geometries().iter().any(|g| {
         slope
             .material(g.material)
@@ -1558,7 +1560,7 @@ pub fn get_slices(
     // Water y at the slice edges, once per water line (for γsat).
     let water_ys = std::cell::RefCell::new(EdgeYsCache::new(&slices_x));
     let poly_base = |x: f64| base_y(x);
-    let waternet_fn = waternet.map(|wn| move |x: f64, y: f64| waternet_pore_pressure(wn, x, y));
+    let waternet_fn = waternet.map(|wn| move |x: f64, y: f64| waternet_pore_pressure(wn, x, y, gw));
     let materials = slope.materials();
     for i in 0..n_slices {
         let mut water_y_mean: Option<f64> = None;
@@ -1628,6 +1630,7 @@ pub fn get_slices(
                 None
             },
             pore_pressure_at: waternet_fn.as_ref().map(|f| f as &dyn Fn(f64, f64) -> f64),
+            water_unit_weight: gw,
         };
         let s = create_slice(
             &SliceInput {
@@ -1652,7 +1655,7 @@ pub fn get_slices(
                 continue;
             }
             if free_lines[i].is_some() {
-                apply_free_water(&mut s, free_y_l[i], free_y_r[i], cy);
+                apply_free_water(&mut s, free_y_l[i], free_y_r[i], cy, gw);
             }
             let excess = if !excess_udls.is_empty() {
                 load_excess_pore_pressure(&s, materials, &excess_udls, load_factor)
@@ -1757,7 +1760,7 @@ pub fn get_slices(
             }
             let h1 = wy - y_lo;
             let h2 = js::math::max(wy - y_hi, 0.0);
-            let force = (WATER_UNIT_WEIGHT * (h1 * h1 - h2 * h2)) / 2.0;
+            let force = (gw * (h1 * h1 - h2 * h2)) / 2.0;
             // Centroid of the trapezoidal pressure between yLo and min(wy, yHi).
             let d = js::math::min(wy, y_hi) - y_lo;
             let yc = y_lo + (d * (h1 + 2.0 * h2)) / (3.0 * (h1 + h2));
@@ -1796,7 +1799,7 @@ pub fn get_slices(
             return Ok(Vec::new());
         }
         let y_crack_bottom = first.y0_bottom;
-        let force = 0.5 * WATER_UNIT_WEIGHT * hw * hw;
+        let force = 0.5 * gw * hw * hw;
         first.h_force = Some(first.h_force.unwrap_or(0.0) + force);
         first.extra_moment =
             Some(first.extra_moment.unwrap_or(0.0) + force * (cy - (y_crack_bottom + hw / 3.0)));
@@ -2037,7 +2040,7 @@ pub fn rankine_crack_depth(slope: &Slope, x: f64) -> Result<f64> {
     if let Some(water) = slope.get_water_line_for_material(Some(geo.material)) {
         let wy = get_y_at_x(&water.x, &water.y, x);
         if wy.is_finite() && wy > y_ground {
-            q += WATER_UNIT_WEIGHT * (wy - y_ground);
+            q += slope.water_unit_weight() * (wy - y_ground);
         }
     }
     Ok(js::math::max(
@@ -2141,7 +2144,7 @@ pub fn find_crack_x(
 /// The pressure γw·g(x), with g the water depth above the surface, is
 /// integrated over the wet part of the slice top: vertical load ∫p dx,
 /// horizontal force ∫p dy = slope·∫p dx, and their moment about the centre.
-fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64) {
+fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64, gw: f64) {
     if !wy_left.is_finite() || !wy_right.is_finite() {
         return;
     }
@@ -2173,11 +2176,9 @@ fn apply_free_water(s: &mut Slice, wy_left: f64, wy_right: f64, cy: f64) {
     let moment_density = |t: f64| depth(t) * (cx - x_at(t) + surface_slope * (cy - y_at(t)));
     let tm = (ta + tb) / 2.0;
     let len = (tb - ta) * b;
-    let load = WATER_UNIT_WEIGHT * len * ((depth(ta) + depth(tb)) / 2.0);
-    let moment = (WATER_UNIT_WEIGHT
-        * len
-        * (moment_density(ta) + 4.0 * moment_density(tm) + moment_density(tb)))
-        / 6.0;
+    let load = gw * len * ((depth(ta) + depth(tb)) / 2.0);
+    let moment =
+        (gw * len * (moment_density(ta) + 4.0 * moment_density(tm) + moment_density(tb))) / 6.0;
     s.water_load = Some(s.water_load.unwrap_or(0.0) + load);
     s.h_force = Some(s.h_force.unwrap_or(0.0) + surface_slope * load);
     // The solvers already take the vertical load at the slice centre.

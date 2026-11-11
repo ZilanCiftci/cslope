@@ -2,7 +2,7 @@
 //! opened (`AnalysisOptions` of packages/engine, as `normalizeAnalysisOptions`
 //! in store/persistence.ts fills them): the app's defaults with every saved
 //! field checked and clamped. The 17 members the app always sets are
-//! required; the 12 it sets only when the file had a valid value are
+//! required; the 13 it sets only when the file had a valid value are
 //! optional. The input hash (docs/file-format.md section 5) is over these
 //! options as they are, so their set of members must be the app's.
 
@@ -47,6 +47,9 @@ pub struct AnalysisOptions {
     pub seismic_horizontal: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub seismic_vertical: Option<f64>,
+    /// The unit weight of water γw (kN/m³); absent: the engine's 9.807.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub water_unit_weight: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tension_crack_angle: Option<f64>,
     /// "block"; absent: circular.
@@ -89,6 +92,7 @@ impl AnalysisOptions {
             tension_crack_auto: None,
             seismic_horizontal: None,
             seismic_vertical: None,
+            water_unit_weight: None,
             tension_crack_angle: None,
             search_method: None,
             block_active_angle: None,

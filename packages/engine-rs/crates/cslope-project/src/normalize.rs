@@ -1552,7 +1552,7 @@ fn custom_plane(raw: &Value, index: usize, cx: &Ctx) -> Option<Value> {
 
 // ── Options ─────────────────────────────────────────────────────
 
-const OPTION_KEYS: [&str; 29] = [
+const OPTION_KEYS: [&str; 30] = [
     "slices",
     "iterations",
     "refinedIterations",
@@ -1572,6 +1572,7 @@ const OPTION_KEYS: [&str; 29] = [
     "compositeBase",
     "seismicHorizontal",
     "seismicVertical",
+    "waterUnitWeight",
     "partialFactors",
     "bothDirections",
     "nonCircularOptimization",
@@ -1715,6 +1716,9 @@ fn analysis_options(raw: &Value, cx: &Ctx) -> Obj {
     }
     if let Some(k) = num(o.get("seismicVertical")).filter(|k| *k != 0.0 && k.abs() <= 1.0) {
         set(&mut out, "seismicVertical", json!(k));
+    }
+    if let Some(g) = num(o.get("waterUnitWeight")).filter(|g| *g > 0.0) {
+        set(&mut out, "waterUnitWeight", json!(g));
     }
     if let Some(a) = num(o.get("tensionCrackAngle")).filter(|a| *a > 0.0 && *a < 90.0) {
         set(&mut out, "tensionCrackAngle", json!(a));
@@ -2714,5 +2718,34 @@ mod tests {
             "materials[2].model.x"
         );
         assert_eq!(pointer_to_path(""), "");
+    }
+
+    #[test]
+    fn the_unit_weight_of_water_is_kept_when_positive_and_dropped_otherwise() {
+        let cx = Ctx {
+            strict: true,
+            today: "2026-11-11",
+            next_id: Cell::new(100),
+            unknown: RefCell::new(Vec::new()),
+        };
+        let read = |v: Value| analysis_options(&serde_json::json!({ "waterUnitWeight": v }), &cx);
+        assert_eq!(
+            read(serde_json::json!(9.82)).get("waterUnitWeight"),
+            Some(&serde_json::json!(9.82))
+        );
+        for bad in [
+            serde_json::json!(0),
+            serde_json::json!(-10),
+            serde_json::json!("10"),
+            Value::Null,
+        ] {
+            assert_eq!(read(bad).get("waterUnitWeight"), None);
+        }
+        assert!(cx.unknown.borrow().is_empty());
+        // absent: absent (the engine's 9.807)
+        assert_eq!(
+            analysis_options(&serde_json::json!({}), &cx).get("waterUnitWeight"),
+            None
+        );
     }
 }

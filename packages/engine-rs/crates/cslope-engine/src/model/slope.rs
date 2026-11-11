@@ -34,7 +34,9 @@ use crate::types::analysis::{
     IntersliceFunctionType, PartialFactors, PorePressureHead, SearchMethod, SurfaceRejection,
     WaterTableInput,
 };
-use crate::types::constants::{ITERATIONS_RANGE, REFINED_ITERATIONS_RANGE, SLICES_RANGE};
+use crate::types::constants::{
+    ITERATIONS_RANGE, REFINED_ITERATIONS_RANGE, SLICES_RANGE, WATER_UNIT_WEIGHT,
+};
 use crate::types::geometry::{GeometryWithMaterial, Slice};
 use crate::types::json::OrOther;
 use crate::types::loads::{LineLoad, Udl};
@@ -248,6 +250,12 @@ pub struct AnalysisOptionsPatch {
         deserialize_with = "crate::types::json::present_num"
     )]
     pub seismic_vertical: Option<f64>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::present_num"
+    )]
+    pub water_unit_weight: Option<f64>,
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",
@@ -488,6 +496,7 @@ impl AnalysisOptionsPatch {
             composite_base,
             seismic_horizontal,
             seismic_vertical,
+            water_unit_weight,
             partial_factors,
             both_directions,
             non_circular_optimization,
@@ -526,6 +535,7 @@ impl From<&AnalysisOptions> for AnalysisOptionsPatch {
             composite_base: o.composite_base,
             seismic_horizontal: o.seismic_horizontal,
             seismic_vertical: o.seismic_vertical,
+            water_unit_weight: o.water_unit_weight,
             partial_factors: o.partial_factors.clone(),
             both_directions: o.both_directions,
             non_circular_optimization: o.non_circular_optimization,
@@ -683,6 +693,8 @@ pub struct Slope {
     options_given: AnalysisOptionsPatch,
     seismic_horizontal: f64,
     seismic_vertical: f64,
+    /// Unit weight of water γw (kN/m³).
+    water_unit_weight: f64,
     composite_floor: OnceLock<Option<CompositeFloor>>,
     partial_factors: Option<PartialFactors>,
     non_circular_optimization: bool,
@@ -777,6 +789,7 @@ impl Slope {
             options_given: AnalysisOptionsPatch::default(),
             seismic_horizontal: d.seismic_horizontal.unwrap_or(0.0),
             seismic_vertical: d.seismic_vertical.unwrap_or(0.0),
+            water_unit_weight: d.water_unit_weight.unwrap_or(WATER_UNIT_WEIGHT),
             composite_floor: OnceLock::new(),
             partial_factors: None,
             non_circular_optimization: false,
@@ -1143,8 +1156,12 @@ impl Slope {
 
     /// Takes ownership of the earlier stage (TypeScript shares the object;
     /// ARCHITECTURE.md §1.3).
+    /// The stage takes this slope's unit weight of water (the same water).
     pub fn set_earlier_stage(&mut self, s: Option<Slope>) {
         self.earlier_stage = s.map(Box::new);
+        if let Some(e) = self.earlier_stage.as_deref_mut() {
+            e.set_water_unit_weight(self.water_unit_weight);
+        }
         self.reset_results();
     }
 
@@ -1188,6 +1205,21 @@ impl Slope {
     /// Pseudostatic vertical seismic coefficient kv (positive downward).
     pub fn seismic_vertical(&self) -> f64 {
         self.seismic_vertical
+    }
+
+    /// Unit weight of water γw (kN/m³): the `waterUnitWeight` option,
+    /// `WATER_UNIT_WEIGHT` without it.
+    pub fn water_unit_weight(&self) -> f64 {
+        self.water_unit_weight
+    }
+
+    /// Set γw here and in the earlier stages (validated by the caller).
+    fn set_water_unit_weight(&mut self, g: f64) {
+        self.water_unit_weight = g;
+        if let Some(e) = self.earlier_stage.as_deref_mut() {
+            e.set_water_unit_weight(g);
+            e.reset_results();
+        }
     }
 
     /// Whether composite circles also follow the bare base of the model.
@@ -2064,6 +2096,14 @@ impl Slope {
             } else {
                 self.seismic_vertical = v;
             }
+        }
+        if let Some(g) = opts.water_unit_weight {
+            if !(g.is_finite() && g > 0.0) {
+                return Err(EngineError::new(
+                    "waterUnitWeight must be a positive number (kN/m³)",
+                ));
+            }
+            self.set_water_unit_weight(g);
         }
         if let Some(a) = opts.tension_crack_angle {
             if !a.is_finite() || a < 0.0 || a >= 90.0 {

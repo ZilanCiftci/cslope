@@ -275,6 +275,13 @@
             "number",
             "null"
           ]
+        },
+        "waterUnitWeight": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
         }
       },
       "type": "object"

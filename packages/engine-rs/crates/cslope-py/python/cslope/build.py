@@ -216,6 +216,7 @@ _MORE_OPTION_FIELDS = {
     "tension_crack_water": ("tensionCrackWater", 0.0),
     "tension_crack_auto": ("tensionCrackAuto", None),
     "tension_crack_angle": ("tensionCrackAngle", None),
+    "water_unit_weight": ("waterUnitWeight", None),
     "non_circular_optimization": ("nonCircularOptimization", False),
     "composite_base": ("compositeBase", None),
     "block_active_angle": ("blockActiveAngle", None),
@@ -256,7 +257,8 @@ class Options:
     ``interslice_data_points`` ([(x, f)]), ``pore_pressure_head``
     ("vertical" or "phreatic-correction"), ``tension_crack_water`` (0, the
     crack's water filling, 0 to 1), ``tension_crack_auto`` and
-    ``tension_crack_angle`` (°), ``non_circular_optimization`` (False),
+    ``tension_crack_angle`` (°), ``water_unit_weight`` (γw in kN/m³; None:
+    9.807), ``non_circular_optimization`` (False),
     ``composite_base``, ``block_active_angle`` and ``block_passive_angle``
     ((from, to) in °), ``fem`` and ``sgi3d`` (the engine's settings dicts).
     Setting an option to None removes it where None is allowed.
@@ -288,6 +290,7 @@ class Options:
         tension_crack_water: float
         tension_crack_auto: Optional[bool]
         tension_crack_angle: Optional[float]
+        water_unit_weight: Optional[float]
         non_circular_optimization: bool
         composite_base: Optional[bool]
         block_active_angle: Optional[Tuple[float, float]]
@@ -401,7 +404,7 @@ def _check_option(attr: str, v: Any) -> Any:
         if isinstance(v, bool) or not isinstance(v, int) or v < (0 if attr == "refined_iterations" else 1):
             raise ValueError("{} must be a whole number of at least 1, not {!r}".format(attr, v))
         return v
-    if attr == "tolerance":
+    if attr in ("tolerance", "water_unit_weight"):
         return _positive(v, attr)
     if attr in ("min_slip_depth", "tension_crack_depth", "min_failure_dist", "min_slip_area"):
         return _non_negative(v, attr)

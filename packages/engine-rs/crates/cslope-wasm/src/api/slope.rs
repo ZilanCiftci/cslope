@@ -1022,6 +1022,7 @@ pub fn slope_get(handle: u32, name: &str) -> JsResult<JsValue> {
             "waternet" => to_js(&s.waternet()),
             "seismicHorizontal" => Ok(s.seismic_horizontal().into()),
             "seismicVertical" => Ok(s.seismic_vertical().into()),
+            "waterUnitWeight" => Ok(s.water_unit_weight().into()),
             "compositeBase" => Ok(s.composite_base().into()),
             "compositeFloor" => to_js(&s.composite_floor().map(FloorDto::from)),
             "tensionCrackAuto" => Ok(s.tension_crack_auto().into()),

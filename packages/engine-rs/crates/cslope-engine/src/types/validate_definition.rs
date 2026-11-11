@@ -18,7 +18,8 @@
 //!    models, every region with exactly one assignment, interior boundaries
 //!    that reach the outline, loads, search limits and water lines within
 //!    the model's x range, `unitWeightSat` for materials below a water
-//!    line, the deprecated `materialName` and `followBoundary` (D-24).
+//!    line, the deprecated `materialName` and `followBoundary` (D-24), and
+//!    a unit weight of water outside 9–11 kN/m³ (a warning).
 //! 4. Without errors so far: the engine builds the model and takes the
 //!    options; an error it raises is reported.
 
@@ -256,6 +257,19 @@ fn content_checks(
         Some(o) => reader.options(o, opt_prefix, &mut issues),
         None => Some(AnalysisOptionsPatch::default()),
     };
+    // γw far from water's: often a unit mistake (kN/m³ expected).
+    if let Some(g) = opts.as_ref().and_then(|o| o.water_unit_weight) {
+        if g.is_finite() && g > 0.0 && !(9.0..=11.0).contains(&g) {
+            issues.push(Issue::warning(
+                format!("{opt_prefix}/waterUnitWeight"),
+                "unusual-water-unit-weight",
+                format!(
+                    "The unit weight of water is {} kN/m³, outside 9–11 kN/m³: check the unit (the default is 9.807).",
+                    fmt(g)
+                ),
+            ));
+        }
+    }
     let Some(def) = def else {
         return issues;
     };
