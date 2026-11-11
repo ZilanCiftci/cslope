@@ -1,8 +1,16 @@
 name: CI
 
+# Each change runs once: on its pull request, and again on main when it is
+# merged. A push to a working branch does not start a run of its own (it
+# ran the same commit twice once the branch had a pull request).
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -16,11 +24,8 @@ permissions:
 #   results (golden/verification.json); the TypeScript test suite runs its
 #   quick set (the API over the engine), not the verification problems again.
 # - No coverage runs (it measured thin wrappers and slowed the jobs).
-# - Pushes to working branches test the desktop app on Linux; main and pull
-#   requests on Windows, where it ships. The desktop leaves out the full
-#   engine searches on working branches (CSLOPE_QUICK_TESTS).
-env:
-  CSLOPE_QUICK_TESTS: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && '1' || '' }}
+# - The desktop app is tested on Windows, where it ships, with the full
+#   engine searches.
 
 # Time limits: each job stops a few times its usual run time (check about
 # 1 min, desktop 6, engine 2, rust 11 and python 5 with their cache), and
@@ -169,7 +174,7 @@ jobs:
         run: bun run --filter @cslope/engine test
 
   desktop:
-    runs-on: ${{ (github.event_name == 'push' && github.ref != 'refs/heads/main') && 'ubuntu-latest' || 'windows-latest' }}
+    runs-on: windows-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
