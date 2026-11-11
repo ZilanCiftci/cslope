@@ -64,6 +64,70 @@ function groundTopBetween(
 }
 
 /**
+ * The ground's y at x approached from one side (-1: from the left, +1:
+ * from the right): the highest non-vertical edge that runs on that side
+ * of x. At a vertical step the two sides differ.
+ */
+function groundYAtSide(coordinates: readonly Pt[], x: number, side: -1 | 1): number | null {
+  let best: number | null = null;
+  for (let i = 0; i < coordinates.length; i++) {
+    const [x0, y0] = coordinates[i];
+    const [x1, y1] = coordinates[(i + 1) % coordinates.length];
+    const lo = Math.min(x0, x1);
+    const hi = Math.max(x0, x1);
+    if (hi - lo < 1e-12) continue;
+    if (side < 0 ? !(lo < x && x <= hi) : !(lo <= x && x < hi)) continue;
+    const y = y0 + ((x - x0) / (x1 - x0)) * (y1 - y0);
+    if (best === null || y > best) best = y;
+  }
+  return best;
+}
+
+/**
+ * The y of the foot of a vertical face of the ground when the exit range
+ * is a single x on it, as the engine ends the search's circles there
+ * (Slope::exit_face_point): a face that descends in the sliding direction
+ * (from the entry range towards the exit) and is not one of the model's
+ * own ends. Null otherwise; the marker then stands on the ground at x.
+ */
+export function exitFaceFootY(limits: AnalysisLimitsState, coordinates: readonly Pt[]): number | null {
+  if (coordinates.length < 3) return null;
+  const xs = coordinates.map((p) => p[0]);
+  const x0 = Math.min(...xs);
+  const x1 = Math.max(...xs);
+  const tol = 1e-9 * (x1 - x0);
+  const x = limits.exitLeftX;
+  if (!(Math.abs(limits.exitRightX - x) <= tol && x > x0 + tol && x < x1 - tol)) return null;
+  const vertical = coordinates.some((p, i) => {
+    const q = coordinates[(i + 1) % coordinates.length];
+    return Math.abs(p[0] - x) <= tol && Math.abs(q[0] - x) <= tol && Math.abs(p[1] - q[1]) > tol;
+  });
+  if (!vertical) return null;
+  // The sliding direction: from the entry range towards the exit.
+  const toward = Math.sign(x - (limits.entryLeftX + limits.entryRightX) / 2);
+  if (toward === 0) return null;
+  const top = groundYAtSide(coordinates, x, toward > 0 ? -1 : 1);
+  const foot = groundYAtSide(coordinates, x, toward > 0 ? 1 : -1);
+  return top !== null && foot !== null && top > foot + tol ? foot : null;
+}
+
+/**
+ * Where a search limit stands (world y): at the foot of the face for an
+ * exit at a single x on a vertical face (exitFaceFootY), otherwise on the
+ * ground at x (`groundY`). The marker, its handle and its hit area use it.
+ */
+export function limitGroundY(
+  limits: AnalysisLimitsState,
+  coordinates: readonly Pt[],
+  kind: "entry" | "exit",
+  x: number,
+  groundY: (x: number) => number | null = (v) => surfaceYAtX(coordinates as Pt[], v),
+): number | null {
+  const foot = kind === "exit" ? exitFaceFootY(limits, coordinates) : null;
+  return foot ?? groundY(x);
+}
+
+/**
  * The markers of both search ranges. The ends and their geometry come
  * from marker-geometry.ts (rangeMarkerEnds, limitMarkerGeometry), as the
  * edit-view labels reserve them: a bar across the ground and a triangle
@@ -88,7 +152,8 @@ export function layoutLimitMarkers(
   const tris = new Map<LimitMarker, [Pt, Pt, Pt][]>();
   const addRange = (a: LimitHandle, b: LimitHandle, kind: "entry" | "exit") => {
     for (const end of rangeMarkerEnds(limits[a], limits[b])) {
-      const gy = surfaceYAtX(coordinates as Pt[], end.x);
+      // (an exit given as a single x on a vertical face: at the foot of the face)
+      const gy = limitGroundY(limits, coordinates, kind, end.x);
       if (gy === null) continue;
       const [cx, cy] = toD(end.x, gy);
       const g = limitMarkerGeometry(cx, cy, end.toward === null ? null : toD(end.toward, gy)[0], unit, dots);
