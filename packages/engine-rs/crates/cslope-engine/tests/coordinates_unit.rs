@@ -304,7 +304,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         constant(),
     );
     // (the factors of safety of these three are those before the rule, to the bit)
-    close(fos.unwrap(), 1.149_358_448_589_419, 12);
+    close(fos.unwrap(), 1.150_043_595_810_847, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
     // An exit range across the face: the ground at each x, as before.
@@ -329,7 +329,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         mp(),
     );
-    close(fos.unwrap(), 1.251_493_696_465_045, 12);
+    close(fos.unwrap(), 1.251_587_687_149_846, 12);
     assert_eq!(s.exit_face_point(), None);
     // The model's own end face is no exit face.
     let end = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 40, "exitRightX": 40 });

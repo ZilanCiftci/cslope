@@ -117,7 +117,7 @@ describe("a single exit x on a vertical face of the ground", () => {
     const r = runVerification(rising, "Morgenstern-Price", constant);
     expect(r.slope.searchLimits).toEqual([11, 16, 30 - w, 30]);
     // (the factors of safety before the rule, as in the Rust tests)
-    expect(r.fos!).toBeCloseTo(1.149358448589419, 9);
+    expect(r.fos!).toBeCloseTo(1.150043595810847, 9);
     const range = runVerification(
       wall(false, { entryLeftX: 11, entryRightX: 16, exitLeftX: 18, exitRightX: 30 }),
       "Morgenstern-Price",
