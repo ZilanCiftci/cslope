@@ -361,8 +361,10 @@ porters. Each names where it lives.
   W·(x − xc) (`dx`), as in the conventional method (an earlier note here
   said the conventional method takes W·R·sin α of the chord; it takes
   W·(x − xc) too, and the difference lay in the shear arm). The steep ends of
-  a circle are still cut narrower (a chord cannot follow an arc that turns
-  20–30° within one slice). From
+  a circle are not cut narrower (from 2026-11-11; they were cut so that no
+  slice spanned more than max(2°, 2b/R) of arc from 2026-11-02): the slices
+  are the nominal division plus the geometry, material and water breaks,
+  as in other programs. From
   2026-11-02 to 2026-11-10 the base was the arc (arc length, α at the
   middle of the arc, the weight above the arc, shear arm R), with the chord as an experiment switch (`CSLOPE_SLICE_BASE`); both
   were removed. On the same circle the chord raises F by about 0.01–0.15 %.

@@ -111,9 +111,17 @@ describe("Slice-count convergence", () => {
       ],
       circle(18, 16, 12),
     );
+    // Since 2026-11-11 the steep ends of a circle are not cut into
+    // narrower slices (DECISIONS.md), so the vertical upper end is sliced at
+    // the nominal width and 50 slices sit 1.9 % above 500 (1.419 against
+    // 1.392; within 1 % with the cuts): the same slicing sensitivity as
+    // V068's tolerance (tolerance.ts, slicingSensitive). 100 slices come
+    // within 1 % (1.403).
     const f50 = runVerification(def, "Bishop", { slices: 50 }).fos!;
+    const f100 = runVerification(def, "Bishop", { slices: 100 }).fos!;
     const f500 = runVerification(def, "Bishop", { slices: 500 }).fos!;
-    expect(Math.abs(f50 / f500 - 1)).toBeLessThanOrEqual(0.01);
+    expect(f50).toBeGreaterThan(f100);
+    expect(Math.abs(f100 / f500 - 1)).toBeLessThanOrEqual(0.01);
     expect(Math.abs(f500 / 1.389 - 1)).toBeLessThanOrEqual(0.01);
   });
 });
@@ -167,10 +175,17 @@ describe("Free water against a vertical face", () => {
     expect(vertical).toBeGreaterThan(2.3);
   });
   it("a submerged vertical cut = the buoyant cut", () => {
-    const submerged = runVerification(wall(0, 15), "Bishop").fos!;
+    // The two agree in the limit of thin slices; the gap is the slicing of
+    // the circle's vertical end along the face. Since 2026-11-11 that end is
+    // not cut into narrower slices (DECISIONS.md): the gap is 0.39 % at the
+    // default 50 slices, 0.14 % at 100 and 0.06 % at 200 (below 0.1 % at
+    // the default count with the cuts), so the check runs with 200 slices.
+    const options = { slices: 200 };
+    const submerged = runVerification(wall(0, 15), "Bishop", options).fos!;
     const buoyant = runVerification(
       layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - WATER_UNIT_WEIGHT) }], circle(8, 10, 11)),
       "Bishop",
+      options,
     ).fos!;
     expect(Math.abs(submerged / buoyant - 1)).toBeLessThan(0.001);
   });
