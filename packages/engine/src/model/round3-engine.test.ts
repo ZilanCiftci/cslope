@@ -194,7 +194,10 @@ describe("round 6 engine fixes", () => {
         customSearchPlanes: [{ cx: 10.7607, cy: 10.246, radius: 0.8004 }],
         customPlanesOnly: true,
       });
-      slope.updateAnalysisOptions({ method: "Bishop", slices: 80 });
+      // 160 slices: since 2026-11-11 the steep ends of a circle are not cut
+      // into narrower slices, and at 80 the surface with c = 25 is no longer
+      // rejected (F 1.274); at 160 it is for every c.
+      slope.updateAnalysisOptions({ method: "Bishop", slices: 160 });
       expect(analyseSlope(slope)).toBeNull();
     }
   });

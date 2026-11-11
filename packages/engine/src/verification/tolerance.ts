@@ -9,6 +9,10 @@
  *    with at least two decimals assumed (a table's "1.40" is stored as 1.4);
  *  - input read from a figure (a digitised surface or water table): + 1 %;
  *  - a reference value read from a chart or a figure: + 1 %;
+ *  - a slicing-sensitive surface: the reference surface has a vertical or
+ *    near-vertical end (its centre at crest level), where the factor depends
+ *    on how the steep part is divided into slices (Low 1989 calls the Bishop
+ *    value there misleading): + 1 %;
  *  - a reference from a different method (finite elements, strength
  *    reduction): 5 %, an indication rather than a check of the method.
  */
@@ -19,6 +23,12 @@ export interface ToleranceCase {
   inputFromFigure?: boolean;
   /** The reference values were read from a chart or a figure. */
   referenceFromFigure?: boolean;
+  /**
+   * The reference surface has a vertical or near-vertical end (a circle with
+   * its centre at crest level), where the factor depends on how the steep
+   * part is divided into slices.
+   */
+  slicingSensitive?: boolean;
 }
 
 export interface ToleranceCheck {
@@ -28,6 +38,7 @@ export interface ToleranceCheck {
 
 const BASE = { fixed: 0.01, search: 0.02 } as const;
 const FIGURE = 0.01;
+const SLICING = 0.01;
 const OTHER_METHOD = 0.05;
 
 /** The source used a different method of analysis (finite elements). */
@@ -50,6 +61,7 @@ export function referenceTolerance(c: ToleranceCase, k: ToleranceCheck): number 
   t += (0.5 * 10 ** -printedDecimals(k.published)) / Math.abs(k.published);
   if (c.inputFromFigure) t += FIGURE;
   if (c.referenceFromFigure || fromChart(k.publishedBy)) t += FIGURE;
+  if (c.slicingSensitive) t += SLICING;
   return t;
 }
 

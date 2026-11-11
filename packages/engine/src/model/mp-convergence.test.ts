@@ -54,7 +54,8 @@ describe("Morgenstern-Price convergence criterion", () => {
       const slope = buildSlope(DEFINITION);
       slope.updateAnalysisOptions({ slices: 25, iterations: 300, refinedIterations: 0, tolerance, intersliceFunction: "constant" });
       const slices = getSlices(slope, PLANE.x0, PLANE.x1, PLANE.cx, PLANE.cy, PLANE.radius);
-      expect(slices).toHaveLength(26);
+      // 25 slices since the steep ends of a circle are no longer cut (26 with the cuts, until 2026-11-11).
+      expect(slices).toHaveLength(25);
       for (const s of [slices, ...perturbations(slices)]) {
         const [, lff, , , converged, , closestPair] = analyseMorgensternPrice(slope, s);
         expect(converged).toBe(false);

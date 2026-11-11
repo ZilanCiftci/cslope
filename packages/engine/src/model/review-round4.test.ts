@@ -57,9 +57,10 @@ describe("region split", () => {
 
   it("puts a boundary end up to 1e-3 of the model size short of the edge on it", () => {
     // A 1 mm or 4 cm (1e-3 × 40 m, less a rounding margin) gap left one
-    // region of the strong material: FOS 2.215 instead of 0.772.
+    // region of the strong material: FOS 2.215 instead of 0.773 (0.772
+    // with the cut steep ends of a circle, until 2026-11-11).
     const exact = fos(def(0))!;
-    expect(exact).toBeCloseTo(0.772, 3);
+    expect(exact).toBeCloseTo(0.773, 3);
     for (const gap of [1e-3, 0.999e-3 * 40]) {
       const slope = buildSlope(def(gap));
       expect(slope.danglingBoundaries).toEqual([]);
