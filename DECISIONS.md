@@ -55,6 +55,12 @@ The review is in `packages/desktop/tools/design-review`; each decision had two o
 
 Implemented in PRs #28–#30, #32–#35 and #37.
 
+## Import and export
+
+### 2026-11-11: The .gsz export writes a water line as drawn, also when free water is off (issue #149)
+
+In the .gsz format a piezometric line above the ground is water standing on it; the format has no setting that turns this off (the public example files carry only display settings for it). A cSlope model with free water off (its water lines clipped to the ground, D-24) and a line above the ground therefore gives another factor of safety from the exported file: on a synthetic slope 2.6317 in cSlope against 2.6428 from the file, on the same circle. The export keeps the line as the user drew it and says so in the export message ("The water lines are clipped to the ground in cSlope; the format carries free water above the ground where a line is above it."). With free water on, which is the app's default, or with the line below the ground, export and re-import give the same factor of safety. Turned down: writing the line clipped to the ground when free water is off (the file would give the same factor, 2.6317 on that slope, but the line in the file would no longer be the one drawn, and the clipping needs rules for vertical faces, overhangs and materials with lines of their own). The behaviour is pinned by gsz-round-trip.test.ts.
+
 ## Engine
 
 ### 2026-11-11: A single exit x on a vertical ground face exits at the foot of the face (issue #141)
