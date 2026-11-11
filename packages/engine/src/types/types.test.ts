@@ -86,7 +86,7 @@ describe("constants", () => {
 
   it("has correct numerical constants", () => {
     expect(MATERIAL_EPSILON).toBe(1e-10);
-    expect(WATER_UNIT_WEIGHT).toBe(9.81);
+    expect(WATER_UNIT_WEIGHT).toBe(9.807);
     expect(FOS_TOLERANCE).toBe(0.001);
   });
 });

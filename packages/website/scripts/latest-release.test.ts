@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { latestRelease, toLatestRelease } from "./latest-release";
 
 const answer = (status: number, body: unknown = {}) =>
-  (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch;
+  (() => Promise.resolve(new Response(JSON.stringify(body), { status }))) as unknown as typeof fetch;
 const cacheFile = () => join(mkdtempSync(join(tmpdir(), "release-")), "cache.json");
 
 describe("latest release", () => {
@@ -36,7 +36,7 @@ describe("latest release", () => {
   it("fails a production build when GitHub cannot be asked (#63)", async () => {
     const cache = cacheFile();
     await expect(latestRelease({ VERCEL_ENV: "production" }, answer(401), cache)).rejects.toThrow(/GitHub answered 401/);
-    const unreachable = (async () => { throw new Error("timeout"); }) as unknown as typeof fetch;
+    const unreachable = (() => Promise.reject(new Error("timeout"))) as unknown as typeof fetch;
     await expect(latestRelease({ VERCEL_ENV: "production" }, unreachable, cache)).rejects.toThrow(/could not be reached/);
     expect(existsSync(cache)).toBe(false);
   });

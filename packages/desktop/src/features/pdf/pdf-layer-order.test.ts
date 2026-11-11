@@ -12,7 +12,7 @@ const { calls, outputs } = vi.hoisted(() => ({
 }));
 
 vi.mock("jspdf", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import("jspdf");
+  const actual = await importOriginal<typeof import("jspdf")>();
   class KeepJsPdf extends actual.jsPDF {
     constructor(...args: ConstructorParameters<typeof actual.jsPDF>) {
       super(...args);
@@ -104,7 +104,7 @@ function data(view: Partial<ResultViewSettings> = {}): PdfExportData {
       annotations: ANNOS,
       ...view,
     },
-    piezometricLine: { enabled: false, lines: [], activeLineId: null, materialAssignment: {} } as unknown as PdfExportData["piezometricLine"],
+    piezometricLine: { enabled: false, lines: [], activeLineId: null, materialAssignment: {} },
     udls: [],
     lineLoads: [],
     analysisLimits: { ...DEFAULT_ANALYSIS_LIMITS },
@@ -119,7 +119,7 @@ function exportNamed(view: Partial<ResultViewSettings> = {}): string[] {
   exportVectorPdf(data(view));
   return calls.map((c) => {
     if (c.name === "drawAnnotations") return `annotation:${(c.args[2] as Annotation[]).map((a) => a.id).join(",")}`;
-    if (c.name === "drawMaterialRegions") return c.args[7] === "fills" ? "soilFills" : `regions:${c.args[6]}`;
+    if (c.name === "drawMaterialRegions") return c.args[7] === "fills" ? "soilFills" : `regions:${String(c.args[6])}`;
     return c.name;
   });
 }

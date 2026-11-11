@@ -41,7 +41,7 @@ type Raw = Record<string, unknown>;
 export function decodeSlices(w: SlicesWire, start = 0, count = w.data.length / SLICE_STRIDE, extraAt?: Map<number, Raw>): Raw[] {
   const d = w.data;
   const extras = extraAt ?? new Map(w.extras);
-  const out: Raw[] = new Array(count);
+  const out = new Array<Raw>(count);
   for (let k = 0; k < count; k++) {
     const i = start + k;
     const o = i * SLICE_STRIDE;

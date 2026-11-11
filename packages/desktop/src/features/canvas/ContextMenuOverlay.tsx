@@ -8,7 +8,7 @@ interface ContextMenuOverlayProps {
 
 /** The box a menu must stay in: the canvas area the menu is placed in (it clips what sticks out). */
 function boundsOf(el: HTMLElement): DOMRect {
-  const menu = el.closest("[data-context-menu]") as HTMLElement | null;
+  const menu = el.closest<HTMLElement>("[data-context-menu]");
   const host = (menu?.offsetParent as HTMLElement | null) ?? document.body;
   return host.getBoundingClientRect();
 }

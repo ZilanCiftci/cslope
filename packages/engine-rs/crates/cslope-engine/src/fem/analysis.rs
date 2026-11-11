@@ -498,7 +498,7 @@ impl<'a> FemSearch<'a> {
                 let prior = self.prior.take().expect("the prior search");
                 let mut trials = prior.trials.clone();
                 trials.extend_from_slice(&r.trials);
-                let previous_state = r.previous_state.clone().or(prior.previous_state.clone());
+                let previous_state = r.previous_state.clone().or(prior.previous_state);
                 let r = SrmResult {
                     trials,
                     previous_state,

@@ -19,7 +19,7 @@ const def: SlopeDefinition = {
   regionAssignments: [{ point: [15, 2], materialName: "soil" }],
   customSearchPlanes: [{ cx: CX, cy: CY, radius: R }],
   customPlanesOnly: true,
-} as SlopeDefinition;
+};
 const run = (o: Partial<AnalysisOptions> = {}) => {
   const s = buildSlope(toCanonicalSlopeDefinition(def));
   s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", slices: 40, ...o });

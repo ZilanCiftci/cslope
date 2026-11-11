@@ -139,7 +139,8 @@ describe("free water from a material's own line", () => {
 
   it("gives the pool as the material's line the FOS of the pool as the main line", () => {
     const main = fos({ ...dry, waterTable: { mode: "custom", value: pool, followBoundary: false } })!;
-    expect(main).toBeCloseTo(1.597, 3);
+    // 1.597 with the arc base of a circle; the chord (2026-11-10).
+    expect(main).toBeCloseTo(1.5988, 3);
     expect(fos({ ...own, waterTables: [{ id: "p", coordinates: pool, followBoundary: false }] })).toBeCloseTo(main, 6);
     expect(
       fos({

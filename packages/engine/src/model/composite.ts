@@ -47,7 +47,7 @@ export function compositeFloor(
     if (i < 0) i = materials.push(m) - 1;
     return i;
   };
-  const geos = geometries.map((g) => ({ ...g, material: index(g.material as unknown as Material) }));
+  const geos = geometries.map((g) => ({ ...g, material: index(g.material) }));
   return (wasm().composite_floor(boundary, geos, materials.map(materialWire), followBase) as CompositeFloor | null | undefined) ?? null;
 }
 

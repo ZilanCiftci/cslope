@@ -25,6 +25,7 @@ import {
 } from "./actions";
 import { adoptProjectAssets, readProject } from "./cslp";
 import {
+  alertFailure,
   confirmUnsavedChanges,
   createdForSave,
   markProjectSaved,
@@ -39,6 +40,9 @@ export interface ProjectActions {
 
   /** Hidden `<input type="file">` ref for browser Open dialog. */
   fileInputRef: RefObject<HTMLInputElement | null>;
+
+  // The actions below never reject: a failure is reported to the user
+  // (alertFailure), so callers may ignore the promise.
 
   /** Create a fresh, empty project (asks about unsaved changes first). */
   handleNew: () => void | Promise<void>;
@@ -77,8 +81,8 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
 
   // ── New ──────────────────────────────────────────────────────────
 
-  const handleNew = () =>
-    withUnsavedChangesCheck(() => {
+  const handleNew = () => {
+    const pending = withUnsavedChangesCheck(() => {
       // (no drawings: those of the project closed are dropped)
       adoptProjectAssets([]);
       useAppStore.getState().newProject();
@@ -86,19 +90,24 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       setFileName("");
       if (isElectron) window.cslope.menuNew();
     });
+    // Synchronous (and nothing to report) when the project was clean.
+    if (pending instanceof Promise) {
+      return pending.catch((err: unknown) => alertFailure("create a new project", err));
+    }
+  };
 
   // ── Open ─────────────────────────────────────────────────────────
 
   const handleOpen = async () => {
-    // Stay synchronous when there is nothing to save: a browser only opens
-    // the file picker from within the click.
-    if (
-      isProjectDirty(useAppStore.getState()) &&
-      !(await confirmUnsavedChanges())
-    )
-      return;
-    if (isElectron) {
-      try {
+    try {
+      // Stay synchronous when there is nothing to save: a browser only opens
+      // the file picker from within the click.
+      if (
+        isProjectDirty(useAppStore.getState()) &&
+        !(await confirmUnsavedChanges())
+      )
+        return;
+      if (isElectron) {
         const contents = await window.cslope.openFile();
         if (!contents) return;
         const read = await readProject(contents);
@@ -106,28 +115,31 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
         useAppStore.getState().loadProject(read.file);
         useAppStore.temporal.getState().clear();
         window.cslope.confirmFileOpened();
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
+        return;
       }
-      return;
+      // Browser path – trigger the hidden file input.
+      const input = fileInputRef.current;
+      if (!input) return;
+      input.value = "";
+      input.click();
+    } catch (err) {
+      alertFailure("open project", err);
     }
-    // Browser path – trigger the hidden file input.
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.value = "";
-    input.click();
   };
 
   // ── Save ─────────────────────────────────────────────────────────
 
   const handleSave = async () => {
-    if (isElectron) {
-      await saveProjectInElectron();
-      return;
+    try {
+      if (isElectron) {
+        await saveProjectInElectron();
+        return;
+      }
+      const suggested = fileNameRef.current || defaultBaseName;
+      await downloadProject(ensureCslpName(suggested));
+    } catch (err) {
+      alertFailure("save project", err);
     }
-    const suggested = fileNameRef.current || defaultBaseName;
-    await downloadProject(ensureCslpName(suggested));
   };
 
   /** Browser: offer the project as a .cslp download. */
@@ -140,8 +152,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
       setFileName(stripProjectExt(finalName));
       triggerBrowserDownload(bytes, finalName);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Unknown error";
-      window.alert(`Unable to save project: ${msg}`);
+      alertFailure("save project", err);
       return;
     }
     markProjectSaved(state, created);
@@ -150,14 +161,18 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
   // ── Save As ──────────────────────────────────────────────────────
 
   const handleSaveAs = async () => {
-    if (isElectron) {
-      await saveProjectInElectron(true);
-      return;
+    try {
+      if (isElectron) {
+        await saveProjectInElectron(true);
+        return;
+      }
+      const suggested = fileNameRef.current || defaultBaseName;
+      const inputName = window.prompt("Save project as", suggested);
+      if (!inputName?.trim()) return;
+      await downloadProject(ensureCslpName(inputName));
+    } catch (err) {
+      alertFailure("save project", err);
     }
-    const suggested = fileNameRef.current || defaultBaseName;
-    const inputName = window.prompt("Save project as", suggested);
-    if (!inputName?.trim()) return;
-    await downloadProject(ensureCslpName(inputName));
   };
 
   // ── File change (browser <input> → read → load) ─────────────────
@@ -179,10 +194,7 @@ export function useProjectActions(defaultBaseName: string): ProjectActions {
         useAppStore.temporal.getState().clear();
         setFileName(stripProjectExt(file.name));
       })
-      .catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : "Unknown error";
-        window.alert(`Unable to open project: ${msg}`);
-      });
+      .catch((err: unknown) => alertFailure("open project", err));
   };
 
   return {

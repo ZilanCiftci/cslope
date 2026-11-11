@@ -390,7 +390,7 @@ fn circumcentre(ax: f64, ay: f64, bx: f64, by: f64, cx: f64, cy: f64) -> (f64, f
 /// rounds correctly, so that it is the same in every JavaScript engine;
 /// Math.hypot, acos, log2 and ** may differ by an ulp between engines and
 /// would change the mesh.
-fn dist(dx: f64, dy: f64) -> f64 {
+pub(crate) fn dist(dx: f64, dy: f64) -> f64 {
     (dx * dx + dy * dy).sqrt()
 }
 

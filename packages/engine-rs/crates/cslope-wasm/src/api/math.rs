@@ -197,11 +197,3 @@ pub fn extrapolate_lambda(lff_array: JsValue) -> JsResult<Vec<f64>> {
 pub fn get_precision(n: f64) -> usize {
     math::get_precision(n)
 }
-
-#[wasm_bindgen]
-pub fn material_colors() -> Vec<String> {
-    math::MATERIAL_COLORS
-        .iter()
-        .map(|s| s.to_string())
-        .collect()
-}

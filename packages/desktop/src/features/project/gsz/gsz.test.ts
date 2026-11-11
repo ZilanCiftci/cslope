@@ -121,6 +121,40 @@ const XML = `<?xml version="1.0" encoding="UTF-8"?>
 
 const CSV = "SlipNum,SlipFOS,SlipCenterX,SlipCenterY,SlipRadiusX,SlipWeight,SlipOrigSearchMethod,MobilizedShearDirection\n1,1.5,15,18,14,900,5,-1.5707963\n2,999,15,18,1,0,5,-1.57\n3,1.4,14,17,13.5,800,5,-1.5707963\n";
 
+/**
+ * A slope of one material from y = 10 down to y = 5, facing right (sliding
+ * left to right) or its mirror image about x = 15 (sliding right to left).
+ * `material` is the material's <SlopeModel> and fields, `functions` the
+ * file's <Functions>.
+ */
+const slopeXml = (rtl: boolean, material: string, functions = "") => {
+  const X = (x: number) => (rtl ? 30 - x : x);
+  const pts = [[0, 10], [10, 10], [20, 5], [30, 5], [30, 0], [0, 0]];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<GSIData Version="11.11">
+  <Analyses Len="1"><Analysis><ID>1</ID><Name>Slope</Name><Kind>Slope stability</Kind><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis></Analyses>
+  <Contexts Len="1"><Context><AnalysisID>1</AnalysisID><GeometryUsesMaterials Len="1"><GeometryUsesMaterial ID="Regions-1" Entry="1" /></GeometryUsesMaterials></Context></Contexts>
+  <Coordinates><EngCoords UnitSystem="Metric" /></Coordinates>
+  ${functions}
+  <Geometries Len="1"><Geometry>
+    <Points Len="6">${pts.map(([x, y], i) => `<Point ID="${i + 1}" X="${X(x)}" Y="${y}" />`).join("")}</Points>
+    <Regions Len="1"><Region><ID>1</ID><PointIDs>1,2,3,4,5,6</PointIDs></Region></Regions>
+  </Geometry></Geometries>
+  <Materials Len="1"><Material><ID>1</ID><Name>Clay</Name>${material}</Material></Materials>
+  <StabilityItems Len="1"><StabilityItem><AnalysisID>1</AnalysisID><Entry><SlipSurface>
+    <DirectionOfSlip>${rtl ? "RightToLeft" : "LeftToRight"}</DirectionOfSlip>
+    <Option>EntryExit</Option>
+    <EntryExit><LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" /><RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" /></EntryExit>
+  </SlipSurface></Entry></StabilityItem></StabilityItems>
+</GSIData>`;
+};
+/** The format's anisotropy functions: [inclination °, factor] points by id. */
+const anisoFnsXml = (...fns: [number, number][][]) =>
+  `<Functions><Material><StressStrain><AnisoFns Len="${fns.length}">${fns.map((pts, i) => `<AnisoFn><ID>${i + 1}</ID><Points Len="${pts.length}">${pts.map(([x, y]) => `<Point X="${x}" Y="${y}" />`).join("")}</Points></AnisoFn>`).join("")}</AnisoFns></StressStrain></Material></Functions>`;
+// strong where the format's inclination is negative, weak where it is positive
+const ANISO_FN: [number, number][] = [[-60, 1.3], [0, 1], [60, 0.8]];
+const ANISO_FN_MATERIAL = "<SlopeModel>AnisotropicFn</SlopeModel><StressStrain><CAnisoFnNum>1</CAnisoFnNum><PhiAnisoFnNum>1</PhiAnisoFnNum><UnitWeight>18</UnitWeight><CohesionPrime>8</CohesionPrime><PhiPrime>28</PhiPrime></StressStrain>";
+
 const fos = (def: SlopeDefinition, options: object = {}) => {
   const s = buildSlope(toCanonicalSlopeDefinition(def));
   // circles only: a short search, so that the import, not the search, is compared
@@ -232,6 +266,28 @@ describe(".gsz import", () => {
     expect(back.definition.udls!.every((u) => u.direction === "normal")).toBe(true);
   });
 
+  it("takes the file's unit weight of water into the model and exports the model's", async () => {
+    expect(gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1).options.waterUnitWeight).toBeUndefined();
+    const imp = gszToDefinition({ ...parseGszXml(XML.replace("<UnitWaterWeight>9.807<", "<UnitWaterWeight>9.82<")), results: new Map() }, 1);
+    expect(imp.options.waterUnitWeight).toBe(9.82);
+    expect(imp.notes.join(" ")).not.toMatch(/unit weight of water/);
+    const model = modelFromDefinition(imp.definition, { id: "w", name: "W", options: imp.options });
+    expect(modelToGszXml(model).xml).toContain("<UnitWaterWeight>9.82</UnitWaterWeight>");
+    const [back] = await gszImports(modelToGsz(model).bytes, "W.gsz");
+    expect(back.options.waterUnitWeight).toBe(9.82);
+    // without a setting the exporter writes 9.807
+    expect(modelToGszXml(modelFromDefinition(imp.definition, { id: "d", name: "D" })).xml).toContain("<UnitWaterWeight>9.807</UnitWaterWeight>");
+  });
+
+  it("takes the phreatic correction (IsPiezPhreatic) as the pore pressure head", () => {
+    const withControl = (v: string) => XML.replace("<Entry>\n        <DataPoints", `<Entry>\n        <Control><IsPiezPhreatic>${v}</IsPiezPhreatic></Control>\n        <DataPoints`);
+    expect(withControl("true")).not.toBe(XML);
+    expect(gszToDefinition({ ...parseGszXml(withControl("true")), results: new Map() }, 1).options.porePressureHead).toBe("phreatic-correction");
+    // false or absent: the default (the vertical head)
+    expect(gszToDefinition({ ...parseGszXml(withControl("false")), results: new Map() }, 1).options.porePressureHead).toBeUndefined();
+    expect(gszToDefinition({ ...parseGszXml(XML), results: new Map() }, 1).options.porePressureHead).toBeUndefined();
+  });
+
   it("reads the default search (no Option) and an exit given as a point", () => {
     const xml = XML.replace("<Option>EntryExit</Option>", "")
       .replace('<RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />', '<RightOption>Point</RightOption><RightSideLeftPt X="21" Y="5" />');
@@ -270,6 +326,72 @@ describe(".gsz import", () => {
     expect(imp.notes.join(" ")).toMatch(/downslope end angles of the block search \(-15° to 10° from the horizontal\) are outside 0–90°/);
   });
 
+  // Further stability analyses whose search takes its slip surfaces from
+  // another analysis; their own (stale) entry and exit ranges differ from
+  // those of analysis 1.
+  const analysisXml = (id: number, name: string, parent = 1) =>
+    `<Analysis><ID>${id}</ID><Name>${name}</Name><Kind>Slope stability</Kind><ParentID>${parent}</ParentID><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis>`;
+  const contextXml = (id: number) =>
+    `<Context><AnalysisID>${id}</AnalysisID><GeometryUsesMaterials Len="2"><GeometryUsesMaterial ID="Regions-1" Entry="1" /><GeometryUsesMaterial ID="Regions-2" Entry="2" /></GeometryUsesMaterials></Context>`;
+  const fromOtherItem = (id: number, inputInfo: string) =>
+    `<StabilityItem><AnalysisID>${id}</AnalysisID><Entry><InitialInputInfo>${inputInfo}</InitialInputInfo><SlipSurface><Option>FromOther</Option>` +
+    `<EntryExit><LeftSideLeftPt X="0" Y="10" /><LeftSideRightPt X="2" Y="10" /><RightSideLeftPt X="28" Y="5" /><RightSideRightPt X="30" Y="5" /></EntryExit></SlipSurface></Entry></StabilityItem>`;
+  const path = (name: string) => `<Path path=";;&quot;${name}&quot;;(last)" />`;
+  const withFromOther = (items: { id: number; name: string; parent?: number; input: string }[], base = XML) => {
+    let xml = base;
+    for (const a of items) {
+      xml = xml
+        .replace("</Analyses>", `${analysisXml(a.id, a.name, a.parent)}</Analyses>`)
+        .replace("</Contexts>", `${contextXml(a.id)}</Contexts>`)
+        .replace("</StabilityItems>", `${fromOtherItem(a.id, a.input)}</StabilityItems>`);
+    }
+    return { ...parseGszXml(xml), results: new Map() };
+  };
+
+  it("takes a FromOther search from the analysis its input names, through a chain", () => {
+    const f = withFromOther([
+      { id: 3, name: "Probability", input: `<Option>Parent</Option>${path("Short term")}` },
+      { id: 4, name: "With load", parent: 3, input: `<Option>Other</Option>${path("Probability")}` },
+    ]);
+    expect(f.stability.get(3)!.inputFrom).toEqual({ option: "Parent", name: "Short term" });
+    for (const id of [3, 4]) {
+      const imp = gszToDefinition(f, id);
+      // analysis 1's ranges, slices and direction, not the analysis's own stale ranges
+      expect(imp.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+      expect(imp.definition.orientation).toBe("ltr");
+      expect(imp.options.slices).toBe(40);
+      expect(imp.notes.join(" ")).toMatch(/slip surface search is taken from analysis "Short term"/);
+      expect(imp.notes.join(" ")).not.toMatch(/is not imported; cSlope's own search/);
+    }
+    // no path: the parent analysis
+    const parent = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: "<Option>Parent</Option>" }]), 3);
+    expect(parent.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+  });
+
+  it("searches the whole slope, with a note, when a FromOther source is not in the file", () => {
+    const imp = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: `<Option>Other</Option>${path("Gone")}` }]), 3);
+    expect(imp.definition.analysisLimits).toBeUndefined();
+    expect(imp.options.searchMethod).toBeUndefined();
+    expect(imp.notes.join(" ")).toMatch(/takes its slip surfaces from "Gone", which the file does not give as a stability analysis; cSlope's own search over the whole slope is used/);
+    // "another" analysis without a name is not taken to be the parent
+    const other = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: "<Option>Other</Option>" }]), 3);
+    expect(other.definition.analysisLimits).toBeUndefined();
+    expect(other.notes.join(" ")).toMatch(/from another analysis, which the file does not give/);
+  });
+
+  it("stops at a loop of FromOther searches", () => {
+    const f = withFromOther([
+      { id: 3, name: "Probability", input: `<Option>Other</Option>${path("With load")}` },
+      { id: 4, name: "With load", parent: 3, input: `<Option>Other</Option>${path("Probability")}` },
+      { id: 5, name: "Self", input: `<Option>Other</Option>${path("Self")}` },
+    ]);
+    for (const id of [3, 4, 5]) {
+      const imp = gszToDefinition(f, id);
+      expect(imp.definition.analysisLimits).toBeUndefined();
+      expect(imp.notes.join(" ")).toMatch(/from other analyses in a loop .*cSlope's own search over the whole slope is used/);
+    }
+  });
+
   it("finds the results of an analysis with a slash in its name", async () => {
     const xml = XML.replace("<Name>Short term</Name>", "<Name>Short/long term</Name>");
     const imps = await gszImports(writeZip([{ name: "S.xml", data: xml }, { name: "Short&3long term/001/slip_surface.csv", data: CSV }]), "S.gsz");
@@ -284,6 +406,55 @@ describe(".gsz import", () => {
     const m = imp.definition.materials.find((x) => x.model?.kind === "s-f-depth")!;
     expect(m.model).toMatchObject({ suRef: 12, depthRef: 0, rate: 2, depthReference: "layer-top", anisotropy: [[-10, 1], [0, 0.7], [10, 1]] });
     expect(imp.notes.join(" ")).toMatch(/anisotropy function is imported as factors interpolated linearly/);
+  });
+
+  it("imports AnisotropicFn as an anisotropic function, the inclination's sign changed to cSlope's", () => {
+    for (const rtl of [false, true]) {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      expect(imp.definition.orientation).toBe(rtl ? "rtl" : "ltr");
+      // the file's inclination is negative at the scarp, cSlope's α positive there, in both directions
+      expect(imp.definition.materials[0].model).toEqual({ kind: "anisotropic-function", unitWeight: 18, cohesion: 8, frictionAngle: 28, modifierFunction: [[-60, 0.8], [0, 1], [60, 1.3]] });
+      const notes = imp.notes.join(" ");
+      expect(notes).not.toMatch(/Enter it by hand/);
+      expect(notes).toMatch(/"Clay": the anisotropy function is imported as factors interpolated linearly between its 3 points \(the file uses a spline\), with the sign of the inclination changed/);
+    }
+    // an Imperial file: c in kPa
+    const imperial = slopeXml(false, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN)).replace('UnitSystem="Metric"', 'UnitSystem="Imperial"').replace("<CohesionPrime>8<", "<CohesionPrime>200<");
+    const m = gszToDefinition({ ...parseGszXml(imperial), results: new Map() }, 1).definition.materials[0].model as { cohesion: number; frictionAngle: number };
+    expect(m.cohesion).toBeCloseTo(200 * 0.0478802589, 9);
+    expect(m.frictionAngle).toBe(28);
+  });
+
+  it("gives the same factor of safety for an AnisotropicFn slope facing right and its mirror image facing left", () => {
+    const run = (rtl: boolean) => {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, ANISO_FN_MATERIAL, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      const circle = { cx: rtl ? 16 : 14, cy: 17, radius: 13.5 };
+      return { d: { ...imp.definition, customSearchPlanes: [circle], customPlanesOnly: true }, options: imp.options };
+    };
+    const ltr = run(false), rtl = run(true);
+    const f = fos(ltr.d, ltr.options);
+    expect(Number.isFinite(f)).toBe(true);
+    expect(fos(rtl.d, rtl.options)).toBeCloseTo(f, 6);
+    // the sign matters: the function as written in the file gives another factor of safety
+    const unchanged = (d: SlopeDefinition) => ({ ...d, materials: d.materials.map((x) => ({ ...x, model: { ...x.model!, modifierFunction: ANISO_FN } as SlopeDefinition["materials"][number]["model"] })) });
+    expect(Math.abs(fos(unchanged(ltr.d), ltr.options) - f)).toBeGreaterThan(0.01);
+  });
+
+  it("keeps Mohr-Coulomb with a note for an AnisotropicFn whose function is missing or differs for c and φ", () => {
+    const missing = gszToDefinition({ ...parseGszXml(slopeXml(false, ANISO_FN_MATERIAL)), results: new Map() }, 1);
+    expect(missing.definition.materials[0].model).toEqual({ kind: "mohr-coulomb", unitWeight: 18, cohesion: 8, frictionAngle: 28 });
+    expect(missing.notes.join(" ")).toMatch(/"Clay": the strength model "AnisotropicFn" has no counterpart in the import yet; it is read as Mohr-Coulomb with c = 8.00 kPa, φ = 28°.*Enter it by hand/);
+    const two = gszToDefinition({ ...parseGszXml(slopeXml(false, ANISO_FN_MATERIAL.replace("<PhiAnisoFnNum>1<", "<PhiAnisoFnNum>2<"), anisoFnsXml(ANISO_FN, [[0, 1], [45, 1.2]]))), results: new Map() }, 1);
+    expect(two.definition.materials[0].model?.kind).toBe("mohr-coulomb");
+    expect(two.notes.join(" ")).toMatch(/"Clay": c and φ have different anisotropy functions; cSlope's anisotropic function applies one to both\..*"Clay": the strength model "AnisotropicFn" has no counterpart/);
+  });
+
+  it("changes the sign of the inclination of an anisotropy function on an undrained strength", () => {
+    const material = "<SlopeModel>UndrainedPhiZero</SlopeModel><StressStrain><ShearAnisoFnNum>1</ShearAnisoFnNum><UnitWeight>18</UnitWeight><Cohesion>30</Cohesion></StressStrain>";
+    for (const rtl of [false, true]) {
+      const imp = gszToDefinition({ ...parseGszXml(slopeXml(rtl, material, anisoFnsXml(ANISO_FN))), results: new Map() }, 1);
+      expect(imp.definition.materials[0].model).toEqual({ kind: "undrained", unitWeight: 18, undrainedShearStrength: 30, anisotropy: [[-60, 0.8], [0, 1], [60, 1.3]] });
+    }
   });
 
   it("imports Hoek-Brown from GSI, mi (10 when not given) and D, or from mb, s and a", () => {
@@ -441,6 +612,64 @@ describe(".gsz import", () => {
     expect(imp.definition.materials[1].model).toMatchObject({ unitWeight: 17 * 0.157087463, undrainedShearStrength: 25 * 0.0478802589 });
   });
 
+  const withLimits = (limits: string, xml = XML) => xml.replace("<NumberOfSlicesPerSlip>40</NumberOfSlicesPerSlip>", `<NumberOfSlicesPerSlip>40</NumberOfSlicesPerSlip>${limits}`);
+
+  it("imports the minimum slip volume as the smallest sliding area and the minimum depth, with a note", () => {
+    const imp = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>1</MinimumVolume><MinimumDepth>0.5</MinimumDepth>")), results: new Map() }, 1);
+    expect(parseGszXml(withLimits("<MinimumVolume>1</MinimumVolume>")).stability.get(1)!.minimumVolume).toBe(1);
+    expect(imp.options).toMatchObject({ minSlipArea: 1, minSlipDepth: 0.5 });
+    expect(imp.notes).toContain("The file's minimum slip volume (1 m²) and minimum slip depth (0.5 m) are carried over.");
+    // one of them: one limit in the line
+    const volume = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>0.1</MinimumVolume>")), results: new Map() }, 1);
+    expect(volume.options.minSlipArea).toBe(0.1);
+    expect(volume.options.minSlipDepth).toBeUndefined();
+    expect(volume.notes).toContain("The file's minimum slip volume (0.1 m²) is carried over.");
+    // Imperial: a volume per unit width in ft², the depth in ft
+    const ft = gszToDefinition({ ...parseGszXml(withLimits("<MinimumVolume>35.3147</MinimumVolume><MinimumDepth>1</MinimumDepth>", XML.replace('UnitSystem="Metric"', 'UnitSystem="Imperial"'))), results: new Map() }, 1);
+    expect(ft.options.minSlipArea).toBe(3.28084);
+    expect(ft.options.minSlipDepth).toBe(0.3048);
+    expect(ft.notes).toContain("The file's minimum slip volume (3.28084 m²) and minimum slip depth (0.3048 m) are carried over.");
+  });
+
+  it("sets no limit and no note when the file has none or gives 0", () => {
+    for (const xml of [XML, withLimits("<MinimumVolume>0</MinimumVolume><MinimumDepth>0</MinimumDepth>"), withLimits('<MinimumVolume Missing="true" /><MinimumDepth />')]) {
+      const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+      expect(imp.options).not.toHaveProperty("minSlipArea");
+      expect(imp.options).not.toHaveProperty("minSlipDepth");
+      expect(imp.notes.join(" ")).not.toMatch(/minimum slip/);
+    }
+  });
+
+  it("gives an analysis whose search is FromOther the other analysis's limits", () => {
+    // analysis 1 has both limits; analysis 3 has none of its own and takes its slip surfaces from 1
+    const f = withFromOther([{ id: 3, name: "Probability", input: `<Option>Parent</Option>${path("Short term")}` }], withLimits("<MinimumVolume>2</MinimumVolume><MinimumDepth>1.5</MinimumDepth>"));
+    expect(f.stability.get(3)!.minimumVolume).toBeUndefined();
+    const imp = gszToDefinition(f, 3);
+    expect(imp.options).toMatchObject({ minSlipArea: 2, minSlipDepth: 1.5 });
+    expect(imp.notes).toContain("The file's minimum slip volume (2 m²) and minimum slip depth (1.5 m) are carried over.");
+  });
+
+  it("keeps every point of an analysis's point list that repeats a number: the repeat takes its position as its number", () => {
+    // the analysis's points 1–5, then 6, 6 (the seventh), 8 and 9–11; the block grids refer to 6–11
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="6" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
+      .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="115" Angle2="135" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="30" Angle2="45" PointUL="9" PointLL="10" PointLR="11" /></Block>');
+    const f = parseGszXml(xml);
+    const st = f.stability.get(1)!;
+    expect(st.block?.left).toMatchObject({ ul: [6, 6], ll: [6, 3], lr: [10, 3] });
+    // the points the water, load and surcharge refer to are read as before
+    expect(st.piezometric.get(1)).toEqual([[0, 6], [30, 4]]);
+    expect(st.lineLoads[0]).toMatchObject({ x: 5, y: 10 });
+    const imp = gszToDefinition({ ...f, results: new Map() }, 1);
+    expect(imp.definition.blockSearchObjects).toEqual([
+      { points: [[6, 6], [6, 3], [10, 3], [10, 6]] },
+      { points: [[18, 4], [18, 2], [24, 2], [24, 4]] },
+    ]);
+    // the geometry's points by ID are read as before: a repeated ID is the last point with it
+    const geometry = parseGszXml(XML.replace('<Point ID="9" X="15" Y="3" />', '<Point ID="8" X="15" Y="3" />'));
+    expect(geometry.geometries.get(1)!.points.get(8)).toEqual([15, 3]);
+    expect(geometry.geometries.get(1)!.points.has(9)).toBe(false);
+  });
+
   it("imports every stability analysis of a ZIP and skips the seepage one", async () => {
     const bytes = writeZip([{ name: "Section A.xml", data: XML }, { name: "Short term/001/slip_surface.csv", data: CSV }]);
     const imps = await gszImports(bytes, "Section A.gsz");
@@ -515,7 +744,7 @@ describe(".gsz export", () => {
     udls: [{ magnitude: 20, x1: 2, x2: 8 }],
     lineLoads: [{ magnitude: 40, x: 5 }],
     analysisLimits: { entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 },
-  } as SlopeDefinition;
+  };
   const model = modelFromDefinition(def, { id: "m", name: "Section A", options: { method: "Morgenstern-Price", intersliceFunction: "constant" } });
 
   it("writes the regions, materials, water, loads and search, and reads back the same slope", async () => {
@@ -544,7 +773,7 @@ describe(".gsz export", () => {
           { magnitude: 20, x: 25, angle: -45, y: 5 },
           { magnitude: 10, x: 12, angle: 120 },
         ],
-      } as SlopeDefinition,
+      },
       { id: "m", name: "Section A" },
     );
     // the import into the model keeps the angle and the point
@@ -596,7 +825,7 @@ describe(".gsz export", () => {
           def.materials[1],
         ],
         rapidDrawdown: { waterBefore: [[0, 9], [30, 9]] },
-      } as SlopeDefinition,
+      },
       { id: "m", name: "Section A" },
     );
     expect(rd.piezometricLine.rapidDrawdown).toEqual({ waterBefore: [[0, 9], [30, 9]] });
@@ -644,6 +873,18 @@ describe(".gsz export", () => {
     expect(Math.abs(onCircle(imp.definition) / onCircle(lens) - 1)).toBeLessThan(1e-3);
   });
 
+  it("writes the phreatic correction as IsPiezPhreatic and reads it back; nothing for the vertical head", async () => {
+    const corrected = { ...model, options: { ...model.options, porePressureHead: "phreatic-correction" as const } };
+    expect(modelToGszXml(corrected).xml).toContain("<Control>\n          <IsPiezPhreatic>true</IsPiezPhreatic>\n        </Control>");
+    const [imp] = await gszImports(modelToGsz(corrected).bytes, "P.gsz");
+    expect(imp.options.porePressureHead).toBe("phreatic-correction");
+    // the default: no Control block, as before
+    expect(modelToGszXml(model).xml).not.toContain("<Control>");
+    expect(modelToGszXml({ ...model, options: { ...model.options, porePressureHead: "vertical" as const } }).xml).not.toContain("<Control>");
+    const [plain] = await gszImports(modelToGsz(model).bytes, "P.gsz");
+    expect(plain.options.porePressureHead).toBeUndefined();
+  });
+
   it("writes the seismic coefficients and reads them back", async () => {
     const quake = { ...model, options: { ...model.options, seismicHorizontal: 0.15, seismicVertical: 0.05 } };
     expect(modelToGszXml(quake).xml).toContain(`<Seismic Horizontal="0.15" Vertical="0.05" />`);
@@ -657,7 +898,7 @@ describe(".gsz export", () => {
 
   it("writes given circles and surfaces analyzed alone as fully specified slip surfaces, and notes them when the model also searches", async () => {
     const circle = { cx: 16, cy: 18, radius: 15 };
-    const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "C", options: { method: "Bishop" } });
+    const onCircle = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: true }, { id: "m", name: "C", options: { method: "Bishop" } });
     const { xml, notes } = modelToGszXml(onCircle);
     expect(xml).toContain("<Option>FullySpecified</Option>");
     expect(xml).toMatch(/<Axis ID="\d+" \/>/);
@@ -669,15 +910,15 @@ describe(".gsz export", () => {
     // the points are on the circle and reach above the ground at both ends
     expect(surface.points.every(([x, y]) => Math.abs(Math.hypot(x - 16, y - 18) - 15) < 1e-9)).toBe(true);
     // a polyline in 2° steps: the factor of safety of the circle within 0.2 %
-    const f0 = fos({ ...def, customSearchPlanes: [circle], customPlanesOnly: true } as SlopeDefinition, { method: "Bishop" });
+    const f0 = fos({ ...def, customSearchPlanes: [circle], customPlanesOnly: true }, { method: "Bishop" });
     expect(Math.abs(fos(imp.definition, { method: "Bishop" }) / f0 - 1)).toBeLessThan(2e-3);
     // a surface: its points, no axis
     const pts: [number, number][] = [[4, 10], [12, 4], [22, 3.5], [27, 5]];
-    const onSurface = modelFromDefinition({ ...def, customSurfaces: [{ points: pts }], customPlanesOnly: true } as SlopeDefinition, { id: "m", name: "S" });
+    const onSurface = modelFromDefinition({ ...def, customSurfaces: [{ points: pts }], customPlanesOnly: true }, { id: "m", name: "S" });
     const [back] = await gszImports(modelToGsz(onSurface).bytes, "S.gsz");
     expect(back.definition.customSurfaces).toEqual([{ points: pts }]);
     // with the search as well: not written, with a note
-    const both = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: false } as SlopeDefinition, { id: "m", name: "B" });
+    const both = modelFromDefinition({ ...def, customSearchPlanes: [circle], customPlanesOnly: false }, { id: "m", name: "B" });
     const out = modelToGszXml(both);
     expect(out.xml).not.toContain("FullySpecified");
     expect(out.notes.join(" ")).toMatch(/custom slip surfaces are not written/);
@@ -726,6 +967,38 @@ describe(".gsz export", () => {
     expect(pop.model).toMatchObject({ ratio: 0.25, ocr: 1 });
   });
 
+  it("writes an anisotropic function as AnisotropicFn with the format's sign of the inclination, and reads it back with the same factor of safety", async () => {
+    const clay = { kind: "anisotropic-function", unitWeight: 17, cohesion: 6, frictionAngle: 24, modifierFunction: [[-45, 0.8], [0, 1], [60, 1.4]] } as const;
+    for (const orientation of ["ltr", "rtl"] as const) {
+      const coordinates = orientation === "ltr" ? def.coordinates : def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]);
+      const d = {
+        ...def,
+        orientation,
+        coordinates,
+        materials: [def.materials[0], { name: "Clay", model: clay }],
+        materialBoundaries: [{ coordinates: [[0, 3], [30, 3]], materialName: "" }],
+        regionAssignments: [{ point: [orientation === "ltr" ? 5 : 25, 6], materialName: "Fill" }, { point: [5, 1], materialName: "Clay" }],
+        waterTable: { mode: "custom", value: orientation === "ltr" ? [[0, 6], [30, 4]] : [[0, 4], [30, 6]] },
+        udls: [],
+        lineLoads: [],
+        analysisLimits: orientation === "ltr" ? def.analysisLimits : { entryLeftX: 21, entryRightX: 29, exitLeftX: 1, exitRightX: 9 },
+      } as SlopeDefinition;
+      const m = modelFromDefinition(d, { id: "a", name: "Aniso", options: { method: "Bishop" } });
+      const { xml, notes } = modelToGszXml(m);
+      expect(xml).toContain("<SlopeModel>AnisotropicFn</SlopeModel>");
+      expect(xml).toMatch(/<CAnisoFnNum>1<\/CAnisoFnNum>\s*<PhiAnisoFnNum>1<\/PhiAnisoFnNum>\s*<UnitWeight>17<\/UnitWeight>\s*<CohesionPrime>6<\/CohesionPrime>\s*<PhiPrime>24<\/PhiPrime>/);
+      expect(xml).toMatch(/<Functions>\s*<Material>\s*<StressStrain>\s*<AnisoFns Len="1">\s*<AnisoFn>\s*<ID>1<\/ID>/);
+      expect(xml).toContain("<Function>Linear(OutputParam=ModifierFactor,InputParam=Inclination,SlopeBefore=0,SlopeAfter=0)</Function>");
+      expect(xml).toMatch(/<Point X="-60" Y="1.4" \/>\s*<Point X="0" Y="1" \/>\s*<Point X="45" Y="0.8" \/>/);
+      expect(notes.join(" ")).not.toMatch(/"Clay"/);
+      const [imp] = await gszImports(modelToGsz(m).bytes, "A.gsz");
+      expect(imp.definition.orientation ?? "ltr").toBe(orientation);
+      expect(imp.definition.materials[1].model).toEqual(clay);
+      const circle = { cx: orientation === "ltr" ? 14 : 16, cy: 17, radius: 13.5 };
+      const alone = (x: SlopeDefinition) => ({ ...x, customSearchPlanes: [circle], customPlanesOnly: true });      expect(fos(alone(imp.definition), { method: "Bishop" })).toBeCloseTo(fos(alone(d), { method: "Bishop" }), 6);
+    }
+  });
+
   it("writes what the format's files leave out only when it differs from their default, in their order", async () => {
     const parse = (xml: string) => new DOMParser().parseFromString(xml, "application/xml");
     const { xml } = modelToGszXml(model);
@@ -744,17 +1017,33 @@ describe(".gsz export", () => {
     expect(imp.definition.analysisLimits).toEqual(def.analysisLimits);
     expect(imp.definition.orientation ?? "ltr").toBe("ltr");
     // sliding to the left is written, and read back
-    const rtl = modelFromDefinition({ ...def, orientation: "rtl", coordinates: def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]).reverse(), analysisLimits: undefined } as SlopeDefinition, { id: "m", name: "L" });
+    const rtl = modelFromDefinition({ ...def, orientation: "rtl", coordinates: def.coordinates.map(([x, y]) => [30 - x, y] as [number, number]).reverse(), analysisLimits: undefined }, { id: "m", name: "L" });
     expect(modelToGszXml(rtl).xml).toContain("<DirectionOfSlip>RightToLeft</DirectionOfSlip>");
     const [left] = await gszImports(modelToGsz(rtl).bytes, "L.gsz");
     expect(left.definition.orientation).toBe("rtl");
     // dry: no pore pressure option and no empty lists
-    const dry = modelFromDefinition({ ...def, waterTable: undefined, udls: [], lineLoads: [] } as SlopeDefinition, { id: "m", name: "D" });
+    const dry = modelFromDefinition({ ...def, waterTable: undefined, udls: [], lineLoads: [] }, { id: "m", name: "D" });
     const dryXml = modelToGszXml(dry).xml;
     expect(dryXml).not.toContain("ResultInputInfo");
     expect(tags(parse(dryXml).querySelector("StabilityItem > Entry"))).toEqual(["SlipSurface", "Seismic"]);
     const [d] = await gszImports(modelToGsz(dry).bytes, "D.gsz");
     expect(d.definition.waterTable).toBeUndefined();
+  });
+
+  it("writes the minimum slip area and depth as the minimum volume and depth, and reads them back; nothing without them", async () => {
+    const limited = { ...model, options: { ...model.options, minSlipArea: 2.5, minSlipDepth: 0.75 } };
+    const { xml } = modelToGszXml(limited);
+    expect(xml).toContain("<MinimumVolume>2.5</MinimumVolume>");
+    expect(xml).toContain("<MinimumDepth>0.75</MinimumDepth>");
+    const [imp] = await gszImports(modelToGsz(limited).bytes, "M.gsz");
+    expect(imp.options).toMatchObject({ minSlipArea: 2.5, minSlipDepth: 0.75 });
+    // without them (absent, 0 or none): the same file as before, the two lines aside
+    const plain = modelToGszXml(model).xml;
+    expect(plain).not.toMatch(/MinimumVolume|MinimumDepth/);
+    expect(xml.replace("          <MinimumVolume>2.5</MinimumVolume>\n          <MinimumDepth>0.75</MinimumDepth>\n", "")).toBe(plain);
+    expect(modelToGszXml({ ...model, options: { ...model.options, minSlipArea: null, minSlipDepth: 0 } }).xml).toBe(plain);
+    const [back] = await gszImports(modelToGsz(model).bytes, "M.gsz");
+    expect(back.options).not.toHaveProperty("minSlipArea");
   });
 
   it("notes that the direction convention of an inclined line load is unverified", () => {

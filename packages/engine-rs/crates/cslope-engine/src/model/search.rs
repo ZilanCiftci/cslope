@@ -857,7 +857,7 @@ pub fn generate_refined_planes(
                     continue;
                 }
                 let lc: Pt = [ex, slope.get_external_y_intersection(ex)?];
-                let rc: Pt = [xx, slope.get_external_y_intersection(xx)?];
+                let rc: Pt = slope.exit_ground_point(xx)?;
                 if dist_points(lc, rc) <= slope.min_failure_distance() {
                     continue;
                 }
@@ -996,7 +996,7 @@ pub fn generate_local_planes(
                     continue;
                 }
                 let lc: Pt = [ex, slope.get_external_y_intersection(ex)?];
-                let rc: Pt = [xx, slope.get_external_y_intersection(xx)?];
+                let rc: Pt = slope.exit_ground_point(xx)?;
                 if dist_points(lc, rc) <= slope.min_failure_distance() {
                     continue;
                 }
@@ -1092,7 +1092,7 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
     let mut n = 0.0;
     while n <= num_points_bot {
         let x = exit_left_x + (n / num_points_bot) * (exit_right_x - exit_left_x);
-        right_coords.push([x, slope.get_external_y_intersection(x)?]);
+        right_coords.push(slope.exit_ground_point(x)?);
         n += 1.0;
     }
 

@@ -101,6 +101,7 @@ describe("worker protocol", () => {
       error: "No variables",
     });
     reliability.run.mockImplementationOnce(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- a non-Error throw is what this test is about
       throw "plain";
     });
     handler()({ data: { type: "run-reliability", id: "r3" } });
@@ -168,7 +169,7 @@ describe("worker protocol", () => {
       reinforcements: [
         { x1: 32, y1: -4, x2: 10, y2: -4, tensileCapacity: 200, application: "active" },
       ],
-    } as SlopeDefinition);
+    });
     if (plain.type !== "analysis-complete" || anchored.type !== "analysis-complete") {
       throw new Error("analysis failed");
     }
@@ -184,7 +185,7 @@ describe("worker protocol", () => {
       ...T_ACADS,
       customPlanesOnly: true,
       customSurfaces: [{ points: [[8, 0], [30, -12], [45, -10]] }],
-    } as SlopeDefinition);
+    });
     if (msg.type !== "analysis-complete") throw new Error(JSON.stringify(msg));
     expect(msg.result.criticalSurface!.points!.length).toBeGreaterThanOrEqual(2);
     expect(msg.result.criticalPushingMoment).toBeUndefined();
@@ -198,7 +199,7 @@ describe("worker protocol", () => {
         ...T_ACADS,
         customPlanesOnly: true,
         customSurfaces: [{ points: [[8, 0], [30, -12], [45, -10]] }],
-      } as SlopeDefinition,
+      },
       { tensionCrackDepth: 2 },
     );
     if (msg.type !== "analysis-complete") throw new Error(JSON.stringify(msg));

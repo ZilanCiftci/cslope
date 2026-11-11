@@ -31,7 +31,9 @@ describe("main window side of the Sensitivity window", () => {
   it("sends the model on request, and its changes and the run's only while the window is open", () => {
     renderHook(() => useSensitivityWindowSync(true));
     act(() => useAppStore.setState({ parameters: [{ name: "H", expression: "10" } as never] }));
-    act(() => vi.advanceTimersByTime(100));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     // Not open yet: nothing is sent.
     expect(bridge.sentOf("sendSensitivityChanged")).toHaveLength(0);
 
@@ -43,7 +45,9 @@ describe("main window side of the Sensitivity window", () => {
 
     act(() => useSensitivityStore.setState({ points: [{ value: 1, fos: 1.2 }], total: 2 }));
     act(() => useAppStore.setState((s) => ({ options: { ...s.options, slices: 40 } })));
-    act(() => vi.advanceTimersByTime(100));
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
     // Both changes in one message.
     const changed = bridge.sentOf<SensitivityWindowState>("sendSensitivityChanged");
     expect(changed).toHaveLength(1);

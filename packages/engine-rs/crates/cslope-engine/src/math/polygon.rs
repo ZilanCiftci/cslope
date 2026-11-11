@@ -116,3 +116,28 @@ pub fn clip_polygon_vertical(
     }
     (rx, ry)
 }
+
+/// Whether `p` lies inside the closed ring `ring` (even–odd rule, as
+/// [`is_point_in_polygon`]).
+pub fn point_in_ring(p: [f64; 2], ring: &[[f64; 2]]) -> bool {
+    let xs: Vec<f64> = ring.iter().map(|c| c[0]).collect();
+    let ys: Vec<f64> = ring.iter().map(|c| c[1]).collect();
+    is_point_in_polygon(p[0], p[1], &xs, &ys)
+}
+
+/// Whether `p` lies on the edges of the closed ring `ring`, within `tol`.
+pub fn point_on_ring(p: [f64; 2], ring: &[[f64; 2]], tol: f64) -> bool {
+    (0..ring.len()).any(|i| {
+        let a = ring[i];
+        let b = ring[(i + 1) % ring.len()];
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let len2 = dx * dx + dy * dy;
+        let t = if len2 > 0.0 {
+            (((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / len2).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+        let (qx, qy) = (a[0] + t * dx - p[0], a[1] + t * dy - p[1]);
+        (qx * qx + qy * qy).sqrt() <= tol
+    })
+}

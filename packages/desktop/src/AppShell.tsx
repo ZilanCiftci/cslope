@@ -18,7 +18,7 @@ import {
   performUndo,
   useAppStore,
 } from "./store/app-store";
-import { confirmUnsavedChanges } from "./features/project/unsavedGuard";
+import { alertFailure, confirmUnsavedChanges } from "./features/project/unsavedGuard";
 import { isElectron } from "./utils/is-electron";
 import { useDragDrop } from "./features/canvas/hooks/useDragDrop";
 import { AnalysisErrorBanner } from "./features/analysis/AnalysisErrorBanner";
@@ -88,14 +88,18 @@ export function AppShell() {
       return () => window.removeEventListener("beforeunload", onBeforeUnload);
     }
     let asking = false;
-    const unsubscribe = window.cslope.onCloseRequested(async () => {
+    const unsubscribe = window.cslope.onCloseRequested(() => {
       if (asking) return;
       asking = true;
-      try {
-        if (await confirmUnsavedChanges()) window.cslope.confirmClose();
-      } finally {
-        asking = false;
-      }
+      confirmUnsavedChanges()
+        .then((ok) => {
+          if (ok) window.cslope.confirmClose();
+        })
+        // The window stays open; the user can try again.
+        .catch((err: unknown) => alertFailure("close the window", err))
+        .finally(() => {
+          asking = false;
+        });
     });
     window.cslope.closeGuardReady();
     return () => {

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { OptionsSection } from "./OptionsSection";
 import { useAppStore } from "../../../store/app-store";
@@ -117,7 +117,7 @@ describe("OptionsSection finite elements", () => {
     expect(screen.queryByRole("combobox", { name: "Flow rule" })).toBeNull();
     expect(screen.getByText("Run strength reduction (FE)")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("checkbox", { name: "Strength reduction by finite elements" }));
-    const flowRule = screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement;
+    const flowRule = screen.getByRole<HTMLSelectElement>("combobox", { name: "Flow rule" });
     expect(flowRule.value).toBe("davis-b");
     expect(flowRule.selectedOptions[0].textContent).toBe("Davis B (recommended)");
     expect(useAppStore.getState().options.fem).toMatchObject({ enabled: true, flowRule: "davis-b" });
@@ -127,7 +127,7 @@ describe("OptionsSection finite elements", () => {
     useAppStore.getState().newProject();
     useAppStore.getState().setOptions({ fem: { ...DEFAULT_FEM_SETTINGS, enabled: true, flowRule: "non-associated" } });
     render(<OptionsSection plain />);
-    expect((screen.getByRole("combobox", { name: "Flow rule" }) as HTMLSelectElement).value).toBe("non-associated");
+    expect((screen.getByRole<HTMLSelectElement>("combobox", { name: "Flow rule" })).value).toBe("non-associated");
   });
 });
 
@@ -161,5 +161,36 @@ describe("OptionsSection rapid drawdown", () => {
     expect(piezo().rapidDrawdown!.waterBefore.map((p) => p[1])).toEqual([9, 9]);
     await typeInto("Water level before drawdown", "6");
     expect(piezo().rapidDrawdown!.waterBefore.map((p) => p[1])).toEqual([6, 6]);
+  });
+});
+
+describe("OptionsSection unit weight of water", () => {
+  beforeEach(() => {
+    useAppStore.getState().newProject();
+    useAppStore.temporal.getState().clear();
+    render(<OptionsSection plain />);
+  });
+
+  it("shows 9.807 without a setting and stores the model's own value as one undo step", () => {
+    const input = screen.getByRole<HTMLInputElement>("textbox", { name: "Unit weight of water" });
+    expect(input.value).toBe("9.807");
+    expect(useAppStore.getState().options.waterUnitWeight).toBeUndefined();
+    fireEvent.change(input, { target: { value: "9.82" } });
+    expect(useAppStore.getState().options.waterUnitWeight).toBe(9.82);
+    act(() => useAppStore.temporal.getState().undo());
+    expect(useAppStore.getState().options.waterUnitWeight).toBeUndefined();
+  });
+
+  it("keeps no setting for the default or an empty field, and ignores a value that is not positive", () => {
+    const input = screen.getByRole("textbox", { name: "Unit weight of water" });
+    fireEvent.change(input, { target: { value: "10" } });
+    expect(useAppStore.getState().options.waterUnitWeight).toBe(10);
+    fireEvent.change(input, { target: { value: "0" } });
+    expect(useAppStore.getState().options.waterUnitWeight).toBe(10);
+    fireEvent.change(input, { target: { value: "9.807" } });
+    expect(useAppStore.getState().options.waterUnitWeight).toBeUndefined();
+    fireEvent.change(input, { target: { value: "10" } });
+    fireEvent.change(input, { target: { value: "" } });
+    expect(useAppStore.getState().options.waterUnitWeight).toBeUndefined();
   });
 });

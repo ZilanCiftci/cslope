@@ -26,14 +26,14 @@ from cslope import examples
 # 1.303936 -> 1.304235, two_layer_cut_left 1.833078 -> 1.832632 and
 # 1.804630 -> 1.804133).
 EXPECTED = {
-    ("simple_slope", "Bishop"): 1.6221345209559157,
-    ("simple_slope", "Morgenstern-Price"): 1.6203232747394294,
-    ("slope_with_water_table", "Bishop"): 1.3648599587454642,
-    ("slope_with_water_table", "Morgenstern-Price"): 1.366246096456041,
-    ("clay_crust_with_load", "Bishop"): 1.304216981243128,
-    ("clay_crust_with_load", "Morgenstern-Price"): 1.3042351061905917,
-    ("two_layer_cut_left", "Bishop"): 1.832631714530995,
-    ("two_layer_cut_left", "Morgenstern-Price"): 1.8041330427967988,
+    ("simple_slope", "Bishop"): 1.6225110637396323,
+    ("simple_slope", "Morgenstern-Price"): 1.620713156398642,
+    ("slope_with_water_table", "Bishop"): 1.3666772357829378,
+    ("slope_with_water_table", "Morgenstern-Price"): 1.367993607806179,
+    ("clay_crust_with_load", "Bishop"): 1.3054681397872558,
+    ("clay_crust_with_load", "Morgenstern-Price"): 1.3054732951160273,
+    ("two_layer_cut_left", "Bishop"): 1.833429728065641,
+    ("two_layer_cut_left", "Morgenstern-Price"): 1.8033185044681899,
 }
 
 # The engine's own defaults where the public ones (D-23, analyse without
@@ -62,7 +62,11 @@ def test_examples(name, method):
     assert math.isclose(r["minFOS"], EXPECTED[(name, method)], rel_tol=1e-6, abs_tol=0)
     assert r["criticalSurface"]["fos"] == r["minFOS"]
     assert r["criticalSlices"] and r["allSurfaces"]
-    assert r["warnings"] == []
+    # Every example runs without a warning. (Bishop's critical circle of the
+    # loaded clay crust had a steepest slice with N' < 0, reported as
+    # negative-effective-normal and steep-entry-tension, while the steep
+    # ends of a circle were cut into narrower slices, until 2026-11-11.)
+    assert [w["code"] for w in r["warnings"]] == []
 
 
 def test_left_sliding_model_in_model_coordinates():

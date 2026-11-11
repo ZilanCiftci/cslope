@@ -21,7 +21,7 @@ describe("DocsPage", () => {
       expect(screen.getByRole("heading", { level: 1, name: d.title })).toBeInTheDocument();
       // The content loads lazily, after the title.
       await waitFor(() => expect(screen.queryByText("Loading the documentation")).toBeNull());
-      expect(document.querySelector("article")!.textContent!.length).toBeGreaterThan(d.title.length + d.description.length);
+      expect(document.querySelector("article")!.textContent.length).toBeGreaterThan(d.title.length + d.description.length);
       unmount();
     }
     // The first test compiles every page.

@@ -67,6 +67,9 @@ export function useDragDrop() {
       await openProjectBytes(bytes);
     };
 
+    // (handleDrop reports its own errors)
+    const onDrop = (e: DragEvent) => void handleDrop(e);
+
     // Prevent the browser from navigating to the file on stray drops
     const blockDefault = (e: DragEvent) => {
       e.preventDefault();
@@ -74,7 +77,7 @@ export function useDragDrop() {
     };
 
     window.addEventListener("dragover", handleDragOver);
-    window.addEventListener("drop", handleDrop);
+    window.addEventListener("drop", onDrop);
     window.addEventListener("dragleave", blockDefault);
 
     // A project file given to the app (on launch or while it runs): the
@@ -94,7 +97,7 @@ export function useDragDrop() {
 
     return () => {
       window.removeEventListener("dragover", handleDragOver);
-      window.removeEventListener("drop", handleDrop);
+      window.removeEventListener("drop", onDrop);
       window.removeEventListener("dragleave", blockDefault);
       unsubscribeOpenRequests?.();
     };

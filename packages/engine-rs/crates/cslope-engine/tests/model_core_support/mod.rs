@@ -483,7 +483,7 @@ fn as_num(v: &Value) -> Option<f64> {
 /// numbers within `rel` of max(|a|, |b|, 1) (lengths in metres, so 1e-9 m
 /// next to 0). Differences go to `stats.errors` (the first 20).
 pub fn compare(rust: &Value, ts: &Value, path: &str, rel: f64, stats: &mut Stats) {
-    compare_scaled(rust, ts, path, rel, 1.0, stats)
+    compare_scaled(rust, ts, path, rel, 1.0, stats);
 }
 
 /// `compare` with tolerance `rel` × max(|a|, |b|, `floor`).
@@ -603,8 +603,8 @@ pub fn layered(
         f64::NEG_INFINITY
     };
     let xs: Vec<f64> = ground.iter().map(|p| p[0]).collect();
-    let x0 = xs.iter().cloned().fold(f64::INFINITY, f64::min);
-    let x1 = xs.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+    let x0 = xs.iter().copied().fold(f64::INFINITY, f64::min);
+    let x1 = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     let assignments: Vec<Value> = layers
         .iter()
         .enumerate()

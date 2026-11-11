@@ -14,7 +14,7 @@
  * What does not carry over is listed in the notes.
  */
 
-import type { AnalysisOptions, MaterialModel, SlopeDefinition } from "@cslope/engine";
+import { WATER_UNIT_WEIGHT, type AnalysisOptions, type MaterialModel, type SlopeDefinition } from "@cslope/engine";
 import { fields, num, vertexLists, type Fields, type Pt, type SliFile, type SliScenario } from "./sli-read";
 import { MAX_REGIONS } from "../gsz/gsz-to-definition";
 
@@ -452,7 +452,8 @@ interface MaterialContext {
  * needed.
  */
 function fileOption(code: unknown): string {
-  return `an option of the file (code ${String(code ?? "?")}) that cSlope does not import`;
+  const shown = typeof code === "string" || typeof code === "number" ? String(code) : "?";
+  return `an option of the file (code ${shown}) that cSlope does not import`;
 }
 
 /** The strength model of one material. */
@@ -637,9 +638,9 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const raw = file.scenarios[index];
   if (!raw) throw new Error(`The file has no model ${index + 1}.`);
   // imperial units to SI
-  // (a file marked imperial whose water weighs 9.81 has metric numbers)
+  // (a file marked imperial whose water weighs about 9.81 has metric numbers)
   const gw = num(raw.description.get("gammaw"));
-  const metricWater = gw !== undefined && Math.abs(gw - 9.81) < 0.5;
+  const metricWater = gw !== undefined && Math.abs(gw - WATER_UNIT_WEIGHT) < 0.5;
   const u = raw.description.get("units") === "imperial" && !metricWater ? IMPERIAL : SI;
   const sc: SliScenario = u === SI ? raw : { ...raw, vertices: new Map([...raw.vertices].map(([k, [x, y]]) => [k, [x * u.L, y * u.L] as Pt])) };
   const notes: string[] = [];
@@ -651,7 +652,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   }
   const units = d("units");
   if (units === "imperial" && u === IMPERIAL) notes.push("The model is in imperial units; it is converted to SI (ft to m, psf to kPa, pcf to kN/m³, lbf to kN).");
-  else if (units === "imperial") notes.push("The file is marked as in imperial units, but its unit weight of water is 9.81; its numbers are taken as SI (kN, kPa, m) as they are.");
+  else if (units === "imperial") notes.push("The file is marked as in imperial units, but its unit weight of water is about 9.81; its numbers are taken as SI (kN, kPa, m) as they are.");
   else if (units && units !== "metric") notes.push(`The model is in ${units} units; the numbers are imported as they are (cSlope works in kN, kPa and m).`);
 
   const geo = cellRegions({ vertices: squareSides(sc, notes), cells: sc.cells }, notes);
@@ -675,8 +676,10 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     notes.push(`The pore pressures come from ${what[waterMode] ?? `the method "${waterMode}"`}, which is not imported; the model has no pore pressure.`);
   }
   if (waterUsed && (sc.sections.get("pore pressures") ?? []).some((l) => /\bv:/.test(l))) notes.push("The grid of pore pressure points is not imported.");
-  const gammaW = dn("gammaw");
-  if (gammaW !== undefined && Math.abs(gammaW * u.G - 9.81) > 0.02) notes.push(`The unit weight of water is ${+(gammaW * u.G).toFixed(3)} kN/m³ in the file; cSlope uses 9.81.`);
+  // the file's unit weight of water, in kN/m³, as the model's (absent: 9.807)
+  const gammaWFile = dn("gammaw");
+  const gammaW = gammaWFile !== undefined ? Number((gammaWFile * u.G).toFixed(4)) : undefined;
+  if (gammaW !== undefined && !(gammaW > 0)) notes.push(`The unit weight of water in the file (${gammaWFile}) is not valid; ${WATER_UNIT_WEIGHT} kN/m³ is used.`);
 
   // materials: one per material key used by the cells
   const usedKeys = [...new Set(geo.regions.map((r) => r.material))].sort((a, b) => Number(a.replace(/\D/g, "")) - Number(b.replace(/\D/g, "")));
@@ -707,13 +710,13 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     const largest = own.reduce((m, r) => (r.area > m.area ? r : m), own[0]);
     let model = strength(f, { sc, index: k, name, notes, rtl, top, x: largest?.point[0] ?? 0, u });
     const uw = num(f.uw), sat = num(f.uwbwt);
-    if (sat !== undefined && sat > 0 && sat !== uw) model = { ...model, unitWeightSat: sat * u.G } as MaterialModel;
+    if (sat !== undefined && sat > 0 && sat !== uw) model = { ...model, unitWeightSat: sat * u.G };
     // strength from suction
     const phiB = num(f.gw_phi_b) ?? 0;
     if (phiB > 0 && (model.kind === "mohr-coulomb" || model.kind === "anisotropic-function")) {
       const cap = dn("usemaxnegporepressure") ? (dn("maxnegporepressure") ?? 0) * u.P : undefined;
       if (cap === 0) notes.push(`Material "${name}": φb = ${phiB}° is not imported; the model limits the negative pore pressure to 0 (no suction).`);
-      else model = { ...model, phiB, ...(cap !== undefined ? { maxSuction: cap } : {}) } as MaterialModel;
+      else model = { ...model, phiB, ...(cap !== undefined ? { maxSuction: cap } : {}) };
     }
     if ((num(f.rd_undrained) ?? 0) !== 0) {
       if (model.kind === "mohr-coulomb" && drawdownLine && ((num(f.rd_cr) ?? 0) > 0 || (num(f.rd_phir) ?? 0) > 0)) {
@@ -726,17 +729,17 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
     const bbar = num(f.bbar) ?? 0;
     if (bBarMethod) {
       if (bbar > 0 && bbar <= 1.5) {
-        model = { ...model, bBar: bbar } as MaterialModel;
+        model = { ...model, bBar: bbar };
         bBarMaterials.push({ name, bbar });
       } else if (bbar === 0) {
-        if (!fillMarked || num(f.stg2) === 1) model = { ...model, bBarLoad: true } as MaterialModel;
+        if (!fillMarked || num(f.stg2) === 1) model = { ...model, bBarLoad: true };
       } else notes.push(`Material "${name}": its B̄ ${bbar} is outside 0–1.5 and is not imported.`);
     }
     // (without the method switched on, B-bar values have no effect in the file either)
     // an ru coefficient: the water method ru (the `water` value is ru), or
     // with "with_ru" one on top of the water line's pressure
     const ru = waterMode === "ru" ? num(f.water) ?? 0 : dn("with_ru") !== 0 ? num(f.withru) ?? 0 : 0;
-    if (ru > 0 && ru < 1) model = { ...model, ru } as MaterialModel;
+    if (ru > 0 && ru < 1) model = { ...model, ru };
     else if (ru !== 0) notes.push(`Material "${name}": its rᵤ ${ru} is outside 0–1 and is not imported.`);
     if ((num(f.mat_tensile) ?? 0) !== 0) notes.push(`Material "${name}": the tensile strength (cut-off) is not imported.`);
     if ((num(f.use_alternate_strength) ?? 0) !== 0) notes.push(`Material "${name}": the alternate strength is not imported.`);
@@ -793,6 +796,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   if (unusedPiezos > 0) notes.push(`${unusedPiezos} piezometric line(s) that no material uses are not imported.`);
   // Hu: automatic (cos² of the water line's inclination) or the given value
   const options: Partial<AnalysisOptions> = {};
+  if (gammaW !== undefined && gammaW > 0 && gammaW !== WATER_UNIT_WEIGHT) options.waterUnitWeight = gammaW;
   const autos = wet.filter(([, w]) => w.auto).map(([n]) => n);
   if (autos.length > 0) {
     if (autos.length === wet.length) options.porePressureHead = "phreatic-correction";
@@ -973,7 +977,7 @@ export function sliToDefinition(file: SliFile, index: number, fileName = "model.
   const lx = ["x1", "x2", "x3", "x4"].map((k) => (num(limits[k]) !== undefined ? num(limits[k])! * u.L : undefined));
   let analysisLimits: SlopeDefinition["analysisLimits"];
   if (lx.every((v) => v !== undefined)) {
-    const [a, b, c, e] = lx as number[];
+    const [a, b, c, e] = lx;
     const left: [number, number] = [Math.min(a, b), Math.max(a, b)], right: [number, number] = [Math.min(c, e), Math.max(c, e)];
     const [entry, exit] = rtl ? [right, left] : [left, right];
     analysisLimits = { entryLeftX: entry[0], entryRightX: entry[1], exitLeftX: exit[0], exitRightX: exit[1] };

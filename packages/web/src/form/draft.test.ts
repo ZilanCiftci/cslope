@@ -8,9 +8,9 @@ import { describe, expect, it } from "vitest";
 import { MATERIAL_MODEL_LABELS } from "@cslope/engine";
 import type { Layer } from "../templates/common";
 import { EMBANKMENT_EXAMPLES } from "../templates/embankment-examples";
-import { embankmentDocument } from "../templates/embankment";
+import { embankmentDocument, type EmbankmentParams } from "../templates/embankment";
 import { EXCAVATION_DEFAULTS, EXCAVATION_EXAMPLES } from "../templates/excavation-examples";
-import { excavationDocument } from "../templates/excavation";
+import { excavationDocument, type ExcavationParams } from "../templates/excavation";
 import { LAYER_COLORS } from "../templates/colors";
 import { draftOf, draftLevels, emptyLayer, LAYER_KINDS, moveLayer, strengthSummary, formState, fromQuery, initialDraft, parseNumber, toQuery, withGroup, withNewLayer, type Draft } from "./draft";
 import { bottomLevels, rangeText, thicknesses } from "./layers";
@@ -75,7 +75,7 @@ describe("the form's state", () => {
     d.fields.waterLevel = "";
     d.fields["road.trafficLoad"] = "";
     expect(formState(d).ready).toBe(true);
-    expect(formState(d).params.road!.trafficLoad).toBeNull();
+    expect((formState(d).params as ExcavationParams).road!.trafficLoad).toBeNull();
   });
 
   it("starts the embankment with its geometry and without the fill's and the clay's strengths", () => {
@@ -89,9 +89,9 @@ describe("the form's state", () => {
     const on = withGroup(plain(), "road", true);
     expect(on.on).toEqual(["road"]);
     // The first visit's road.
-    expect(formState(on).params.road).toEqual(EXCAVATION_DEFAULTS.road);
+    expect((formState(on).params as ExcavationParams).road).toEqual(EXCAVATION_DEFAULTS.road);
     const off = withGroup(on, "road", false);
-    expect(formState(off).params.road).toBeNull();
+    expect((formState(off).params as ExcavationParams).road).toBeNull();
     expect(toQuery(off)).toBe(toQuery(plain()));
   });
 
@@ -102,14 +102,14 @@ describe("the form's state", () => {
       const back = formState(fromQuery("?" + query));
       expect(back.ready, name).toBe(true);
       expect(back.params, name).toEqual(params);
-      expect(embankmentDocument(back.params), name).toEqual(embankmentDocument(params));
+      expect(embankmentDocument(back.params as EmbankmentParams), name).toEqual(embankmentDocument(params));
     }
     for (const [name, params] of Object.entries(EXCAVATION_EXAMPLES)) {
       const query = toQuery(draftOf("excavation", params));
       const back = formState(fromQuery("?" + query));
       expect(back.ready, name).toBe(true);
       expect(back.params, name).toEqual(params);
-      expect(excavationDocument(back.params), name).toEqual(excavationDocument(params));
+      expect(excavationDocument(back.params as ExcavationParams), name).toEqual(excavationDocument(params));
     }
   });
 

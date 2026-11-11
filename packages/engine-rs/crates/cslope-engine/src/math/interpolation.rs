@@ -20,12 +20,11 @@ pub fn get_y_at_x(poly_x: &[f64], poly_y: &[f64], x: f64) -> f64 {
         if (x1 <= x && x <= x2) || (x2 <= x && x <= x1) {
             if (x1 - x2).abs() < 1e-12 {
                 y_sum += (y1 + y2) / 2.0;
-                count += 1;
             } else {
                 let t = (x - x1) / (x2 - x1);
                 y_sum += y1 + t * (y2 - y1);
-                count += 1;
             }
+            count += 1;
         }
     }
 

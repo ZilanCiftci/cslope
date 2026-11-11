@@ -92,7 +92,7 @@ describe("Base exactly on a layer boundary (review C3)", () => {
     it(`keeps the soil above on ${kind} material, so the surface stays analysable`, () => {
       const def = layered(ltr, -20, [
         { name: "Upper", topY: null, model: su(40, 19) },
-        { name: "Rock", topY: -12, model: { kind, unitWeight: 22 } as never },
+        { name: "Rock", topY: -12, model: { kind, unitWeight: 22 } },
       ]);
       const { slope } = runVerification(def, "Bishop", { iterations: 200 });
       const on = flat(getSlices(slope, 5, 35, 20, 30, 0, along(-12)));

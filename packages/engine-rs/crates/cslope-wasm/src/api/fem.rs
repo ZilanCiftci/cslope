@@ -184,13 +184,6 @@ pub fn size_field_count() -> usize {
     SIZE_FIELDS.with(|r| r.borrow().len())
 }
 
-/// A constant size field (`() => value`, with `min` when given): the
-/// one closure the facade can turn into data.
-#[wasm_bindgen]
-pub fn size_field_constant(value: f64, min: Option<f64>) -> JsResult<u32> {
-    size_field_new(Arc::new(SizeField::Constant { value, min }))
-}
-
 // ── progress ─────────────────────────────────────────────────────────────
 
 /// The JavaScript callbacks of a run, and the exception one of them threw.

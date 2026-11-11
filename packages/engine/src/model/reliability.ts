@@ -23,7 +23,7 @@
 import { engineEpoch } from "../engine";
 import type { AnalysisOptions } from "../types/analysis";
 import type { SlopeDefinition } from "../types/slope-definition";
-import { type Slope as TsSlope, Slope } from "./slope";
+import { Slope } from "./slope";
 import { shareUnchanged, wasm } from "../facade/internal";
 
 export interface RandomVariable {
@@ -147,8 +147,8 @@ export function lognormalBeta(F: number, cov: number): number {
  * (onSurface): the slope is built once and only the materials change.
  */
 export function monteCarloSampler(surfaceDef: SlopeDefinition, options: Partial<AnalysisOptions>, variables: RandomVariable[]): MonteCarloSampler {
-  const handle = wasm().monte_carlo_sampler_new(surfaceDef, options, variables) as number;
-  const sampler: MonteCarloSampler = (values) => (wasm().monte_carlo_sample(handle, Float64Array.from(values)) as number | undefined) ?? null;
+  const handle = wasm().monte_carlo_sampler_new(surfaceDef, options, variables);
+  const sampler: MonteCarloSampler = (values) => (wasm().monte_carlo_sample(handle, Float64Array.from(values))) ?? null;
   samplers.register(sampler, { handle, epoch: engineEpoch() });
   return sampler;
 }
@@ -185,7 +185,7 @@ export async function analyseReliabilityAsync(
   ro: ReliabilityOptions,
   runner: ReliabilityRunner,
 ): Promise<ReliabilityResult> {
-  const steps = wasm().reliability_steps_new(def, options, variables, withoutCallback(ro)) as number;
+  const steps = wasm().reliability_steps_new(def, options, variables, withoutCallback(ro));
   try {
     let factors: (number | null)[] | undefined;
     for (;;) {
@@ -194,7 +194,7 @@ export async function analyseReliabilityAsync(
       if (r.progress !== undefined) ro.onProgress?.(r.progress);
       if (r.kind === "done") return r.result;
       if (r.kind === "analyse") {
-        const slope = Slope._wrap(r.slope) as unknown as TsSlope;
+        const slope = Slope._wrap(r.slope);
         await runner.analyse({ kind: "analyse", slope, def: r.def, options });
       } else {
         const n = r.count;
@@ -204,7 +204,7 @@ export async function analyseReliabilityAsync(
           options,
           variables,
           values: r.values,
-          sampler: (values) => (wasm().reliability_steps_sample(steps, Float64Array.from(values)) as number | undefined) ?? null,
+          sampler: (values) => (wasm().reliability_steps_sample(steps, Float64Array.from(values))) ?? null,
           progress: (done) => ro.onProgress?.(done / n),
         });
       }

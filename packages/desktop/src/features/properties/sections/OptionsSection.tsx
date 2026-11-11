@@ -7,7 +7,7 @@ import type {
   SwedishFactorBasis,
   Sgi3dSettings,
 } from "@cslope/engine";
-import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE, SAFETY_CLASS_GAMMA_D, swedishPartialFactors } from "@cslope/engine";
+import { DEFAULT_FEM_SETTINGS, EC7_DA3_FACTORS, ITERATIONS_RANGE, SAFETY_CLASS_GAMMA_D, WATER_UNIT_WEIGHT, swedishPartialFactors } from "@cslope/engine";
 import type { FemAnalysisSettings } from "@cslope/engine";
 import { useAppStore } from "../../../store/app-store";
 import { Section } from "../../../components/ui/Section";
@@ -543,6 +543,19 @@ export function OptionsSection({ plain = false }: OptionsSectionProps) {
                 Phreatic correction (vertical head × cos²θ)
               </option>
             </select>
+          </label>
+          <label className="flex flex-col gap-0.5">
+            <Label>Unit weight of water (kN/m³)</Label>
+            <DraftNumberInput
+              value={options.waterUnitWeight ?? WATER_UNIT_WEIGHT}
+              min={0}
+              step={0.01}
+              // the default is not stored: a model without the setting keeps 9.807
+              onValueChange={(v) => v > 0 && setOptions({ waterUnitWeight: v === WATER_UNIT_WEIGHT ? undefined : v })}
+              onClear={() => setOptions({ waterUnitWeight: undefined })}
+              aria-label="Unit weight of water"
+              title={`γw: the pore pressure is γw × the head, also the weight of free water and of water in a crack. Default ${WATER_UNIT_WEIGHT} (standard gravity).`}
+            />
           </label>
           <label
             className="col-span-2 flex items-center gap-1.5"

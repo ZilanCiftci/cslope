@@ -94,6 +94,7 @@ _OPTION_RANGES = {
     "seismicVertical": "-1 to 1 (0: none)",
     "tensionCrackAngle": "more than 0 and less than 90 (None: none)",
     "tensionCrackWater": "0 to 1",
+    "waterUnitWeight": "more than 0 (None: 9.807)",
 }
 
 

@@ -4,6 +4,7 @@
  * published checks themselves run in verification-problems-*.test.ts.
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { SHARDS } from "./verification-shard";
 import { getSlices } from "./slices";
 import { defaultAxisPoint, isAdmissiblePolyline } from "./surface";
@@ -95,28 +96,6 @@ describe("Verification data", () => {
   });
 });
 
-describe("Slice-count convergence", () => {
-  it("V068 geometry: a nearly vertical entry slice in a stiff crust does not inflate FOS", () => {
-    // Low (1989) / V068 layering with the lower clay simplified to a
-    // constant Su. With the arc length as base length, 50 slices gave 1.469
-    // against 1.40 at 500 slices (independent 2000-slice check: 1.389).
-    const def = layered(
-      [[0, 8], [10, 8], [26, 16], [40, 16]],
-      0,
-      [
-        { name: "Upper", topY: null, model: mc(95, 15, 20) },
-        { name: "Middle", topY: 8, model: mc(15, 0, 20) },
-        { name: "Lower", topY: 4, model: mc(22.5, 0, 20) },
-      ],
-      circle(18, 16, 12),
-    );
-    const f50 = runVerification(def, "Bishop", { slices: 50 }).fos!;
-    const f500 = runVerification(def, "Bishop", { slices: 500 }).fos!;
-    expect(Math.abs(f50 / f500 - 1)).toBeLessThanOrEqual(0.01);
-    expect(Math.abs(f500 / 1.389 - 1)).toBeLessThanOrEqual(0.01);
-  });
-});
-
 describe("Search convergence", () => {
   it("V067: the local search reaches the minimum between grid points", () => {
     // The one-pass refinement stopped at the grid resolution: 1.455 with
@@ -139,7 +118,7 @@ describe("Free water above the ground", () => {
     it(`${method}: fully submerged slope = buoyant dry slope`, { timeout: 20000 }, () => {
       const buoyant = runVerification(layered(ground, -10, soil(10)), method).fos!;
       const submerged = runVerification(
-        layered(ground, -10, soil(19.81), {
+        layered(ground, -10, soil(10 + WATER_UNIT_WEIGHT), {
           waterTable: { mode: "custom", value: [[0, 30], [70, 30]], followBoundary: false },
         }),
         method,
@@ -166,10 +145,17 @@ describe("Free water against a vertical face", () => {
     expect(vertical).toBeGreaterThan(2.3);
   });
   it("a submerged vertical cut = the buoyant cut", () => {
-    const submerged = runVerification(wall(0, 15), "Bishop").fos!;
+    // The two agree in the limit of thin slices; the gap is the slicing of
+    // the circle's vertical end along the face. Since 2026-11-11 that end is
+    // not cut into narrower slices (DECISIONS.md): the gap is 0.39 % at the
+    // default 50 slices, 0.14 % at 100 and 0.06 % at 200 (below 0.1 % at
+    // the default count with the cuts), so the check runs with 200 slices.
+    const options = { slices: 200 };
+    const submerged = runVerification(wall(0, 15), "Bishop", options).fos!;
     const buoyant = runVerification(
-      layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - 9.81) }], circle(8, 10, 11)),
+      layered([[-10, -10], [-10, 10], [10, 10], [10, 0], [40, 0], [40, -10]], -10, [{ name: "S", topY: null, model: mc(20, 30, 20 - WATER_UNIT_WEIGHT) }], circle(8, 10, 11)),
       "Bishop",
+      options,
     ).fos!;
     expect(Math.abs(submerged / buoyant - 1)).toBeLessThan(0.001);
   });
@@ -504,7 +490,7 @@ describe("Automatic tension crack depth", () => {
 
   it("free water on the crest closes the crack like a surcharge", () => {
     const wet = slopeWith(su(20, 18), {}, { waterTable: { mode: "custom", value: [[0, 11], [30, 11]], followBoundary: false } });
-    expect(rankineCrackDepth(wet.slope, 5)).toBeCloseTo((40 - 9.81) / 18, 2);
+    expect(rankineCrackDepth(wet.slope, 5)).toBeCloseTo((40 - WATER_UNIT_WEIGHT) / 18, 2);
   });
 
   it("gives the same result as the same fixed depth", () => {

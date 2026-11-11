@@ -8,9 +8,29 @@ export default defineConfig([
   globalIgnores(["dist", "coverage", ".nyc_output", "src/wasm-project"]),
   {
     files: ["**/*.ts"],
-    extends: [js.configs.recommended, tseslint.configs.recommended],
+    extends: [js.configs.recommended, tseslint.configs.recommendedTypeChecked],
     languageOptions: {
       ecmaVersion: 2020,
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
+    rules: {
+      // The facade returns what the WebAssembly bindings return, which
+      // wasm-bindgen types as `any`; each facade function's signature is
+      // the type, so this rule only restates that at every call.
+      "@typescript-eslint/no-unsafe-return": "off",
+      // The public API's async functions (lowerBound, upperBound,
+      // adaptiveBounds, runFemSummaryWithBounds, boundSolver) call the
+      // engine synchronously: `async` keeps them promise-returning and turns
+      // the engine's throws into rejections, as callers expect.
+      "@typescript-eslint/require-await": "off",
+    },
+  },
+  {
+    // Benchmarks and the test setup, outside the tsconfig: linted without type information.
+    files: ["scripts/**", "vitest.config.ts", "vitest.setup.ts"],
+    extends: [tseslint.configs.disableTypeChecked],
   },
 ]);

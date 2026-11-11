@@ -851,7 +851,7 @@ pub fn validate_material_model_json(model: &Value) -> Result<Vec<String>> {
             match js_array(Some(anisotropy)) {
                 None => errors.push("Anisotropy must be a list of [α°, factor] points.".into()),
                 Some(a) if !a.is_empty() => {
-                    validate_modifier_json(&mut errors, Some(anisotropy), "Anisotropy")
+                    validate_modifier_json(&mut errors, Some(anisotropy), "Anisotropy");
                 }
                 Some(_) => {}
             }
@@ -917,7 +917,7 @@ fn validate_modifier_json(errors: &mut Vec<String>, f: Option<&Value>, what: &st
                 i + 1
             )),
             Some(p) if js_to_number(Some(&p[1])) < 0.0 => {
-                errors.push(format!("Modifier point {}: factor must be ≥ 0.", i + 1))
+                errors.push(format!("Modifier point {}: factor must be ≥ 0.", i + 1));
             }
             Some(_) => {}
         }

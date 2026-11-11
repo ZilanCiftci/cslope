@@ -9,7 +9,7 @@ import type { ModelEntry } from "./types";
 
 const activeModel = (): ModelEntry => {
   const s = useAppStore.getState();
-  return { ...s.models.find((m) => m.id === s.activeModelId)!, ...s } as ModelEntry;
+  return { ...s.models.find((m) => m.id === s.activeModelId)!, ...s };
 };
 
 describe("round 3 store fixes", () => {
@@ -186,12 +186,12 @@ describe("tension crack options", () => {
     useAppStore.getState().newProject();
     useAppStore.getState().setOptions({ tensionCrackDepth: 2.5, tensionCrackWater: 0.5 });
     const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
-    const opts = parseProjectFile(JSON.stringify(raw)).models[0].options!;
+    const opts = parseProjectFile(JSON.stringify(raw)).models[0].options;
     expect(opts.tensionCrackDepth).toBe(2.5);
     expect(opts.tensionCrackWater).toBe(0.5);
     raw.models[0].options.tensionCrackDepth = -1;
     raw.models[0].options.tensionCrackWater = 3;
-    const bad = parseProjectFile(JSON.stringify(raw)).models[0].options!;
+    const bad = parseProjectFile(JSON.stringify(raw)).models[0].options;
     expect(bad.tensionCrackDepth).toBe(0);
     expect(bad.tensionCrackWater).toBe(1);
   });
@@ -200,7 +200,7 @@ describe("tension crack options", () => {
     useAppStore.getState().newProject();
     useAppStore.getState().setOptions({ tensionCrackAuto: true });
     const raw = JSON.parse(JSON.stringify(serializeProject(useAppStore.getState())));
-    expect(parseProjectFile(JSON.stringify(raw)).models[0].options!.tensionCrackAuto).toBe(true);
+    expect(parseProjectFile(JSON.stringify(raw)).models[0].options.tensionCrackAuto).toBe(true);
   });
 });
 

@@ -47,8 +47,11 @@ export const POLYGON_INTERSECTION_TOLERANCE = 1e-9;
 export const SLICE_DEDUP_TOLERANCE = 1e-3;
 
 // ── Physical constants ─────────────────────────────────────────────
-/** Water unit weight (kN/m³). */
-export const WATER_UNIT_WEIGHT = 9.81;
+/**
+ * Water unit weight (kN/m³): ρw·g = 1000 kg/m³ × 9.80665 m/s² (standard
+ * gravity, CGPM 1901), rounded to 9.807; 9.81 until 2026-11-11.
+ */
+export const WATER_UNIT_WEIGHT = 9.807;
 
 // ── Validation ranges ──────────────────────────────────────────────
 export const SLICES_RANGE = { min: 10, max: 500 } as const;

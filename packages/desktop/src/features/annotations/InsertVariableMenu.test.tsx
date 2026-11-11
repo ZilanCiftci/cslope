@@ -30,7 +30,7 @@ function Harness({
   );
 }
 
-const textarea = () => screen.getByLabelText("Text") as HTMLTextAreaElement;
+const textarea = () => screen.getByLabelText<HTMLTextAreaElement>("Text");
 const button = () => screen.getByRole("button", { name: /Insert variable/ });
 
 describe("insertAtCaret", () => {

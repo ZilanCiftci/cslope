@@ -39,7 +39,7 @@ describe("StatusBar", () => {
     const result: AnalysisResult = {
       minFOS: 1.8,
       maxFOS: 2.0,
-      criticalSurface: null as never,
+      criticalSurface: null,
       allSurfaces: [],
       criticalSlices: [],
       method: "Bishop",
@@ -56,7 +56,7 @@ describe("StatusBar", () => {
     const result: AnalysisResult = {
       minFOS: 1.2,
       maxFOS: 1.4,
-      criticalSurface: null as never,
+      criticalSurface: null,
       allSurfaces: [],
       criticalSlices: [],
       method: "Janbu",
@@ -71,7 +71,7 @@ describe("StatusBar", () => {
     const result: AnalysisResult = {
       minFOS: 1.172,
       maxFOS: 1.4,
-      criticalSurface: null as never,
+      criticalSurface: null,
       allSurfaces: [],
       criticalSlices: [],
       method: "Bishop",
@@ -85,7 +85,7 @@ describe("StatusBar", () => {
     const result: AnalysisResult = {
       minFOS: 0.85,
       maxFOS: 0.9,
-      criticalSurface: null as never,
+      criticalSurface: null,
       allSurfaces: [],
       criticalSlices: [],
       method: "Bishop",
@@ -158,7 +158,7 @@ describe("StatusBar", () => {
 
   it("gives the snap sizes in metres", () => {
     render(<StatusBar {...defaultProps} snapToGrid gridSnapSize={0.5} />);
-    const select = screen.getByRole("combobox") as HTMLSelectElement;
+    const select = screen.getByRole<HTMLSelectElement>("combobox");
     expect(select.selectedOptions[0].textContent).toBe("0.5 m");
   });
 

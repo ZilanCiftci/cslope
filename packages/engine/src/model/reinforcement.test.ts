@@ -4,6 +4,7 @@
  * published problems are in verification/problems.ts.
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { layered, mc, runVerification } from "../verification/cases";
 import { FHWA_PULLOUT_TABLES } from "../verification/pullout-tables";
 import { buildSlope } from "./build-slope";
@@ -181,7 +182,7 @@ describe("Capacity envelope", () => {
     const def = layered([[0, 10], [40, 10]], -10, [{ name: "S", topY: null, model: mc(0, 30, 20) }], {
       waterTable: { mode: "custom", value: [[0, 12], [40, 12]], followBoundary: false },
     });
-    expect(effectiveVerticalStress(buildSlope(def), 20, 5)).toBeCloseTo(100 - 5 * 9.81, 6);
+    expect(effectiveVerticalStress(buildSlope(def), 20, 5)).toBeCloseTo(100 - 5 * WATER_UNIT_WEIGHT, 6);
   });
 
   it("follows changes of the materials (σ′v)", () => {

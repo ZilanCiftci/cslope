@@ -69,3 +69,21 @@ opt-level = 2
 [profile.wasm-project]
 inherits = "wasm-release"
 opt-level = "z"
+
+# Lints on top of clippy's defaults for every crate (each crate's Cargo.toml
+# has `[lints] workspace = true`). Not taken: the float lints
+# (suboptimal_flops, manual_midpoint, imprecise_flops), whose rewrites change
+# results in the last bits.
+[workspace.lints.rust]
+unused_qualifications = "warn"
+
+[workspace.lints.clippy]
+branches_sharing_code = "warn"
+cloned_instead_of_copied = "warn"
+dbg_macro = "warn"
+implicit_clone = "warn"
+manual_let_else = "warn"
+needless_collect = "warn"
+redundant_clone = "warn"
+semicolon_if_nothing_returned = "warn"
+todo = "warn"

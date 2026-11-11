@@ -71,7 +71,7 @@ export function rankineCrackDepth(slope: Slope, x: number): number {
  * surface never flattens to it before the exit.
  */
 export function findAngleCrackX(xEntry: number, xExit: number, baseY: (x: number) => number, angle: number): number | null {
-  return (wasm().find_angle_crack_x(xEntry, xExit, baseY, angle) as number | undefined) ?? null;
+  return (wasm().find_angle_crack_x(xEntry, xExit, baseY, angle)) ?? null;
 }
 
 /**
@@ -85,5 +85,5 @@ export function findCrackX(
   baseY: (x: number) => number,
   depthAt: (x: number) => number,
 ): number | null {
-  return (wasm().find_crack_x(surf, xEntry, xExit, baseY, depthAt) as number | undefined) ?? null;
+  return (wasm().find_crack_x(surf, xEntry, xExit, baseY, depthAt)) ?? null;
 }

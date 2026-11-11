@@ -85,13 +85,13 @@ export function TitleBar({ theme, onToggleTheme, activeModelName }: Props) {
           draggable={false}
         />
         <div className="flex items-center gap-0.5">
-          <FavButton title="New project" onClick={handleNew}>
+          <FavButton title="New project" onClick={() => void handleNew()}>
             <NewIcon {...QUICK_ICON} />
           </FavButton>
-          <FavButton title="Open project…" onClick={handleOpen}>
+          <FavButton title="Open project…" onClick={() => void handleOpen()}>
             <OpenIcon {...QUICK_ICON} />
           </FavButton>
-          <FavButton title="Save" onClick={handleSave}>
+          <FavButton title="Save" onClick={() => void handleSave()}>
             <SaveIcon {...QUICK_ICON} />
           </FavButton>
           <div

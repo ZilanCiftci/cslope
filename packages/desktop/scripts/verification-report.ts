@@ -322,7 +322,7 @@ function criticalPlane(slope: Slope): Plane | null {
   const valid = slope.search.filter((p) => p.fos != null);
   if (valid.length === 0) return null;
   const best = valid.reduce((a, b) => (b.fos! < a.fos! ? b : a));
-  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc as Pt, rc: best.rc as Pt, fos: best.fos!, points: best.points as Pt[] | undefined };
+  return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc, rc: best.rc, fos: best.fos!, points: best.points };
 }
 
 function niceStep(range: number, target = 6): number {
@@ -356,7 +356,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value) && canon.waterTable.followBoundary !== true
       ? [...(canon.waterTable.value as Pt[])].sort((a, b) => a[0] - b[0])
       : null;
-  const ponds = mainWater ? freeWaterPolygons(mainWater, canon.coordinates as Pt[]) : [];
+  const ponds = mainWater ? freeWaterPolygons(mainWater, canon.coordinates) : [];
   let y1 = Math.max(...ys0, ...ponds.flat().map((p) => p[1]));
   const modelH = y1 - y0;
   if (plane && plane.cy - y1 < 0.8 * Math.max(modelH, (x1 - x0) * 0.3)) {
@@ -395,7 +395,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     const inFace = (p: Pt) =>
       isPointInPolygon(p[0], p[1], fxs, fys) &&
       !face.holes.some((h) => isPointInPolygon(p[0], p[1], h.map((c) => c[0]), h.map((c) => c[1])));
-    const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point as Pt));
+    const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point));
     const idx = hit ? matIndex(hit.materialName) : 0;
     pdf.setFillColor(...MATERIAL_FILLS[idx % MATERIAL_FILLS.length]);
     const rings = [face.outer, ...face.holes];
@@ -449,9 +449,9 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   // Water lines (continued horizontally to the model edges, as analyzed).
   const waterLines: Pt[][] = [];
   if (canon.waterTable && canon.waterTable.mode === "custom" && Array.isArray(canon.waterTable.value)) {
-    waterLines.push(canon.waterTable.value as Pt[]);
+    waterLines.push(canon.waterTable.value);
   }
-  for (const wt of canon.waterTables ?? []) waterLines.push(wt.coordinates as Pt[]);
+  for (const wt of canon.waterTables ?? []) waterLines.push(wt.coordinates);
   for (const line of waterLines) {
     const sorted = [...line].sort((a, b) => a[0] - b[0]);
     pdf.setDrawColor(...WATER);
@@ -782,19 +782,19 @@ table(
       "Pore pressure",
       `Piezometric line; head = vertical distance below the line (default, the usual convention). Checks marked "phreatic correction" use vertical distance × cos²θ.`,
     ],
-    ["Unit weight of water", "9.81 kN/m³"],
+    ["Unit weight of water", "9.807 kN/m³"],
   ],
 );
 if (!PUBLIC) {
   heading("Acceptance", 2);
   paragraph(
-    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
+    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure, plus 1 % where the reference surface ends in a vertical or near-vertical scarp, so that the factor depends on how that part is sliced; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
   );
   y += 2;
 }
 heading("Units", 2);
 paragraph(
-  "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.81 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
+  "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.807 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
 );
 y += 2;
 heading("Source of the input data", 2);

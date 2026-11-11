@@ -312,7 +312,7 @@ fn lognormal_samples_and_mean_zero_as_normal() {
         json!({ "method": "monte-carlo", "samples": 60, "seed": 3 }),
     )
     .unwrap();
-    let mut vn = v.clone();
+    let mut vn = v;
     vn["distribution"] = json!("normal");
     let normal = run(
         &rising,

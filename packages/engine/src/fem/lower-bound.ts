@@ -74,7 +74,7 @@ const ENGINE_SOLVE = Object.freeze(() => {
 /** A solve function for the bounds' programs (a token: the engine solves them, by Clarabel). */
 export async function boundSolver(options: { boundSolver?: "clarabel" } = {}): Promise<(prog: never, sides: number, timeLimit: number) => never> {
   void options;
-  return ENGINE_SOLVE as never;
+  return ENGINE_SOLVE;
 }
 
 

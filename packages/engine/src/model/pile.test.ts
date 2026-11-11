@@ -3,6 +3,7 @@
  * published problems are in verification/problems.ts (V013, V015, V095).
  */
 import { describe, it, expect } from "vitest";
+import { WATER_UNIT_WEIGHT } from "../types/constants";
 import { layered, mc, su, runVerification } from "../verification/cases";
 import { buildSlope } from "./build-slope";
 import { itoMatsuiCoefficients, pileForce } from "./reinforcement";
@@ -43,7 +44,7 @@ describe("Ito & Matsui pile force", () => {
     const fWet = pileForce(wet, pile, 5, 10 - zf).perPile;
     expect(fDry).toBeCloseTo(perPile(20), 1);
     expect(fDry).toBeCloseTo(1053, 0);
-    expect(fWet).toBeCloseTo(perPile(20 - 9.81), 1);
+    expect(fWet).toBeCloseTo(perPile(20 - WATER_UNIT_WEIGHT), 1);
     expect(fWet).toBeCloseTo(593, 0);
   });
 

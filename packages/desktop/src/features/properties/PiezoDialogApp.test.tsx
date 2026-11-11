@@ -168,7 +168,7 @@ describe("PiezoDialogApp", () => {
     expect(pl().freeWater).toBe(false);
     expect(freeWater).not.toBeChecked();
 
-    const main = screen.getByLabelText("Main piezometric line") as HTMLSelectElement;
+    const main = screen.getByLabelText<HTMLSelectElement>("Main piezometric line");
     expect(main.value).toBe("a");
     await userEvent.selectOptions(main, "b");
     expect(pl().mainLineId).toBe("b");

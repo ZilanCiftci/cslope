@@ -72,7 +72,7 @@ use crate::types::{
     design_strength, instantaneous_at_sigma3, needs_layer_top, resolve_unit_weight, suction_angle,
     suction_strength, HoekBrownParameters, Material, MaterialId, PartialFactors, Reinforcement,
     ReinforcementApplication, ReinforcementPullout, ResolvedStrength, StrengthContext,
-    UdlDirection, WATER_UNIT_WEIGHT,
+    UdlDirection,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
@@ -838,7 +838,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
     }
     let size_fn = |px: f64, py: f64| size.at(px, py);
     let tm = mesh_domain(&MeshInput {
-        boundary: bnd.clone(),
+        boundary: bnd,
         segments,
         size: &size_fn,
         min_angle: options.min_angle,
@@ -1071,7 +1071,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
                     _ => f64::NAN,
                 };
                 let suction = if yw.is_finite() {
-                    js::math::max(0.0, WATER_UNIT_WEIGHT * (gy - yw))
+                    js::math::max(0.0, slope.water_unit_weight() * (gy - yw))
                 } else {
                     0.0
                 };
@@ -1113,7 +1113,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
             if let Some(wl) = wl {
                 let yw = polyline_y(wl, gx);
                 gp_u[i] = if yw.is_finite() {
-                    js::math::max(0.0, WATER_UNIT_WEIGHT * (yw - gy))
+                    js::math::max(0.0, slope.water_unit_weight() * (yw - gy))
                 } else {
                     0.0
                 };
@@ -1223,7 +1223,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
                     }
                     let i = 3 * e + g;
                     gp_u[i] = if h.is_finite() {
-                        js::math::max(0.0, WATER_UNIT_WEIGHT * (h - gp_y[i]))
+                        js::math::max(0.0, slope.water_unit_weight() * (h - gp_y[i]))
                     } else {
                         0.0
                     };
@@ -1233,7 +1233,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
                         let ss = if h.is_finite() {
                             suction_strength(
                                 &m.model,
-                                js::math::max(0.0, WATER_UNIT_WEIGHT * (gp_y[i] - h)),
+                                js::math::max(0.0, slope.water_unit_weight() * (gp_y[i] - h)),
                             ) / suction_factor
                         } else {
                             0.0
@@ -1495,7 +1495,7 @@ pub fn build_fe_model(slope: &Slope, options: &FeModelOptions) -> Result<FeModel
                 if let Some(ponding) = ponding {
                     let yw = polyline_y(ponding, px);
                     let p = if yw.is_finite() {
-                        WATER_UNIT_WEIGHT * js::math::max(0.0, yw - py)
+                        slope.water_unit_weight() * js::math::max(0.0, yw - py)
                     } else {
                         0.0
                     };

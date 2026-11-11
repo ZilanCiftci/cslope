@@ -309,7 +309,10 @@ fn march_a_combined_material_the_undrained_strength_governs_where_it_is_lower() 
 fn drawdown_strength_between_the_r_envelope_at_kc_1_and_the_effective_envelope_at_kf() {
     let (c, phi, c_r, phi_r, sfc) = (10.0, 25.0, 20.0, 15.0, 100.0);
     let r = (phi_r * PI) / 180.0;
-    let tau1 = (c_r * r.cos()) / (1.0 - r.sin()) + sfc * ((r.sin() * r.cos()) / (1.0 - r.sin()));
+    let p = (phi * PI) / 180.0;
+    // the Kc = 1 envelope by Duncan, Wright & Brandon (2014), Eqs. 9.6–9.7
+    let tau1 =
+        (c_r * r.cos() * p.cos()) / (1.0 - r.sin()) + sfc * ((r.sin() * p.cos()) / (1.0 - r.sin()));
     let tau_kf = c + sfc * ((phi * PI) / 180.0).tan();
     // isotropic consolidation (no shear): the R envelope
     close(drawdown_strength(sfc, 0.0, c, phi, c_r, phi_r), tau1, 9);
@@ -323,6 +326,26 @@ fn drawdown_strength_between_the_r_envelope_at_kc_1_and_the_effective_envelope_a
     let mid = drawdown_strength(sfc, tau_kf / 2.0, c, phi, c_r, phi_r);
     assert!(mid > tau1.min(tau_kf));
     assert!(mid < tau1.max(tau_kf));
+}
+
+#[test]
+fn drawdown_strength_kc_1_envelope_of_pilarcitos_dam() {
+    // Pilarcitos Dam (Duncan, Wright & Wong 1990): c′ = 0, φ′ = 45°,
+    // cR = 60 psf, φR = 23° give the Kc = 1 envelope d = 64 psf, ψ = 24.4°
+    // (64.10 and 24.39° by Eqs. 9.6–9.7 of Duncan, Wright & Brandon 2014).
+    // With τfc = 0 (Kc = 1) τff is on that envelope.
+    let tau = |sfc: f64| drawdown_strength(sfc, 0.0, 0.0, 45.0, 60.0, 23.0);
+    let (s1, s2) = (500.0, 1500.0);
+    let tan_psi = (tau(s2) - tau(s1)) / (s2 - s1);
+    let d = tau(s1) - s1 * tan_psi;
+    assert!((d - 64.10).abs() < 0.005, "d = {d}");
+    let psi = tan_psi.atan().to_degrees();
+    assert!((psi - 24.39).abs() < 0.005, "ψ = {psi}");
+    close(
+        tau(1000.0),
+        64.10 + 1000.0 * 24.39_f64.to_radians().tan(),
+        0,
+    );
 }
 
 const DD_GROUND: [[f64; 2]; 4] = [[0.0, 0.0], [30.0, 15.0], [40.0, 15.0], [60.0, 15.0]];

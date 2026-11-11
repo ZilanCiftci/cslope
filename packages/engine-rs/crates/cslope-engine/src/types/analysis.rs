@@ -180,6 +180,17 @@ pub struct AnalysisOptions {
         deserialize_with = "crate::types::json::opt_num"
     )]
     pub seismic_vertical: Option<f64>,
+    /// Unit weight of water γw (kN/m³, > 0): pore pressure u = γw·h from a
+    /// head h, the weight of free water and the water in a tension crack.
+    /// Default `WATER_UNIT_WEIGHT` (9.807, ρw·g with standard gravity); a
+    /// model may set its own (9.82 for local gravity, 10 as a
+    /// simplification).
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::json::opt_num"
+    )]
+    pub water_unit_weight: Option<f64>,
     /// Partial factors (Eurocode 7 design values). When set, strengths are
     /// divided and variable loads multiplied by them, and the FOS is the
     /// over-design factor on design values (≥ 1.0 satisfies the design).
@@ -373,6 +384,7 @@ pub fn default_analysis_options() -> AnalysisOptions {
         composite_base: None,
         seismic_horizontal: None,
         seismic_vertical: None,
+        water_unit_weight: None,
         partial_factors: None,
         both_directions: None,
         non_circular_optimization: Some(false),
