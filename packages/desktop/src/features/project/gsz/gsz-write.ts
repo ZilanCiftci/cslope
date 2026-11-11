@@ -80,6 +80,7 @@ function materialXml(
     }
     case "undrained":
       if (model.suRateOfChange) notes.push(`Material "${name}": Su increasing with depth is written as its reference value.`);
+      if (model.anisotropy?.length) notes.push(`Material "${name}": the anisotropy of the undrained strength is not written.`);
       return { slopeModel: "UndrainedPhiZero", fields: [["UnitWeight", gamma], ["Cohesion", model.undrainedShearStrength], ["CohesionPrime", model.undrainedShearStrength]] };
     case "impenetrable":
       return { slopeModel: "Bedrock", fields: [["UnitWeight", gamma]] };
@@ -87,6 +88,7 @@ function materialXml(
     case "s-f-datum":
       notes.push(`Material "${name}": strength as a function of ${model.kind === "s-f-depth" ? "depth" : "datum"} is written as undrained with its reference Su (${model.suRef} kPa); enter the variation by hand.`);
       if (suctionAngle(model) > 0) notes.push(`Material "${name}": the strength from suction (φb = ${suctionAngle(model)}°) of the drained branch is not written.`);
+      if (model.anisotropy?.length) notes.push(`Material "${name}": the anisotropy of the undrained strength is not written.`);
       return { slopeModel: "UndrainedPhiZero", fields: [["UnitWeight", gamma], ["Cohesion", model.suRef], ["CohesionPrime", model.suRef]] };
     case "shansep": {
       if (model.suMin) notes.push(`Material "${name}": the lower limit of Su (${model.suMin} kPa) is not written.`);
