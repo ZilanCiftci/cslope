@@ -11,6 +11,7 @@ All notable changes to cSlope. Versions follow [semantic versioning](https://sem
 
 ### Fixed
 
+- .gsz import: an analysis whose slip surfaces are taken from another analysis (slip surface option FromOther) uses that analysis's search (entry and exit ranges, fully specified surfaces or block search, with its direction and number of slices), following a chain of such analyses; before, cSlope searched the whole slope and could find a much smaller surface. When the other analysis is not in the file, or the chain loops, the import message says so and the whole slope is searched as before.
 - Rapid drawdown (three-stage): the strength at isotropic consolidation (Kc = 1) is taken from the R envelope as in Duncan, Wright & Brandon (2014), Eqs. 9.6–9.7, with the factor cos φ′ on both its intercept and its slope; it had cos φR in its place and was too high by cos φR / cos φ′ (30 % for φ′ = 45°, φR = 23°). Factors of safety of models with a drawdown (R) envelope fall: on the Walter Bouldin Dam example from 1.046 to 1.023 on the reference circle (reference value 1.026). Models without an R envelope do not change.
 
 ## [0.1.0-beta.2] - 2026-11-04

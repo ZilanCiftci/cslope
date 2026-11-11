@@ -292,6 +292,72 @@ describe(".gsz import", () => {
     expect(imp.notes.join(" ")).toMatch(/downslope end angles of the block search \(-15° to 10° from the horizontal\) are outside 0–90°/);
   });
 
+  // Further stability analyses whose search takes its slip surfaces from
+  // another analysis; their own (stale) entry and exit ranges differ from
+  // those of analysis 1.
+  const analysisXml = (id: number, name: string, parent = 1) =>
+    `<Analysis><ID>${id}</ID><Name>${name}</Name><Kind>Slope stability</Kind><ParentID>${parent}</ParentID><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis>`;
+  const contextXml = (id: number) =>
+    `<Context><AnalysisID>${id}</AnalysisID><GeometryUsesMaterials Len="2"><GeometryUsesMaterial ID="Regions-1" Entry="1" /><GeometryUsesMaterial ID="Regions-2" Entry="2" /></GeometryUsesMaterials></Context>`;
+  const fromOtherItem = (id: number, inputInfo: string) =>
+    `<StabilityItem><AnalysisID>${id}</AnalysisID><Entry><InitialInputInfo>${inputInfo}</InitialInputInfo><SlipSurface><Option>FromOther</Option>` +
+    `<EntryExit><LeftSideLeftPt X="0" Y="10" /><LeftSideRightPt X="2" Y="10" /><RightSideLeftPt X="28" Y="5" /><RightSideRightPt X="30" Y="5" /></EntryExit></SlipSurface></Entry></StabilityItem>`;
+  const path = (name: string) => `<Path path=";;&quot;${name}&quot;;(last)" />`;
+  const withFromOther = (items: { id: number; name: string; parent?: number; input: string }[]) => {
+    let xml = XML;
+    for (const a of items) {
+      xml = xml
+        .replace("</Analyses>", `${analysisXml(a.id, a.name, a.parent)}</Analyses>`)
+        .replace("</Contexts>", `${contextXml(a.id)}</Contexts>`)
+        .replace("</StabilityItems>", `${fromOtherItem(a.id, a.input)}</StabilityItems>`);
+    }
+    return { ...parseGszXml(xml), results: new Map() };
+  };
+
+  it("takes a FromOther search from the analysis its input names, through a chain", () => {
+    const f = withFromOther([
+      { id: 3, name: "Probability", input: `<Option>Parent</Option>${path("Short term")}` },
+      { id: 4, name: "With load", parent: 3, input: `<Option>Other</Option>${path("Probability")}` },
+    ]);
+    expect(f.stability.get(3)!.inputFrom).toEqual({ option: "Parent", name: "Short term" });
+    for (const id of [3, 4]) {
+      const imp = gszToDefinition(f, id);
+      // analysis 1's ranges, slices and direction, not the analysis's own stale ranges
+      expect(imp.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+      expect(imp.definition.orientation).toBe("ltr");
+      expect(imp.options.slices).toBe(40);
+      expect(imp.notes.join(" ")).toMatch(/slip surface search is taken from analysis "Short term"/);
+      expect(imp.notes.join(" ")).not.toMatch(/is not imported; cSlope's own search/);
+    }
+    // no path: the parent analysis
+    const parent = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: "<Option>Parent</Option>" }]), 3);
+    expect(parent.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+  });
+
+  it("searches the whole slope, with a note, when a FromOther source is not in the file", () => {
+    const imp = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: `<Option>Other</Option>${path("Gone")}` }]), 3);
+    expect(imp.definition.analysisLimits).toBeUndefined();
+    expect(imp.options.searchMethod).toBeUndefined();
+    expect(imp.notes.join(" ")).toMatch(/takes its slip surfaces from "Gone", which the file does not give as a stability analysis; cSlope's own search over the whole slope is used/);
+    // "another" analysis without a name is not taken to be the parent
+    const other = gszToDefinition(withFromOther([{ id: 3, name: "Probability", input: "<Option>Other</Option>" }]), 3);
+    expect(other.definition.analysisLimits).toBeUndefined();
+    expect(other.notes.join(" ")).toMatch(/from another analysis, which the file does not give/);
+  });
+
+  it("stops at a loop of FromOther searches", () => {
+    const f = withFromOther([
+      { id: 3, name: "Probability", input: `<Option>Other</Option>${path("With load")}` },
+      { id: 4, name: "With load", parent: 3, input: `<Option>Other</Option>${path("Probability")}` },
+      { id: 5, name: "Self", input: `<Option>Other</Option>${path("Self")}` },
+    ]);
+    for (const id of [3, 4, 5]) {
+      const imp = gszToDefinition(f, id);
+      expect(imp.definition.analysisLimits).toBeUndefined();
+      expect(imp.notes.join(" ")).toMatch(/from other analyses in a loop .*cSlope's own search over the whole slope is used/);
+    }
+  });
+
   it("finds the results of an analysis with a slash in its name", async () => {
     const xml = XML.replace("<Name>Short term</Name>", "<Name>Short/long term</Name>");
     const imps = await gszImports(writeZip([{ name: "S.xml", data: xml }, { name: "Short&3long term/001/slip_surface.csv", data: CSV }]), "S.gsz");
