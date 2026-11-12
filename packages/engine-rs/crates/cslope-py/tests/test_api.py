@@ -24,16 +24,22 @@ from cslope import examples
 # outline where the line does, instead of being snapped to the nearest
 # point of the sloping face (clay_crust_with_load 1.303919 -> 1.304217 and
 # 1.303936 -> 1.304235, two_layer_cut_left 1.833078 -> 1.832632 and
-# 1.804630 -> 1.804133).
+# 1.804630 -> 1.804133). All moved with the search's first pass of 11 radii
+# and its points along the ground (#157, #158, #160): simple_slope
+# 1.6225110637 -> 1.6225196348 and 1.6207131564 -> 1.6207316946,
+# slope_with_water_table 1.3666772358 -> 1.3664432306 and 1.3679936078 ->
+# 1.3678957074, clay_crust_with_load 1.3054681398 -> 1.3050692258 and
+# 1.3054732951 -> 1.3051437702, two_layer_cut_left 1.8334297281 ->
+# 1.8348331872 and 1.8033185045 -> 1.8045533886.
 EXPECTED = {
-    ("simple_slope", "Bishop"): 1.6225110637396323,
-    ("simple_slope", "Morgenstern-Price"): 1.620713156398642,
-    ("slope_with_water_table", "Bishop"): 1.3666772357829378,
-    ("slope_with_water_table", "Morgenstern-Price"): 1.367993607806179,
-    ("clay_crust_with_load", "Bishop"): 1.3054681397872558,
-    ("clay_crust_with_load", "Morgenstern-Price"): 1.3054732951160273,
-    ("two_layer_cut_left", "Bishop"): 1.833429728065641,
-    ("two_layer_cut_left", "Morgenstern-Price"): 1.8033185044681899,
+    ("simple_slope", "Bishop"): 1.6225196347861301,
+    ("simple_slope", "Morgenstern-Price"): 1.620731694586578,
+    ("slope_with_water_table", "Bishop"): 1.3664432306045216,
+    ("slope_with_water_table", "Morgenstern-Price"): 1.3678957073878955,
+    ("clay_crust_with_load", "Bishop"): 1.3050692258021,
+    ("clay_crust_with_load", "Morgenstern-Price"): 1.3051437702448394,
+    ("two_layer_cut_left", "Bishop"): 1.8348331871688992,
+    ("two_layer_cut_left", "Morgenstern-Price"): 1.8045533886444847,
 }
 
 # The engine's own defaults where the public ones (D-23, analyse without
@@ -62,11 +68,14 @@ def test_examples(name, method):
     assert math.isclose(r["minFOS"], EXPECTED[(name, method)], rel_tol=1e-6, abs_tol=0)
     assert r["criticalSurface"]["fos"] == r["minFOS"]
     assert r["criticalSlices"] and r["allSurfaces"]
-    # Every example runs without a warning. (Bishop's critical circle of the
-    # loaded clay crust had a steepest slice with N' < 0, reported as
-    # negative-effective-normal and steep-entry-tension, while the steep
-    # ends of a circle were cut into narrower slices, until 2026-11-11.)
-    assert [w["code"] for w in r["warnings"]] == []
+    # Every example but the loaded clay crust runs without a warning. Its
+    # critical circle has a steepest slice with N' < 0, reported as
+    # negative-effective-normal and steep-entry-tension: while the steep ends
+    # of a circle were cut into narrower slices (until 2026-11-11) for
+    # Bishop, and again since the search's first pass of 11 radii along the
+    # ground (#158, #160) found a lower circle with a steeper entry.
+    warnings = ["negative-effective-normal", "steep-entry-tension"] if name == "clay_crust_with_load" else []
+    assert [w["code"] for w in r["warnings"]] == warnings
 
 
 def test_left_sliding_model_in_model_coordinates():

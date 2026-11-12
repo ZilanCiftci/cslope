@@ -96,7 +96,7 @@ def test_a_saved_result_reads_without_a_run():
     p = Project.open(APP_RESULTS)
     m = p.model("T-ACADS Simple")
     assert m.result_is_current and m.result.is_current
-    assert m.result.fos == pytest.approx(0.9844574205971577, abs=1e-12)
+    assert m.result.fos == pytest.approx(0.9844937943075049, abs=1e-12)
     assert m.result.fos_label == "factor of safety" and m.result.method == "Morgenstern-Price"
     assert m.result.critical_surface["shape"] == "circle"
     assert m.min_fos == m.result.fos and m.result.saved["runState"] == "done"

@@ -25,11 +25,11 @@ needs_examples = pytest.mark.skipif(not EXAMPLES.is_dir(), reason="the skill's e
 # (PORTING.md). Every option is written into the documents, so the engine's
 # defaults do not move them.
 PINNED = {
-    "single_slope": 1.6205913376603949,
-    "layered_soil": 1.8027804337477604,
-    "water_table": 1.0158537043392202,
-    "distributed_load": 1.2993105869298305,
-    "swedish_partial_factors": 1.3872286356243877,
+    "single_slope": 1.6205288835607905,
+    "layered_soil": 1.8028952576836497,
+    "water_table": 1.0158487750810268,
+    "distributed_load": 1.2984867108694798,
+    "swedish_partial_factors": 1.3868213415494353,
 }
 
 
