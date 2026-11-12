@@ -1145,3 +1145,31 @@ describe(".gsz import: the optimization of an entry and exit search", () => {
     expect(plainBack.options.nonCircularOptimization).toBeUndefined();
   });
 });
+
+describe(".gsz import: an entry or exit given as a point", () => {
+  const RANGES = '<LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" />\n            <RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />';
+  const withEntryExit = (inner: string) => {
+    expect(XML).toContain(RANGES);
+    return XML.replace(RANGES, inner);
+  };
+  const limits = (xml: string) => gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1).definition.analysisLimits;
+
+  it("takes the first point of a side with option Point, also when the file has a second point for it", () => {
+    // the right side (the exit, sliding left to right)
+    expect(limits(withEntryExit(`<RightOption>Point</RightOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 21 });
+    // the left side (the entry)
+    expect(limits(withEntryExit(`<LeftOption>Point</LeftOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 1, exitLeftX: 21, exitRightX: 29 });
+    // both
+    expect(limits(withEntryExit(`<LeftOption>Point</LeftOption><RightOption>Point</RightOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 1, exitLeftX: 21, exitRightX: 21 });
+  });
+
+  it("keeps a side with option Range, or without an option, as a range", () => {
+    const range = { entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 };
+    expect(limits(withEntryExit(`<LeftOption>Range</LeftOption><RightOption>Range</RightOption>${RANGES}`))).toEqual(range);
+    expect(limits(XML)).toEqual(range);
+  });
+
+  it("takes a side with option Point and no second point as that point", () => {
+    expect(limits(withEntryExit('<LeftOption>Point</LeftOption><LeftSideLeftPt X="3" Y="10" /><RightOption>Point</RightOption><RightSideLeftPt X="24" Y="5" />'))).toEqual({ entryLeftX: 3, entryRightX: 3, exitLeftX: 24, exitRightX: 24 });
+  });
+});
