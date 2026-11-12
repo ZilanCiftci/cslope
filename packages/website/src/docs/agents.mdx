@@ -17,7 +17,7 @@ The repository has a **skill** for AI agents: [skills/cslope](https://github.com
 
 ## What it does
 
-The agent follows a fixed path, from the person's input to a reviewable file and the engine's own summary:
+The agent always takes the same four steps:
 
 1. It asks for the inputs: the geometry, every soil's parameters, the water, the loads and, for a check with partial factors, the safety class and the conversion factors η.
 2. It writes an **analysis document** (JSON) with the builder `cslope.build.Definition`. The builder checks each value as it is given, and the document is what you read to see what was analyzed.

@@ -11,6 +11,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { gzipSync } from "node:zlib";
 
 interface VercelConfig {
   trailingSlash?: boolean;
@@ -111,6 +112,9 @@ const TYPES: Record<string, string> = {
   ".xml": "application/xml",
 };
 
+/** The types served compressed. */
+const COMPRESSED = /^(text\/|application\/(json|xml)|image\/svg)/;
+
 /** Starts the server on 127.0.0.1; port 0 picks a free port. Resolves to its URL. */
 export function startPreview({ dist = "dist", port = 4173 }: { dist?: string; port?: number } = {}): Promise<{
   url: string;
@@ -129,7 +133,13 @@ export function startPreview({ dist = "dist", port = 4173 }: { dist?: string; po
       return;
     }
     const type = TYPES[extname(r.file).toLowerCase()] ?? "application/octet-stream";
-    res.writeHead(r.status, { ...headers, "Content-Type": type }).end(req.method === "HEAD" ? undefined : readFileSync(r.file));
+    // Text is compressed, as Vercel does, so that page weights and
+    // Lighthouse runs against the preview match the deployed site.
+    const gzip = COMPRESSED.test(type) && /\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""));
+    const body = readFileSync(r.file);
+    res
+      .writeHead(r.status, { ...headers, "Content-Type": type, Vary: "Accept-Encoding", ...(gzip ? { "Content-Encoding": "gzip" } : {}) })
+      .end(req.method === "HEAD" ? undefined : gzip ? gzipSync(body) : body);
   });
   return new Promise((done) =>
     server.listen(port, "127.0.0.1", () => {

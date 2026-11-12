@@ -1,8 +1,10 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fillTemplate, outputFile, lazyStylesheets, sitemap } from "./prerender";
+import { fillTemplate, hasFormulas, lastCommitTime, outputFile, lazyStylesheets, sitemap } from "./prerender";
 
 const template = readFileSync(join(import.meta.dirname, "../index.html"), "utf8");
 
@@ -72,10 +74,66 @@ describe("lazyStylesheets", () => {
 });
 
 describe("sitemap", () => {
-  it("lists every page under the origin", () => {
-    const xml = sitemap("https://cslope.example", ["/", "/docs", "/docs/theory"]);
-    expect(xml).toContain("<loc>https://cslope.example/</loc>");
-    expect(xml).toContain("<loc>https://cslope.example/docs/theory</loc>");
+  it("lists every page under the origin, with its last change where known", () => {
+    const xml = sitemap("https://cslope.example", [{ path: "/" }, { path: "/docs" }, { path: "/docs/theory", lastmod: "2026-03-04" }]);
+    expect(xml).toContain("<url><loc>https://cslope.example/</loc></url>");
+    expect(xml).toContain("<url><loc>https://cslope.example/docs/theory</loc><lastmod>2026-03-04</lastmod></url>");
     expect(xml.match(/<url>/g)).toHaveLength(3);
+  });
+});
+
+describe("lastCommitTime", () => {
+  // In a repository of its own: the checkout the tests run in can be a
+  // shallow clone (CI), where the date of the boundary commit is left out.
+  const git = (cwd: string, ...args: string[]) => {
+    const r = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  const repo = () => {
+    const dir = mkdtempSync(join(tmpdir(), "cslope-lastmod-"));
+    git(dir, "init", "-q");
+    writeFileSync(join(dir, "a.txt"), "a");
+    git(dir, "add", "a.txt");
+    git(dir, "commit", "-q", "-m", "a");
+    return dir;
+  };
+
+  it("dates committed files and not unknown ones", () => {
+    const dir = repo();
+    try {
+      expect(lastCommitTime(["a.txt"], dir)).toMatch(/^\d{4}-\d\d-\d\dT/);
+      expect(lastCommitTime(["no-such-file.txt"], dir)).toBeUndefined();
+      expect(lastCommitTime([], dir)).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gives no date for the boundary commit of a shallow clone", () => {
+    const dir = repo();
+    try {
+      writeFileSync(join(dir, "b.txt"), "b");
+      git(dir, "add", "b.txt");
+      git(dir, "commit", "-q", "-m", "b");
+      const shallow = git(dir, "rev-parse", "--path-format=absolute", "--git-path", "shallow");
+      // As a clone of depth 1 records it: the last commit is the boundary.
+      writeFileSync(shallow, git(dir, "rev-parse", "HEAD") + "\n");
+      expect(lastCommitTime(["b.txt"], dir)).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("og:type and formulas", () => {
+  it("sets og:type when given", () => {
+    const html = fillTemplate(template, "", { title: "T", description: "D", url: "", type: "article" });
+    expect(html).toContain('<meta property="og:type" content="article" />');
+  });
+
+  it("finds formulas in a rendered page", () => {
+    expect(hasFormulas('<span class="katex">x</span>')).toBe(true);
+    expect(hasFormulas("<p>No formulas</p>")).toBe(false);
   });
 });

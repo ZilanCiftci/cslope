@@ -69,7 +69,7 @@ describe("Verification page", () => {
 
   it("names the document title", () => {
     renderPage();
-    expect(document.title).toBe("Verification · cSlope");
+    expect(document.title).toBe("Verification against published problems · cSlope");
   });
 
   it("links the verification report the site serves (scripts/report.test.ts checks the file)", () => {

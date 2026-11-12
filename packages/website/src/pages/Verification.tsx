@@ -292,7 +292,7 @@ function ReliabilityTable() {
 
 export function Verification() {
   usePageMeta(
-    "Verification",
+    "Verification against published problems",
     `cSlope on ${VERIFICATION.summary.problems} published slope stability problems: the sources' values, other programs' results and cSlope's results, problem by problem.`,
   );
   const s = VERIFICATION.summary;
@@ -300,8 +300,8 @@ export function Verification() {
     <>
       <PageHeader
         eyebrow="Verification"
-        title="Every result, next to the published ones"
-        lead={`cSlope is run on ${s.problems} problems from the literature and from verification manuals. For each problem the table shows what the source publishes, with the method where the source names one, the range of other programs' results and cSlope's result. It presents the results; it does not mark them as passed or failed.`}
+        title="cSlope's results on published problems"
+        lead={`cSlope is run on ${s.problems} problems from the literature and from verification manuals. For each problem the table shows what the source publishes, with the method where the source names one, the range of other programs' results and cSlope's result. The results are not marked as passed or failed.`}
       >
         <dl className="mt-10 grid max-w-3xl grid-cols-2 gap-6 sm:grid-cols-4">
           {[

@@ -12,6 +12,12 @@ describe("content security policy", () => {
     expect(inlineScriptHashes('<script type="module" src="/src/main.tsx"></script>')).toEqual([]);
   });
 
+  it("leaves out structured data, which the browser does not run", () => {
+    expect(inlineScriptHashes('<script type="application/ld+json">{"@context":"https://schema.org"}</script><script>x</script>')).toEqual([
+      "'sha256-LXEWQrcmsEQBYnyp+6wy9chTD7GQPMTbAiWHF5IaSIE='",
+    ]);
+  });
+
   it("vercel.json allows exactly the inline theme script of index.html", () => {
     const hashes = inlineScriptHashes(readFileSync(join(root, "index.html"), "utf8"));
     expect(hashes).toHaveLength(1);
