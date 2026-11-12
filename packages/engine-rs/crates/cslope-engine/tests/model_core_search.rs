@@ -14,8 +14,8 @@ use cslope_engine::model::composite::{composite_floor, floor_y_at};
 use cslope_engine::model::geometry_ops::Side;
 use cslope_engine::model::search::{
     add_single_circular_plane, add_single_entry_exit_plane, entry_exit_planes,
-    generate_local_planes, generate_refined_planes, is_plane_within_external_boundary, plane_keys,
-    set_entry_exit_planes,
+    generate_local_planes, generate_planes, generate_refined_planes,
+    is_plane_within_external_boundary, plane_key, plane_keys, set_entry_exit_planes,
 };
 use cslope_engine::model::slope::{AnalysisLimitsPatch, AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::model::surface::{
@@ -253,6 +253,26 @@ fn the_grid_has_circles_tangent_to_the_interface_from_above() {
         assert!(gap >= -1e-6, "{gap}");
         assert!(gap < 1e-3, "{gap}");
     }
+}
+
+/// A pair given right to left (the exit left of the entry, as the first
+/// pass pairs them where the ranges overlap) has the same circles, the one
+/// tangent to the interface included (before, none: the side of the chord
+/// was taken from the order of the points).
+#[test]
+fn a_pair_given_right_to_left_has_the_same_tangent_circle() {
+    let slope = canonical(two_basins());
+    let tangent = |lc: Pt, rc: Pt| -> Vec<String> {
+        generate_planes(&slope, lc, rc, 5.0)
+            .unwrap()
+            .iter()
+            .filter(|p| p.tangent_to.is_some())
+            .map(plane_key)
+            .collect()
+    };
+    let forward = tangent([5.0, 20.0], [35.0, 12.5]);
+    assert_eq!(forward.len(), 1);
+    assert_eq!(tangent([35.0, 12.5], [5.0, 20.0]), forward);
 }
 
 #[test]
@@ -596,7 +616,7 @@ fn refined_planes_have_unique_keys_and_respect_the_budget() {
     let keys = plane_keys(&ranked);
     let mut seen = HashSet::new();
     for p in &refined {
-        let k = cslope_engine::model::search::plane_key(p);
+        let k = plane_key(p);
         assert!(!keys.contains(&k));
         assert!(seen.insert(k));
     }

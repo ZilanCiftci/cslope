@@ -102,11 +102,50 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-11 | Search: a single exit x on a vertical ground face exits at the foot of the face | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 600 s (4 workers, load 2.3 at start) |
 | 2026-11-12 | Search: a side given as a point gets one point in the first pass; a point on a corner is the two ends of its widened limit (issue #157) | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 548 s (4 workers, load 3.3 at start) |
 | 2026-11-12 | Local search: the unmoved end of a seed on a search limit is kept (limit tolerance 1e-9, as for the surfaces) | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 567 s (4 workers, load 2.5 at start) |
+| 2026-11-12 | Search: a pair given right to left gets its circle tangent to a material interface | 6 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.951 | 1.531 → 1.536 | 523 s (4 workers, load 3.7 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-12: Search: a pair given right to left gets its circle tangent to a material interface
+
+Compared with c9cfa3ae. Errors are relative to the reference, in percent. Verification run time: 523 s (4 workers, load 3.7 at start).
+
+**Against other programs (midpoint of their range):** 3 moved (2 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V094 Spencer, non-circular | 1.398 | 1.4000 | 1.3985 | +0.143 % | +0.036 % |
+| V094 Morgenstern-Price (half-sine), non-circular | 1.389 | 1.3885 | 1.3882 | -0.036 % | -0.058 % |
+| V009c Spencer, non-circular | 1.868 | 1.8668 | 1.8671 | -0.064 % | -0.048 % |
+| **Mean error (n = 301)** | | | | -0.203 % | -0.203 % |
+| **Mean absolute error** | | | | 0.308 % | 0.308 % |
+| **RMS error** | | | | 0.441 % | 0.441 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 3 moved (1 closer to the reference, 2 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V002 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 0.430 | 0.4131 | 0.4120 | -3.930 % | -4.186 % |
+| V094 Spencer, non-circular (Greco (1996)) | 1.400 | 1.4000 | 1.3985 | 0.000 % | -0.107 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8668 | 1.8671 | -2.262 % | -2.246 % |
+| **Mean error (n = 123)** | | | | -0.120 % | -0.123 % |
+| **Mean absolute error** | | | | 0.948 % | 0.951 % |
+| **RMS error** | | | | 1.531 % | 1.536 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-12: Local search: the unmoved end of a seed on a search limit is kept (limit tolerance 1e-9, as for the surfaces)
 

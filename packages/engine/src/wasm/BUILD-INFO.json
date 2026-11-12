@@ -2,8 +2,8 @@
   "flavour": "product",
   "rustc": "rustc 1.97.0 (2d8144b78 2026-07-07)",
   "wasmBindgen": "0.2.130",
-  "sourceHash": "cfee1255690697d5ce1da123d7f4fa50217422ddee086108c1e3d42e5b9ba715",
-  "wasmSha256": "5e4e5f37eb7f6a930855f701346f7191099f616f453aa2d15f5fc1321ed215b9",
-  "bytes": 3370487,
-  "brotliBytes": 798841
+  "sourceHash": "8baf43fd2930f8454362e45c908775d439d0e3f9c33c96f9475d85182999d3bb",
+  "wasmSha256": "b9d69389dad5b3f6fdee87c8994e561a187fee8bfb0e46c18f966ab381a9fa04",
+  "bytes": 3370517,
+  "brotliBytes": 798937
 }

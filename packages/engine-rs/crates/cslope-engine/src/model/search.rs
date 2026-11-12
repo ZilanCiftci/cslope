@@ -398,11 +398,16 @@ fn arc_reaches_interface(lc: Pt, rc: Pt, chord_to_edge: f64, iface: &MaterialInt
     let Some((cx, cy, radius)) = circle_through(lc, rc, chord_to_edge) else {
         return false;
     };
-    // Unit normal of the chord on the side of the centre; the arc is on the
-    // other side.
+    // Unit normal of the chord pointing up, away from the arc, which is the
+    // lower one also for a pair given right to left (rc left of lc: the
+    // first pass pairs every entry with every exit, and the ranges overlap
+    // when no limits are set). Before, such a pair took the normal pointing
+    // down, looked for the interface above the chord and had no tangent
+    // circle.
     let len = dist_points(lc, rc);
-    let nx = -(rc[1] - lc[1]) / len;
-    let ny = (rc[0] - lc[0]) / len;
+    let up = if rc[0] < lc[0] { -1.0 } else { 1.0 };
+    let nx = -up * (rc[1] - lc[1]) / len;
+    let ny = up * (rc[0] - lc[0]) / len;
     let [mx, my] = mid_coord(lc, rc);
     let min_length = 1e-9 * js::math::max(1.0, len);
     let s = &iface.segs;

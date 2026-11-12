@@ -130,7 +130,7 @@
      "method": "Janbu corrected, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
-     "computed": 0.4131
+     "computed": 0.412
     },
     {
      "value": 0.43,
@@ -186,7 +186,7 @@
     },
     {
      "method": "Janbu corrected, non-circular",
-     "computed": 0.4131,
+     "computed": 0.412,
      "programs": null
     },
     {
@@ -672,13 +672,13 @@
      "method": "Spencer, non-circular",
      "source": "Baker & Leshchinsky (2001)",
      "analysis": "Spencer, non-circular",
-     "computed": 1.8668
+     "computed": 1.8671
     }
    ],
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 1.8668,
+     "computed": 1.8671,
      "programs": {
       "min": 1.868,
       "max": 1.868
@@ -6919,7 +6919,7 @@
      "method": "Spencer, non-circular",
      "source": "Greco (1996)",
      "analysis": "Spencer, non-circular",
-     "computed": 1.4
+     "computed": 1.3985
     },
     {
      "value": 1.39,
@@ -6932,7 +6932,7 @@
    "results": [
     {
      "method": "Spencer, non-circular",
-     "computed": 1.4,
+     "computed": 1.3985,
      "programs": {
       "min": 1.398,
       "max": 1.398
@@ -6940,7 +6940,7 @@
     },
     {
      "method": "Morgenstern-Price (half-sine), non-circular",
-     "computed": 1.3885,
+     "computed": 1.3882,
      "programs": {
       "min": 1.389,
       "max": 1.389
