@@ -67,6 +67,56 @@ describe("generated planes", () => {
   });
 });
 
+describe("the first pass", () => {
+  const distinct = (xs: number[]) =>
+    [...xs].sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-7);
+
+  it("has 9 entry and 11 exit points at 1 000 iterations, scaled with the square root (#160)", () => {
+    const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 8, exitLeftX: 27, exitRightX: 38 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    expect(distinct(s.search.map((p) => p.lc[0]))).toHaveLength(9);
+    expect(distinct(s.search.map((p) => p.rc[0]))).toHaveLength(11);
+    s.updateAnalysisOptions({ iterations: 4000 });
+    setEntryExitPlanes(s);
+    expect(distinct(s.search.map((p) => p.lc[0]))).toHaveLength(18);
+    expect(distinct(s.search.map((p) => p.rc[0]))).toHaveLength(22);
+  });
+
+  it("spaces the 11 sagittas of a pair evenly from 5 % to 95 % of the reference depth (#160)", () => {
+    const s = model([[-40, -40], [-40, 10], [10, 10], [25, 0], [80, 0], [80, -40]]);
+    // One pair (each side a point), both ends on the face.
+    s.setAnalysisLimits({ entryLeftX: 11.5, entryRightX: 11.5, exitLeftX: 23.5, exitRightX: 23.5 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    expect(s.search).toHaveLength(11);
+    const [lc, rc] = [[11.5, 9], [23.5, 1]];
+    // D: the sagitta of the circle through both ends centred at the
+    // elevation of the higher end (radius half-chord / cos β).
+    const half = Math.hypot(rc[0] - lc[0], rc[1] - lc[1]) / 2;
+    const rRef = half / ((rc[0] - lc[0]) / (2 * half));
+    const d = rRef - Math.sqrt(rRef ** 2 - half ** 2);
+    const sagittas = s.search
+      .map((p) => {
+        const dist = Math.abs((rc[0] - lc[0]) * (p.cy - lc[1]) - (rc[1] - lc[1]) * (p.cx - lc[0])) / (2 * half);
+        return p.radius - dist;
+      })
+      .sort((a, b) => a - b);
+    sagittas.forEach((v, k) => expect(v / d).toBeCloseTo(0.05 + 0.09 * k, 9));
+  });
+
+  it("gives a side given as a point its point only (#157)", () => {
+    const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 8, exitLeftX: 32, exitRightX: 32 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    expect(distinct(s.search.map((p) => p.rc[0]))).toHaveLength(1);
+    expect(distinct(s.search.map((p) => p.lc[0]))).toHaveLength(9);
+    expect(s.search.length).toBeLessThanOrEqual(9 * 11);
+  });
+});
+
 describe("individual planes", () => {
   const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
 

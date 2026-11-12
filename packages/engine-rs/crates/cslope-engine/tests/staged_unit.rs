@@ -120,8 +120,10 @@ fn layer_top_depth_equals_s_f_datum_at_the_clay_top_and_is_lower_than_from_the_g
     );
     // Value before the layer-top option was added (TypeScript's pinned value
     // 1.0896195608), with the chord base of a circle since 2026-11-10
-    // (1.0874542963), without the cut steep ends since 2026-11-11.
-    close(from_ground, 1.0884182069, 8);
+    // (1.0874542963), without the cut steep ends since 2026-11-11
+    // (1.0884182069), with the first pass of 11 radii on 6 × 7 pairs at
+    // these 400 iterations since issue #160 (converged: 1.0857103430).
+    close(from_ground, 1.0980545582, 8);
 }
 
 #[test]

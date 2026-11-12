@@ -247,7 +247,9 @@ fn the_grid_has_circles_tangent_to_the_interface_from_above() {
         .iter()
         .filter(|p| p.tangent_to.is_some())
         .collect();
-    assert!(tangent.len() > 5);
+    // Only pairs whose exit is on the face, above the interface, have one:
+    // 3 of the 9 × 11 pairs of the first pass (7 of 14 × 16 before #160).
+    assert!(tangent.len() >= 3);
     for p in tangent {
         let gap = (p.cx.clamp(0.0, 40.0) - p.cx).hypot(10.0 - p.cy) - p.radius;
         assert!(gap >= -1e-6, "{gap}");
@@ -698,10 +700,75 @@ fn the_local_search_keeps_the_exit_of_a_seed_on_the_limit() {
         let seeds = vec![seed];
         let local =
             generate_local_planes(&s, &seeds, 1000.0, 1.0, &mut plane_keys(&seeds), 4).unwrap();
-        // The entry and the sagitta move with the exit kept: 3 × 3 − 1
-        // circles, all with the seed's exit.
+        // The entry and the sagitta move with the exit kept (before: none).
         let kept = local.iter().filter(|p| on_limit(p)).count();
-        assert!(kept >= 8, "rc {rc_x}: {kept} of {}", local.len());
+        assert!(kept >= 4, "rc {rc_x}: {kept} of {}", local.len());
+    }
+}
+
+// ── The first pass: 11 sagittas from 5 % to 95 % of D (issue #160) ──
+
+#[test]
+fn the_first_pass_has_9_entry_and_11_exit_points() {
+    let (_, planes) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    assert_eq!(distinct(planes.iter().map(|p| p.lc[0])).len(), 9);
+    assert_eq!(distinct(planes.iter().map(|p| p.rc[0])).len(), 11);
+    // 11 circles per pair at most, and one touching the base; no circle twice.
+    assert!(planes.len() <= 9 * 11 * 12, "{}", planes.len());
+    assert!(planes.len() > 9 * 11 * 5, "{}", planes.len());
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    // The pair counts scale with the square root of the iterations.
+    let (mut s, _) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    s.update_analysis_options(&opts(json!({ "iterations": 4000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    assert_eq!(distinct(planes.iter().map(|p| p.lc[0])).len(), 18);
+    assert_eq!(distinct(planes.iter().map(|p| p.rc[0])).len(), 22);
+}
+
+#[test]
+fn the_first_pass_spaces_the_sagittas_evenly_from_5_to_95_percent_of_d() {
+    // A deep model, so that every circle of the pair stays in it.
+    let deep: [Pt; 6] = [
+        [-40.0, -40.0],
+        [-40.0, 10.0],
+        [10.0, 10.0],
+        [25.0, 0.0],
+        [80.0, 0.0],
+        [80.0, -40.0],
+    ];
+    let mut s = model(&deep);
+    // One pair, both on the face (the chord on the ground): the entry and
+    // the exit each a point.
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(11.5),
+        entry_right_x: Some(11.5),
+        exit_left_x: Some(23.5),
+        exit_right_x: Some(23.5),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    assert_eq!(planes.len(), 11);
+    let (lc, rc): (Pt, Pt) = ([11.5, 9.0], [23.5, 1.0]);
+    // D: the sagitta of the circle through both ends whose centre is at
+    // the elevation of the higher end (radius half-chord / cos β).
+    let half = (rc[0] - lc[0]).hypot(rc[1] - lc[1]) / 2.0;
+    let cos_beta = (rc[0] - lc[0]) / (2.0 * half);
+    let r_ref = half / cos_beta;
+    let d = r_ref - (r_ref * r_ref - half * half).sqrt();
+    let mut sagittas: Vec<f64> = planes
+        .iter()
+        .map(|p| {
+            // the radius less the centre's distance from the chord
+            let dist = ((rc[0] - lc[0]) * (p.cy - lc[1]) - (rc[1] - lc[1]) * (p.cx - lc[0])).abs()
+                / (2.0 * half);
+            p.radius - dist
+        })
+        .collect();
+    sagittas.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    for (k, s) in sagittas.iter().enumerate() {
+        close(*s / d, 0.05 + 0.09 * k as f64, 9);
     }
 }
 

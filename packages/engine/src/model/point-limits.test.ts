@@ -145,15 +145,16 @@ describe("a single exit x on a vertical face of the ground", () => {
     };
     const r = runVerification(rising, "Morgenstern-Price", constant);
     expect(r.slope.searchLimits).toEqual([11, 16, 30 - w, 30]);
-    // (as in the Rust tests: the first is the factor of safety before the
-    // rule; the second moved with the local search's limit tolerance, #160)
-    expect(r.fos!).toBeCloseTo(1.150043595810847, 9);
+    // (as in the Rust tests: 1.150043595810847 and 0.392698221225512
+    // before the local search's limit tolerance and the first pass of 11
+    // radii, #160)
+    expect(r.fos!).toBeCloseTo(1.1487376444300625, 9);
     const range = runVerification(
       wall(false, { entryLeftX: 11, entryRightX: 16, exitLeftX: 18, exitRightX: 30 }),
       "Morgenstern-Price",
       constant,
     );
     expect(range.slope.searchLimits).toEqual([11, 16, 18, 30]);
-    expect(range.fos!).toBeCloseTo(0.39268667489844383, 9);
+    expect(range.fos!).toBeCloseTo(0.39241043063957864, 9);
   });
 });

@@ -55,7 +55,9 @@ describe("circular search with two basins (toe circle above a stronger layer, de
     slope.updateAnalysisOptions({ iterations: 1000 });
     setEntryExitPlanes(slope);
     const tangent = slope.search.filter((p) => p.tangentTo !== undefined);
-    expect(tangent.length).toBeGreaterThan(5);
+    // Only pairs whose exit is on the face, above the interface, have one:
+    // 3 of the 9 × 11 pairs of the first pass (7 of 14 × 16 before #160).
+    expect(tangent.length).toBeGreaterThanOrEqual(3);
     for (const p of tangent) {
       // The circle touches the interface (y = 10, x 0–40) without cutting
       // it: tangent to it, or (exits beyond the toe) through its end.

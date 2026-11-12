@@ -303,15 +303,15 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    // (the factor of safety of the first is that before the rule, to the
-    // bit)
-    close(fos.unwrap(), 1.150_043_595_810_847, 12);
+    // (1.150043595810847 before the rule and until the first pass of 11
+    // radii, issue #160)
+    close(fos.unwrap(), 1.148_737_644_430_062_5, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
     // An exit range across the face: the ground at each x, as before. (Its
     // critical circle exits at the range's left end: 0.392698221225512
     // before the local search kept the unmoved end of a seed on a limit,
-    // issue #160.)
+    // 0.39268667489844383 before the first pass of 11 radii, issue #160.)
     let (fos, s) = run_verification(
         wall_def(
             false,
@@ -321,13 +321,14 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    close(fos.unwrap(), 0.392_686_674_898_443_83, 12);
+    close(fos.unwrap(), 0.392_410_430_639_578_64, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
     // A single exit x at the toe of a sloping face (no vertical face). Since
     // issue #157 its circles go through the two ends of the widened limit
-    // only (1.251587687149846 with 16 exit points between them).
+    // only (1.251587687149846 with 16 exit points between them;
+    // 1.251608205846085 before the first pass of 11 radii, #160).
     let (fos, s) = run_verification(
         point_slope(Some(
             json!({ "entryLeftX": 17, "entryRightX": 21.5, "exitLeftX": 30.5, "exitRightX": 30.5 }),
@@ -335,7 +336,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         mp(),
     );
-    close(fos.unwrap(), 1.251_608_205_846_085, 12);
+    close(fos.unwrap(), 1.251_608_205_833_489_6, 12);
     assert_eq!(s.exit_face_point(), None);
     // The model's own end face is no exit face.
     let end = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 40, "exitRightX": 40 });

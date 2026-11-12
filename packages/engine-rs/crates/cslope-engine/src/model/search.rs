@@ -97,23 +97,24 @@ fn get_search_grid_spec(slope: &Slope) -> SearchGridSpec {
     spec
 }
 
+/// The number of circles per entry-exit pair in the first pass (issue
+/// #160): sagittas evenly spaced from 95 % to 5 % of the reference depth
+/// (`generate_planes_with_scale`).
+const FIRST_PASS_CIRCLES: f64 = 11.0;
+
+/// The grid of a search between two ranges. The first pass has 9 entry and
+/// 11 exit points at 1 000 iterations, scaled with the square root of the
+/// iterations (FIRST_PASS_CIRCLES circles per pair: 1 089 at 1 000). The
+/// refinement and the local search step by this spacing; `num_circles` is
+/// their number of circles per pair, as before issue #160 (at least 5, and
+/// one per 800 iterations).
 fn range_grid_spec(slope: &Slope) -> SearchGridSpec {
     let num_circles = js::math::max(5.0, (slope.iterations() / 800.0).floor());
-    let point_combinations = slope.iterations() / num_circles;
-    let mut num_points_top = point_combinations.sqrt().floor();
-    let mut num_points_bot = num_points_top;
-
-    while num_points_top * num_points_bot * num_circles < slope.iterations() {
-        num_points_bot += 1.0;
-    }
-
+    let k = (slope.iterations() / 1000.0).sqrt();
     // The entry points next to loads (setEntryExitPlanes) come on top of
-    // this grid. Taking them out of it coarsened the grid by one point per
-    // load, also for loads outside the search limits, whose points are then
-    // all filtered out.
-    if num_points_top < 2.0 {
-        num_points_top = 2.0;
-    }
+    // this grid, so that at least two entry points are always left.
+    let num_points_top = js::math::max(2.0, js::math::round(9.0 * k));
+    let num_points_bot = js::math::max(1.0, js::math::round(11.0 * k) - 1.0);
 
     SearchGridSpec {
         num_circles,
@@ -634,7 +635,7 @@ pub fn generate_planes(
     rc: Pt,
     num_circles: f64,
 ) -> Result<Vec<SearchPlane>> {
-    generate_planes_with_scale(slope, lc, rc, num_circles, 1.1)
+    generate_planes_with_scale(slope, lc, rc, num_circles, 1.1, false)
 }
 
 /// The circle at one chord-to-arc distance (`planeAt` in TypeScript).
@@ -658,12 +659,22 @@ fn new_plane(ends: (Pt, Pt), cx: f64, cy: f64, radius: f64) -> SearchPlane {
     }
 }
 
+/// The circles through lc and rc, from the deepest to the shallowest. The
+/// start circle has the radius `start_radius_scale` × half-chord / cos β
+/// (β the chord's inclination); the circles' sagittas are k/numCircles of
+/// its sagitta, k = numCircles … 1. With `first_pass` (issue #160) the
+/// sagittas are instead evenly spaced from 95 % to 5 % of the reference
+/// depth D, the sagitta of the circle through both ends whose centre is at
+/// the elevation of the higher end (radius half-chord / cos β); the
+/// circles tangent to the base and to material interfaces are found as for
+/// the start circle either way.
 fn generate_planes_with_scale(
     slope: &Slope,
     lc: Pt,
     rc: Pt,
     num_circles: f64,
     start_radius_scale: f64,
+    first_pass: bool,
 ) -> Result<Vec<SearchPlane>> {
     let mut planes: Vec<SearchPlane> = Vec::new();
 
@@ -701,9 +712,21 @@ fn generate_planes_with_scale(
     // From the deepest circle to the shallowest.
     let mut deepest_outside: Option<f64> = None;
     let mut tangent_added = false;
+    let reference = first_pass && num_circles > 1.0;
+    let reference_radius = half_coord_dist / js::math::cos(beta);
+    let reference_depth = reference_radius
+        - js::math::max(
+            0.0,
+            reference_radius * reference_radius - half_coord_dist * half_coord_dist,
+        )
+        .sqrt();
     let mut i = 0.0;
     while i < num_circles {
-        let chord_to_edge = (start_chord_to_edge * (num_circles - i)) / num_circles;
+        let chord_to_edge = if reference {
+            reference_depth * (0.05 + 0.9 * (num_circles - 1.0 - i) / (num_circles - 1.0))
+        } else {
+            (start_chord_to_edge * (num_circles - i)) / num_circles
+        };
         i += 1.0;
         let plane = match plane_at(chord_to_edge)? {
             PlaneAt::Outside(outside) => {
@@ -860,6 +883,7 @@ pub fn generate_refined_planes(
                     seed.rc,
                     js::math::max(grid.num_circles + 4.0, 8.0),
                     1.45,
+                    false,
                 )?
                 .into_iter()
                 .filter(|p| p.radius > max_radius + 1e-6)
@@ -874,6 +898,7 @@ pub fn generate_refined_planes(
                     seed.rc,
                     js::math::max(grid.num_circles + 4.0, 8.0),
                     1.02,
+                    false,
                 )?
                 .into_iter()
                 .filter(|p| p.radius < min_radius - 1e-6)
@@ -931,6 +956,7 @@ pub fn generate_refined_planes(
                     rc,
                     js::math::max(4.0, (grid.num_circles / 2.0).ceil()),
                     1.1,
+                    false,
                 )?;
                 add_planes(&mut generated, local);
                 if full(&generated) {
@@ -1141,9 +1167,9 @@ pub fn set_entry_exit_planes(slope: &mut Slope) -> Result<()> {
 /// The planes `set_entry_exit_planes` sets, on a shared slope.
 pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
     let SearchGridSpec {
-        num_circles,
         num_points_top,
         num_points_bot,
+        ..
     } = get_search_grid_spec(slope);
     let points = point_sides(slope);
 
@@ -1201,7 +1227,14 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
     for &l_co in &left_coords {
         for &r_co in &right_coords {
             if dist_points(l_co, r_co) > slope.min_failure_distance() {
-                all_planes.extend(generate_planes(slope, l_co, r_co, num_circles)?);
+                all_planes.extend(generate_planes_with_scale(
+                    slope,
+                    l_co,
+                    r_co,
+                    FIRST_PASS_CIRCLES,
+                    1.1,
+                    true,
+                )?);
             }
         }
     }
