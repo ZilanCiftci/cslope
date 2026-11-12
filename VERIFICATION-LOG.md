@@ -106,11 +106,52 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-12 | Search: first pass with 11 sagittas from 5 % to 95 % of the reference depth on 9 × 11 entry-exit pairs (issue #160) | 68 | 0.308 → 0.311 | 0.441 → 0.443 | 0.951 → 0.949 | 1.536 → 1.537 | 510 s (4 workers, load 1.0 at start) |
 | 2026-11-12 | Search: entry and exit points evenly along the ground in the first pass, the refinement and the local search; an exit range end on a descending face is its foot (issue #158) | 56 | 0.311 → 0.315 | 0.443 → 0.454 | 0.949 → 0.948 | 1.537 → 1.533 | 518 s (4 workers, load 1.0 at start) |
 | 2026-11-12 | Search: points on the break points of the ground (issue #164) | 4 | 0.315 → 0.315 | 0.454 → 0.454 | 0.948 → 0.947 | 1.533 → 1.529 | 510 s (4 workers, load 2.6 at start) |
+| 2026-11-12 | Search: a toe in an exit range is a break point from 15° (other breaks from 30°), issue #164 | 8 | 0.315 → 0.315 | 0.454 → 0.454 | 0.947 → 0.947 | 1.529 → 1.530 | 513 s (4 workers, load 0.9 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-12: Search: a toe in an exit range is a break point from 15° (other breaks from 30°), issue #164
+
+Compared with 7d781e4c. Errors are relative to the reference, in percent. Verification run time: 513 s (4 workers, load 0.9 at start).
+
+**Against other programs (midpoint of their range):** 6 moved (2 closer to the reference, 4 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V041b Spencer, non-circular | 1.590 | 1.5880 | 1.5895 | -0.126 % | -0.031 % |
+| V071b Janbu simplified | 1.151 | 1.1488 | 1.1489 | -0.191 % | -0.182 % |
+| V041a Spencer | 1.599 | 1.5956 | 1.5955 | -0.213 % | -0.219 % |
+| V041b Spencer | 1.599 | 1.5951 | 1.5950 | -0.244 % | -0.250 % |
+| V041b Bishop simplified | 1.603 | 1.5983 | 1.5982 | -0.293 % | -0.299 % |
+| V041a Bishop simplified | 1.603 | 1.5984 | 1.5983 | -0.287 % | -0.293 % |
+| **Mean error (n = 301)** | | | | -0.200 % | -0.199 % |
+| **Mean absolute error** | | | | 0.315 % | 0.315 % |
+| **RMS error** | | | | 0.454 % | 0.454 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 2 moved (0 closer to the reference, 2 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V041a Spencer (Duncan & Wright) | 1.600 | 1.5956 | 1.5955 | -0.275 % | -0.281 % |
+| V041b Spencer (Duncan & Wright) | 1.600 | 1.5951 | 1.5950 | -0.306 % | -0.313 % |
+| **Mean error (n = 123)** | | | | -0.132 % | -0.132 % |
+| **Mean absolute error** | | | | 0.947 % | 0.947 % |
+| **RMS error** | | | | 1.529 % | 1.530 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-12: Search: points on the break points of the ground (issue #164)
 

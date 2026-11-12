@@ -30,16 +30,22 @@ from cslope import examples
 # slope_with_water_table 1.3666772358 -> 1.3664432306 and 1.3679936078 ->
 # 1.3678957074, clay_crust_with_load 1.3054681398 -> 1.3050692258 and
 # 1.3054732951 -> 1.3051437702, two_layer_cut_left 1.8334297281 ->
-# 1.8348331872 and 1.8033185045 -> 1.8045533886.
+# 1.8348331872 and 1.8033185045 -> 1.8045533886. And with the toes of the
+# ground as break points of the exit range (#164): simple_slope
+# 1.6225196348 -> 1.6224960171 and 1.6207316946 -> 1.6207306372,
+# slope_with_water_table 1.3664432306 -> 1.3664474675 and 1.3678957074 ->
+# 1.3678830306, clay_crust_with_load Bishop 1.3050692258 -> 1.3051222647,
+# two_layer_cut_left 1.8348331872 -> 1.8329489918 and 1.8045533886 ->
+# 1.8029560543.
 EXPECTED = {
-    ("simple_slope", "Bishop"): 1.6225196347861301,
-    ("simple_slope", "Morgenstern-Price"): 1.620731694586578,
-    ("slope_with_water_table", "Bishop"): 1.3664432306045216,
-    ("slope_with_water_table", "Morgenstern-Price"): 1.3678957073878955,
-    ("clay_crust_with_load", "Bishop"): 1.3050692258021,
+    ("simple_slope", "Bishop"): 1.6224960171169882,
+    ("simple_slope", "Morgenstern-Price"): 1.6207306372336825,
+    ("slope_with_water_table", "Bishop"): 1.3664474674748466,
+    ("slope_with_water_table", "Morgenstern-Price"): 1.3678830306084626,
+    ("clay_crust_with_load", "Bishop"): 1.305122264658733,
     ("clay_crust_with_load", "Morgenstern-Price"): 1.3051437702448394,
-    ("two_layer_cut_left", "Bishop"): 1.8348331871688992,
-    ("two_layer_cut_left", "Morgenstern-Price"): 1.8045533886444847,
+    ("two_layer_cut_left", "Bishop"): 1.8329489917849942,
+    ("two_layer_cut_left", "Morgenstern-Price"): 1.8029560542535878,
 }
 
 # The engine's own defaults where the public ones (D-23, analyse without

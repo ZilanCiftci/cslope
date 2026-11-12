@@ -104,11 +104,26 @@ const FIRST_PASS_CIRCLES: f64 = 11.0;
 
 /// A vertex of the ground where it turns by more than this (30°) is a
 /// break point of a range: the first pass puts a point on it (issue #164).
-/// Chosen by measurement: from 10° to 25° the toe of a 2:1 slope (26.6°)
-/// counted and V026's Morgenstern-Price search fell 2.6 % (further below
-/// Bishop); at 40° fewer imported models gained, and at 50° the toe of a
-/// 1:1 slope (45°) was left out.
+/// Chosen by measurement: with 15° for every break, crests of 21.8° in
+/// V038's entry range raised its Morgenstern-Price search by 1.2 % (by
+/// 1.45 % with its exit range at 15° too), and the 26.6° toe in V034a's
+/// entry range moved its non-circular search; at 40° fewer imported models
+/// gained, and at 50° the toe of a 1:1 slope (45°) was left out.
 const BREAK_MIN_TURN: f64 = std::f64::consts::FRAC_PI_6;
+
+/// In an exit range a toe is a break point already where the ground turns
+/// by more than this (15°), so that the toes of 2:1 (26.6°) and 3:1
+/// (18.4°) slopes get a point (issue #164, decided by the maintainer). A
+/// toe: the ground bends upward there (a concave break) and runs on beyond
+/// it within TOE_LEVEL of level. Critical circles often exit at the toe;
+/// limited to toes in exit ranges, the lower threshold moved neither V038
+/// nor V034a (see BREAK_MIN_TURN).
+const TOE_MIN_TURN: f64 = std::f64::consts::PI / 12.0;
+
+/// The ground beyond a toe is within this (10°) of level. A judgement: the
+/// measurements did not separate it from other values, as the toes of the
+/// verification problems and the imported models have level ground beyond.
+const TOE_LEVEL: f64 = std::f64::consts::PI / 18.0;
 
 /// At most this share of a range's first-pass points is moved onto break
 /// points, the sharpest first: a surveyed ground with many vertices keeps
@@ -287,18 +302,26 @@ impl GroundPath {
 
     /// The break points of the ground inside the path (issue #164): the
     /// vertices strictly between its ends where the ground turns by more
-    /// than BREAK_MIN_TURN, as distances along the path, the sharpest
+    /// than BREAK_MIN_TURN, and on an exit range also the toes that turn by
+    /// more than TOE_MIN_TURN, as distances along the path, the sharpest
     /// first (ties: in path order).
-    fn break_points(&self) -> Vec<f64> {
+    fn break_points(&self, exit: bool) -> Vec<f64> {
         let l = self.len();
         let mut out: Vec<(f64, f64)> = Vec::new();
         for k in 1..self.pts.len() - 1 {
             let (p, q, r) = (self.pts[k - 1], self.pts[k], self.pts[k + 1]);
             let (ax, ay) = (q[0] - p[0], q[1] - p[1]);
             let (bx, by) = (r[0] - q[0], r[1] - q[1]);
-            let turn = js::math::atan2(ax * by - ay * bx, ax * bx + ay * by).abs();
+            // Counterclockwise (> 0) in canonical space, where the path runs
+            // left to right: the ground bends upward, a concave break.
+            let signed = js::math::atan2(ax * by - ay * bx, ax * bx + ay * by);
+            let turn = signed.abs();
+            let toe = exit
+                && turn > TOE_MIN_TURN
+                && signed > 0.0
+                && js::math::atan2(by, bx).abs() <= TOE_LEVEL;
             let s = self.cum[k];
-            if turn > BREAK_MIN_TURN && s > 1e-9 * l && s < l - 1e-9 * l {
+            if (turn > BREAK_MIN_TURN || toe) && s > 1e-9 * l && s < l - 1e-9 * l {
                 out.push((s, turn));
             }
         }
@@ -312,13 +335,13 @@ impl GroundPath {
     /// sharpest break first and each point at most once. At most
     /// BREAK_MAX_SHARE of the points (and never an end) are moved, so a
     /// surveyed ground with many vertices keeps its sharpest ones only.
-    /// `corner_offset`: on an exit range a break point stands for the point
-    /// that far up the ground from it, as the corner rule of
+    /// `exit_offset`: for an exit range, Some(offset): a break point stands
+    /// for the point that far up the ground from it, as the corner rule of
     /// `Slope::search_limits` puts the exit at the toe (a circle exactly
     /// through the corner can just touch it and run on in the soil); at the
     /// foot of a vertical face that is the point `Slope::exit_face_foot`
-    /// gives.
-    fn first_pass_points(&self, n: f64, corner_offset: f64) -> Vec<Pt> {
+    /// gives. None for an entry range.
+    fn first_pass_points(&self, n: f64, exit_offset: Option<f64>) -> Vec<Pt> {
         if n < 3.0 {
             return self.points(n);
         }
@@ -327,7 +350,12 @@ impl GroundPath {
         let mut s: Vec<f64> = (0..count).map(|i| l * i as f64 / (n - 1.0)).collect();
         let mut moved = vec![false; count];
         let max_breaks = js::math::max(1.0, (BREAK_MAX_SHARE * n).floor()) as usize;
-        for b in self.break_points().into_iter().take(max_breaks) {
+        let corner_offset = exit_offset.unwrap_or(0.0);
+        for b in self
+            .break_points(exit_offset.is_some())
+            .into_iter()
+            .take(max_breaks)
+        {
             let mut nearest: Option<usize> = None;
             for i in 1..count - 1 {
                 if !moved[i] && nearest.is_none_or(|j| (s[i] - b).abs() < (s[j] - b).abs()) {
@@ -1507,7 +1535,7 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
             left_coords.push([x, slope.get_external_y_intersection(x)?]);
         }
     } else if let Some(path) = &entry_path {
-        left_coords = path.first_pass_points(num_points_top, 0.0);
+        left_coords = path.first_pass_points(num_points_top, None);
     } else {
         let mut n = 0.0;
         while n < num_points_top {
@@ -1524,7 +1552,7 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
             right_coords.push(slope.exit_ground_point(x)?);
         }
     } else if let Some(path) = &exit_path {
-        right_coords = path.first_pass_points(num_points_bot + 1.0, corner_offset);
+        right_coords = path.first_pass_points(num_points_bot + 1.0, Some(corner_offset));
     } else {
         let mut n = 0.0;
         while n <= num_points_bot {

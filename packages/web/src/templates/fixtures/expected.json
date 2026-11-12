@@ -1,6 +1,6 @@
 {
   "defaults": {
-    "fos": 1.4862118558030408,
+    "fos": 1.48591916955512,
     "fosLabel": "factor of safety"
   },
   "clay-3m": {
@@ -12,7 +12,7 @@
     "fosLabel": "factor of safety"
   },
   "clay-increasing": {
-    "fos": 1.775847466053905,
+    "fos": 1.7758356073479962,
     "fosLabel": "factor of safety"
   },
   "crust-over-clay": {
@@ -24,7 +24,7 @@
     "fosLabel": "factor of safety"
   },
   "clay-road": {
-    "fos": 1.5371901094385743,
+    "fos": 1.539103122967971,
     "fosLabel": "factor of safety"
   },
   "clay-road-no-traffic": {
@@ -36,7 +36,7 @@
     "fosLabel": "factor of safety"
   },
   "three-layers-wide": {
-    "fos": 1.1702446594646072,
+    "fos": 1.17023226466694,
     "fosLabel": "factor of safety"
   },
   "trench-1m": {

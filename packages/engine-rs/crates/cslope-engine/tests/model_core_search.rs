@@ -1083,3 +1083,162 @@ fn a_bend_of_less_than_30_degrees_is_no_break_point() {
         close(p[0], x, 7);
     }
 }
+
+/// n points at equal distances along a polyline, both ends included.
+fn even_along(path: &[Pt], n: usize) -> Vec<Pt> {
+    let cum: Vec<f64> = std::iter::once(0.0)
+        .chain(path.windows(2).scan(0.0, |acc, w| {
+            *acc += (w[1][0] - w[0][0]).hypot(w[1][1] - w[0][1]);
+            Some(*acc)
+        }))
+        .collect();
+    let total = cum[cum.len() - 1];
+    (0..n)
+        .map(|k| {
+            let s = total * k as f64 / (n - 1) as f64;
+            let j = (1..path.len())
+                .find(|&j| s <= cum[j] + 1e-12)
+                .unwrap_or(path.len() - 1);
+            let t = (s - cum[j - 1]) / (cum[j] - cum[j - 1]);
+            let (a, b) = (path[j - 1], path[j]);
+            [a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1])]
+        })
+        .collect()
+}
+
+/// A crest at y = 10 to x = 10, a slope falling `run` m per m of height to
+/// the toe at y = 0, a floor to x = 100.
+fn slope_of(run: f64) -> [Pt; 6] {
+    [
+        [0.0, -10.0],
+        [0.0, 10.0],
+        [10.0, 10.0],
+        [10.0 + 10.0 * run, 0.0],
+        [100.0, 0.0],
+        [100.0, -10.0],
+    ]
+}
+
+#[test]
+fn a_crest_in_an_entry_range_is_a_break_point_from_30_degrees() {
+    // Entry range from x = 1 over the crest (x = 10) to 3 m down the slope.
+    // Just below 30° (a run of 1.80:1, 29.1°) the points stay evenly along
+    // the ground; just above (1.70:1, 30.5°) one lies on the crest.
+    for (run, on_crest) in [(2.0, false), (1.80, false), (1.70, true)] {
+        let coords = slope_of(run);
+        let toe_x = 10.0 + 10.0 * run;
+        let end = [10.0 + 3.0 * run, 7.0];
+        let planes = first_pass_of(&coords, [1.0, end[0], toe_x + 2.0, 55.0]);
+        let entries = grid_points(planes.iter().map(|p| p.lc));
+        assert_eq!(entries.len(), 9, "run {run}");
+        assert_eq!(
+            has_point(&entries, [10.0, 10.0]),
+            on_crest,
+            "run {run}: {entries:?}"
+        );
+        if !on_crest {
+            for (p, q) in entries
+                .iter()
+                .zip(even_along(&[[1.0, 10.0], [10.0, 10.0], end], 9))
+            {
+                close(p[0], q[0], 7);
+                close(p[1], q[1], 7);
+            }
+        }
+    }
+}
+
+#[test]
+fn the_toe_of_a_2_1_and_a_3_1_slope_in_an_exit_range_gets_a_point_just_above_it() {
+    // An exit range from 5 m up the slope to 15 m beyond the toe. A toe (the
+    // ground bends upward and runs on level) is a break point of an exit
+    // range from 15°: the 2:1 (26.6°) and 3:1 (18.4°) toes, and 3.7:1
+    // (15.1°), get a point 1e-5 of the model's width up the slope from
+    // the toe; 3.9:1 (14.4°) does not.
+    let w = 1e-5 * 100.0;
+    for (run, at_toe) in [(2.0, true), (3.0, true), (3.7, true), (3.9, false)] {
+        let coords = slope_of(run);
+        let toe_x = 10.0 + 10.0 * run;
+        let start = [toe_x - 5.0 * run, 5.0];
+        let planes = first_pass_of(&coords, [1.0, 9.0, start[0], toe_x + 15.0]);
+        let exits = grid_points(planes.iter().map(|p| p.rc));
+        assert_eq!(exits.len(), 11, "run {run}: {exits:?}");
+        let face = run.hypot(1.0);
+        let up = [toe_x - w * run / face, w / face];
+        assert_eq!(has_point(&exits, up), at_toe, "run {run}: {exits:?}");
+        if !at_toe {
+            for (p, q) in exits
+                .iter()
+                .zip(even_along(&[start, [toe_x, 0.0], [toe_x + 15.0, 0.0]], 11))
+            {
+                close(p[0], q[0], 7);
+                close(p[1], q[1], 7);
+            }
+        }
+    }
+}
+
+#[test]
+fn a_toe_is_a_concave_break_with_level_ground_beyond_it() {
+    // In an exit range, breaks of less than 30° that are not toes get no
+    // point: a 26.6° crest (convex), and a 1:1 face turning into a 2:1
+    // slope (concave by 18.4°, but the ground beyond falls at 26.6°). A
+    // 2:1 slope turning into a 10:1 one (concave by 20.9°, 5.7° beyond) is
+    // a toe and gets its point.
+    let crest: [Pt; 6] = [
+        [0.0, -20.0],
+        [0.0, 10.0],
+        [40.0, 10.0],
+        [60.0, 0.0],
+        [80.0, 0.0],
+        [80.0, -20.0],
+    ];
+    let planes = first_pass_of(&crest, [1.0, 20.0, 30.0, 50.0]);
+    let exits = grid_points(planes.iter().map(|p| p.rc));
+    assert_eq!(exits.len(), 11, "{exits:?}");
+    for (p, q) in exits
+        .iter()
+        .zip(even_along(&[[30.0, 10.0], [40.0, 10.0], [50.0, 5.0]], 11))
+    {
+        close(p[0], q[0], 7);
+        close(p[1], q[1], 7);
+    }
+    for (beyond, toe) in [(2.0, false), (10.0, true)] {
+        // a 1:1 face from (20, 20) to (30, 10), then `beyond`:1 to y = 0
+        let run = if toe { 2.0 } else { 1.0 };
+        let x1 = 20.0 + 10.0 * run;
+        let x2 = x1 + 10.0 * beyond;
+        let coords: [Pt; 7] = [
+            [0.0, -20.0],
+            [0.0, 20.0],
+            [20.0, 20.0],
+            [x1, 10.0],
+            [x2, 0.0],
+            [x2 + 20.0, 0.0],
+            [x2 + 20.0, -20.0],
+        ];
+        let width = x2 + 20.0;
+        let (a, b) = ([x1 - 4.0 * run, 14.0], [x1 + 4.0 * beyond, 6.0]);
+        let mut s = model(&coords);
+        s.set_analysis_limits(&AnalysisLimitsPatch {
+            entry_left_x: Some(1.0),
+            entry_right_x: Some(19.0),
+            exit_left_x: Some(a[0]),
+            exit_right_x: Some(b[0]),
+        });
+        s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+            .unwrap();
+        let planes = entry_exit_planes(&s).unwrap();
+        let exits = grid_points(planes.iter().map(|p| p.rc));
+        assert_eq!(exits.len(), 11, "beyond {beyond}: {exits:?}");
+        let face = run.hypot(1.0);
+        let up = [x1 - 1e-5 * width * run / face, 10.0 + 1e-5 * width / face];
+        assert_eq!(has_point(&exits, up), toe, "beyond {beyond}: {exits:?}");
+        if !toe {
+            for (p, q) in exits.iter().zip(even_along(&[a, [x1, 10.0], b], 11)) {
+                close(p[0], q[0], 7);
+                close(p[1], q[1], 7);
+            }
+        }
+    }
+}

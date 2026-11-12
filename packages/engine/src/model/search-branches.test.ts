@@ -162,6 +162,20 @@ describe("the first pass", () => {
     expect(s.search.some((p) => at(p.rc, [35, 0]))).toBe(true);
   });
 
+  it("puts a point just above the toe of a 2:1 slope in an exit range, not on its crest in an entry range (#164)", () => {
+    // crest y = 10 to x = 10, a 2:1 slope (26.6°) to the toe at x = 30, floor to 100
+    const s = model([[0, -10], [0, 10], [10, 10], [30, 0], [100, 0], [100, -10]]);
+    s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 16, exitLeftX: 20, exitRightX: 45 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    const at = (p: number[], q: number[]) => Math.abs(p[0] - q[0]) < 1e-7 && Math.abs(p[1] - q[1]) < 1e-7;
+    // a toe counts from 15° in an exit range: 1e-5 of the width up the slope
+    const w = 1e-5 * 100, face = Math.hypot(2, 1);
+    expect(s.search.filter((p) => at(p.rc, [30 - (w * 2) / face, w / face])).length).toBeGreaterThanOrEqual(5);
+    // a crest counts from 30° only: no entry on it
+    expect(s.search.some((p) => at(p.lc, [10, 10]))).toBe(false);
+  });
+
   it("gives a side given as a point its point only (#157)", () => {
     const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
     s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 8, exitLeftX: 32, exitRightX: 32 });
