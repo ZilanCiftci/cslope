@@ -9,23 +9,24 @@ import type { ExcavationParams } from "./excavation";
 
 /**
  * The first visit of the excavation: a complete section, so that the page
- * computes F at once. Typical values: a 2.5 m cut at 1:2 through a dry
- * crust and a soft clay into sand and gravel, which reaches below 3H
- * (no shallow-base note), and a low haul road with traffic 1 m
- * behind the crest; dry.
+ * computes F at once. A trench 3 m deep, 2 m wide at the bottom, with
+ * sides 1:1, through a crust (Mohr-Coulomb, c′ 15 kPa, φ′ 0) and a clay
+ * with Su growing with depth into sand, down to 8.5 m (less than 3H: the
+ * form notes the base); the water 1 m down, and a low haul road with
+ * traffic 1 m behind the crest.
  */
 export const EXCAVATION_DEFAULTS: ExcavationParams = {
   groundLevel: 0,
-  excavationDepth: 2.5,
-  slope: 2,
-  bottomWidth: null,
+  excavationDepth: 3,
+  slope: 1,
+  bottomWidth: 2,
   layers: [
-    { name: "Dry crust", bottomLevel: -1, material: { kind: "undrained", gamma: 17, su: 30 } },
-    { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 15 } },
-    { name: "Sand and gravel", bottomLevel: -9, material: { kind: "drained", gamma: 22, c: 0, phi: 35 } },
+    { name: "Crust", bottomLevel: -1.5, material: { kind: "drained", gamma: 18, c: 15, phi: 0 } },
+    { name: "Clay", bottomLevel: -3.5, material: { kind: "undrained-increasing", gamma: 16.5, su: 18, suRate: 1.2 } },
+    { name: "Sand", bottomLevel: -8.5, material: { kind: "drained", gamma: 20, c: 0, phi: 38 } },
   ],
-  waterLevel: null,
-  road: { distanceFromCrest: 1, width: 4, height: 0.3, fill: { gamma: 18, c: 0, phi: 39 }, trafficLoad: 15 },
+  waterLevel: -1,
+  road: { distanceFromCrest: 1, width: 4, height: 0.3, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: 20 },
 };
 
 export const EXCAVATION_EXAMPLES: Record<string, ExcavationParams> = {

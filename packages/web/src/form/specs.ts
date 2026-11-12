@@ -106,7 +106,7 @@ export const excavationSpec: FormSpec<ExcavationParams> = {
         label: "Haul road behind the crest",
         title: "A fill on the ground behind the crest, with its own material and an optional traffic load.",
         // The first visit's road (EXCAVATION_DEFAULTS).
-        initial: { "road.distanceFromCrest": "1", "road.width": "4", "road.height": "0.3", "road.gamma": "18", "road.c": "0", "road.phi": "39", "road.trafficLoad": "15" },
+        initial: { "road.distanceFromCrest": "1", "road.width": "4", "road.height": "0.3", "road.gamma": "20", "road.c": "0", "road.phi": "38", "road.trafficLoad": "20" },
       },
     },
   ],

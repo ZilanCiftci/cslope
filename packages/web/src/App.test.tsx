@@ -105,12 +105,14 @@ beforeEach(() => {
 describe("App", () => {
   it("opens the excavation's defaults complete and computes F at once, the haul road on", async () => {
     const { requests } = renderApp();
-    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
-    expect(screen.getByRole("button", { name: /^Dry crust/ })).toHaveTextContent("Undrained · 1 m (0 to −1 m) · Su 30 kPa");
-    expect(screen.getByRole("button", { name: /^Sand and gravel/ })).toHaveTextContent("Mohr-Coulomb · 5 m (−4 to −9 m) · c′ 0 kPa, φ′ 35°");
-    expect(field("Excavation depth H (m)").value).toBe("2.5");
-    expect(field("Slope 1:n").value).toBe("2");
+    expect(screen.getByRole("button", { name: /^Crust/ })).toHaveTextContent("Mohr-Coulomb · 1.5 m (0 to −1.5 m) · c′ 15 kPa, φ′ 0°");
+    expect(screen.getByRole("button", { name: /^Clay/ })).toHaveTextContent("Undrained · 2 m (−1.5 to −3.5 m) · Su 18 kPa, +1.2 kPa/m");
+    expect(screen.getByRole("button", { name: /^Sand/ })).toHaveTextContent("Mohr-Coulomb · 5 m (−3.5 to −8.5 m) · c′ 0 kPa, φ′ 38°");
+    expect(field("Excavation depth H (m)").value).toBe("3");
+    expect(field("Slope 1:n").value).toBe("1");
+    expect(field("Bottom width (m)").value).toBe("2");
     // No field is empty: it runs by itself, with the defaults' document.
     await waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0].document).toEqual(excavationDocument(EXCAVATION_DEFAULTS));
@@ -124,15 +126,15 @@ describe("App", () => {
     fireEvent.change(field("Excavation depth H (m)"), { target: { value: "3.5" } });
     expect(field("Excavation depth H (m)").value).toBe("3.5");
     fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
-    expect(field("Excavation depth H (m)").value).toBe("2.5");
+    expect(field("Excavation depth H (m)").value).toBe("3");
     expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
-    expect(screen.getByRole("button", { name: /^Dry crust/ })).toHaveTextContent("Undrained · 1 m (0 to −1 m) · Su 30 kPa");
+    expect(screen.getByRole("button", { name: /^Crust/ })).toHaveTextContent("Mohr-Coulomb · 1.5 m (0 to −1.5 m) · c′ 15 kPa, φ′ 0°");
   });
 
   it("asks for the empty strengths of a plain section without running", async () => {
     plain();
     const { requests } = renderApp();
-    expect(screen.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Excavation" })).toBeInTheDocument();
     await flush();
     expect(screen.getByRole("status")).toHaveTextContent("To get F, fill in 2 empty fields.");
     expect(field("Su (kPa)").value).toBe("");
@@ -235,7 +237,7 @@ describe("App", () => {
   it("undoes a removed layer: back in its place with its values and its color, the focus on its header", async () => {
     const { requests } = renderApp();
     await waitFor(() => expect(requests).toHaveLength(1));
-    const names = () => screen.getAllByRole("button", { name: /^(Dry crust|Clay|Sand and gravel)/ }).map((b) => /^(Dry crust|Clay|Sand and gravel)/.exec(b.textContent ?? "")?.[0]);
+    const names = () => screen.getAllByRole("button", { name: /^(Crust|Clay|Sand)/ }).map((b) => /^(Crust|Clay|Sand)/.exec(b.textContent ?? "")?.[0]);
     // The clay, open, gets its own color and strength.
     fireEvent.click(screen.getByRole("button", { name: /^Clay/ }));
     fireEvent.click(screen.getByRole("button", { name: "Color" }));
@@ -244,15 +246,15 @@ describe("App", () => {
     await waitFor(() => expect(new URLSearchParams(window.location.search).get("layer2.su")).toBe("17"));
     const address = window.location.search;
     fireEvent.click(screen.getByRole("button", { name: "Remove Clay" }));
-    expect(names()).toEqual(["Dry crust", "Sand and gravel"]);
+    expect(names()).toEqual(["Crust", "Sand"]);
     // The message names the layer, with Undo, in the card's live region.
     const live = within(card()).getByText("Removed Clay.").closest("[aria-live]")!;
     expect(live).toHaveAttribute("aria-live", "polite");
     expect(live).toHaveTextContent("Removed Clay. Undo");
     fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
-    expect(names()).toEqual(["Dry crust", "Clay", "Sand and gravel"]);
+    expect(names()).toEqual(["Crust", "Clay", "Sand"]);
     const clay = screen.getByRole("button", { name: /^Clay/ });
-    expect(clay).toHaveTextContent("Undrained · 3 m (−1 to −4 m) · Su 17 kPa");
+    expect(clay).toHaveTextContent("Undrained · 2 m (−1.5 to −3.5 m) · Su 17 kPa, +1.2 kPa/m");
     expect(clay).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: "Color" })).toHaveTextContent("Sienna");
     expect(document.activeElement).toBe(clay);
@@ -280,7 +282,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("checkbox", { name: "Haul road behind the crest" }));
     fireEvent.click(screen.getByRole("button", { name: "+ Add layer" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset to defaults" }));
-    expect(field("Excavation depth H (m)").value).toBe("2.5");
+    expect(field("Excavation depth H (m)").value).toBe("3");
     expect(screen.queryByRole("button", { name: /^Layer 4/ })).toBeNull();
     expect(within(card()).getByText("Reset to the template's defaults.").closest("[aria-live]")).toHaveTextContent("Reset to the template's defaults. Undo");
     fireEvent.click(within(card()).getByRole("button", { name: "Undo" }));
@@ -337,7 +339,7 @@ describe("App", () => {
     fireEvent.click(thumb);
     const sheet = screen.getByRole("dialog", { name: "Section" });
     expect(thumb).toHaveAttribute("aria-expanded", "true");
-    expect(within(sheet).getByRole("img")).toHaveAccessibleName(/^Section of the excavation: .*, and the critical surface of F 1\.234\.$/);
+    expect(within(sheet).getByRole("img")).toHaveAccessibleName(/^Section of the excavation, a trench 2 m wide at the bottom: .*, and the critical surface of F 1\.234\.$/);
     expect(within(sheet).getByText("F 1.234")).toBeInTheDocument();
     // The focus is on Close and stays in the sheet; Escape closes it and gives the focus back to the picture.
     const close = within(sheet).getByRole("button", { name: "Close" });
@@ -595,7 +597,7 @@ describe("App", () => {
     fireEvent.click(button);
     await waitFor(() => expect(files).toHaveLength(1));
     // The document that ran, its result, and the template's title as the model's name.
-    expect(writeProject).toHaveBeenCalledWith(requests[0].document, { criticalSlices: [] }, "Excavation in clay with a haul road");
+    expect(writeProject).toHaveBeenCalledWith(requests[0].document, { criticalSlices: [] }, "Excavation");
     expect(files[0].name).toBe("cslope-excavation.cslp");
     expect(files[0].blob.type).toBe("application/zip");
     expect(new Uint8Array(await files[0].blob.arrayBuffer())).toEqual(new Uint8Array([0x50, 0x4b, 3, 4]));
@@ -609,7 +611,7 @@ describe("App", () => {
     await waitFor(() => expect(requests).toHaveLength(1));
     fireEvent.click(screen.getByRole("button", { name: "Download .cslp" }));
     await waitFor(() => expect(files).toHaveLength(1));
-    expect(writeProject).toHaveBeenCalledWith(requests[0].document, null, "Excavation in clay with a haul road");
+    expect(writeProject).toHaveBeenCalledWith(requests[0].document, null, "Excavation");
     expect(await screen.findByText("Downloaded without a result: F is not computed yet.")).toBeInTheDocument();
   });
 
@@ -619,7 +621,7 @@ describe("App", () => {
     const { requests, writeProject } = renderApp({ answer: (r) => (answer ? complete(r) : null) });
     expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
     answer = false;
-    type("Excavation depth H (m)", "3");
+    type("Excavation depth H (m)", "3.5");
     fireEvent.click(screen.getByRole("button", { name: "Download .cslp" }));
     await waitFor(() => expect(writeProject).toHaveBeenCalledOnce());
     const [doc, result] = vi.mocked(writeProject).mock.calls[0];
@@ -653,11 +655,11 @@ describe("App", () => {
     plain();
     const { requests } = renderApp();
     const picker = screen.getByRole("group", { name: "Template" });
-    const excavation = within(picker).getByRole("button", { name: "Excavation in clay with a haul road" });
+    const excavation = within(picker).getByRole("button", { name: "Excavation" });
     const embankment = within(picker).getByRole("button", { name: "Embankment on clay" });
     expect(excavation).toHaveAttribute("aria-pressed", "true");
     expect(embankment).toHaveAttribute("aria-pressed", "false");
-    expect(document.title).toBe("Excavation in clay with a haul road — cSlope");
+    expect(document.title).toBe("Excavation — cSlope");
     type("Excavation depth H (m)", "4");
     fireEvent.click(embankment);
     expect(screen.getByRole("heading", { level: 1, name: "Embankment on clay" })).toBeInTheDocument();
@@ -683,7 +685,7 @@ describe("App", () => {
     expect(await within(card()).findByText("F 1.234")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /^Section of the embankment: 1 layer, a load of 10 kPa on the crest, and the critical surface of F 1.234\.$/ })).toBeInTheDocument();
     // Back to the excavation as it was left.
-    fireEvent.click(within(picker).getByRole("button", { name: "Excavation in clay with a haul road" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "Excavation" }));
     expect(field("Excavation depth H (m)").value).toBe("4");
   });
 

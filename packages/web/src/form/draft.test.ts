@@ -24,9 +24,9 @@ describe("the form's state", () => {
     const first = initialDraft();
     expect(first.on).toEqual(["road"]);
     expect(first.layers.map((l) => [l.name, l.kind, l.thickness])).toEqual([
-      ["Dry crust", "undrained", "1"],
-      ["Clay", "undrained", "3"],
-      ["Sand and gravel", "mohr-coulomb", "5"],
+      ["Crust", "mohr-coulomb", "1.5"],
+      ["Clay", "undrained", "2"],
+      ["Sand", "mohr-coulomb", "5"],
     ]);
     const f = formState(first);
     expect(f.missing).toEqual([]);
@@ -221,6 +221,49 @@ describe("the form's state", () => {
     d.layers[1].thickness = "18.5";
     d.fields.groundLevel = "2000";
     expect([...formState(d).errors.keys()]).toEqual(["groundLevel"]);
+  });
+
+  it("opens the bare excavation link at the defaults, the same section as the defaults' full link", () => {
+    const full =
+      "t=excavation&ground=0&H=3&slope=1&bottomWidth=2&water=-1&layers=3" +
+      "&layer1.name=Crust&layer1.kind=mohr-coulomb&layer1.t=1.5&layer1.gamma=18&layer1.c=15&layer1.phi=0" +
+      "&layer2.name=Clay&layer2.kind=undrained&layer2.t=2&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
+      "&layer3.name=Sand&layer3.kind=mohr-coulomb&layer3.t=5&layer3.gamma=20&layer3.c=0&layer3.phi=38" +
+      "&road=on&road.distanceFromCrest=1&road.width=4&road.height=0.3&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20";
+    expect(toQuery(fromQuery("?t=excavation"))).toBe(full);
+    expect(formState(fromQuery("?" + full)).params).toEqual(EXCAVATION_DEFAULTS);
+    expect(formState(fromQuery("?t=excavation")).params).toEqual(EXCAVATION_DEFAULTS);
+  });
+
+  it("keeps the meaning of links shared before the defaults changed: a link with layers says every field", () => {
+    // The page's address at the earlier defaults: the same section today.
+    const before =
+      "?t=excavation&ground=0&H=2.5&slope=2&layers=3" +
+      "&layer1.name=Dry+crust&layer1.kind=undrained&layer1.t=1&layer1.gamma=17&layer1.su=30" +
+      "&layer2.name=Clay&layer2.kind=undrained&layer2.t=3&layer2.gamma=17&layer2.su=15" +
+      "&layer3.name=Sand+and+gravel&layer3.kind=mohr-coulomb&layer3.t=5&layer3.gamma=22&layer3.c=0&layer3.phi=35" +
+      "&road=on&road.distanceFromCrest=1&road.width=4&road.height=0.3&road.gamma=18&road.c=0&road.phi=39&road.trafficLoad=15";
+    const earlier: ExcavationParams = {
+      groundLevel: 0,
+      excavationDepth: 2.5,
+      slope: 2,
+      bottomWidth: null,
+      layers: [
+        { name: "Dry crust", bottomLevel: -1, material: { kind: "undrained", gamma: 17, su: 30 } },
+        { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 17, su: 15 } },
+        { name: "Sand and gravel", bottomLevel: -9, material: { kind: "drained", gamma: 22, c: 0, phi: 35 } },
+      ],
+      waterLevel: null,
+      road: { distanceFromCrest: 1, width: 4, height: 0.3, fill: { gamma: 18, c: 0, phi: 39 }, trafficLoad: 15 },
+    };
+    expect("?" + toQuery(draftOf("excavation", earlier))).toBe(before);
+    expect(formState(fromQuery(before)).params).toEqual(earlier);
+    // A link with a few fields: the others stay empty (none is taken from the defaults), the road off.
+    const few = fromQuery("?t=excavation&H=4&layers=1&layer1.kind=undrained&layer1.t=10&layer1.su=20");
+    expect(few.fields).toEqual({ groundLevel: "", excavationDepth: "4", slope: "", bottomWidth: "", waterLevel: "" });
+    expect(few.on).toEqual([]);
+    expect(few.layers.map((l) => [l.thickness, l.gamma, l.su, l.suRate])).toEqual([["10", "", "20", ""]]);
+    expect(formState(few).missing).toEqual(["groundLevel", "slope", "layers.0.gamma"]);
   });
 
   it("opens an unknown template as the excavation", () => {
