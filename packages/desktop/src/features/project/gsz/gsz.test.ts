@@ -1083,3 +1083,93 @@ describe(".gsz export: anisotropy of the undrained strength", () => {
     expect(anisoNotes(make([]))).toEqual([]);
   });
 });
+
+describe(".gsz import: the optimization of an entry and exit search", () => {
+  const optimised = XML.replace("<NumberOfSlicesPerSlip>", "<IsOptimizationOn>true</IsOptimizationOn><NumberOfSlicesPerSlip>");
+  const note = /optimizes the critical surface after the search; the non-circular optimization is turned on/;
+
+  it("turns the non-circular optimization on, with a line in the import message", () => {
+    expect(optimised).not.toBe(XML);
+    const imp = gszToDefinition({ ...parseGszXml(optimised), results: new Map([["short term", parseSlipSurfaceCsv(CSV)]]) }, 1);
+    expect(imp.options.nonCircularOptimization).toBe(true);
+    expect(imp.definition.analysisLimits).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 });
+    expect(imp.notes.join(" ")).toMatch(note);
+    // the file's critical surface is optimized, not a circle: not carried over
+    expect(imp.reference).toBeUndefined();
+    expect(imp.notes.join(" ")).toMatch(/not a circle/);
+  });
+
+  it("leaves it off without the flag or with the flag false", () => {
+    for (const xml of [XML, XML.replace("<NumberOfSlicesPerSlip>", "<IsOptimizationOn>false</IsOptimizationOn><NumberOfSlicesPerSlip>")]) {
+      const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+      expect(imp.options.nonCircularOptimization).toBeUndefined();
+      expect(imp.notes.join(" ")).not.toMatch(note);
+    }
+  });
+
+  it("follows the analysis a FromOther search takes its slip surfaces from", () => {
+    // analysis 3 takes its slip surfaces from its parent, "Short term"; its own flag is not read
+    const withOther = (base: string, own: string) =>
+      base
+        .replace("</Analyses>", "<Analysis><ID>3</ID><Name>Probability</Name><Kind>Slope stability</Kind><ParentID>1</ParentID><Method>Spencer</Method><GeometryId>1</GeometryId></Analysis></Analyses>")
+        .replace("</Contexts>", '<Context><AnalysisID>3</AnalysisID><GeometryUsesMaterials Len="2"><GeometryUsesMaterial ID="Regions-1" Entry="1" /><GeometryUsesMaterial ID="Regions-2" Entry="2" /></GeometryUsesMaterials></Context></Contexts>')
+        .replace("</StabilityItems>", `<StabilityItem><AnalysisID>3</AnalysisID><Entry><InitialInputInfo><Option>Parent</Option></InitialInputInfo><SlipSurface><Option>FromOther</Option>${own}<EntryExit><LeftSideLeftPt X="0" Y="10" /><LeftSideRightPt X="2" Y="10" /><RightSideLeftPt X="28" Y="5" /><RightSideRightPt X="30" Y="5" /></EntryExit></SlipSurface></Entry></StabilityItem></StabilityItems>`);
+    const on = gszToDefinition({ ...parseGszXml(withOther(optimised, "")), results: new Map() }, 3);
+    expect(on.options.nonCircularOptimization).toBe(true);
+    expect(on.notes.join(" ")).toMatch(note);
+    const off = gszToDefinition({ ...parseGszXml(withOther(XML, "<IsOptimizationOn>true</IsOptimizationOn>")), results: new Map() }, 3);
+    expect(off.options.nonCircularOptimization).toBeUndefined();
+    expect(off.notes.join(" ")).not.toMatch(note);
+  });
+
+  it("leaves the block search as it was: the option on, without the line", () => {
+    const xml = XML.replace('<DataPoint Number="5" X="5" Y="10" />', '<DataPoint Number="5" X="5" Y="10" /><DataPoint Number="6" X="6" Y="6" /><DataPoint Number="7" X="6" Y="3" /><DataPoint Number="8" X="10" Y="3" /><DataPoint Number="9" X="18" Y="4" /><DataPoint Number="10" X="18" Y="2" /><DataPoint Number="11" X="24" Y="2" />')
+      .replace("<Option>EntryExit</Option>", '<Option>Block</Option><Block><LeftGrid Angle1="115" Angle2="135" PointUL="6" PointLL="7" PointLR="8" /><RightGrid Angle1="30" Angle2="45" PointUL="9" PointLL="10" PointLR="11" /></Block><IsOptimizationOn>true</IsOptimizationOn>');
+    const imp = gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1);
+    expect(imp.options).toMatchObject({ searchMethod: "block", nonCircularOptimization: true });
+    expect(imp.definition.analysisLimits).toBeUndefined();
+    expect(imp.notes.join(" ")).not.toMatch(note);
+  });
+
+  it("writes the flag for an entry and exit search with the option on, and a round trip keeps it", async () => {
+    const imp = gszToDefinition({ ...parseGszXml(optimised), results: new Map() }, 1);
+    const model = modelFromDefinition(imp.definition, { id: "o", name: "O", options: imp.options });
+    expect(model.options.nonCircularOptimization).toBe(true);
+    expect(modelToGszXml(model).xml).toContain("<IsOptimizationOn>true</IsOptimizationOn>");
+    const [back] = await gszImports(modelToGsz(model).bytes, "O.gsz");
+    expect(back.options.nonCircularOptimization).toBe(true);
+    // off: not written
+    const plain = modelFromDefinition(imp.definition, { id: "p", name: "P" });
+    expect(modelToGszXml(plain).xml).not.toMatch(/IsOptimizationOn/);
+    const [plainBack] = await gszImports(modelToGsz(plain).bytes, "P.gsz");
+    expect(plainBack.options.nonCircularOptimization).toBeUndefined();
+  });
+});
+
+describe(".gsz import: an entry or exit given as a point", () => {
+  const RANGES = '<LeftSideLeftPt X="1" Y="10" /><LeftSideRightPt X="9" Y="10" />\n            <RightSideLeftPt X="21" Y="5" /><RightSideRightPt X="29" Y="5" />';
+  const withEntryExit = (inner: string) => {
+    expect(XML).toContain(RANGES);
+    return XML.replace(RANGES, inner);
+  };
+  const limits = (xml: string) => gszToDefinition({ ...parseGszXml(xml), results: new Map() }, 1).definition.analysisLimits;
+
+  it("takes the first point of a side with option Point, also when the file has a second point for it", () => {
+    // the right side (the exit, sliding left to right)
+    expect(limits(withEntryExit(`<RightOption>Point</RightOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 21 });
+    // the left side (the entry)
+    expect(limits(withEntryExit(`<LeftOption>Point</LeftOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 1, exitLeftX: 21, exitRightX: 29 });
+    // both
+    expect(limits(withEntryExit(`<LeftOption>Point</LeftOption><RightOption>Point</RightOption>${RANGES}`))).toEqual({ entryLeftX: 1, entryRightX: 1, exitLeftX: 21, exitRightX: 21 });
+  });
+
+  it("keeps a side with option Range, or without an option, as a range", () => {
+    const range = { entryLeftX: 1, entryRightX: 9, exitLeftX: 21, exitRightX: 29 };
+    expect(limits(withEntryExit(`<LeftOption>Range</LeftOption><RightOption>Range</RightOption>${RANGES}`))).toEqual(range);
+    expect(limits(XML)).toEqual(range);
+  });
+
+  it("takes a side with option Point and no second point as that point", () => {
+    expect(limits(withEntryExit('<LeftOption>Point</LeftOption><LeftSideLeftPt X="3" Y="10" /><RightOption>Point</RightOption><RightSideLeftPt X="24" Y="5" />'))).toEqual({ entryLeftX: 3, entryRightX: 3, exitLeftX: 24, exitRightX: 24 });
+  });
+});

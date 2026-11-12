@@ -422,6 +422,8 @@ ${item.join("\n")}
     (opts.minSlipArea ?? 0) > 0 ? `          <MinimumVolume>${n(opts.minSlipArea!)}</MinimumVolume>\n` : "",
     (opts.minSlipDepth ?? 0) > 0 ? `          <MinimumDepth>${n(opts.minSlipDepth!)}</MinimumDepth>\n` : "",
   ].join("");
+  // the optimization of the critical surface after an entry and exit search; left out when off
+  const optimiseXml = !given && opts.nonCircularOptimization === true ? "          <IsOptimizationOn>true</IsOptimizationOn>\n" : "";
   const waterOption = main ? (bBarXml.length > 0 ? "PiezoSurfaceBbar" : "PiezoSurface") : undefined;
 
   const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -492,7 +494,7 @@ ${slipXml}          <EntryExit>
           </EntryExit>
 ${axisXml}${rtl ? `          <DirectionOfSlip>RightToLeft</DirectionOfSlip>
 ` : ""}${fullyXml}          <NumberOfSlicesPerSlip>${Math.round(opts.slices ?? 30)}</NumberOfSlicesPerSlip>
-${limitsXml}        </SlipSurface>
+${optimiseXml}${limitsXml}        </SlipSurface>
 ${list("LineLoadPoints", lineLoadXml)}${list("Surcharges", surchargeXml)}${seismicXml}${crackXml}${list("PiezometricSurfaces", piezoXml)}${list("MaterialUsesPiezs", usesXml)}${list("MaterialUsesBBarParams", bBarXml)}      </Entry>
     </StabilityItem>
   </StabilityItems>

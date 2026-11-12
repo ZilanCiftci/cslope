@@ -420,9 +420,10 @@ export function parseGszXml(xml: string): Omit<GszFile, "results"> {
     const xOf = (tag: string) => num(child(ee, tag)?.getAttribute("X"));
     const [l1, l2Given, r1, r2Given] = ["LeftSideLeftPt", "LeftSideRightPt", "RightSideLeftPt", "RightSideRightPt"].map(xOf);
     // An entry or exit given as a single point (LeftOption / RightOption
-    // "Point") has only its first point.
-    const l2 = /point/i.test(childText(ee, "LeftOption") ?? "") ? (l2Given ?? l1) : l2Given;
-    const r2 = /point/i.test(childText(ee, "RightOption") ?? "") ? (r2Given ?? r1) : r2Given;
+    // "Point") has only its first point, also when the file still carries a
+    // second one for that side.
+    const l2 = /point/i.test(childText(ee, "LeftOption") ?? "") ? l1 : l2Given;
+    const r2 = /point/i.test(childText(ee, "RightOption") ?? "") ? r1 : r2Given;
     const seis = child(entry, "Seismic");
     const input = child(entry, "InitialInputInfo");
     // the path names the analysis in quotes: ;;"name";(last)
