@@ -763,6 +763,11 @@ export function gszToDefinition(file: GszFile, analysisId: number, fileName = "g
       entryLeftX: entry[0] * scale.len, entryRightX: entry[1] * scale.len,
       exitLeftX: exit[0] * scale.len, exitRightX: exit[1] * scale.len,
     };
+    // the file optimizes its critical circle after the search
+    if (stab.optimised) {
+      options.nonCircularOptimization = true;
+      notes.push("The file optimizes the critical surface after the search; the non-circular optimization is turned on.");
+    }
   } else if (stab && /fully/i.test(stab.slipOption ?? "") && stab.fullySpecified.length > 0) {
     // the file's own surfaces, analysed alone (below)
   } else if (stab?.block && /block/i.test(stab.slipOption ?? "")) {
