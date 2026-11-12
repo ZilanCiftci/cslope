@@ -2,10 +2,13 @@
  * cSlope verification report.
  *
  * Runs every published verification problem (packages/engine/src/
- * verification/cases.ts) through the engine and writes a PDF in the style of the verification
- * manuals of commercial programs: summary table, then one section per problem with
- * a figure (geometry, materials, water, loads, critical surface), the
- * material table and published vs computed factors of safety.
+ * verification/cases.ts) through the engine and writes a PDF: a summary of
+ * the errors against the other programs, the literature and the finite
+ * element references (the statistics of VERIFICATION-LOG.md, computed here
+ * from the results), then one section per problem with a figure (geometry,
+ * materials, water, loads, critical surface), the material table and one
+ * row per analysis with every comparison, and the full list of results in
+ * an appendix.
  *
  *   bun run verification-report            (from packages/desktop)
  *   bun scripts/verification-report.ts [output.pdf] [--public]
@@ -47,9 +50,12 @@ import {
   presentedAnalyses,
   femAgrees,
   femDeviation,
+  type FemReference,
 } from "@cslope/engine/verification";
 import type { Slope } from "@cslope/engine";
 import { findForbiddenNames } from "../../website/scripts/forbidden-names";
+import { points as logPoints, stats as logStats } from "../../website/scripts/verification-log";
+import type { PublishedValue, VerificationData, VerificationProblem, VerificationResult } from "../../website/src/content/verification-types";
 import { freeWaterPolygons } from "../src/utils/piezo";
 import { POND_COLOR, POND_OPACITY } from "../src/features/rendering/style-spec";
 
@@ -123,10 +129,10 @@ const MATERIAL_FILLS: [number, number, number][] = [
   [170, 220, 210],
 ];
 
-const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
 pdf.setProperties({
-  title: "cSlope verification report",
-  subject: "Verification of cSlope against published slope stability problems",
+  title: "cSlope verification manual",
+  subject: "cSlope's factors of safety on published slope stability problems, against the literature and other programs",
   author: "Ibirico",
   creator: "cSlope",
 });
@@ -171,7 +177,10 @@ const lineH = (size: number) => size * 0.42;
 
 function paragraph(text: string, size = 9.5, style: "normal" | "bold" | "italic" = "normal", color = INK, width = CONTENT_W, x = M) {
   font(size, style, color);
-  const lines = pdf.splitTextToSize(text, width) as string[];
+  // A number keeps its unit on its line ("1 %", "20 m").
+  const lines = pdf.splitTextToSize(text.replace(/(\d) (%|m\b|kPa\b)/g, "$1\u00a0$2"), width) as string[];
+  // No single line of a paragraph alone at the foot of a page.
+  ensure(Math.min(lines.length, 2) * (lineH(size) + 0.6) + 0.4);
   for (const l of lines) {
     ensure(lineH(size) + 1);
     pdf.text(l, x, y, { baseline: "top" });
@@ -179,20 +188,42 @@ function paragraph(text: string, size = 9.5, style: "normal" | "bold" | "italic"
   }
 }
 
-function heading(text: string, level: 1 | 2) {
+/** Contents entries (level 1 and the summary's subsections) and PDF bookmarks. */
+const contents: { level: 1 | 2; text: string; page: number }[] = [];
+const outlineParents = new Map<string, unknown>();
+const currentPage = () => pdf.getNumberOfPages();
+
+/**
+ * A heading, kept with at least `keep` mm of what follows it. `toc` puts it
+ * in the contents; every level 1 heading is a bookmark, a level 2 one under
+ * `bookmarkUnder` when given.
+ */
+function heading(text: string, level: 1 | 2, opts: { toc?: boolean; keep?: number; bookmarkUnder?: string } = {}) {
   const size = level === 1 ? 15 : 12;
-  ensure(level === 1 ? 14 : 10);
+  font(size, "bold", ACCENT);
+  const lines = pdf.splitTextToSize(text, CONTENT_W) as string[];
+  ensure(lines.length * (lineH(size) + 1) + (opts.keep ?? (level === 1 ? 30 : 24)));
   if (level === 1) y += 2;
   font(size, "bold", ACCENT);
-  pdf.text(text, M, y, { baseline: "top" });
-  y += lineH(size) + 1.5;
+  for (const l of lines) {
+    pdf.text(l, M, y, { baseline: "top" });
+    y += lineH(size) + 1;
+  }
+  y += 0.5;
   if (level === 1) {
     pdf.setDrawColor(...ACCENT);
     pdf.setLineWidth(0.4);
     pdf.line(M, y, PAGE_W - M, y);
     y += 3;
   }
+  if (opts.toc ?? level === 1) contents.push({ level, text, page: currentPage() });
+  if (level === 1) outlineParents.set(text, pdf.outline.add(null, text, { pageNumber: currentPage() }));
+  else if (opts.bookmarkUnder) pdf.outline.add(outlineParents.get(opts.bookmarkUnder) ?? null, text, { pageNumber: currentPage() });
 }
+
+/** Links to a problem's page, drawn when every problem has its page. */
+const problemPage = new Map<string, number>();
+const pendingLinks: { page: number; x: number; y: number; w: number; h: number; id: string }[] = [];
 
 interface Column {
   title: string;
@@ -205,11 +236,19 @@ interface CellMeta {
   text?: string;
   color?: RGB;
   bold?: boolean;
+  italic?: boolean;
   swatch?: RGB;
+  /** A problem id: the cell links to its page. */
+  link?: string;
 }
 type Cell = string | (CellMeta & { text: string });
 
-function table(columns: Column[], rows: Cell[][], size = 8.5) {
+/**
+ * A table. The header repeats after a page break, and a row never splits.
+ * `groupStarts[i]` false keeps row i on the page of the row before it (the
+ * sub-rows of one analysis); a rule is drawn only above a group.
+ */
+function table(columns: Column[], rows: Cell[][], size = 8.5, groupStarts?: boolean[]) {
   const rowH = lineH(size) + 2.6;
   const drawHeader = () => {
     pdf.setFillColor(...HEAD_BG);
@@ -224,25 +263,42 @@ function table(columns: Column[], rows: Cell[][], size = 8.5) {
     y += rowH;
   };
   const hasHeader = columns.some((c) => c.title !== "");
-  ensure(rowH * 2);
-  if (hasHeader) drawHeader();
-  for (const row of rows) {
-    // Wrap the cells, row height = tallest cell.
-    font(size);
-    const cells = row.map((cell, i) => {
+  // Wrap the cells, row height = tallest cell.
+  font(size);
+  const wrapped = rows.map((row) =>
+    row.map((cell, i) => {
       const text = typeof cell === "string" ? cell : cell.text;
-      return pdf.splitTextToSize(text, columns[i].width - 3) as string[];
-    });
-    const h = Math.max(...cells.map((c) => c.length)) * (lineH(size) + 0.5) + 2.1;
-    if (y + h > BOTTOM) {
+      return pdf.splitTextToSize(text, columns[i].width - 3 - (typeof cell !== "string" && cell.swatch ? 5 : 0)) as string[];
+    }),
+  );
+  const heights = wrapped.map((cells) => Math.max(...cells.map((c) => c.length)) * (lineH(size) + 0.5) + 2.1);
+  const starts = (i: number) => !groupStarts || groupStarts[i] !== false;
+  const groupHeight = (i: number) => {
+    let h = heights[i];
+    for (let k = i + 1; k < rows.length && !starts(k); k++) h += heights[k];
+    return h;
+  };
+  ensure((hasHeader ? rowH : 0) + Math.min(groupHeight(0) || rowH, BOTTOM - TOP - rowH));
+  if (hasHeader) drawHeader();
+  rows.forEach((row, ri) => {
+    const cells = wrapped[ri];
+    const h = heights[ri];
+    const need = starts(ri) ? Math.min(groupHeight(ri), BOTTOM - TOP - rowH) : h;
+    if (y + need > BOTTOM) {
       newPage();
       if (hasHeader) drawHeader();
+    }
+    if (ri > 0 && starts(ri)) {
+      pdf.setDrawColor(...RULE);
+      pdf.setLineWidth(0.15);
+      pdf.line(M, y, PAGE_W - M, y);
     }
     let x = M;
     row.forEach((cell, i) => {
       const c = columns[i];
       const meta: CellMeta = typeof cell === "string" ? {} : cell;
-      font(size, meta.bold ? "bold" : "normal", meta.color ?? INK);
+      if (meta.link) pendingLinks.push({ page: currentPage(), x, y, w: c.width, h, id: meta.link });
+      font(size, meta.bold ? "bold" : meta.italic ? "italic" : "normal", meta.color ?? (meta.link ? ACCENT : INK));
       let tx = c.align === "right" ? x + c.width - 1.5 : c.align === "center" ? x + c.width / 2 : x + 1.5;
       if (meta.swatch) {
         pdf.setFillColor(...meta.swatch);
@@ -257,10 +313,10 @@ function table(columns: Column[], rows: Cell[][], size = 8.5) {
       x += c.width;
     });
     y += h;
-    pdf.setDrawColor(...RULE);
-    pdf.setLineWidth(0.15);
-    pdf.line(M, y, PAGE_W - M, y);
-  }
+  });
+  pdf.setDrawColor(...RULE);
+  pdf.setLineWidth(0.15);
+  pdf.line(M, y, PAGE_W - M, y);
   y += 3;
 }
 
@@ -282,7 +338,7 @@ function describeModel(model: MaterialModel | undefined, u: Units): { kind: stri
   const g = (v: number) => (Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(2));
   switch (model.kind) {
     case "mohr-coulomb": {
-      let c = `c' = ${g(model.cohesion)}`;
+      let c = `c′ = ${g(model.cohesion)}`;
       if (model.cohesionRateOfChange) c += `, +${g(model.cohesionRateOfChange)}/${u.length} below y = ${g(model.cohesionRefDepth ?? 0)}`;
       return { kind: "Mohr-Coulomb", gamma: g(model.unitWeight), strength: c, phi: `${g(model.frictionAngle)}°` };
     }
@@ -371,15 +427,16 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   y0 -= padY;
   y1 += padY * 1.6;
 
-  ensure(height + 14);
+  const fw = CONTENT_W - 14;
+  const s = Math.min(fw / (x1 - x0), height / (y1 - y0));
+  // The box is as tall as the model drawn in it: no empty band above and below a flat slope.
+  const fh = (y1 - y0) * s;
+  ensure(fh + 26);
   y += 6; // room for the axis label above the plot
   const fx = M + 12;
   const fy = y;
-  const fw = CONTENT_W - 14;
-  const fh = height;
-  const s = Math.min(fw / (x1 - x0), fh / (y1 - y0));
   const ox = fx + (fw - (x1 - x0) * s) / 2;
-  const oy = fy + (fh - (y1 - y0) * s) / 2;
+  const oy = fy;
   const P = (x: number, yy: number): Pt => [ox + (mx(x) - x0) * s, oy + (y1 - yy) * s];
 
   // Material regions.
@@ -591,7 +648,74 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   pdf.text(`x (${units.length})`, ox + (x1 - x0) * s, ay0 + 5, { align: "right", baseline: "top" });
   pdf.text(`y (${units.length})`, ax0 - 1, oy - 1.5, { align: "center", baseline: "bottom" });
 
-  y = Math.max(fy + fh, ay0 + 6) + 3;
+  y = Math.max(fy + fh, ay0 + 6) + 4;
+  // Legend: one sample per kind of line drawn, so the figure reads in greyscale too.
+  const legend: { text: string; draw: (x: number, yy: number) => void }[] = [];
+  if (plane) {
+    legend.push({
+      text: plane.points ? "slip surface" : "slip circle",
+      draw: (x, yy) => {
+        pdf.setDrawColor(...SURFACE);
+        pdf.setLineWidth(0.55);
+        pdf.line(x, yy, x + 6, yy);
+      },
+    });
+  }
+  if (waterLines.length) {
+    legend.push({
+      text: "piezometric line",
+      draw: (x, yy) => {
+        pdf.setDrawColor(...WATER);
+        pdf.setLineWidth(0.45);
+        pdf.line(x, yy, x + 6, yy);
+      },
+    });
+  }
+  if ((canon.udls ?? []).length || (canon.lineLoads ?? []).length) {
+    legend.push({
+      text: "load",
+      draw: (x, yy) => {
+        pdf.setDrawColor(...LOAD);
+        pdf.setFillColor(...LOAD);
+        pdf.setLineWidth(0.3);
+        pdf.line(x + 3, yy - 1.6, x + 3, yy + 0.2);
+        pdf.triangle(x + 2.2, yy + 0.1, x + 3.8, yy + 0.1, x + 3, yy + 1.4, "F");
+      },
+    });
+  }
+  if ((canon.reinforcements ?? []).length) {
+    legend.push({
+      text: "reinforcement",
+      draw: (x, yy) => {
+        pdf.setDrawColor(142, 68, 173);
+        pdf.setLineWidth(0.35);
+        pdf.line(x, yy, x + 6, yy);
+      },
+    });
+  }
+  if ((canon.piles ?? []).length) {
+    legend.push({
+      text: "pile",
+      draw: (x, yy) => {
+        pdf.setDrawColor(93, 64, 55);
+        pdf.setLineWidth(0.8);
+        pdf.line(x, yy, x + 6, yy);
+      },
+    });
+  }
+  if (legend.length) {
+    font(7, "normal", MUTED);
+    const widths = legend.map((l) => 8 + pdf.getTextWidth(l.text));
+    const total = widths.reduce((a, b) => a + b, 0) + 5 * (legend.length - 1);
+    let lx = PAGE_W / 2 - total / 2;
+    legend.forEach((l, k) => {
+      l.draw(lx, y + 1.2);
+      font(7, "normal", MUTED);
+      pdf.text(l.text, lx + 8, y + 1.2, { baseline: "middle" });
+      lx += widths[k] + 5;
+    });
+    y += 4.5;
+  }
   font(8, "italic", MUTED);
   pdf.text(label, PAGE_W / 2, y, { align: "center", baseline: "top" });
   y += 6;
@@ -623,10 +747,10 @@ function evaluate(c: VerificationCase): CaseResult {
     const diff = fos == null ? NaN : ((fos - check.published) / check.published) * 100;
     return { check, fos, diff, pass: fos != null && agrees(check, fos) };
   });
-  // An analysis without checks runs a published value's method: run it
-  // for the public edition, which shows it next to that value.
+  // An analysis without checks runs a published value's method: run it,
+  // so that the value is compared (as on the website).
   const analyses = presentedAnalyses(c).map((a) =>
-    a.checks.length ? results[a.checks[0]].fos : PUBLIC ? runVerification(c.definition, a.method, a.options).fos : null,
+    a.checks.length ? results[a.checks[0]].fos : runVerification(c.definition, a.method, a.options).fos,
   );
   // A problem checked by finite elements only has no limit equilibrium
   // analysis: its figure shows the geometry without a surface.
@@ -655,11 +779,11 @@ for (const rc of RELIABILITY) {
   console.log(`  ${rc.id.padEnd(8)} ${results.map((x) => `${x.quantity} ${fmt(x.computed)}`).join("  ")}`);
 }
 const RELIABILITY_LABELS: Record<ReliabilityCheckResult["quantity"], string> = {
-  fos: "FOS",
+  fos: "F",
   "beta-taylor": "β lognormal (Taylor series)",
   "pf-taylor": "Pf lognormal (Taylor series)",
   "beta-mc": "β lognormal (Monte Carlo)",
-  "pf-mc": "Pf, share FOS < 1 (Monte Carlo)",
+  "pf-mc": "Pf, share F < 1 (Monte Carlo)",
 };
 
 /**
@@ -697,208 +821,576 @@ const nChecks = allChecks.length + reliabilityRows.length;
 const nPass = allChecks.filter((r) => r.pass).length + reliabilityRows.filter((r) => r.pass).length;
 // Failing checks that wait for an engine change (counted as not passing).
 const nPending = allChecks.filter((r) => !r.pass && r.check.pending).length;
-const absDiffs = allChecks.map((r) => Math.abs(r.diff)).filter(Number.isFinite);
-const meanAbs = absDiffs.reduce((a, b) => a + b, 0) / absDiffs.length;
-// The public edition presents, per problem, the sources' values, the other
-// programs' range and cSlope's result for each analysis (presentation.ts).
+// Per problem, the sources' values, the other programs' range and cSlope's
+// result for each analysis (presentation.ts).
 const nPublished = CASES.reduce((n, c) => n + paperValues(c).length, 0);
 const nAnalyses = CASES.reduce((n, c) => n + presentedAnalyses(c).length, 0);
 /** cSlope's result for each analysis. */
 const analysisRows = (r: CaseResult) => presentedAnalyses(r.c).map((a, j) => ({ a, fos: r.analyses[j] }));
-/** cSlope's result for a published value, when cSlope has its method. */
-function paperResult(r: CaseResult, analysis: string | undefined): string {
-  const row = analysisRows(r).find(({ a }) => a.label === analysis);
-  return row ? fmt(row.fos ?? NaN) : "–";
-}
-const maxAbs = Math.max(...absDiffs);
+const PENDING: [number, number, number] = [196, 120, 20];
+/** Pass, Fail, or Pending for a failing check that waits for an engine change (internal edition only). */
+const statusCell = (pass: boolean, pending?: string): Cell =>
+  pass ? { text: "Pass", color: PASS, bold: true } : pending ? { text: "Pending", color: PENDING, bold: true } : { text: "Fail", color: FAIL, bold: true };
 
-// Cover.
+// ── The comparisons ──────────────────────────────────────────────────
+//
+// Each problem as the website's table has it (generate-data.ts): the values
+// its sources publish, each with cSlope's result for the same method, and
+// each analysis with cSlope's result and the other programs' range. The
+// limit equilibrium results are this run's; the finite element results,
+// which take minutes, are read from the committed table.
+
+const FEM_LABEL = "Strength reduction (FE)";
+const DATA_FILE = path.join(REPO, "packages/website/src/content/generated/verification.json");
+const committed = fs.existsSync(DATA_FILE) ? (JSON.parse(fs.readFileSync(DATA_FILE, "utf-8")) as VerificationData) : null;
+const committedById = new Map((committed?.problems ?? []).map((p) => [p.id, p]));
+const round4 = (x: number | null | undefined) => (x == null || !Number.isFinite(x) ? null : Number(x.toFixed(4)));
+/** The site and the public edition name no other program, not even by letter. */
+const femSource = (ref: FemReference) => (isProgramSource(ref.source) ? "another program's verification manual" : ref.source);
+
+type ProblemView = Pick<VerificationProblem, "id" | "published" | "results" | "fem">;
+
+function view(r: CaseResult): ProblemView {
+  const { c } = r;
+  const analyses = presentedAnalyses(c);
+  // The same expressions as generate-data.ts, so that the two can be compared.
+  let published: PublishedValue[] = paperValues(c).map(({ analysis, ...v }) => {
+    const j = analyses.findIndex((a) => a.label === analysis);
+    return j >= 0 ? { ...v, analysis, computed: round4(r.analyses[j]) } : { ...v, computed: null };
+  });
+  const results: VerificationResult[] = analyses.map((a, j) => ({
+    method: a.label,
+    computed: round4(r.analyses[j]),
+    programs: a.programs && { min: a.programs.min, max: a.programs.max },
+  }));
+  if (!c.fem) return { id: c.id, published, results };
+  const table = committedById.get(c.id);
+  const computed = table?.results.find((x) => x.method === FEM_LABEL)?.computed ?? null;
+  published = published.slice();
+  for (const ref of c.fem.references) {
+    const source = femSource(ref);
+    const j = published.findIndex((v) => v.value === ref.value && v.source === source);
+    const disputed = ref.disputed ? { disputed: ref.disputed } : {};
+    if (j >= 0) published[j] = { ...published[j], ...disputed, analysis: FEM_LABEL, computed };
+    else published.push({ value: ref.value, ...(ref.upper != null ? { upper: ref.upper } : {}), method: ref.method, source, ...disputed, analysis: FEM_LABEL, computed });
+  }
+  results.push({ method: FEM_LABEL, computed, programs: null });
+  return { id: c.id, published, results, ...(table?.fem ? { fem: table.fem } : {}) };
+}
+
+const views = caseResults.map(view);
+const caseById = new Map(CASES.map((c) => [c.id, c]));
+const sectionOf = new Map(CASES.map((c, i) => [c.id, `3.${i + 1}`]));
+
+// The committed table is the website's: say when it no longer matches this run.
+if (!committed) {
+  console.warn(`No ${path.relative(REPO, DATA_FILE)}: the report has no finite element results.`);
+} else {
+  const stale = views.filter((v) => {
+    const p = committedById.get(v.id);
+    return !p || JSON.stringify([p.published, p.results]) !== JSON.stringify([v.published, v.results]);
+  });
+  if (stale.length) {
+    console.warn(
+      `The committed verification table differs from this run on ${stale.length} problem(s): ${stale.slice(0, 10).map((v) => v.id).join(", ")}${stale.length > 10 ? ", …" : ""}. Regenerate it (bun scripts/generate-data.ts in packages/website).`,
+    );
+  } else {
+    console.log("The committed verification table matches this run.");
+  }
+}
+
+/** The midpoint of the other programs' range, the reference of the statistics (VERIFICATION-LOG.md). */
+const midpoint = (r: { min: number; max: number }) => (r.min + r.max) / 2;
+const relError = (computed: number, reference: number) => ((computed - reference) / reference) * 100;
+
+/** A finite element result's reference in its problem's setup. */
+function femReferenceOf(id: string, v: PublishedValue): FemReference | undefined {
+  return caseById.get(id)?.fem?.references.find((ref) => ref.value === v.value && femSource(ref) === v.source);
+}
+
+interface Point {
+  id: string;
+  analysis: string;
+  reference: string;
+  source: string;
+  computed: number;
+  /** Relative error in percent; for a pair of finite element bounds, from the nearer bound and 0 between them. */
+  error: number;
+}
+
+const programPoints: Point[] = [];
+const literaturePoints: Point[] = [];
+const femPoints: Point[] = [];
+for (const v of views) {
+  for (const res of v.results) {
+    if (res.programs && res.computed != null) {
+      programPoints.push({ id: v.id, analysis: res.method, reference: formatRange(res.programs), source: "other programs", computed: res.computed, error: relError(res.computed, midpoint(res.programs)) });
+    }
+  }
+  for (const p of v.published) {
+    // A disputed value measures its source, not cSlope: shown, not counted.
+    if (p.computed == null || p.disputed || !p.analysis) continue;
+    if (p.analysis === FEM_LABEL) {
+      const ref = femReferenceOf(v.id, p);
+      const error = ref ? femDeviation(ref, p.computed) * 100 : relError(p.computed, p.value);
+      femPoints.push({ id: v.id, analysis: p.analysis, reference: formatPaperValue(p), source: p.source, computed: p.computed, error });
+    } else {
+      literaturePoints.push({ id: v.id, analysis: p.analysis, reference: formatPaperValue(p), source: p.source, computed: p.computed, error: relError(p.computed, p.value) });
+    }
+  }
+}
+
+interface Stat {
+  n: number;
+  mean: number;
+  meanAbs: number;
+  rms: number;
+  maxAbs: number;
+}
+function statOf(ps: Point[]): Stat {
+  const e = ps.map((p) => p.error);
+  const n = e.length;
+  if (n === 0) return { n, mean: 0, meanAbs: 0, rms: 0, maxAbs: 0 };
+  return {
+    n,
+    mean: e.reduce((s, x) => s + x, 0) / n,
+    meanAbs: e.reduce((s, x) => s + Math.abs(x), 0) / n,
+    rms: Math.sqrt(e.reduce((s, x) => s + x * x, 0) / n),
+    maxAbs: Math.max(...e.map(Math.abs)),
+  };
+}
+const programStat = statOf(programPoints);
+const literatureStat = statOf(literaturePoints);
+const femStat = statOf(femPoints);
+
+// The limit equilibrium statistics are VERIFICATION-LOG.md's: stop if they drift apart.
+{
+  const log = logPoints({ problems: views } as unknown as VerificationData);
+  const near = (a: Stat, b: ReturnType<typeof logStats>) =>
+    a.n === b.n && [a.mean - b.mean, a.meanAbs - b.meanAbs, a.rms - b.rms, a.maxAbs - b.maxAbs].every((d) => Math.abs(d) < 1e-9);
+  if (!near(programStat, logStats(log.programs)) || !near(literatureStat, logStats(log.papers))) {
+    throw new Error("The report's error statistics differ from those of scripts/verification-log.ts.");
+  }
+}
+
+// Checks within their tolerance, as the tests count them (tolerance.ts, fem-cases.ts).
+const programChecks = allChecks.filter((x) => isProgramSource(x.check.publishedBy));
+const literatureChecks = allChecks.filter((x) => !isProgramSource(x.check.publishedBy));
+const femRefs = views.flatMap((v) => {
+  const c = caseById.get(v.id)!;
+  const fos = v.results.find((x) => x.method === FEM_LABEL)?.computed ?? null;
+  return (c.fem?.references ?? []).map((ref) => ({ id: v.id, ref, fos }));
+});
+const femCounted = femRefs.filter((x) => !x.ref.disputed);
+const nFemPass = femCounted.filter((x) => x.fos != null && femAgrees(x.ref, x.fos)).length;
+const nFemDisputed = femRefs.length - femCounted.length;
+
+// ── Text helpers ─────────────────────────────────────────────────────
+
+const pct2 = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)} %`;
+const abs2 = (v: number) => `${Math.abs(v).toFixed(2)} %`;
+const within = (ps: Point[], limit: number) => ps.filter((p) => Math.abs(p.error) <= limit + 1e-9).length;
+const largest = (ps: Point[], n: number) => [...ps].sort((a, b) => Math.abs(b.error) - Math.abs(a.error)).slice(0, n);
+const count = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+let figureNo = 0;
+let tableNo = 0;
+function caption(text: string) {
+  font(8, "italic", MUTED);
+  const lines = pdf.splitTextToSize(text, CONTENT_W) as string[];
+  ensure(lines.length * 3.6 + 1);
+  for (const l of lines) {
+    pdf.text(l, PAGE_W / 2, y, { align: "center", baseline: "top" });
+    y += 3.6;
+  }
+  y += 1.5;
+}
+/** A table caption above its table, kept with the first rows. */
+function tableCaption(text: string) {
+  ensure(22);
+  font(8, "italic", MUTED);
+  pdf.text(text, M, y, { baseline: "top" });
+  y += 4.5;
+}
+
+/**
+ * Histograms of the signed errors, one panel per comparison on the same
+ * x scale (small multiples: one series each, so no legend).
+ */
+function errorHistograms(panels: { title: string; points: Point[] }[]) {
+  const all = panels.flatMap((p) => p.points.map((x) => Math.abs(x.error)));
+  const range = Math.max(3, Math.ceil(Math.max(...all, 0)));
+  const bin = 0.25;
+  const bins = Math.round((2 * range) / bin);
+  const panelH = 19;
+  const gap = 7;
+  const x0 = M + 12;
+  const w = CONTENT_W - 14;
+  const totalH = panels.length * (panelH + gap) + 8;
+  ensure(totalH + 12);
+  y += 5;
+  const bx = (e: number) => x0 + ((e + range) / (2 * range)) * w;
+  panels.forEach((panel) => {
+    const counts = new Array<number>(bins).fill(0);
+    for (const p of panel.points) counts[Math.min(bins - 1, Math.max(0, Math.floor((p.error + range) / bin)))]++;
+    const top = Math.max(...counts, 1);
+    font(7.5, "bold", INK);
+    pdf.text(panel.title, x0, y, { baseline: "bottom" });
+    const base = y + panelH;
+    // Recessive frame: base line, zero line and the count scale.
+    pdf.setDrawColor(...RULE);
+    pdf.setLineWidth(0.15);
+    pdf.line(x0, base, x0 + w, base);
+    pdf.setLineDashPattern([0.8, 0.8], 0);
+    pdf.setDrawColor(...MUTED);
+    pdf.line(bx(0), y + 1, bx(0), base);
+    pdf.setLineDashPattern([], 0);
+    font(6.5, "normal", MUTED);
+    pdf.text(String(top), x0 - 1.5, y + 1.5, { align: "right", baseline: "middle" });
+    pdf.text("0", x0 - 1.5, base, { align: "right", baseline: "middle" });
+    pdf.setFillColor(...ACCENT);
+    counts.forEach((n, k) => {
+      if (!n) return;
+      const h = ((panelH - 1.5) * n) / top;
+      const left = bx(-range + k * bin) + 0.15;
+      const right = bx(-range + (k + 1) * bin) - 0.15;
+      pdf.rect(left, base - h, right - left, h, "F");
+    });
+    y = base + gap;
+  });
+  // The x axis under the last panel.
+  const base = y - gap;
+  font(6.5, "normal", MUTED);
+  pdf.setDrawColor(...MUTED);
+  pdf.setLineWidth(0.15);
+  for (let v = -range; v <= range; v++) {
+    pdf.line(bx(v), base, bx(v), base + 1);
+    pdf.text(v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`, bx(v), base + 1.5, { align: "center", baseline: "top" });
+  }
+  pdf.text("Error (%): cSlope above the reference to the right", x0 + w, base + 5, { align: "right", baseline: "top" });
+  y = base + 10;
+}
+
+// ── Per-analysis comparison rows ─────────────────────────────────────
+
+/** The source of a published value, with its method where that is not the analysis's own. */
+function sourceText(p: PublishedValue, analysis: string | null): string {
+  return p.method && p.method !== analysis ? `${p.source}: ${p.method}` : p.source;
+}
+
+interface ComparisonRows {
+  /** Per row: the problem id (on every row of the problem), the cells, and whether it starts an analysis. */
+  rows: { id: string; cells: Cell[]; start: boolean; problemStart: boolean }[];
+  footnotes: string[];
+}
+
+/**
+ * One row per analysis: cSlope's value, each published value for the same
+ * method with its source and the difference (sub-rows when there are
+ * several), and the other programs' range with the difference from its
+ * midpoint. Published values whose method cSlope does not have follow, not
+ * compared.
+ */
+function comparisonRows(v: ProblemView): ComparisonRows {
+  const rows: ComparisonRows["rows"] = [];
+  const footnotes: string[] = [];
+  const push = (cells: Cell[], start: boolean) => rows.push({ id: v.id, cells, start, problemStart: rows.length === 0 });
+  const diffCell = (p: PublishedValue, computed: number | null): Cell => {
+    if (computed == null) return "–";
+    let text: string;
+    if (p.analysis === FEM_LABEL) {
+      const ref = femReferenceOf(v.id, p);
+      const dev = ref ? femDeviation(ref, computed) * 100 : relError(computed, p.value);
+      text = ref?.kind === "bounds" && dev === 0 ? "in bounds" : pct2(dev);
+    } else {
+      text = pct2(relError(computed, p.value));
+    }
+    if (!p.disputed) return text;
+    footnotes.push(`* Disputed, not counted in section 2: ${p.source}'s ${formatPaperValue(p)}. ${p.disputed}`);
+    return { text: `${text} *`, italic: true, color: MUTED };
+  };
+  for (const res of v.results) {
+    const pubs = v.published.filter((p) => p.analysis === res.method);
+    const programs = res.programs ? formatRange(res.programs) : "";
+    const programDiff = res.programs && res.computed != null ? pct2(relError(res.computed, midpoint(res.programs))) : "";
+    const computed = fmt(res.computed ?? NaN);
+    if (!pubs.length) {
+      push([res.method, computed, "", "", "", programs, programDiff], true);
+      continue;
+    }
+    pubs.forEach((p, k) =>
+      push(
+        [
+          k === 0 ? res.method : "",
+          k === 0 ? computed : "",
+          formatPaperValue(p),
+          sourceText(p, res.method),
+          diffCell(p, res.computed),
+          k === 0 ? programs : "",
+          k === 0 ? programDiff : "",
+        ],
+        k === 0,
+      ),
+    );
+  }
+  for (const p of v.published.filter((x) => !x.analysis)) {
+    push([{ text: "–", color: MUTED }, { text: "–", color: MUTED }, formatPaperValue(p), sourceText(p, null), "", "", ""], true);
+  }
+  return { rows, footnotes };
+}
+
+const COMPARISON_COLUMNS: Column[] = [
+  { title: "Analysis", width: 42 },
+  { title: "cSlope", width: 14, align: "right" },
+  { title: "Published", width: 17, align: "right" },
+  { title: "Source", width: 47 },
+  { title: "Diff.", width: 17, align: "right" },
+  { title: "Other programs", width: 23, align: "right" },
+  { title: "Diff.", width: 14, align: "right" },
+];
+
+// ── Cover ────────────────────────────────────────────────────────────
+
 pdf.setFillColor(...ACCENT);
 pdf.rect(0, 0, PAGE_W, 92, "F");
 font(34, "bold", [255, 255, 255]);
 pdf.text("cSlope", M, 42);
 font(20, "normal", [255, 255, 255]);
-pdf.text("Verification Manual", M, 56);
+pdf.text("Verification manual", M, 56);
 font(11, "normal", [220, 232, 242]);
-pdf.text("Limit equilibrium slope stability analysis — comparison with published results", M, 68);
+pdf.text("Slope stability analyses compared with published results", M, 68);
 y = 112;
 paragraph(
   PUBLIC
-    ? `This document presents factors of safety computed by cSlope for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of other slope stability programs, next to the values the sources publish and the range of other programs' results.`
-    : `This document compares factors of safety computed by cSlope with values published for ${CASES.length} verification problems from the geotechnical literature and from the verification manuals of commercial slope stability programs.`,
+    ? `This manual gives the factors of safety cSlope computes for ${CASES.length} slope stability problems from the geotechnical literature and from the verification manuals of other slope stability programs, next to the values the sources publish and the range of the other programs' results.`
+    : `This manual compares the factors of safety cSlope computes with the values published for ${CASES.length} slope stability problems from the geotechnical literature and from the verification manuals of commercial slope stability programs.`,
   11,
 );
 y += 4;
 table(
   [
-    { title: "", width: 60 },
-    { title: "", width: CONTENT_W - 60 },
+    { title: "", width: 80 },
+    { title: "", width: CONTENT_W - 80 },
   ],
   [
     ["Program version", `cSlope ${pkg.version ?? ""} (commit ${commit})`],
     ["Report generated", today],
-    ...(PUBLIC
-      ? [
-          ["Problems", String(CASES.length)],
-          ["Values published by the sources", String(nPublished)],
-          ["cSlope analyses", String(nAnalyses)],
-        ]
-      : [["Reference values", String(nChecks)]]),
-    // The public edition shows the reference and the computed values only.
+    ["Problems", String(CASES.length)],
+    ["cSlope analyses", String(nAnalyses)],
+    ["Values published by the sources", String(nPublished)],
+    ["Mean absolute error against other programs", `${abs2(programStat.meanAbs)} (${programStat.n} results)`],
+    ["Mean absolute error against the literature", `${abs2(literatureStat.meanAbs)} (${literatureStat.n} values)`],
     ...(PUBLIC
       ? []
       : [
-          ["Within acceptance tolerance", `${nPass} of ${nChecks}`],
+          ["Checks within tolerance", `${nPass} of ${nChecks}`],
           ...(nPending > 0 ? [["Pending engine changes", `${nPending} of the others`]] : []),
-          ["Mean |difference|", `${meanAbs.toFixed(2)} %`],
-          ["Max |difference|", `${maxAbs.toFixed(2)} %`],
         ]),
   ],
   10,
 );
 font(8, "italic", MUTED);
-pdf.text("Generated automatically by packages/desktop/scripts/verification-report.ts from the engine's verification test cases.", M, BOTTOM - 4);
+pdf.text("Produced by packages/desktop/scripts/verification-report.ts from the problems in packages/engine/src/verification.", M, BOTTOM - 4);
 
-// Introduction.
+// Contents: filled in at the end, when the page numbers are known.
+newPage();
+const CONTENTS_PAGE = currentPage();
+
+// ── 1 Introduction ───────────────────────────────────────────────────
+
 newPage();
 heading("1  Introduction", 1);
 paragraph(
-  "Each problem below is defined once in the engine's verification data (packages/engine/src/verification/problems.ts). The same definitions are run by the automated test suite on every change, so the values in this report are the values the program computes.",
+  "Each problem is defined once, in cSlope's source code (packages/engine/src/verification/problems.ts). The automated tests run the same definitions on every change to the program, with a shorter search on the circular problems; this report runs them with the full search given below.",
 );
 y += 2;
-heading("Analysis settings", 2);
+heading("Analysis settings", 2, { toc: false });
 table(
   [
     { title: "Setting", width: 62 },
     { title: "Value", width: CONTENT_W - 62 },
   ],
   [
-    ["Slip surfaces", "Circular, or the non-circular surface the source gives. Fixed surfaces where the source gives one, otherwise a critical-circle search (with non-circular optimization where stated)."],
-    ["Number of slices", `${VERIFICATION_OPTIONS.slices} unless the problem states otherwise`],
-    ["Search", `${FULL_VERIFICATION_OPTIONS.iterations} entry/exit combinations plus ${FULL_VERIFICATION_OPTIONS.refinedIterations} refined around the best surfaces`],
+    ["Slip surfaces", "The surface the source gives, circular or not, where it gives one; otherwise a search for the critical circle, followed by non-circular optimization where the problem says so."],
+    ["Number of slices", `${VERIFICATION_OPTIONS.slices}, unless the problem states otherwise`],
+    ["Search", `${FULL_VERIFICATION_OPTIONS.iterations} entry and exit combinations, then ${FULL_VERIFICATION_OPTIONS.refinedIterations} more around the best surfaces`],
     ["Convergence tolerance", `${VERIFICATION_OPTIONS.tolerance} on the factor of safety; ${NON_CIRCULAR_VERIFICATION_OPTIONS.tolerance} with non-circular optimization`],
-    ["Methods", "Bishop simplified, Janbu simplified (uncorrected unless stated), Morgenstern-Price with half-sine interslice function; Spencer = Morgenstern-Price with a constant interslice function"],
+    ["Methods", "Bishop simplified; Janbu simplified (uncorrected unless stated); Morgenstern-Price with a half-sine interslice function; Spencer, which is Morgenstern-Price with a constant interslice function"],
     [
       "Pore pressure",
-      `Piezometric line; head = vertical distance below the line (default, the usual convention). Checks marked "phreatic correction" use vertical distance × cos²θ.`,
+      `From the piezometric line: the head is the vertical distance below the line (the usual convention). Problems described with "phreatic correction" use the vertical distance × cos²θ, where θ is the inclination of the line.`,
     ],
     ["Unit weight of water", "9.807 kN/m³"],
   ],
 );
-if (!PUBLIC) {
-  heading("Acceptance", 2);
-  paragraph(
-    `A result passes when its relative difference from the published value is within its tolerance: 1 % on a given surface and 2 % for a search, plus half a unit of the reference's last digit, plus 1 % where the input or the reference value is read from a figure, plus 1 % where the reference surface ends in a vertical or near-vertical scarp, so that the factor depends on how that part is sliced; 5 % against finite-element results. Reliability indices and probabilities of failure are compared with absolute tolerances. Tolerances follow one rule from what is known about each problem before it is analyzed (packages/engine/src/verification/tolerance.ts).`,
-  );
-  y += 2;
-}
-heading("Units", 2);
+heading("Units", 2, { toc: false, keep: 12 });
 paragraph(
-  "Problems published in imperial units without water are entered in their own units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI because the program uses γw = 9.807 kN/m³ (62.4 pcf = 9.80 kN/m³, < 0.1 % difference).",
+  "Problems published in imperial units without water are entered in those units (ft, psf, pcf); the factor of safety is dimensionless. Problems with water are converted to SI, because cSlope uses γw = 9.807 kN/m³ (62.4 pcf is 9.80 kN/m³, less than 0.1 % apart).",
 );
 y += 2;
-heading("Source of the input data", 2);
+heading("Source of the input data", 2, { toc: false, keep: 12 });
 paragraph(
   PUBLIC
-    ? "The input data were transcribed from the publications and from the verification manuals of other slope stability programs, most of them commercial, and cross-checked against an independent open-source transcription of the same problems. For each problem the report lists the values the source publishes, with the method where the source names one; some are hand calculations, charts, trial wedges or finite elements rather than the method of slices. For each analysis cSlope runs, it gives the range of results that other programs publish in their verification manuals, without naming the programs, and cSlope's result. The report presents the results; it does not mark them as passed or failed. Problem ids are cSlope's own: a number is one slope, a letter a variant of it."
-    : "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labeled with its source; where a figure had to be digitised or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: a number is one slope, a letter a variant of it.",
-  9.5,
-  "normal",
+    ? "The input data were transcribed from the publications and from the verification manuals of other slope stability programs, most of them commercial, and cross-checked against an independent open-source transcription of the same problems. For each problem the report lists the values the sources publish, with the method where the source names one; some are hand calculations, chart readings, trial wedges or finite element results rather than the method of slices. For each analysis it also gives the range of results that other programs publish in their verification manuals, without naming the programs. Problem ids are cSlope's own: the number is the slope, the letter a variant of it."
+    : "The input data were transcribed from the publications and from the verification manuals of commercial slope stability programs, and cross-checked against an independent open-source transcription of the same problems. Values that only a commercial program's manual gives are attributed to \"commercial program A\", \"B\" and so on, one letter per program. Each published value is labeled with its source; where a figure had to be digitized or an input inferred, the notes of the problem say so. Checks marked \"pending\" wait for an engine change named in the notes. Problem ids are cSlope's own: the number is the slope, the letter a variant of it.",
+);
+y += 2;
+heading("How to read the tables", 2, { toc: false, keep: 12 });
+paragraph(
+  "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Diff. is cSlope's value minus the reference, in percent of the reference: the lower end of a published range, the midpoint of the programs' range, as in the statistics of section 2. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
 );
 
-// Summary.
+// ── 2 Summary ────────────────────────────────────────────────────────
+
 newPage();
 heading("2  Summary of results", 1);
-const PENDING: [number, number, number] = [196, 120, 20];
-/** Pass, Fail, or Pending for a failing check that waits for an engine change. */
-const statusCell = (pass: boolean, pending?: string) =>
-  pass ? { text: "Pass", color: PASS, bold: true } : pending ? { text: "Pending", color: PENDING, bold: true } : { text: "Fail", color: FAIL, bold: true };
-// The public edition shows the reference and cSlope's value only; the
-// internal one adds the difference and the acceptance.
-const summaryRows: Cell[][] = [
-  ...caseResults.flatMap((r) =>
-    r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, fmt(x.check.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
-  ),
-  // Reliability (β, Pf): absolute differences.
-  ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
-    results
-      .filter((x) => x.quantity !== "fos")
-      .map((x): Cell[] => [
-        c.id,
-        c.title,
-        RELIABILITY_LABELS[x.quantity],
-        x.published.toFixed(3),
-        x.computed.toFixed(3),
-        (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
-        statusCell(x.pass),
-      ]),
-  ),
+const SUMMARY = "2  Summary of results";
+paragraph(
+  `cSlope was run on ${CASES.length} problems, with ${nAnalyses} analyses. Each result is compared with two kinds of reference. The first is the results that other slope stability programs publish for the same analysis in their verification manuals: ${programStat.n} results, compared with the midpoint of the programs' range where more than one program gives a value. The second is the literature: ${literatureStat.n} values from papers, books, design manuals and theory. The finite element factors of safety are compared with published finite element, finite difference, limit analysis and theoretical values (${femStat.n} references). The error is cSlope's factor of safety minus the reference, in percent of the reference, so a negative mean error means that cSlope is lower on average.`,
+);
+y += 2;
+heading("2.1  Errors against each reference", 2, { toc: true, bookmarkUnder: SUMMARY });
+tableCaption(`Table ${++tableNo}. Errors of cSlope's factors of safety in percent of the reference.`);
+const statRow = (label: string, s: Stat, tol: string): Cell[] => [label, String(s.n), pct2(s.mean), abs2(s.meanAbs), abs2(s.rms), abs2(s.maxAbs), tol];
+table(
+  [
+    { title: "Reference", width: 50 },
+    { title: "Results", width: 15, align: "right" },
+    { title: "Mean", width: 17, align: "right" },
+    { title: "Mean abs.", width: 18, align: "right" },
+    { title: "RMS", width: 16, align: "right" },
+    { title: "Largest", width: 17, align: "right" },
+    { title: "Within tolerance", width: CONTENT_W - 133, align: "right" },
+  ],
+  [
+    statRow("Other programs", programStat, `${programChecks.filter((x) => x.pass).length} of ${programChecks.length} checks`),
+    statRow("Literature", literatureStat, `${literatureChecks.filter((x) => x.pass).length} of ${literatureChecks.length} checks`),
+    ...(femStat.n ? [statRow("Finite elements (section 4)", femStat, `${nFemPass} of ${femCounted.length} references`)] : []),
+  ],
+  8.5,
+);
+const largestOf = (ps: Point[]) => {
+  const [p] = largest(ps, 1);
+  return p ? `${abs2(p.error)} (${p.id}, ${p.analysis})` : "–";
+};
+paragraph(
+  `Against the other programs, ${within(programPoints, 0.5)} of the ${programStat.n} results lie within 0.5 %, ${within(programPoints, 1)} within 1 % and ${within(programPoints, 2)} within 2 %; the largest error is ${largestOf(programPoints)}. ` +
+    `Against the literature the spread is wider: ${within(literaturePoints, 1)} of ${literatureStat.n} values lie within 1 %, ${within(literaturePoints, 2)} within 2 % and ${within(literaturePoints, 5)} within 5 %, and the largest error is ${largestOf(literaturePoints)}. ` +
+    "Many literature values are printed to two decimals, some are read from charts, some come from hand calculations or from another method such as finite elements or a trial wedge, and on some problems the sources differ from each other; section 2.4 lists the largest deviations.",
+);
+y += 1;
+paragraph(
+  "\"Within tolerance\" counts the checks that the automated tests apply on every change to the program. Each check compares cSlope with one published value, so an analysis with values from three programs gives three checks, while the statistics use the midpoint of their range. " +
+    "A check agrees when cSlope is within 1 % of the reference on a given surface and 2 % for a search, plus half a unit of the reference's last printed digit, plus 1 % where the input or the reference was read from a figure, plus 1 % where the surface ends in a vertical or near-vertical scarp; 5 % against a finite element value. " +
+    `The finite element references have their own rule (section 4)${nFemDisputed ? `; ${count(nFemDisputed, "disputed reference is", "disputed references are")} shown there and not counted` : ""}. ` +
+    `The ${reliabilityRows.length} reliability indices and probabilities of failure of the probabilistic problems are compared with absolute tolerances: ${reliabilityRows.filter((x) => x.pass).length} of ${reliabilityRows.length} agree. ` +
+    "Section 3 and appendix A show every difference but do not mark single results as passed or failed.",
+);
+y += 2;
+heading("2.2  Distribution of the errors", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
+errorHistograms([
+  { title: `Against other programs (${programStat.n} results)`, points: programPoints },
+  { title: `Against the literature (${literatureStat.n} values)`, points: literaturePoints },
+  ...(femStat.n ? [{ title: `Finite elements against their references (${femStat.n})`, points: femPoints }] : []),
+]);
+caption(`Figure ${++figureNo}. Number of results per 0.25 % of error. The dashed line is zero error.`);
+
+heading("2.3  By method", 2, { toc: true, bookmarkUnder: SUMMARY });
+const FAMILIES: { label: string; test: (analysis: string) => boolean }[] = [
+  { label: "Bishop simplified", test: (a) => a.startsWith("Bishop") && !a.includes("non-circular") },
+  { label: "Janbu simplified and corrected", test: (a) => a.startsWith("Janbu") && !a.includes("non-circular") },
+  { label: "Spencer and Morgenstern-Price", test: (a) => /^(Spencer|Morgenstern)/.test(a) && !a.includes("non-circular") },
+  { label: "Non-circular optimization, all methods", test: (a) => a.includes("non-circular") },
 ];
-if (PUBLIC) {
-  // One row per analysis; the sources' values on the problem's first row.
-  const publicRows: Cell[][] = [
-    ...caseResults.flatMap((r) =>
-      analysisRows(r).map(({ a, fos }, j): Cell[] => [
-        j === 0 ? r.c.id : "",
-        j === 0 ? r.c.title : "",
-        j === 0 ? paperValues(r.c).map(formatPaperValue).join("; ") || "–" : "",
-        a.label,
-        a.programs ? formatRange(a.programs) : "–",
-        fmt(fos ?? NaN),
-      ]),
-    ),
-    ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
-      reliabilityPresentation(results).map((x): Cell[] => [
-        c.id,
-        c.title,
-        x.published.map((v) => v.published.toFixed(3)).join("; ") || "–",
-        RELIABILITY_LABELS[x.quantity],
-        x.programs ? formatRange(x.programs) : "–",
-        x.computed.toFixed(3),
-      ]),
-    ),
-  ];
+const familyCells = (ps: Point[]): Cell[] => {
+  const s = statOf(ps);
+  return s.n ? [String(s.n), abs2(s.meanAbs), abs2(s.maxAbs)] : ["0", "–", "–"];
+};
+tableCaption(`Table ${++tableNo}. Mean absolute and largest error by method, against the other programs and against the literature.`);
+table(
+  [
+    { title: "Method", width: 64 },
+    { title: "Programs: n", width: 20, align: "right" },
+    { title: "Mean abs.", width: 18, align: "right" },
+    { title: "Largest", width: 17, align: "right" },
+    { title: "Literature: n", width: 21, align: "right" },
+    { title: "Mean abs.", width: 18, align: "right" },
+    { title: "Largest", width: CONTENT_W - 158, align: "right" },
+  ],
+  FAMILIES.map((f) => [f.label, ...familyCells(programPoints.filter((p) => f.test(p.analysis))), ...familyCells(literaturePoints.filter((p) => f.test(p.analysis)))]),
+  8.5,
+);
+paragraph(
+  "The first three rows hold circles and the surfaces the sources give; the last holds the searches that optimize a circle into a non-circular surface, whatever the method. Non-circular searches depend on the search more than circular ones, and two programs need not end on the same surface.",
+  9,
+);
+
+y += 2;
+heading("2.4  Largest deviations", 2, { toc: true, bookmarkUnder: SUMMARY });
+paragraph(
+  "The largest errors against each reference, with the notes of those problems. The problem id links to its section.",
+  9,
+);
+const deviationTable = (title: string, ps: Point[]) => {
+  tableCaption(title);
   table(
     [
-      { title: "Problem", width: 16 },
-      { title: "Description", width: 58 },
-      { title: "Published", width: 26, align: "right" },
-      { title: "cSlope analysis", width: 38 },
-      { title: "Other programs", width: 22, align: "right" },
-      { title: "cSlope", width: CONTENT_W - 160, align: "right" },
-    ],
-    publicRows,
-    7.2,
-  );
-} else {
-  table(
-    [
-      { title: "Problem", width: 18 },
-      { title: "Description", width: 54 },
-      { title: "Method", width: 40 },
-      { title: "Published", width: 18, align: "right" },
+      { title: "Problem", width: 24 },
+      { title: "Analysis", width: 40 },
+      { title: "Reference", width: 18, align: "right" },
+      { title: "Source", width: 56 },
       { title: "cSlope", width: 15, align: "right" },
-      { title: "Diff.", width: 15, align: "right" },
-      { title: "", width: CONTENT_W - 160, align: "center" },
+      { title: "Error", width: CONTENT_W - 153, align: "right" },
     ],
-    summaryRows,
-    7.6,
+    ps.map((p) => [{ text: `${p.id} (${sectionOf.get(p.id)})`, link: p.id }, p.analysis, p.reference, p.source, fmt(p.computed), pct2(p.error)]),
+    7.8,
   );
+};
+const topPrograms = largest(programPoints, 5);
+const topLiterature = largest(literaturePoints, 5);
+const topFem = largest(femPoints, 3);
+deviationTable(`Table ${++tableNo}. The five largest errors against other programs (reference: the midpoint of their range).`, topPrograms);
+deviationTable(`Table ${++tableNo}. The five largest errors against the literature.`, topLiterature);
+if (topFem.length) deviationTable(`Table ${++tableNo}. The three largest errors of the finite element analysis against its references.`, topFem);
+{
+  const ids = [...new Set([...topPrograms, ...topLiterature, ...topFem].map((p) => p.id))];
+  const noted = ids.filter((id) => caseById.get(id)?.publicNote);
+  const silent = ids.filter((id) => !caseById.get(id)?.publicNote);
+  if (noted.length) {
+    font(9, "bold", INK);
+    ensure(10);
+    pdf.text("Notes of these problems", M, y, { baseline: "top" });
+    y += 4.5;
+    for (const id of noted) paragraph(`${id}: ${caseById.get(id)!.publicNote}`, 8.5, "normal", INK, CONTENT_W - 4, M + 2);
+  }
+  if (silent.length) {
+    y += 1;
+    paragraph(
+      `${silent.join(", ")} ${silent.length === 1 ? "has" : "have"} no note: the table of ${silent.length === 1 ? "that problem" : "each problem"} in section 3 gives every published value and the other programs' range for the same analysis.`,
+      8.5,
+      "italic",
+      MUTED,
+    );
+  }
 }
 
-// Problems.
+// ── 3 Problems ───────────────────────────────────────────────────────
+
 newPage();
-heading("3  Verification problems", 1);
+const PROBLEMS = "3  Verification problems";
+heading(PROBLEMS, 1, { keep: 60 });
 caseResults.forEach((r, i) => {
   if (i > 0) newPage();
   const { c } = r;
+  const v = views[i];
+  problemPage.set(c.id, currentPage());
   const units = c.units === "SI" ? SI : IMPERIAL;
   const nonCircular = !!r.plane?.points;
   const feOnly = r.results.length === 0 && analysisRows(r).length === 0;
   const surfaceKind = feOnly ? "Finite elements only" : c.surface === "fixed"
     ? nonCircular ? "Specified non-circular surface" : "Fixed circle"
     : nonCircular ? "Circle search with non-circular optimization" : "Critical circle search";
-  heading(`3.${i + 1}  ${c.id} — ${c.title}`, 2);
+  heading(`3.${i + 1}  ${c.id}: ${c.title}`, 2, { toc: false, keep: 60, bookmarkUnder: PROBLEMS });
   paragraph(c.reference, 8.5, "italic", MUTED);
   y += 1;
   paragraph(
@@ -910,12 +1402,15 @@ caseResults.forEach((r, i) => {
   y += 1;
   paragraph(c.description);
   y += 2;
-  const first = r.results[0];
+  const first = analysisRows(r)[0];
+  const surfaceName = c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : nonCircular ? "critical surface" : "critical circle";
   const matIndex = figure(
     c.definition,
     r.slope,
     r.plane,
-    feOnly ? `Figure ${i + 1}. ${c.id}: geometry and water` : `Figure ${i + 1}. ${c.id}: ${c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : (nonCircular ? "critical surface" : "critical circle")} (${PUBLIC ? analysisRows(r)[0].a.label : first.check.label}, FOS = ${fmt(first.fos ?? NaN)}).`,
+    feOnly || !first
+      ? `Figure ${++figureNo}. ${c.id}: geometry and water.`
+      : `Figure ${++figureNo}. ${c.id}: ${surfaceName} (${PUBLIC || !r.results[0] ? first.a.label : r.results[0].check.label}, F = ${fmt(PUBLIC || !r.results[0] ? first.fos ?? NaN : r.results[0].fos ?? NaN)}).`,
     units,
   );
   table(
@@ -937,40 +1432,24 @@ caseResults.forEach((r, i) => {
       ];
     }),
   );
-  if (PUBLIC) {
-    const published = paperValues(c);
-    if (published.length) {
-      table(
-        [
-          { title: "Published value", width: 30, align: "right" },
-          { title: "Method", width: 62 },
-          { title: "Source", width: CONTENT_W - 112 },
-          { title: "cSlope", width: 20, align: "right" },
-        ],
-        published.map((v) => [
-          formatPaperValue(v),
-          v.method ?? "not stated",
-          v.disputed ? `${v.source} (disputed: see the note)` : v.source,
-          paperResult(r, v.analysis),
-        ]),
-      );
-    } else {
-      paragraph("The source publishes no factor of safety for this problem.", 8.5, "italic", MUTED);
-      y += 1;
-    }
+  const cmp = comparisonRows(v);
+  if (!v.published.length) {
+    paragraph("The sources publish no factor of safety for this problem.", 8.5, "italic", MUTED);
+    y += 1;
+  }
+  table(
+    COMPARISON_COLUMNS,
+    cmp.rows.map((x) => x.cells),
+    8,
+    cmp.rows.map((x) => x.start),
+  );
+  for (const f of cmp.footnotes) paragraph(f, 8, "italic", MUTED);
+  if (cmp.footnotes.length) y += 1;
+  if (!PUBLIC) {
+    // The internal edition adds the checks with their tolerances.
     table(
       [
-        { title: "cSlope analysis", width: 80 },
-        { title: "Other programs", width: 40, align: "right" },
-        { title: "cSlope", width: CONTENT_W - 120, align: "right" },
-      ],
-      analysisRows(r).map(({ a, fos }) => [a.label, a.programs ? formatRange(a.programs) : "–", fmt(fos ?? NaN)]),
-    );
-    if (c.publicNote) paragraph(c.publicNote, 8.5, "italic", MUTED);
-  } else {
-    table(
-      [
-        { title: "Method", width: 56 },
+        { title: "Check", width: 56 },
         { title: "Published by", width: 34 },
         { title: "Published", width: 19, align: "right" },
         { title: "cSlope", width: 17, align: "right" },
@@ -989,11 +1468,13 @@ caseResults.forEach((r, i) => {
       ]),
     );
   }
+  if (PUBLIC && c.publicNote) paragraph(c.publicNote, 8.5, "italic", MUTED);
   for (const { rc, results } of reliabilityResults.get(c.id) ?? []) {
     const reliability = results.filter((x) => x.quantity !== "fos");
     if (!reliability.length) continue;
+    y += 1;
     paragraph(
-      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}). Differences in β and Pf are absolute.`,
+      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}).${PUBLIC ? "" : " Differences in β and Pf are absolute."}`,
       8.5,
     );
     if (PUBLIC) {
@@ -1006,7 +1487,7 @@ caseResults.forEach((r, i) => {
         ],
         reliabilityPresentation(results).map((x) => [
           RELIABILITY_LABELS[x.quantity],
-          x.published.map((v) => `${v.published.toFixed(3)} ${v.publishedBy}`).join("; ") || "–",
+          x.published.map((p) => `${p.published.toFixed(3)} ${p.publishedBy}`).join("; ") || "–",
           x.programs ? formatRange(x.programs) : "–",
           x.computed.toFixed(3),
         ]),
@@ -1041,7 +1522,7 @@ caseResults.forEach((r, i) => {
       x.check.pending ? [`${x.check.label} (${x.check.publishedBy}) is pending: it waits for the engine change "${x.check.pending}".`] : [],
     ),
   ];
-  // The public edition leaves the notes out: they name the other programs.
+  // The public edition leaves the internal notes out: they name the other programs.
   if (!PUBLIC && notes.length > 0) {
     font(9, "bold", INK);
     ensure(6);
@@ -1051,91 +1532,232 @@ caseResults.forEach((r, i) => {
   }
 });
 
-// Strength reduction by finite elements: the results of the website's table
-// (generate-data.ts runs them; they take minutes), against the published
-// finite element, finite difference, limit analysis and theory values.
-const FEM_DATA = path.join(REPO, "packages/website/src/content/generated/verification.json");
+// ── 4 Finite elements ────────────────────────────────────────────────
+// The results of the website's table (generate-data.ts runs them; they take
+// minutes), against the published finite element, finite difference, limit
+// analysis and theory values.
+
 const FEM_CASES = CASES.filter((c) => c.fem);
-if (FEM_CASES.length && fs.existsSync(FEM_DATA)) {
-  const data = JSON.parse(fs.readFileSync(FEM_DATA, "utf-8")) as {
-    problems: { id: string; results: { method: string; computed: number | null }[]; fem?: { flowRule: string; levels: { elements: number; fos: number }[] } }[];
-  };
-  const byId = new Map(data.problems.map((p) => [p.id, p]));
+if (FEM_CASES.length && committed) {
   newPage();
   heading("4  Strength reduction by finite elements", 1);
   paragraph(
-    "cSlope's finite element analysis reduces c and tan φ by a factor F until the elastic–perfectly plastic slope can no longer be brought into equilibrium. " +
-      "The mesh is of six-node triangles, refined adaptively where the plastic dissipation at failure is largest until F changes by less than 0.01 or twice. " +
+    "cSlope's finite element analysis reduces c and tan φ by a factor F until the elastic, perfectly plastic slope can no longer be brought into equilibrium. " +
+      "The mesh is of six-node triangles. It is refined adaptively, at most twice, where the plastic dissipation at failure is largest, until F changes by less than 0.01. " +
       "Each problem is run with its source's flow rule (Davis B, associated, or non-associated with ψ = 0); the source's elastic parameters do not change F appreciably. " +
-      "The finite element factor is compared with the source's finite element, finite difference, limit analysis or theoretical value: within 2 % of a theoretical value or a pair of bounds, and within 5 % of a published numerical value, which depends on the mesh, the elements and the failure criterion.",
+      "The finite element factor is compared with the source's finite element, finite difference, limit analysis or theoretical value. It agrees within 2 % of a theoretical value or of a pair of bounds, and within 5 % of a published numerical value, which depends on the mesh, the elements and the failure criterion. " +
+      `${nFemPass} of the ${femCounted.length} references agree${nFemDisputed ? `; the disputed ${nFemDisputed === 1 ? "one is" : "ones are"} not counted` : ""}.`,
     9,
   );
   y += 2;
   const rows: Cell[][] = [];
+  const starts: boolean[] = [];
   const disputed: string[] = [];
-  let nFem = 0, nFemPass = 0;
   for (const c of FEM_CASES) {
-    const p = byId.get(c.id);
-    const fos = p?.results.find((r) => r.method === "Strength reduction (FE)")?.computed ?? null;
-    const levels = p?.fem?.levels ?? [];
+    const v = views.find((x) => x.id === c.id)!;
+    const fos = v.results.find((r) => r.method === FEM_LABEL)?.computed ?? null;
+    const levels = v.fem?.levels ?? [];
     c.fem!.references.forEach((ref, j) => {
       const pass = fos != null && femAgrees(ref, fos);
-      // A disputed reference measures its source, not cSlope (fem-cases.ts): shown, not counted.
       if (ref.disputed) disputed.push(`${c.id}: ${ref.disputed}`);
-      else {
-        nFem++;
-        if (pass) nFemPass++;
-      }
-      const refText = ref.upper != null ? `${fmt(ref.value, 2)}–${fmt(ref.upper, 2)}` : fmt(ref.value, ref.value < 10 ? 3 : 2).replace(/0+$/, "").replace(/\.$/, ".0");
+      // As the source prints it, with at least two decimals (as in section 3).
+      const refText = formatPaperValue({ value: ref.value, ...(ref.upper != null ? { upper: ref.upper } : {}), source: ref.source });
+      const dev = fos == null ? null : femDeviation(ref, fos) * 100;
       const row: Cell[] = [
-        j === 0 ? c.id : "",
-        `${ref.method}, ${PUBLIC && isProgramSource(ref.source) ? "another program's manual" : ref.source}${ref.disputed ? " (disputed: see below)" : ""}`,
+        j === 0 ? { text: c.id, link: c.id } : "",
+        `${ref.method}, ${PUBLIC ? femSource(ref) : ref.source}${ref.disputed ? " (disputed: see below)" : ""}`,
         refText,
-        j === 0 ? (p?.fem?.flowRule ?? c.fem!.flowRule ?? "davis-b") : "",
+        j === 0 ? (v.fem?.flowRule ?? c.fem!.flowRule ?? "davis-b").replace("davis-b", "Davis B") : "",
         j === 0 ? levels.map((l) => `${l.elements}: ${fmt(l.fos)}`).join(", ") : "",
-        fmt(fos ?? NaN),
+        j === 0 ? fmt(fos ?? NaN) : "",
+        dev == null ? "–" : ref.kind === "bounds" && dev === 0 ? "in bounds" : pct2(dev),
       ];
-      if (!PUBLIC) row.push(fos == null ? "–" : pct(femDeviation(ref, fos) * 100), ref.disputed ? { text: "Disputed", color: PENDING, bold: true } : statusCell(pass));
+      if (!PUBLIC) row.push(ref.disputed ? { text: "Disputed", color: PENDING, bold: true } : statusCell(pass));
       rows.push(row);
+      starts.push(j === 0);
     });
   }
+  tableCaption(`Table ${tableNo + 1}. Finite element factors of safety against the published values; the mesh refinement as number of elements: F.`);
   table(
     PUBLIC
       ? [
-          { title: "Problem", width: 16 },
-          { title: "Published by", width: 62 },
-          { title: "Published", width: 18, align: "right" },
-          { title: "Flow rule", width: 22 },
-          { title: "Elements: F", width: 36 },
-          { title: "cSlope", width: CONTENT_W - 154, align: "right" },
+          { title: "Problem", width: 15 },
+          { title: "Published by", width: 57 },
+          { title: "Published", width: 17, align: "right" },
+          { title: "Flow rule", width: 23 },
+          { title: "Elements: F", width: 33 },
+          { title: "cSlope", width: 13, align: "right" },
+          { title: "Diff.", width: CONTENT_W - 158, align: "right" },
         ]
       : [
           { title: "Problem", width: 14 },
-          { title: "Published by", width: 52 },
+          { title: "Published by", width: 48 },
           { title: "Published", width: 16, align: "right" },
-          { title: "Flow rule", width: 20 },
-          { title: "Elements: F", width: 30 },
+          { title: "Flow rule", width: 23 },
+          { title: "Elements: F", width: 28 },
           { title: "cSlope", width: 12, align: "right" },
           { title: "Diff.", width: 14, align: "right" },
-          { title: "", width: CONTENT_W - 158, align: "center" },
+          { title: "", width: CONTENT_W - 155, align: "center" },
         ],
     rows,
     7.2,
+    starts,
   );
   for (const d of disputed) {
-    y += 2;
+    y += 1;
     paragraph(d, 8, "italic", MUTED);
   }
-  console.log(`${nFemPass}/${nFem} finite element references within tolerance${disputed.length ? `, ${disputed.length} disputed and not counted` : ""}.`);
+  console.log(`${nFemPass}/${femCounted.length} finite element references within tolerance${nFemDisputed ? `, ${nFemDisputed} disputed and not counted` : ""}.`);
 }
+
+// ── Appendix A: every result ─────────────────────────────────────────
+
+newPage();
+heading("Appendix A  Results of all problems", 1);
+paragraph(
+  "One row per cSlope analysis of every problem, with the same columns as the tables of section 3 and the page of the problem. The problem id links to its section.",
+  9,
+);
+y += 1;
+{
+  const rows: Cell[][] = [];
+  const starts: boolean[] = [];
+  views.forEach((v) => {
+    const cmp = comparisonRows(v);
+    cmp.rows.forEach((x) => {
+      const head: Cell = x.problemStart ? { text: v.id, link: v.id } : "";
+      rows.push([head, ...x.cells, x.problemStart ? String(problemPage.get(v.id) ?? "") : ""]);
+      // A problem's rows stay together on a page where they fit.
+      starts.push(x.problemStart);
+    });
+  });
+  table(
+    [
+      { title: "Problem", width: 14 },
+      { title: "Analysis", width: 35 },
+      { title: "cSlope", width: 12, align: "right" },
+      { title: "Published", width: 14, align: "right" },
+      { title: "Source", width: 41 },
+      { title: "Diff.", width: 14, align: "right" },
+      { title: "Other programs", width: 21, align: "right" },
+      { title: "Diff.", width: 13, align: "right" },
+      { title: "Page", width: CONTENT_W - 164, align: "right" },
+    ],
+    rows,
+    6.8,
+    starts,
+  );
+}
+if (reliabilityResults.size) {
+  heading("Probabilistic problems", 2, { toc: false, keep: 30 });
+  table(
+    [
+      { title: "Problem", width: 16 },
+      { title: "Quantity", width: 50 },
+      { title: "Published", width: 56 },
+      { title: "Other programs", width: 28, align: "right" },
+      { title: "cSlope", width: CONTENT_W - 150, align: "right" },
+    ],
+    [...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
+      reliabilityPresentation(results).map((x): Cell[] => [
+        { text: c.id, link: c.id },
+        RELIABILITY_LABELS[x.quantity],
+        x.published.map((v) => `${v.published.toFixed(3)} ${v.publishedBy}`).join("; ") || "–",
+        x.programs ? formatRange(x.programs) : "–",
+        x.computed.toFixed(3),
+      ]),
+    ),
+    7.2,
+  );
+}
+
+// The internal edition lists every check with its tolerance and status.
+if (!PUBLIC) {
+  newPage();
+  heading("Appendix B  Checks", 1);
+  table(
+    [
+      { title: "Problem", width: 18 },
+      { title: "Description", width: 54 },
+      { title: "Check", width: 40 },
+      { title: "Published", width: 18, align: "right" },
+      { title: "cSlope", width: 15, align: "right" },
+      { title: "Diff.", width: 15, align: "right" },
+      { title: "", width: CONTENT_W - 160, align: "center" },
+    ],
+    [
+      ...caseResults.flatMap((r) =>
+        r.results.map((x): Cell[] => [r.c.id, r.c.title, x.check.label, fmt(x.check.published), fmt(x.fos ?? NaN), pct(x.diff), statusCell(x.pass, x.check.pending)]),
+      ),
+      ...[...reliabilityResults.values()].flat().flatMap(({ rc: c, results }) =>
+        results
+          .filter((x) => x.quantity !== "fos")
+          .map((x): Cell[] => [
+            c.id,
+            c.title,
+            RELIABILITY_LABELS[x.quantity],
+            x.published.toFixed(3),
+            x.computed.toFixed(3),
+            (x.computed - x.published >= 0 ? "+" : "") + (x.computed - x.published).toFixed(3),
+            statusCell(x.pass),
+          ]),
+      ),
+    ],
+    7.6,
+  );
+}
+
+// ── Links, contents, header and footer ───────────────────────────────
+
+for (const l of pendingLinks) {
+  const page = problemPage.get(l.id);
+  if (page == null) continue;
+  pdf.setPage(l.page);
+  pdf.link(l.x, l.y, l.w, l.h, { pageNumber: page });
+}
+
+pdf.setPage(CONTENTS_PAGE);
+y = TOP;
+font(15, "bold", ACCENT);
+pdf.text("Contents", M, y, { baseline: "top" });
+y += lineH(15) + 1.5;
+pdf.setDrawColor(...ACCENT);
+pdf.setLineWidth(0.4);
+pdf.line(M, y, PAGE_W - M, y);
+y += 5;
+for (const e of contents) {
+  const indent = e.level === 1 ? 0 : 8;
+  font(e.level === 1 ? 10.5 : 9.5, e.level === 1 ? "bold" : "normal", INK);
+  if (e.level === 1) y += 2;
+  const pageText = String(e.page);
+  const textW = pdf.getTextWidth(e.text);
+  const pageW = pdf.getTextWidth(pageText);
+  pdf.text(e.text, M + indent, y, { baseline: "top" });
+  pdf.text(pageText, PAGE_W - M, y, { baseline: "top", align: "right" });
+  // Dotted leader between the title and the page number.
+  pdf.setDrawColor(...RULE);
+  pdf.setLineWidth(0.2);
+  pdf.setLineDashPattern([0.3, 1.2], 0);
+  pdf.line(M + indent + textW + 2, y + 3, PAGE_W - M - pageW - 2, y + 3);
+  pdf.setLineDashPattern([], 0);
+  pdf.link(M + indent, y - 0.5, CONTENT_W - indent, 5, { pageNumber: e.page });
+  y += 6;
+}
+y += 4;
+paragraph(
+  `Section 3 has one page per problem, in the order of their ids; appendix A lists them all with their page numbers.`,
+  9,
+  "italic",
+  MUTED,
+);
 
 // Header and footer on every page but the cover.
 const pages = pdf.getNumberOfPages();
 for (let p = 2; p <= pages; p++) {
   pdf.setPage(p);
   font(7.5, "normal", MUTED);
-  pdf.text("cSlope — Verification Manual", M, 12);
-  pdf.text(`${today} · commit ${commit}`, PAGE_W - M, 12, { align: "right" });
+  pdf.text("cSlope verification manual", M, 12);
+  pdf.text(`cSlope ${pkg.version ?? ""} · ${today} · commit ${commit}`, PAGE_W - M, 12, { align: "right" });
   pdf.setDrawColor(...RULE);
   pdf.setLineWidth(0.2);
   pdf.line(M, 14, PAGE_W - M, 14);
@@ -1144,5 +1766,5 @@ for (let p = 2; p <= pages; p++) {
 
 if (!fs.existsSync(path.dirname(OUT))) fs.mkdirSync(path.dirname(OUT), { recursive: true });
 fs.writeFileSync(OUT, Buffer.from(pdf.output("arraybuffer")));
-console.log(`\n${nPass}/${nChecks} checks within tolerance (not shown in the public edition). Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
+console.log(`\n${nPass}/${nChecks} checks within tolerance (not shown per result in the public edition). Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
 if (nPass < nChecks) process.exitCode = 1;
