@@ -7,11 +7,19 @@
  */
 import { createHash } from "node:crypto";
 
+/**
+ * A script element that holds data rather than code (structured data,
+ * type="application/ld+json"): the browser does not run it, so the policy
+ * does not apply to it.
+ */
+const DATA_BLOCK = /\btype\s*=\s*["']?application\/(ld\+)?json\b/i;
+
 /** The sha256 source hashes of the inline scripts of an HTML document, as CSP writes them. */
 export function inlineScriptHashes(html: string): string[] {
   const hashes: string[] = [];
-  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi)) {
-    hashes.push(`'sha256-${createHash("sha256").update(m[1]).digest("base64")}'`);
+  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/gi)) {
+    if (DATA_BLOCK.test(m[1])) continue;
+    hashes.push(`'sha256-${createHash("sha256").update(m[2]).digest("base64")}'`);
   }
   return hashes;
 }

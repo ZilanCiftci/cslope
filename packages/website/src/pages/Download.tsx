@@ -24,7 +24,7 @@ const STEPS = [
 ];
 
 export function Download() {
-  usePageMeta("Download", `Download cSlope ${OFFERED_VERSION} for Windows: free and open source slope stability software.`);
+  usePageMeta("Download for Windows", `Download cSlope ${OFFERED_VERSION} for Windows: free and open source slope stability software.`);
   return (
     <>
       <PageHeader

@@ -26,7 +26,7 @@ let canonicalOrigin: string | null | undefined;
  */
 export function usePageMeta(
   title: string | null,
-  description: string = SITE.description,
+  description: string = SITE.metaDescription,
   { canonical = true }: { canonical?: boolean } = {},
 ) {
   const { pathname } = useLocation();

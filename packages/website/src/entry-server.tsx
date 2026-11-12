@@ -8,7 +8,7 @@ import { StrictMode } from "react";
 import { prerender } from "react-dom/static";
 import { StaticRouter } from "react-router";
 import { ThemeProvider } from "@/components/theme-provider";
-import { DOCS, docPath } from "@/docs/registry";
+import { DOCS, docPath, findDoc } from "@/docs/registry";
 import { PageMetaCollector, pageTitle, type PageMeta } from "@/lib/page-meta";
 import { routes } from "@/routes";
 import { SITE } from "@/site";
@@ -19,6 +19,30 @@ export function sitePaths(): string[] {
   const pages = routes.map((r) => r.path).filter((p) => !p.includes("*"));
   return [...pages, ...DOCS.map(docPath)];
 }
+
+/**
+ * The source files of the page at a path, relative to packages/website:
+ * the latest commit to any of them dates the page in the sitemap
+ * (lastmod) and its structured data (dateModified).
+ */
+const PAGE_SOURCES: Record<string, string[]> = {
+  "/": ["src/pages/Home.tsx", "src/content/home.ts", "src/content/home-examples.ts"],
+  "/features": ["src/pages/Features.tsx"],
+  "/verification": ["src/pages/Verification.tsx", "src/content/generated/verification.json"],
+  "/download": ["src/pages/Download.tsx"],
+  "/about": ["src/pages/About.tsx"],
+  "/changelog": ["../../CHANGELOG.md"],
+};
+
+export function sourceFiles(path: string): string[] {
+  if (path === "/docs" || path.startsWith("/docs/")) {
+    const doc = findDoc(path.slice("/docs".length));
+    return doc ? [`src/docs/${doc.file}`] : [];
+  }
+  return PAGE_SOURCES[path] ?? [];
+}
+
+export { jsonLdTag, structuredData } from "@/lib/structured-data";
 
 export interface Rendered extends PageMeta {
   html: string;
@@ -51,7 +75,7 @@ const toHtml = async (url: string, collect: (meta: PageMeta) => void) => {
 
 /** The app's HTML at this URL, with every page fully rendered. */
 export async function render(url: string): Promise<Rendered> {
-  let meta: PageMeta = { title: pageTitle(null), description: SITE.description };
+  let meta: PageMeta = { title: pageTitle(null), description: SITE.metaDescription };
   // The innermost page to render last wins (a docs page that is not found
   // renders NotFound).
   const html = await toHtml(url, (m) => {

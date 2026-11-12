@@ -1,9 +1,13 @@
 /** Site-wide facts and links, in one place. */
 export const SITE = {
   name: "cSlope",
-  tagline: "Slope stability analysis, checked against published problems",
+  /** The home page's title after the name. */
+  tagline: "Open source slope stability software",
+  /** The home page's description in search results and link previews. */
+  metaDescription:
+    "Open source slope stability software. Limit equilibrium analysis by Bishop, Janbu and Morgenstern-Price on circular and non-circular slip surfaces.",
   description:
-    "Open source limit equilibrium software for slope stability analysis, verified against published solutions.",
+    "Open source limit equilibrium software for slope stability analysis.",
   github: "https://github.com/ZilanCiftci/cslope",
   releases: "https://github.com/ZilanCiftci/cslope/releases",
   issues: "https://github.com/ZilanCiftci/cslope/issues",

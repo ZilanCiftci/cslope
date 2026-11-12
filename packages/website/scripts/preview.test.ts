@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import vercel from "../vercel.json";
-import { headersFor, resolvePath, sourceToRegExp } from "./preview";
+import { headersFor, resolvePath, sourceToRegExp, startPreview } from "./preview";
 
 /** A small dist with the files vercel.json points at. */
 function fakeDist(): string {
@@ -51,5 +51,19 @@ describe("preview server", () => {
     expect(headersFor(vercel, "/features")["Content-Security-Policy"]).toMatch(/^default-src 'self'/);
     expect(headersFor(vercel, "/assets/a.js")["Cache-Control"]).toMatch(/immutable/);
     expect(headersFor(vercel, "/features")["Cache-Control"]).toBeUndefined();
+  });
+
+  it("compresses text, as Vercel does, and leaves images as they are", async () => {
+    writeFileSync(join(dist, "a.png"), "png");
+    const server = await startPreview({ dist, port: 0 });
+    try {
+      const page = await fetch(`${server.url}/features`, { headers: { "Accept-Encoding": "gzip" } });
+      expect(page.headers.get("content-encoding")).toBe("gzip");
+      expect(await page.text()).toBe("features/index.html");
+      const image = await fetch(`${server.url}/a.png`, { headers: { "Accept-Encoding": "gzip" } });
+      expect(image.headers.get("content-encoding")).toBeNull();
+    } finally {
+      await server.close();
+    }
   });
 });
