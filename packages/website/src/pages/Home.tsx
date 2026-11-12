@@ -40,7 +40,7 @@ function Hero() {
             {s.problems} verification problems, {s.publishedValues} published values
           </p>
           <h1 className="mt-6 text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
-            Slope stability analysis, checked against published problems
+            Open source slope stability software
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground text-pretty">
             cSlope is limit equilibrium software for geotechnical engineers. Bishop, Janbu and Morgenstern-Price on
@@ -235,7 +235,7 @@ function Verification() {
         <div>
           <SectionHeading
             eyebrow="Verification"
-            title="Run on published problems"
+            title="Results on published problems"
             lead={
               <>
                 {s.problems} problems from the geotechnical literature and from verification manuals of established
@@ -348,7 +348,7 @@ function OpenSource() {
       <div className="grid gap-10 md:grid-cols-2 md:items-center">
         <SectionHeading
           eyebrow="Open source"
-          title="No license server, no subscription"
+          title="No license server or subscription"
           lead="cSlope is MIT licensed. You can install it on every computer in the office, read the solver code behind a result, and keep using the version a project was approved with."
         />
         <ul className="grid gap-4 text-sm">
