@@ -125,7 +125,7 @@ export const FILL_PARAMETERS = {
  */
 export const TEMPLATE_OPTIONS = { tensionCrackAuto: true, tensionCrackAngle: 65 } satisfies Partial<AnalysisOptions>;
 
-/** A layer is at least this thick, and no level comes closer than this to an excavation bottom (m). */
+/** A layer is at least this thick, and no level comes closer than this to an excavation bottom, other than on it (m). */
 export const MIN_LAYER_THICKNESS = 0.05;
 
 /**
@@ -140,6 +140,9 @@ export const EXTENT_FACTOR = 1.5;
 export function layerName(layer: Layer, index: number): string {
   return layer.name?.trim() || `Layer ${index + 1}`;
 }
+
+/** A level or distance without the floating-point rest of a difference (1e-6 m): 5.03 − 5 is 0.03. */
+const micro = (v: number) => String(Math.round(v * 1e6) / 1e6 + 0);
 
 const within = (v: number, d: ParameterDescription) =>
   Number.isFinite(v) && (d.minExclusive ? v > d.min : v >= d.min) && (d.maxExclusive ? v < d.max : v <= d.max);
@@ -162,8 +165,8 @@ export class Problems {
    * The layers: at least one, names used once, each at least 5 cm thick
    * below the ground or the layer above, and its material's values; a
    * level (other than the last layer's) within 5 cm of `avoid.level` (an
-   * excavation's bottom) is refused, and a layer named as the fill's
-   * material (`reserved`).
+   * excavation's bottom) but not on it (1e-9 m) is refused, and a layer
+   * named as the fill's material (`reserved`).
    */
   layers(layers: Layer[], ground: number, options: { avoid?: { level: number; text: string }; reserved?: { name: string; what: string } } = {}): void {
     const P = LAYER_PARAMETERS;
@@ -185,8 +188,11 @@ export class Problems {
           this.add(f("bottomLevel"), `${where}the bottom level ${layer.bottomLevel} must be at least ${thin} m below the ${i === 0 ? "ground" : "layer above"} (${top}).`);
         }
         const avoid = options.avoid;
-        if (avoid && !isLast && Math.abs(layer.bottomLevel - avoid.level) < thin - 1e-9) {
-          this.add(f("bottomLevel"), `${where}the bottom level ${layer.bottomLevel} is within ${thin} m of ${avoid.text}; move it.`);
+        // On the level itself (within 1e-9 m) is allowed; only a sliver thinner than 5 cm is refused.
+        const off = avoid ? Math.abs(layer.bottomLevel - avoid.level) : NaN;
+        if (avoid && !isLast && off > 1e-9 && off < thin - 1e-9) {
+          const at = micro(avoid.level);
+          this.add(f("bottomLevel"), `${where}the bottom level ${layer.bottomLevel} is ${micro(off)} m from ${avoid.text} (${at}): put it at ${at}, or at least ${thin} m from it.`);
         }
       }
       top = layer.bottomLevel;
