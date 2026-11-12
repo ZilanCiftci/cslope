@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fillTemplate, hasFormulas, lastCommitTime, outputFile, lazyStylesheets, sitemap } from "./prerender";
 
@@ -81,11 +83,46 @@ describe("sitemap", () => {
 });
 
 describe("lastCommitTime", () => {
+  // In a repository of its own: the checkout the tests run in can be a
+  // shallow clone (CI), where the date of the boundary commit is left out.
+  const git = (cwd: string, ...args: string[]) => {
+    const r = spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false", ...args], { cwd, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+    return r.stdout.trim();
+  };
+  const repo = () => {
+    const dir = mkdtempSync(join(tmpdir(), "cslope-lastmod-"));
+    git(dir, "init", "-q");
+    writeFileSync(join(dir, "a.txt"), "a");
+    git(dir, "add", "a.txt");
+    git(dir, "commit", "-q", "-m", "a");
+    return dir;
+  };
+
   it("dates committed files and not unknown ones", () => {
-    const root = join(import.meta.dirname, "..");
-    expect(lastCommitTime(["package.json"], root)).toMatch(/^\d{4}-\d\d-\d\dT/);
-    expect(lastCommitTime(["no-such-file.txt"], root)).toBeUndefined();
-    expect(lastCommitTime([], root)).toBeUndefined();
+    const dir = repo();
+    try {
+      expect(lastCommitTime(["a.txt"], dir)).toMatch(/^\d{4}-\d\d-\d\dT/);
+      expect(lastCommitTime(["no-such-file.txt"], dir)).toBeUndefined();
+      expect(lastCommitTime([], dir)).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gives no date for the boundary commit of a shallow clone", () => {
+    const dir = repo();
+    try {
+      writeFileSync(join(dir, "b.txt"), "b");
+      git(dir, "add", "b.txt");
+      git(dir, "commit", "-q", "-m", "b");
+      const shallow = git(dir, "rev-parse", "--path-format=absolute", "--git-path", "shallow");
+      // As a clone of depth 1 records it: the last commit is the boundary.
+      writeFileSync(shallow, git(dir, "rev-parse", "HEAD") + "\n");
+      expect(lastCommitTime(["b.txt"], dir)).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
