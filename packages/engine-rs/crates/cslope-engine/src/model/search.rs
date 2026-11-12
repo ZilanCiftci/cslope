@@ -123,6 +123,170 @@ fn range_grid_spec(slope: &Slope) -> SearchGridSpec {
     }
 }
 
+/// The ground paths of the entry and the exit range, for the sides that
+/// are ranges whose ground is not one straight line (issue #158).
+fn ground_paths(
+    slope: &Slope,
+    grid: &SearchGridSpec,
+) -> Result<(Option<GroundPath>, Option<GroundPath>)> {
+    let points = point_sides(slope);
+    let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = slope.search_limits();
+    let entry = if points.entry.is_none() && grid.num_points_top > 1.0 {
+        GroundPath::new(slope, entry_left_x, entry_right_x, false)?
+    } else {
+        None
+    };
+    let exit = if points.exit.is_none() && grid.num_points_bot > 0.0 {
+        GroundPath::new(slope, exit_left_x, exit_right_x, true)?
+    } else {
+        None
+    };
+    Ok((entry, exit))
+}
+
+/// The ground between two x as a path, along which the search spaces its
+/// entry or exit points evenly (issue #158): across slope breaks, and down
+/// a vertical face inside the range. A face at an end of the range lies at
+/// the limit's x and belongs to the range whole, except at an end of an
+/// exit range on a face that descends in the sliding direction: that end
+/// is the foot of the face, as a single exit there is
+/// (`Slope::exit_face_foot`, issue #147). An exit range starting at such a
+/// face starts at its foot; one ending at it runs down the face to its
+/// foot. None when the ground there is one straight segment: equal steps
+/// along it are equal steps in x, and the points are computed in x as
+/// before.
+struct GroundPath {
+    pts: Vec<Pt>,
+    /// Distance along the path to each point.
+    cum: Vec<f64>,
+}
+
+impl GroundPath {
+    fn new(slope: &Slope, a: f64, b: f64, exit: bool) -> Result<Option<GroundPath>> {
+        let Some(surf) = slope.surface_line_xy() else {
+            return Ok(None);
+        };
+        let (xs, ys) = (&surf.x, &surf.y);
+        if xs.len() < 2 || ys.len() < xs.len() {
+            return Ok(None);
+        }
+        let tol = 1e-9 * (js::math::max_of(xs) - js::math::min_of(xs));
+        if !(b - a > tol) {
+            return Ok(None);
+        }
+        let inner: Vec<Pt> = (0..xs.len())
+            .filter(|&i| xs[i] >= a - tol && xs[i] <= b + tol)
+            .map(|i| [xs[i], ys[i]])
+            .collect();
+        let mut pts: Vec<Pt> = Vec::new();
+        if !inner.first().is_some_and(|p| (p[0] - a).abs() <= tol) {
+            pts.push([a, slope.get_external_y_intersection(a)?]);
+        }
+        pts.extend(inner.iter().copied());
+        if !inner.last().is_some_and(|p| (p[0] - b).abs() <= tol) {
+            pts.push([b, slope.get_external_y_intersection(b)?]);
+        }
+        pts.dedup_by(|p, q| (p[0] - q[0]).abs() <= tol && (p[1] - q[1]).abs() <= tol);
+        if exit {
+            // An end on a face that descends towards the exit: its foot.
+            if let Some(foot) = slope.exit_face_foot(a) {
+                let k = pts
+                    .iter()
+                    .rposition(|p| (p[0] - a).abs() <= tol)
+                    .unwrap_or(0);
+                pts.drain(..k);
+                pts.insert(0, foot);
+            }
+            if let Some(foot) = slope.exit_face_foot(b) {
+                let last = pts.len() - 1;
+                pts[last] = foot;
+            }
+        }
+        if pts.len() <= 2 {
+            return Ok(None);
+        }
+        // Collinear points only: one straight segment.
+        let p0 = pts[0];
+        let pn = pts[pts.len() - 1];
+        let l = js::math::hypot(&[pn[0] - p0[0], pn[1] - p0[1]]);
+        let straight = pts[1..pts.len() - 1].iter().all(|p| {
+            ((p[0] - p0[0]) * (pn[1] - p0[1]) - (p[1] - p0[1]) * (pn[0] - p0[0])).abs() / l
+                <= 1e-9 * js::math::max(1.0, l)
+        });
+        if straight {
+            return Ok(None);
+        }
+        let mut cum = vec![0.0];
+        for k in 1..pts.len() {
+            let d = js::math::hypot(&[pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]]);
+            cum.push(cum[k - 1] + d);
+        }
+        Ok(Some(GroundPath { pts, cum }))
+    }
+
+    /// The path's length.
+    fn len(&self) -> f64 {
+        self.cum[self.cum.len() - 1]
+    }
+
+    /// The point at distance s along the path (clamped to its ends).
+    fn at(&self, s: f64) -> Pt {
+        let s = js::math::min(js::math::max(s, 0.0), self.len());
+        for k in 1..self.pts.len() {
+            if s <= self.cum[k] || k == self.pts.len() - 1 {
+                let seg = self.cum[k] - self.cum[k - 1];
+                let t = if seg > 0.0 {
+                    (s - self.cum[k - 1]) / seg
+                } else {
+                    0.0
+                };
+                let (p, q) = (self.pts[k - 1], self.pts[k]);
+                return [p[0] + t * (q[0] - p[0]), p[1] + t * (q[1] - p[1])];
+            }
+        }
+        self.pts[0]
+    }
+
+    /// The distance along the path of the path's point nearest to p.
+    fn s_of(&self, p: Pt) -> f64 {
+        let mut best = f64::INFINITY;
+        let mut s_best = 0.0;
+        for k in 1..self.pts.len() {
+            let (a, b) = (self.pts[k - 1], self.pts[k]);
+            let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+            let qa = dx * dx + dy * dy;
+            let t = if qa > 0.0 {
+                js::math::min(
+                    1.0,
+                    js::math::max(0.0, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / qa),
+                )
+            } else {
+                0.0
+            };
+            let d = js::math::hypot(&[a[0] + t * dx - p[0], a[1] + t * dy - p[1]]);
+            if d < best {
+                best = d;
+                s_best = self.cum[k - 1] + t * (self.cum[k] - self.cum[k - 1]);
+            }
+        }
+        s_best
+    }
+
+    /// n points at equal distances along the path, both ends included.
+    fn points(&self, n: f64) -> Vec<Pt> {
+        if n <= 1.0 {
+            return vec![self.pts[0]];
+        }
+        let mut out = Vec::new();
+        let mut i = 0.0;
+        while i < n {
+            out.push(self.at(self.len() * i / (n - 1.0)));
+            i += 1.0;
+        }
+        out
+    }
+}
+
 /// Entry and exit of the slip surface on a circle: the first crossing of
 /// the lower arc with the ground where the arc goes from air into soil,
 /// and the next crossing where it comes out again.
@@ -856,6 +1020,7 @@ pub fn generate_refined_planes(
         0.25,
         js::math::min(or_default(entry_step), or_default(exit_step)),
     );
+    let (entry_path, exit_path) = ground_paths(slope, &grid)?;
 
     for seed in seeds {
         if full(&generated) {
@@ -940,13 +1105,50 @@ pub fn generate_refined_planes(
         let entry_candidates = unique_numbers(entry_candidates);
         let exit_candidates = unique_numbers(exit_candidates);
 
-        'entries: for &ex in &entry_candidates {
+        // The ends half a grid step from the seed's (true: the seed's own).
+        // Where a range's ground is not one straight line, the step is
+        // taken along the ground (issue #158).
+        let mut entry_pts: Vec<(Pt, bool)> = Vec::new();
+        if let Some(path) = &entry_path {
+            let s0 = path.s_of(seed.lc);
+            let step = path.len() / (grid.num_points_top - 1.0);
+            entry_pts.push((seed.lc, true));
+            for d in [-0.5 * step, 0.5 * step] {
+                let s = s0 + d;
+                if s >= 0.0 && s <= path.len() {
+                    entry_pts.push((path.at(s), false));
+                }
+            }
+        } else {
+            for &ex in &entry_candidates {
+                entry_pts.push((
+                    [ex, slope.get_external_y_intersection(ex)?],
+                    (ex - seed.lc[0]).abs() < 1e-9,
+                ));
+            }
+        }
+        let mut exit_pts: Vec<(Pt, bool)> = Vec::new();
+        if let Some(path) = &exit_path {
+            let s0 = path.s_of(seed.rc);
+            let step = path.len() / grid.num_points_bot;
+            exit_pts.push((seed.rc, true));
+            for d in [-0.5 * step, 0.5 * step] {
+                let s = s0 + d;
+                if s >= 0.0 && s <= path.len() {
+                    exit_pts.push((path.at(s), false));
+                }
+            }
+        } else {
             for &xx in &exit_candidates {
-                if (ex - seed.lc[0]).abs() < 1e-9 && (xx - seed.rc[0]).abs() < 1e-9 {
+                exit_pts.push((slope.exit_ground_point(xx)?, (xx - seed.rc[0]).abs() < 1e-9));
+            }
+        }
+
+        'entries: for &(lc, entry_is_seed) in &entry_pts {
+            for &(rc, exit_is_seed) in &exit_pts {
+                if entry_is_seed && exit_is_seed {
                     continue;
                 }
-                let lc: Pt = [ex, slope.get_external_y_intersection(ex)?];
-                let rc: Pt = slope.exit_ground_point(xx)?;
                 if dist_points(lc, rc) <= slope.min_failure_distance() {
                     continue;
                 }
@@ -1016,6 +1218,7 @@ pub fn generate_local_planes(
     };
     // The grid spaces sagittas by 1/numCircles of the largest one.
     let sagitta_step = (2.0 * scale) / js::math::max(grid.num_circles, 1.0);
+    let (entry_path, exit_path) = ground_paths(slope, &grid)?;
 
     /// Adds the circle with this chord-to-arc distance; true when the budget is spent.
     #[allow(clippy::too_many_arguments)]
@@ -1081,19 +1284,53 @@ pub fn generate_local_planes(
         // ulps outside it, and without the tolerance its unmoved end was
         // dropped. A seed at a corner-widened limit (e.g. the toe) then
         // kept only the moved ends, whose circles all left the limits, and
-        // the empty level ended the local search early (issue #160).
-        for de in [-entry_step, 0.0, entry_step] {
-            let ex = seed.lc[0] + de;
-            if ex < entry_left_x - LIMIT_TOL || ex > entry_right_x + LIMIT_TOL {
-                continue;
+        // the empty level ended the local search early (issue #160). Where a
+        // range's ground is not one straight line, the ends step along the
+        // ground, by the same fraction of the grid's spacing along it (issue
+        // #158; the step's sign stands in for its size: 0 is the seed's end).
+        let mut entry_pts: Vec<(f64, Pt)> = Vec::new();
+        if let Some(path) = &entry_path {
+            let s0 = path.s_of(seed.lc);
+            let step = path.len() / (grid.num_points_top - 1.0) * scale;
+            for k in [-1.0, 0.0, 1.0] {
+                let s = s0 + k * step;
+                if s < 0.0 || s > path.len() {
+                    continue;
+                }
+                entry_pts.push((k, if k == 0.0 { seed.lc } else { path.at(s) }));
             }
+        } else {
+            for de in [-entry_step, 0.0, entry_step] {
+                let ex = seed.lc[0] + de;
+                if ex < entry_left_x - LIMIT_TOL || ex > entry_right_x + LIMIT_TOL {
+                    continue;
+                }
+                entry_pts.push((de, [ex, slope.get_external_y_intersection(ex)?]));
+            }
+        }
+        let mut exit_pts: Vec<(f64, Pt)> = Vec::new();
+        if let Some(path) = &exit_path {
+            let s0 = path.s_of(seed.rc);
+            let step = path.len() / grid.num_points_bot * scale;
+            for k in [-1.0, 0.0, 1.0] {
+                let s = s0 + k * step;
+                if s < 0.0 || s > path.len() {
+                    continue;
+                }
+                exit_pts.push((k, if k == 0.0 { seed.rc } else { path.at(s) }));
+            }
+        } else {
             for dx in [-exit_step, 0.0, exit_step] {
                 let xx = seed.rc[0] + dx;
                 if xx < exit_left_x - LIMIT_TOL || xx > exit_right_x + LIMIT_TOL {
                     continue;
                 }
-                let lc: Pt = [ex, slope.get_external_y_intersection(ex)?];
-                let rc: Pt = slope.exit_ground_point(xx)?;
+                exit_pts.push((dx, slope.exit_ground_point(xx)?));
+            }
+        }
+
+        for &(de, lc) in &entry_pts {
+            for &(dx, rc) in &exit_pts {
                 if dist_points(lc, rc) <= slope.min_failure_distance() {
                     continue;
                 }
@@ -1166,22 +1403,24 @@ pub fn set_entry_exit_planes(slope: &mut Slope) -> Result<()> {
 
 /// The planes `set_entry_exit_planes` sets, on a shared slope.
 pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
-    let SearchGridSpec {
-        num_points_top,
-        num_points_bot,
-        ..
-    } = get_search_grid_spec(slope);
+    let grid = get_search_grid_spec(slope);
+    let (num_points_top, num_points_bot) = (grid.num_points_top, grid.num_points_bot);
     let points = point_sides(slope);
+    let (entry_path, exit_path) = ground_paths(slope, &grid)?;
 
     let window = SearchWindow::of(slope);
     let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
 
-    // Generate entry (left) coordinates
+    // Generate entry (left) coordinates: evenly spaced along the ground
+    // between the limits (issue #158), which is evenly in x where the
+    // ground there is one straight line.
     let mut left_coords: Vec<Pt> = Vec::new();
     if let Some(xs) = &points.entry {
         for &x in xs {
             left_coords.push([x, slope.get_external_y_intersection(x)?]);
         }
+    } else if let Some(path) = &entry_path {
+        left_coords = path.points(num_points_top);
     } else {
         let mut n = 0.0;
         while n < num_points_top {
@@ -1197,6 +1436,8 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
         for &x in xs {
             right_coords.push(slope.exit_ground_point(x)?);
         }
+    } else if let Some(path) = &exit_path {
+        right_coords = path.points(num_points_bot + 1.0);
     } else {
         let mut n = 0.0;
         while n <= num_points_bot {

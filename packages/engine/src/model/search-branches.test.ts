@@ -106,6 +106,45 @@ describe("the first pass", () => {
     sagittas.forEach((v, k) => expect(v / d).toBeCloseTo(0.05 + 0.09 * k, 9));
   });
 
+  it("spaces the points evenly along the ground: in x on a straight range, across a slope break (#158)", () => {
+    const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 14, exitLeftX: 27, exitRightX: 38 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    // the exit range on the floor: 1.1 m apart in x
+    distinct(s.search.map((p) => p.rc[0])).forEach((x, k) => expect(x).toBeCloseTo(27 + 1.1 * k, 9));
+    // the entry range from the crest over its corner onto the face
+    const face = (x: number) => 10 - ((x - 10) * 10) / 15;
+    const total = 9 + Math.hypot(4, 10 - face(14));
+    const entries = distinct(s.search.map((p) => p.lc[0]));
+    expect(entries).toHaveLength(9);
+    entries.forEach((x, k) => {
+      const d = (total * k) / 8;
+      expect(x).toBeCloseTo(d <= 9 ? 1 + d : 10 + (4 * (d - 9)) / (total - 9), 7);
+    });
+  });
+
+  it("puts points on a vertical face in a range, and ends an exit range at a face at its foot (#158)", () => {
+    // crest y = 15, a 10 m face at x = 20, floor y = 5
+    const wall = () => model([[0, 0], [0, 15], [20, 15], [20, 5], [40, 5], [40, 0]]);
+    const s = wall();
+    s.setAnalysisLimits({ entryLeftX: 5, entryRightX: 16, exitLeftX: 15, exitRightX: 30 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    for (const y of [12.5, 10, 7.5]) {
+      expect(s.search.some((p) => Math.abs(p.rc[0] - 20) < 1e-9 && Math.abs(p.rc[1] - y) < 1e-7)).toBe(true);
+    }
+    const foot = 5 + 1e-5 * 40;
+    const t = wall();
+    t.setAnalysisLimits({ entryLeftX: 5, entryRightX: 16, exitLeftX: 20, exitRightX: 30 });
+    t.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(t);
+    // starting at the face: from its foot, not on the crest
+    expect(t.searchLimits).toEqual([5, 16, 20, 30]);
+    expect(t.search.every((p) => p.rc[1] < 15 - 1e-3)).toBe(true);
+    expect(t.search.some((p) => Math.abs(p.rc[0] - 20) < 1e-9 && Math.abs(p.rc[1] - foot) < 1e-9)).toBe(true);
+  });
+
   it("gives a side given as a point its point only (#157)", () => {
     const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
     s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 8, exitLeftX: 32, exitRightX: 32 });

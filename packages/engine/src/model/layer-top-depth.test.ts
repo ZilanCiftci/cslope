@@ -68,8 +68,9 @@ describe("S = f(depth) from the top of the layer", () => {
     // 1.0896195608 with the arc base of a circle; the chord since 2026-11-10
     // (1.0874542963); without the cut steep ends since 2026-11-11
     // (1.0884182069); with the first pass of 11 radii on 6 × 7 pairs at
-    // these 400 iterations since #160 (converged: 1.0857103430).
-    expect(fromGround).toBeCloseTo(1.0980545582, 8);
+    // these 400 iterations since #160 (1.0980545582); with the points along
+    // the ground since #158 (converged: 1.0857103430).
+    expect(fromGround).toBeCloseTo(1.0946430416, 8);
   });
 
   it("works on a right-to-left model", () => {

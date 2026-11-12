@@ -137,6 +137,20 @@ describe("a single exit x on a vertical face of the ground", () => {
     expect(Math.abs(poly! / fos! - 1)).toBeLessThan(1e-4);
   });
 
+  it("starts or ends an exit range at the face at its foot (#158)", () => {
+    const foot = 5 + 1e-5 * 40;
+    for (const rtl of [false, true]) {
+      const single = runVerification(wall(rtl, limits), "Morgenstern-Price", constant).fos!;
+      const start = runVerification(wall(rtl, { ...limits, exitRightX: 30 }), "Morgenstern-Price", constant);
+      expect(start.slope.searchLimits).toEqual([11, 16, 20, 30]);
+      expect(start.fos!).toBeLessThanOrEqual(single * (1 + 1e-3));
+      expect(start.slope.search.every((p) => p.rc[1] < 15 - 1e-3)).toBe(true);
+      const end = runVerification(wall(rtl, { ...limits, exitLeftX: 17 }), "Morgenstern-Price", constant);
+      expect(end.fos!).toBeLessThanOrEqual(single * (1 + 1e-3));
+      expect(end.slope.search.every((p) => p.rc[0] <= 20 + 1e-9 && p.rc[1] >= foot - 1e-9)).toBe(true);
+    }
+  });
+
   it("leaves a face that rises towards the exit and an exit range as they were", () => {
     const w = 1e-5 * 40;
     const rising: SlopeDefinition = {
@@ -147,7 +161,8 @@ describe("a single exit x on a vertical face of the ground", () => {
     expect(r.slope.searchLimits).toEqual([11, 16, 30 - w, 30]);
     // (as in the Rust tests: 1.150043595810847 and 0.392698221225512
     // before the local search's limit tolerance and the first pass of 11
-    // radii, #160)
+    // radii, #160; the second 0.39241043063957864 before the points along
+    // the ground, #158)
     expect(r.fos!).toBeCloseTo(1.1487376444300625, 9);
     const range = runVerification(
       wall(false, { entryLeftX: 11, entryRightX: 16, exitLeftX: 18, exitRightX: 30 }),
@@ -155,6 +170,6 @@ describe("a single exit x on a vertical face of the ground", () => {
       constant,
     );
     expect(range.slope.searchLimits).toEqual([11, 16, 18, 30]);
-    expect(range.fos!).toBeCloseTo(0.39241043063957864, 9);
+    expect(range.fos!).toBeCloseTo(0.3925454411110143, 9);
   });
 });

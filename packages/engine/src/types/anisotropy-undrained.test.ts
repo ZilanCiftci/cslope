@@ -82,18 +82,20 @@ describe("anisotropy on Su = f(datum) in a slope", () => {
   it("gives the factor of the same strength in thin layers of the anisotropic model", () => {
     const run = (thin: boolean) => {
       const s = buildSlope(toCanonicalSlopeDefinition(layered(thin)));
-      s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", slices: 40, iterations: 1000, refinedIterations: 500 });
+      s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", slices: 40, iterations: 2000, refinedIterations: 1000 });
       return analyseSlope(s) as number;
     };
-    // At the default 1 000 iterations: with 300 the search itself missed
-    // the minimum of one of the two by 1.2 % (#160's first pass; by up to
-    // 0.95 % with the earlier one), the order of the tolerance.
+    // At 2 000 iterations: with fewer the search itself can miss the
+    // minimum of one of the two by more than the tolerance (with 300 by
+    // up to 0.95 % before #160 and 1.2 % after it; with 1 000 by 1.6 %
+    // since #158, whose points along the ground no longer fall on the toe,
+    // where the critical circle exits).
     const fNew = run(false), fThin = run(true);
     expect(Math.abs(fNew / fThin - 1)).toBeLessThan(0.01);
     // and differs from the isotropic slope (active zone stronger, passive weaker)
     const iso = layered(false); ((iso.materials as unknown as Mat[])[0].model as { anisotropy?: unknown }).anisotropy = undefined;
     const s = buildSlope(toCanonicalSlopeDefinition(iso));
-    s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", slices: 40, iterations: 1000, refinedIterations: 500 });
+    s.updateAnalysisOptions({ ...DEFAULT_ANALYSIS_OPTIONS, method: "Morgenstern-Price", slices: 40, iterations: 2000, refinedIterations: 1000 });
     expect(Math.abs((analyseSlope(s) as number) / fNew - 1)).toBeGreaterThan(0.02);
   }, 300000);
 });

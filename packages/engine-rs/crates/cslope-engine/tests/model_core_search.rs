@@ -798,3 +798,123 @@ fn a_point_on_a_corner_is_the_two_ends_of_its_widened_limit() {
         );
     }
 }
+
+// ── Points evenly along the ground (issue #158) ──────────────────
+
+/// The distinct points, to within 1e-7, in x then y.
+fn distinct_points(ps: impl Iterator<Item = Pt>) -> Vec<Pt> {
+    let mut v: Vec<Pt> = ps.collect();
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.dedup_by(|a, b| (a[0] - b[0]).abs() < 1e-7 && (a[1] - b[1]).abs() < 1e-7);
+    v
+}
+
+#[test]
+fn on_a_straight_range_the_points_are_even_in_x() {
+    // The exit range on the floor: 11 points 1.1 m apart, as in x.
+    let (_, planes) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    let exits = distinct(planes.iter().map(|p| p.rc[0]));
+    assert_eq!(exits.len(), 11);
+    for (k, x) in exits.iter().enumerate() {
+        close(*x, 27.0 + 1.1 * k as f64, 9);
+    }
+}
+
+#[test]
+fn over_a_slope_break_the_points_are_even_along_the_ground() {
+    // The entry range from the crest over its corner (x = 10) onto the
+    // 2:3 face: 9 points at equal distances along the ground.
+    let (_, planes) = first_pass([1.0, 14.0, 27.0, 38.0]);
+    let face = |x: f64| 10.0 - (x - 10.0) * 10.0 / 15.0;
+    let total = 9.0 + (4.0_f64).hypot(10.0 - face(14.0));
+    let expected: Vec<Pt> = (0..9)
+        .map(|k| {
+            let s = total * k as f64 / 8.0;
+            if s <= 9.0 {
+                [1.0 + s, 10.0]
+            } else {
+                let t = (s - 9.0) / (total - 9.0);
+                [10.0 + 4.0 * t, face(10.0 + 4.0 * t)]
+            }
+        })
+        .collect();
+    let entries = distinct_points(planes.iter().map(|p| p.lc));
+    assert_eq!(entries.len(), 9);
+    for (p, q) in entries.iter().zip(&expected) {
+        close(p[0], q[0], 7);
+        close(p[1], q[1], 7);
+    }
+}
+
+/// A crest at y = 15, a 10 m vertical face at x = 20 and a floor at y = 5,
+/// sliding to the right.
+const WALL: [Pt; 6] = [
+    [0.0, 0.0],
+    [0.0, 15.0],
+    [20.0, 15.0],
+    [20.0, 5.0],
+    [40.0, 5.0],
+    [40.0, 0.0],
+];
+
+fn wall_first_pass(exit: [f64; 2]) -> (Slope, Vec<SearchPlane>) {
+    let mut s = model(&WALL);
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(5.0),
+        entry_right_x: Some(16.0),
+        exit_left_x: Some(exit[0]),
+        exit_right_x: Some(exit[1]),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    (s, planes)
+}
+
+#[test]
+fn a_vertical_face_inside_a_range_gets_points_on_it() {
+    // Exit range 15-30: 5 m of crest, the 10 m face, 10 m of floor; the 11
+    // points 2.5 m apart along it, three of them inside the face (before,
+    // in x, none: the face has no width).
+    let (_, planes) = wall_first_pass([15.0, 30.0]);
+    let exits = distinct_points(planes.iter().map(|p| p.rc));
+    for y in [12.5, 10.0, 7.5] {
+        assert!(
+            exits
+                .iter()
+                .any(|p| (p[0] - 20.0).abs() < 1e-9 && (p[1] - y).abs() < 1e-7),
+            "no exit at (20, {y})"
+        );
+    }
+}
+
+#[test]
+fn an_exit_range_at_a_face_ends_at_its_foot() {
+    let foot = [20.0, 5.0 + 1e-5 * 40.0];
+    // Starting at the face: at its foot, not on the crest (the corner rule
+    // does not move this end, as for a single exit there, issue #147).
+    let (s, planes) = wall_first_pass([20.0, 30.0]);
+    assert_eq!(s.search_limits(), [5.0, 16.0, 20.0, 30.0]);
+    assert!(!planes.is_empty());
+    // (a circle through a point of the floor next to the foot can still
+    // come out of the face a little above it)
+    for p in &planes {
+        assert!(p.rc[1] < 15.0 - 1e-3, "exit {:?}", p.rc);
+    }
+    assert!(planes
+        .iter()
+        .any(|p| (p.rc[0] - foot[0]).abs() < 1e-9 && (p.rc[1] - foot[1]).abs() < 1e-9));
+    // Ending at the face: down the face to its foot, and not beyond it.
+    let (s, planes) = wall_first_pass([12.0, 20.0]);
+    assert_eq!(s.search_limits(), [5.0, 16.0, 12.0, 20.0]);
+    for p in &planes {
+        assert!(
+            p.rc[0] <= 20.0 + 1e-9 && p.rc[1] >= foot[1] - 1e-9,
+            "exit {:?}",
+            p.rc
+        );
+    }
+    assert!(planes
+        .iter()
+        .any(|p| (p.rc[0] - 20.0).abs() < 1e-9 && p.rc[1] > foot[1] + 1.0 && p.rc[1] < 14.0));
+}

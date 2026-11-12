@@ -289,6 +289,47 @@ fn a_single_exit_x_on_a_vertical_face_exits_at_its_foot() {
     }
 }
 
+/// An exit range whose end lies on the face (issue #158): an end on a face
+/// that descends towards the exit is its foot, as a single exit there is.
+#[test]
+fn an_exit_range_at_a_vertical_face_starts_or_ends_at_its_foot() {
+    let entry = |xl: f64, xr: f64| json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": xl, "exitRightX": xr });
+    let foot = 5.0 + 1e-5 * 40.0;
+    for rtl in [false, true] {
+        let (single, _) = run_verification(
+            wall_def(rtl, false, entry(20.0, 20.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let single = single.unwrap();
+        // Starting at the face: the crest is not searched (the corner rule
+        // does not move this end), and the foot is.
+        let (fos, s) = run_verification(
+            wall_def(rtl, false, entry(20.0, 30.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let fos = fos.unwrap();
+        assert_eq!(s.search_limits(), [11.0, 16.0, 20.0, 30.0]);
+        assert!(fos <= single * (1.0 + 1e-3), "{fos} against {single}");
+        for p in s.search() {
+            assert!(p.rc[1] < 15.0 - 1e-3, "exit {:?}", p.rc);
+        }
+        // Ending at the face: the face is searched down to its foot.
+        let (fos, s) = run_verification(
+            wall_def(rtl, false, entry(17.0, 20.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let fos = fos.unwrap();
+        assert!(fos <= single * (1.0 + 1e-3), "{fos} against {single}");
+        assert!(s
+            .search()
+            .iter()
+            .all(|p| p.rc[0] <= 20.0 + 1e-9 && p.rc[1] >= foot - 1e-9));
+    }
+}
+
 #[test]
 fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
     // A single exit x on a face that rises in the sliding direction: the
@@ -308,10 +349,12 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
     close(fos.unwrap(), 1.148_737_644_430_062_5, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
-    // An exit range across the face: the ground at each x, as before. (Its
+    // An exit range across the face: no foot rule, the face is part of the
+    // range (its points along the ground since #158). (Its
     // critical circle exits at the range's left end: 0.392698221225512
     // before the local search kept the unmoved end of a seed on a limit,
-    // 0.39268667489844383 before the first pass of 11 radii, issue #160.)
+    // 0.39268667489844383 before the first pass of 11 radii, issue #160,
+    // 0.39241043063957864 before the points along the ground, #158.)
     let (fos, s) = run_verification(
         wall_def(
             false,
@@ -321,7 +364,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    close(fos.unwrap(), 0.392_410_430_639_578_64, 12);
+    close(fos.unwrap(), 0.392_545_441_111_014_3, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
