@@ -2,7 +2,7 @@
  * The result card: F, a factor of safety on characteristic values, with
  * the engine's own label, the method, the critical surface's entry and exit,
  * the surfaces searched; then the commands (run, cancel, the downloads of
- * the analysis document and of a cSlope project, the link) and a note that this is a template calculation, not a design.
+ * the analysis document and of a cSlope project, the link) and a note that this is a template calculation to be checked before use in a design.
  * The engine's warnings are not shown: the page's users cannot act on them
  * (the geometry and the options are the template's), and the templates
  * avoid what they are about (TEMPLATE_OPTIONS); the app shows them.
