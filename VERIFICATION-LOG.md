@@ -100,11 +100,306 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-11 | Slices of a circle without the steep-end cuts (V068 tolerance +1 % for a slicing-sensitive surface) | 166 | 0.316 → 0.308 | 0.447 → 0.441 | 0.936 → 0.948 | 1.519 → 1.531 | 638 s (4 workers, load 1.1 at start) |
 | 2026-11-11 | Reinforcement: active (prestressed) elements always carry their force; the tension-only rule is for passive elements | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 1308 s (4 workers, load 2.3 at start) |
 | 2026-11-11 | Search: a single exit x on a vertical ground face exits at the foot of the face | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 600 s (4 workers, load 2.3 at start) |
+| 2026-11-12 | Search: a side given as a point gets one point in the first pass; a point on a corner is the two ends of its widened limit (issue #157) | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 548 s (4 workers, load 3.3 at start) |
+| 2026-11-12 | Local search: the unmoved end of a seed on a search limit is kept (limit tolerance 1e-9, as for the surfaces) | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 567 s (4 workers, load 2.5 at start) |
+| 2026-11-12 | Search: a pair given right to left gets its circle tangent to a material interface | 6 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.951 | 1.531 → 1.536 | 523 s (4 workers, load 3.7 at start) |
+| 2026-11-12 | Search: first pass with 11 sagittas from 5 % to 95 % of the reference depth on 9 × 11 entry-exit pairs (issue #160) | 68 | 0.308 → 0.311 | 0.441 → 0.443 | 0.951 → 0.949 | 1.536 → 1.537 | 510 s (4 workers, load 1.0 at start) |
+| 2026-11-12 | Search: entry and exit points evenly along the ground in the first pass, the refinement and the local search; an exit range end on a descending face is its foot (issue #158) | 56 | 0.311 → 0.315 | 0.443 → 0.454 | 0.949 → 0.948 | 1.537 → 1.533 | 518 s (4 workers, load 1.0 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-12: Search: entry and exit points evenly along the ground in the first pass, the refinement and the local search; an exit range end on a descending face is its foot (issue #158)
+
+Compared with 2a0e3666. Errors are relative to the reference, in percent. Verification run time: 518 s (4 workers, load 1.0 at start).
+
+**Against other programs (midpoint of their range):** 36 moved (16 closer to the reference, 20 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V059b Spencer, non-circular | 1.290 | 1.2892 | 1.3118 | -0.062 % | +1.690 % |
+| V034a Spencer, non-circular | 1.262 | 1.2579 | 1.2609 | -0.325 % | -0.087 % |
+| V094 Morgenstern-Price (half-sine), non-circular | 1.389 | 1.3857 | 1.3881 | -0.238 % | -0.065 % |
+| V003 Bishop simplified | 1.115 | 1.1155 | 1.1140 | +0.045 % | -0.090 % |
+| V028 Bishop simplified | 1.126 | 1.1233 | 1.1246 | -0.240 % | -0.124 % |
+| V104a Bishop simplified | 2.300 | 2.2918 | 2.2940 | -0.357 % | -0.261 % |
+| V041b Spencer, non-circular | 1.590 | 1.5895 | 1.5880 | -0.031 % | -0.126 % |
+| V086c Spencer | 1.209 | 1.2014 | 1.2005 | -0.629 % | -0.703 % |
+| V036a Spencer, non-circular | 0.740 | 0.7373 | 0.7368 | -0.365 % | -0.432 % |
+| V004a Spencer | 2.794 | 2.8033 | 2.8023 | +0.333 % | +0.297 % |
+| V086c Morgenstern-Price (half-sine) | 1.218 | 1.2113 | 1.2109 | -0.550 % | -0.583 % |
+| V033 Spencer, non-circular | 1.534 | 1.5224 | 1.5220 | -0.756 % | -0.782 % |
+| V052a Janbu corrected | 1.949 | 1.9496 | 1.9501 | +0.031 % | +0.056 % |
+| V098 Spencer, non-circular | 1.360 | 1.3567 | 1.3570 | -0.243 % | -0.221 % |
+| V009c Spencer, non-circular | 1.868 | 1.8667 | 1.8670 | -0.070 % | -0.054 % |
+| V100 Janbu simplified, non-circular | 1.563 | 1.5588 | 1.5586 | -0.269 % | -0.282 % |
+| V100 Bishop simplified, non-circular | 1.656 | 1.6511 | 1.6513 | -0.296 % | -0.284 % |
+| V004a Janbu simplified | 2.662 | 2.6764 | 2.6767 | +0.541 % | +0.552 % |
+| V036d Spencer, non-circular | 1.116 | 1.1192 | 1.1193 | +0.287 % | +0.296 % |
+| V039 Spencer, non-circular | 1.167 | 1.1604 | 1.1603 | -0.566 % | -0.574 % |
+| V026 Spencer, non-circular | 1.190 | 1.1704 | 1.1703 | -1.647 % | -1.655 % |
+| V059a Spencer, non-circular | 1.215 | 1.2136 | 1.2137 | -0.115 % | -0.107 % |
+| V059c Spencer, non-circular | 1.315 | 1.3119 | 1.3118 | -0.236 % | -0.243 % |
+| V093 Spencer, non-circular | 1.325 | 1.3226 | 1.3225 | -0.181 % | -0.189 % |
+| V082d Janbu corrected | 1.345 | 1.3435 | 1.3436 | -0.112 % | -0.104 % |
+| V082d Morgenstern-Price (half-sine) | 1.378 | 1.3715 | 1.3714 | -0.472 % | -0.479 % |
+| V082d Spencer | 1.382 | 1.3763 | 1.3762 | -0.412 % | -0.420 % |
+| V001 Spencer, non-circular | 1.386 | 1.3836 | 1.3837 | -0.173 % | -0.166 % |
+| V073 Bishop simplified, circles only | 1.417 | 1.4109 | 1.4108 | -0.430 % | -0.438 % |
+| V057a Spencer | 1.468 | 1.4735 | 1.4736 | +0.375 % | +0.381 % |
+| V041a Spencer | 1.599 | 1.5955 | 1.5956 | -0.219 % | -0.213 % |
+| V041b Spencer | 1.599 | 1.5950 | 1.5951 | -0.250 % | -0.244 % |
+| V041b Bishop simplified | 1.603 | 1.5982 | 1.5983 | -0.299 % | -0.293 % |
+| V041a Bishop simplified | 1.603 | 1.5983 | 1.5984 | -0.293 % | -0.287 % |
+| V085 Janbu simplified | 1.628 | 1.6268 | 1.6267 | -0.074 % | -0.080 % |
+| V052a Bishop simplified | 1.950 | 1.9477 | 1.9478 | -0.092 % | -0.087 % |
+| **Mean error (n = 301)** | | | | -0.206 % | -0.199 % |
+| **Mean absolute error** | | | | 0.311 % | 0.315 % |
+| **RMS error** | | | | 0.443 % | 0.454 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 20 moved (11 closer to the reference, 9 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V002 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 0.430 | 0.4118 | 0.4130 | -4.233 % | -3.953 % |
+| V003 Bishop simplified (Arai & Tagyo (1985)) | 1.138 | 1.1155 | 1.1140 | -1.977 % | -2.109 % |
+| V086c Spencer (Tandjiria, Low & Teh (2002)) | 1.219 | 1.2014 | 1.2005 | -1.444 % | -1.518 % |
+| V002 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.405 | 0.3920 | 0.3919 | -3.210 % | -3.235 % |
+| V038b Spencer (Duncan & Wright) | 1.160 | 1.1578 | 1.1580 | -0.190 % | -0.172 % |
+| V038b Spencer, finite-element pore pressures (Duncan, Wright & Brandon (2014)) | 1.190 | 1.1578 | 1.1580 | -2.706 % | -2.689 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8667 | 1.8670 | -2.267 % | -2.251 % |
+| V100 Janbu simplified (uncorrected), non-circular (Jiang, Baker & Yamagami) | 1.560 | 1.5588 | 1.5586 | -0.077 % | -0.090 % |
+| V003 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.995 | 0.9661 | 0.9660 | -2.905 % | -2.915 % |
+| V028 Spencer (Duncan & Wright) | 1.124 | 1.1244 | 1.1243 | +0.036 % | +0.027 % |
+| V039 Spencer, non-circular (Duncan & Wright) | 1.160 | 1.1604 | 1.1603 | +0.034 % | +0.026 % |
+| V069a stability chart (Morgenstern) | 1.200 | 1.2009 | 1.2008 | +0.075 % | +0.067 % |
+| V005 Spencer, non-circular (dynamic programming) (Baker, Frydman & Talesnick (1993)) | 2.410 | 2.5005 | 2.5003 | +3.755 % | +3.747 % |
+| V086e Spencer (Tandjiria, Low & Teh) | 1.219 | 1.2044 | 1.2045 | -1.198 % | -1.189 % |
+| V093 Spencer, non-circular (Greco (1996)) | 1.330 | 1.3226 | 1.3225 | -0.556 % | -0.564 % |
+| V093 Spencer, non-circular (Yamagami & Ueta (1988)) | 1.339 | 1.3226 | 1.3225 | -1.225 % | -1.232 % |
+| V057a limit-equilibrium chart (Griffiths & Lane) | 1.460 | 1.4735 | 1.4736 | +0.925 % | +0.932 % |
+| V041a Spencer (Duncan & Wright) | 1.600 | 1.5955 | 1.5956 | -0.281 % | -0.275 % |
+| V041b Spencer (Duncan & Wright) | 1.600 | 1.5950 | 1.5951 | -0.313 % | -0.306 % |
+| V085 Janbu simplified (Duncan & Wright) | 1.630 | 1.6268 | 1.6267 | -0.196 % | -0.202 % |
+| **Mean error (n = 123)** | | | | -0.134 % | -0.133 % |
+| **Mean absolute error** | | | | 0.949 % | 0.948 % |
+| **RMS error** | | | | 1.537 % | 1.533 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
+
+### 2026-11-12: Search: first pass with 11 sagittas from 5 % to 95 % of the reference depth on 9 × 11 entry-exit pairs (issue #160)
+
+Compared with 255d8a46. Errors are relative to the reference, in percent. Verification run time: 510 s (4 workers, load 1.0 at start).
+
+**Against other programs (midpoint of their range):** 43 moved (18 closer to the reference, 25 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V086c Spencer | 1.209 | 1.2063 | 1.2014 | -0.223 % | -0.629 % |
+| V086c Morgenstern-Price (half-sine) | 1.218 | 1.2150 | 1.2113 | -0.246 % | -0.550 % |
+| V100 Bishop simplified, non-circular | 1.656 | 1.6476 | 1.6511 | -0.507 % | -0.296 % |
+| V094 Morgenstern-Price (half-sine), non-circular | 1.389 | 1.3882 | 1.3857 | -0.058 % | -0.238 % |
+| V036a Spencer, non-circular | 0.740 | 0.7360 | 0.7373 | -0.541 % | -0.365 % |
+| V003 Bishop simplified | 1.115 | 1.1140 | 1.1155 | -0.090 % | +0.045 % |
+| V039 Spencer, non-circular | 1.167 | 1.1618 | 1.1604 | -0.446 % | -0.566 % |
+| V028 Bishop simplified | 1.126 | 1.1246 | 1.1233 | -0.124 % | -0.240 % |
+| V052a Janbu corrected | 1.949 | 1.9516 | 1.9496 | +0.133 % | +0.031 % |
+| V036a Spencer | 0.756 | 0.7521 | 0.7515 | -0.516 % | -0.595 % |
+| V036a Bishop simplified | 0.761 | 0.7568 | 0.7564 | -0.552 % | -0.604 % |
+| V036b Spencer | 0.898 | 0.8983 | 0.8979 | +0.033 % | -0.011 % |
+| V004a Spencer | 2.794 | 2.8021 | 2.8033 | +0.290 % | +0.333 % |
+| V094 Spencer, non-circular | 1.398 | 1.3985 | 1.3990 | +0.036 % | +0.072 % |
+| V041b Spencer, non-circular | 1.590 | 1.5890 | 1.5895 | -0.063 % | -0.031 % |
+| V004a Janbu simplified | 2.662 | 2.6771 | 2.6764 | +0.567 % | +0.541 % |
+| V032a Bishop simplified | 1.230 | 1.2247 | 1.2244 | -0.431 % | -0.455 % |
+| V036b Bishop simplified | 0.909 | 0.9060 | 0.9058 | -0.330 % | -0.352 % |
+| V009c Spencer, non-circular | 1.868 | 1.8671 | 1.8667 | -0.048 % | -0.070 % |
+| V052a Bishop simplified | 1.950 | 1.9481 | 1.9477 | -0.072 % | -0.092 % |
+| V033 Spencer, non-circular | 1.534 | 1.5221 | 1.5224 | -0.776 % | -0.756 % |
+| V026 Spencer, non-circular | 1.190 | 1.1702 | 1.1704 | -1.664 % | -1.647 % |
+| V026 Bishop simplified | 1.228 | 1.2203 | 1.2201 | -0.627 % | -0.643 % |
+| V052a Spencer | 1.948 | 1.9480 | 1.9477 | 0.000 % | -0.015 % |
+| V093 Spencer, non-circular | 1.325 | 1.3224 | 1.3226 | -0.196 % | -0.181 % |
+| V041a Spencer, non-circular | 1.592 | 1.5911 | 1.5913 | -0.057 % | -0.044 % |
+| V047b Morgenstern-Price (half-sine) | 1.660 | 1.6561 | 1.6559 | -0.235 % | -0.247 % |
+| V047b Bishop simplified | 1.664 | 1.6592 | 1.6590 | -0.288 % | -0.300 % |
+| V038 Bishop simplified, circles only | 1.080 | 1.0707 | 1.0706 | -0.861 % | -0.870 % |
+| V032b Bishop simplified | 1.155 | 1.1548 | 1.1547 | -0.017 % | -0.026 % |
+| V096b Morgenstern-Price (half-sine) | 1.174 | 1.1731 | 1.1732 | -0.077 % | -0.068 % |
+| V096b Bishop simplified | 1.176 | 1.1745 | 1.1746 | -0.128 % | -0.119 % |
+| V059c Spencer, non-circular | 1.315 | 1.3118 | 1.3119 | -0.243 % | -0.236 % |
+| V093 Bishop simplified | 1.344 | 1.3431 | 1.3430 | -0.067 % | -0.074 % |
+| V082d Morgenstern-Price (half-sine) | 1.378 | 1.3714 | 1.3715 | -0.479 % | -0.472 % |
+| V001 Spencer, non-circular | 1.386 | 1.3837 | 1.3836 | -0.166 % | -0.173 % |
+| V073 Bishop simplified, circles only | 1.417 | 1.4108 | 1.4109 | -0.438 % | -0.430 % |
+| V040 Bishop simplified, circles only | 1.461 | 1.4594 | 1.4595 | -0.110 % | -0.103 % |
+| V100 Janbu simplified, non-circular | 1.563 | 1.5589 | 1.5588 | -0.262 % | -0.269 % |
+| V085 Janbu simplified | 1.628 | 1.6267 | 1.6268 | -0.080 % | -0.074 % |
+| V104b Bishop simplified | 1.770 | 1.7660 | 1.7659 | -0.226 % | -0.232 % |
+| V104a Bishop simplified | 2.300 | 2.2919 | 2.2918 | -0.352 % | -0.357 % |
+| V004b Janbu simplified | 2.610 | 2.6091 | 2.6090 | -0.034 % | -0.038 % |
+| **Mean error (n = 301)** | | | | -0.203 % | -0.206 % |
+| **Mean absolute error** | | | | 0.308 % | 0.311 % |
+| **RMS error** | | | | 0.441 % | 0.443 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 25 moved (16 closer to the reference, 9 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V005 infinite slope (Theory) | 2.500 | 2.5121 | 2.5018 | +0.484 % | +0.072 % |
+| V086c Spencer (Tandjiria, Low & Teh (2002)) | 1.219 | 1.2063 | 1.2014 | -1.042 % | -1.444 % |
+| V005 Spencer, non-circular (dynamic programming) (Baker, Frydman & Talesnick (1993)) | 2.410 | 2.5046 | 2.5005 | +3.925 % | +3.755 % |
+| V002 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.405 | 0.3926 | 0.3920 | -3.062 % | -3.210 % |
+| V003 Bishop simplified (Arai & Tagyo (1985)) | 1.138 | 1.1140 | 1.1155 | -2.109 % | -1.977 % |
+| V039 Spencer, non-circular (Duncan & Wright) | 1.160 | 1.1618 | 1.1604 | +0.155 % | +0.034 % |
+| V036a Spencer (Duncan & Wright) | 0.750 | 0.7521 | 0.7515 | +0.280 % | +0.200 % |
+| V086e Spencer (Tandjiria, Low & Teh) | 1.219 | 1.2051 | 1.2044 | -1.140 % | -1.198 % |
+| V002 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 0.430 | 0.4120 | 0.4118 | -4.186 % | -4.233 % |
+| V036b Spencer (Duncan & Wright) | 0.900 | 0.8983 | 0.8979 | -0.189 % | -0.233 % |
+| V094 Spencer, non-circular (Greco (1996)) | 1.400 | 1.3985 | 1.3990 | -0.107 % | -0.071 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8671 | 1.8667 | -2.246 % | -2.267 % |
+| V028 Spencer (Duncan & Wright) | 1.124 | 1.1246 | 1.1244 | +0.053 % | +0.036 % |
+| V069a stability chart (Morgenstern) | 1.200 | 1.2007 | 1.2009 | +0.058 % | +0.075 % |
+| V026 Bishop simplified (Duncan & Wright) | 1.220 | 1.2203 | 1.2201 | +0.025 % | +0.008 % |
+| V093 Spencer, non-circular (Greco (1996)) | 1.330 | 1.3224 | 1.3226 | -0.571 % | -0.556 % |
+| V093 Spencer, non-circular (Yamagami & Ueta (1988)) | 1.339 | 1.3224 | 1.3226 | -1.240 % | -1.225 % |
+| V086d Spencer (Tandjiria, Low & Teh) | 0.981 | 0.9731 | 0.9732 | -0.805 % | -0.795 % |
+| V003 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.995 | 0.9660 | 0.9661 | -2.915 % | -2.905 % |
+| V003 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 1.071 | 1.0470 | 1.0471 | -2.241 % | -2.232 % |
+| V026 Spencer (Duncan & Wright) | 1.190 | 1.1955 | 1.1954 | +0.462 % | +0.454 % |
+| V093 Bishop simplified (Yamagami & Ueta (1988)) | 1.348 | 1.3431 | 1.3430 | -0.364 % | -0.371 % |
+| V040 Bishop simplified (El-Ramly et al. (2002)) | 1.460 | 1.4594 | 1.4595 | -0.041 % | -0.034 % |
+| V100 Janbu simplified (uncorrected), non-circular (Jiang, Baker & Yamagami) | 1.560 | 1.5589 | 1.5588 | -0.071 % | -0.077 % |
+| V085 Janbu simplified (Duncan & Wright) | 1.630 | 1.6267 | 1.6268 | -0.202 % | -0.196 % |
+| **Mean error (n = 123)** | | | | -0.123 % | -0.134 % |
+| **Mean absolute error** | | | | 0.951 % | 0.949 % |
+| **RMS error** | | | | 1.536 % | 1.537 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
+
+### 2026-11-12: Search: a pair given right to left gets its circle tangent to a material interface
+
+Compared with c9cfa3ae. Errors are relative to the reference, in percent. Verification run time: 523 s (4 workers, load 3.7 at start).
+
+**Against other programs (midpoint of their range):** 3 moved (2 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V094 Spencer, non-circular | 1.398 | 1.4000 | 1.3985 | +0.143 % | +0.036 % |
+| V094 Morgenstern-Price (half-sine), non-circular | 1.389 | 1.3885 | 1.3882 | -0.036 % | -0.058 % |
+| V009c Spencer, non-circular | 1.868 | 1.8668 | 1.8671 | -0.064 % | -0.048 % |
+| **Mean error (n = 301)** | | | | -0.203 % | -0.203 % |
+| **Mean absolute error** | | | | 0.308 % | 0.308 % |
+| **RMS error** | | | | 0.441 % | 0.441 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 3 moved (1 closer to the reference, 2 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V002 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 0.430 | 0.4131 | 0.4120 | -3.930 % | -4.186 % |
+| V094 Spencer, non-circular (Greco (1996)) | 1.400 | 1.4000 | 1.3985 | 0.000 % | -0.107 % |
+| V009c Spencer, non-circular (Baker & Leshchinsky (2001)) | 1.910 | 1.8668 | 1.8671 | -2.262 % | -2.246 % |
+| **Mean error (n = 123)** | | | | -0.120 % | -0.123 % |
+| **Mean absolute error** | | | | 0.948 % | 0.951 % |
+| **RMS error** | | | | 1.531 % | 1.536 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
+
+### 2026-11-12: Local search: the unmoved end of a seed on a search limit is kept (limit tolerance 1e-9, as for the surfaces)
+
+Compared with 38db95b6. Errors are relative to the reference, in percent. Verification run time: 567 s (4 workers, load 2.5 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.203 % | -0.203 % |
+| **Mean absolute error** | | | | 0.308 % | 0.308 % |
+| **RMS error** | | | | 0.441 % | 0.441 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.120 % | -0.120 % |
+| **Mean absolute error** | | | | 0.948 % | 0.948 % |
+| **RMS error** | | | | 1.531 % | 1.531 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
+
+### 2026-11-12: Search: a side given as a point gets one point in the first pass; a point on a corner is the two ends of its widened limit (issue #157)
+
+Compared with f1a2a2b0. Errors are relative to the reference, in percent. Verification run time: 548 s (4 workers, load 3.3 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.203 % | -0.203 % |
+| **Mean absolute error** | | | | 0.308 % | 0.308 % |
+| **RMS error** | | | | 0.441 % | 0.441 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.120 % | -0.120 % |
+| **Mean absolute error** | | | | 0.948 % | 0.948 % |
+| **RMS error** | | | | 1.531 % | 1.531 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-11: Search: a single exit x on a vertical ground face exits at the foot of the face
 

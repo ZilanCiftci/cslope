@@ -20,7 +20,7 @@ Open **Model › Analysis › Search limits** and tick **Restrict entry/exit ran
 
 You can also select the search limits on the canvas and drag their markers (opening the window selects them). Without limits, surfaces may enter and exit anywhere on the ground surface.
 
-A range can be a single point: give Min X and Max X the same value. An exit at a single x on a vertical face of the ground, such as the face of a wall, is the foot of that face, and every trial circle ends there: the surface is the arc from its entry to the foot of the face, as for the internal stability of a reinforced or anchored wall. This holds for a face that steps down in the sliding direction and is not an end of the model; on a face that steps up, and for an exit range that spans a face, the exit stays on the ground at each x. The exit marker on the canvas stands at the foot of the face. An exit at a single x on a corner of the ground, such as the toe of a slope, is the corner itself.
+A range can be a single point: give Min X and Max X the same value. An exit at a single x on a vertical face of the ground, such as the face of a wall, is the foot of that face, and every trial circle ends there: the surface is the arc from its entry to the foot of the face, as for the internal stability of a reinforced or anchored wall. This holds for a face that steps down in the sliding direction and is not an end of the model, and also for an exit range that starts or ends at such a face: that end is the foot of the face. On a face that steps up, and for an exit range that spans a face, the face is part of the range. The exit marker on the canvas stands at the foot of the face. An exit at a single x on a corner of the ground, such as the toe of a slope, is the corner itself.
 
 Restrict the ranges to the part of the slope you are assessing, and keep them wide enough that the critical surface does not end at a limit. If it does, the result has a warning ([Critical surface at a search limit](/docs/troubleshooting#critical-surface-at-a-search-limit)); widen the range and run again.
 
@@ -32,10 +32,21 @@ The size of the search is set in **Model › Analysis › Options**:
 
 | Setting | Range | Default | Meaning |
 | --- | --- | --- | --- |
-| **Iterations** | 500–100 000 | 1000 | Approximate number of trial circles: entry points × exit points × radii per pair (at least 5 radii per pair) |
+| **Iterations** | 500–100 000 | 1000 | Approximate number of trial circles in the first pass: entry points × exit points × 11 radii per pair |
 | **Refined iterations** | 0–100 000 | 500 | Additional surfaces around the best ones |
 
 More iterations give a more thorough search and take longer. For a final analysis, check that doubling the iterations no longer lowers the factor of safety noticeably.
+
+### How the first pass chooses its circles
+
+The search starts with a grid of trial circles. With the default 1000 iterations it takes 9 entry points and 11 exit points; with more iterations both numbers grow with the square root of the iterations (18 and 22 at 4000).
+
+- **Points along the ground.** The entry and exit points are spaced evenly along the ground between the two limits of each range, across slope breaks, so that a steep part of the ground gets as many points as a flat part of the same length. A vertical face inside a range gets points on it. On a range where the ground is one straight line this is the same as spacing them evenly in x.
+- **A range given as a point** (Min X = Max X) has that one point. A point on a corner of the ground, such as the toe, is searched just beside the corner on both sides.
+- **A face at the end of an exit range.** An end of an exit range on a vertical face that steps down in the sliding direction is the foot of the face, as for a single exit there: a range that starts at the face starts at its foot, and one that ends at the face runs down it to its foot. At other faces the whole face belongs to the range.
+- **Radii.** Through each pair of an entry and an exit point the search tries 11 circles, from shallow to deep: their depths below the straight line between the two points are spaced evenly from 5 % to 95 % of a reference depth, the depth of the circle through both points whose center is level with the higher one. To these come the circle that just touches the base of the model, where a deeper one would leave it, and the circles that just touch a layer boundary from above.
+
+The refinement then tries larger and smaller circles through the ends of the best circles and circles through ends half a grid step away, and a local search moves the entry, the exit and the depth of the best circles by steps that halve until the remaining budget is spent. Both step along the ground as the first pass does.
 
 ## Analysis direction
 

@@ -289,6 +289,47 @@ fn a_single_exit_x_on_a_vertical_face_exits_at_its_foot() {
     }
 }
 
+/// An exit range whose end lies on the face (issue #158): an end on a face
+/// that descends towards the exit is its foot, as a single exit there is.
+#[test]
+fn an_exit_range_at_a_vertical_face_starts_or_ends_at_its_foot() {
+    let entry = |xl: f64, xr: f64| json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": xl, "exitRightX": xr });
+    let foot = 5.0 + 1e-5 * 40.0;
+    for rtl in [false, true] {
+        let (single, _) = run_verification(
+            wall_def(rtl, false, entry(20.0, 20.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let single = single.unwrap();
+        // Starting at the face: the crest is not searched (the corner rule
+        // does not move this end), and the foot is.
+        let (fos, s) = run_verification(
+            wall_def(rtl, false, entry(20.0, 30.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let fos = fos.unwrap();
+        assert_eq!(s.search_limits(), [11.0, 16.0, 20.0, 30.0]);
+        assert!(fos <= single * (1.0 + 1e-3), "{fos} against {single}");
+        for p in s.search() {
+            assert!(p.rc[1] < 15.0 - 1e-3, "exit {:?}", p.rc);
+        }
+        // Ending at the face: the face is searched down to its foot.
+        let (fos, s) = run_verification(
+            wall_def(rtl, false, entry(17.0, 20.0)),
+            "Morgenstern-Price",
+            constant(),
+        );
+        let fos = fos.unwrap();
+        assert!(fos <= single * (1.0 + 1e-3), "{fos} against {single}");
+        assert!(s
+            .search()
+            .iter()
+            .all(|p| p.rc[0] <= 20.0 + 1e-9 && p.rc[1] >= foot - 1e-9));
+    }
+}
+
 #[test]
 fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
     // A single exit x on a face that rises in the sliding direction: the
@@ -303,11 +344,17 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    // (the factors of safety of these three are those before the rule, to the bit)
-    close(fos.unwrap(), 1.150_043_595_810_847, 12);
+    // (1.150043595810847 before the rule and until the first pass of 11
+    // radii, issue #160)
+    close(fos.unwrap(), 1.148_737_644_430_062_5, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
-    // An exit range across the face: the ground at each x, as before.
+    // An exit range across the face: no foot rule, the face is part of the
+    // range (its points along the ground since #158). (Its
+    // critical circle exits at the range's left end: 0.392698221225512
+    // before the local search kept the unmoved end of a seed on a limit,
+    // 0.39268667489844383 before the first pass of 11 radii, issue #160,
+    // 0.39241043063957864 before the points along the ground, #158.)
     let (fos, s) = run_verification(
         wall_def(
             false,
@@ -317,11 +364,14 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    close(fos.unwrap(), 0.392_698_221_225_512, 12);
+    close(fos.unwrap(), 0.392_545_441_111_014_3, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
-    // A single exit x at the toe of a sloping face (no vertical face).
+    // A single exit x at the toe of a sloping face (no vertical face). Since
+    // issue #157 its circles go through the two ends of the widened limit
+    // only (1.251587687149846 with 16 exit points between them;
+    // 1.251608205846085 before the first pass of 11 radii, #160).
     let (fos, s) = run_verification(
         point_slope(Some(
             json!({ "entryLeftX": 17, "entryRightX": 21.5, "exitLeftX": 30.5, "exitRightX": 30.5 }),
@@ -329,7 +379,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         mp(),
     );
-    close(fos.unwrap(), 1.251_587_687_149_846, 12);
+    close(fos.unwrap(), 1.251_608_205_833_489_6, 12);
     assert_eq!(s.exit_face_point(), None);
     // The model's own end face is no exit face.
     let end = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 40, "exitRightX": 40 });

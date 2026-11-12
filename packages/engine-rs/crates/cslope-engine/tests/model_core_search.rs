@@ -13,8 +13,9 @@ use cslope_engine::model::canonical::to_canonical_slope_definition;
 use cslope_engine::model::composite::{composite_floor, floor_y_at};
 use cslope_engine::model::geometry_ops::Side;
 use cslope_engine::model::search::{
-    add_single_circular_plane, add_single_entry_exit_plane, generate_local_planes,
-    generate_refined_planes, is_plane_within_external_boundary, plane_keys, set_entry_exit_planes,
+    add_single_circular_plane, add_single_entry_exit_plane, entry_exit_planes,
+    generate_local_planes, generate_planes, generate_refined_planes,
+    is_plane_within_external_boundary, plane_key, plane_keys, set_entry_exit_planes,
 };
 use cslope_engine::model::slope::{AnalysisLimitsPatch, AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::model::surface::{
@@ -246,12 +247,34 @@ fn the_grid_has_circles_tangent_to_the_interface_from_above() {
         .iter()
         .filter(|p| p.tangent_to.is_some())
         .collect();
-    assert!(tangent.len() > 5);
+    // Only pairs whose exit is on the face, above the interface, have one:
+    // 3 of the 9 × 11 pairs of the first pass (7 of 14 × 16 before #160).
+    assert!(tangent.len() >= 3);
     for p in tangent {
         let gap = (p.cx.clamp(0.0, 40.0) - p.cx).hypot(10.0 - p.cy) - p.radius;
         assert!(gap >= -1e-6, "{gap}");
         assert!(gap < 1e-3, "{gap}");
     }
+}
+
+/// A pair given right to left (the exit left of the entry, as the first
+/// pass pairs them where the ranges overlap) has the same circles, the one
+/// tangent to the interface included (before, none: the side of the chord
+/// was taken from the order of the points).
+#[test]
+fn a_pair_given_right_to_left_has_the_same_tangent_circle() {
+    let slope = canonical(two_basins());
+    let tangent = |lc: Pt, rc: Pt| -> Vec<String> {
+        generate_planes(&slope, lc, rc, 5.0)
+            .unwrap()
+            .iter()
+            .filter(|p| p.tangent_to.is_some())
+            .map(plane_key)
+            .collect()
+    };
+    let forward = tangent([5.0, 20.0], [35.0, 12.5]);
+    assert_eq!(forward.len(), 1);
+    assert_eq!(tangent([35.0, 12.5], [5.0, 20.0]), forward);
 }
 
 #[test]
@@ -595,8 +618,303 @@ fn refined_planes_have_unique_keys_and_respect_the_budget() {
     let keys = plane_keys(&ranked);
     let mut seen = HashSet::new();
     for p in &refined {
-        let k = cslope_engine::model::search::plane_key(p);
+        let k = plane_key(p);
         assert!(!keys.contains(&k));
         assert!(seen.insert(k));
     }
+}
+
+// ── A side of the search given as a point (issue #157) ────────────
+
+/// The first pass on BOUNDARY (crest y = 10 to x = 10, toe at x = 25,
+/// floor y = 0 to x = 40) at 1 000 iterations.
+fn first_pass(limits: [f64; 4]) -> (Slope, Vec<SearchPlane>) {
+    let mut s = model(&BOUNDARY);
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(limits[0]),
+        entry_right_x: Some(limits[1]),
+        exit_left_x: Some(limits[2]),
+        exit_right_x: Some(limits[3]),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    (s, planes)
+}
+
+/// The distinct values, to within 1e-7.
+fn distinct(xs: impl Iterator<Item = f64>) -> Vec<f64> {
+    let mut v: Vec<f64> = xs.collect();
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.dedup_by(|a, b| (*a - *b).abs() < 1e-7);
+    v
+}
+
+#[test]
+fn a_side_given_as_a_point_has_one_point_in_the_first_pass() {
+    // An exit at one x on the floor: one exit point, and no circle twice
+    // (before, all 16 exit points of the grid lay there).
+    let (_, planes) = first_pass([1.0, 8.0, 32.0, 32.0]);
+    assert!(!planes.is_empty());
+    let exits = distinct(planes.iter().map(|p| p.rc[0]));
+    assert_eq!(exits.len(), 1);
+    close(exits[0], 32.0, 7);
+    assert!(distinct(planes.iter().map(|p| p.lc[0])).len() > 1);
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    assert!(planes.len() <= 14 * 5, "{}", planes.len());
+    // An entry at one x on the crest.
+    let (_, planes) = first_pass([5.0, 5.0, 26.0, 38.0]);
+    assert!(!planes.is_empty());
+    let entries = distinct(planes.iter().map(|p| p.lc[0]));
+    assert_eq!(entries.len(), 1);
+    close(entries[0], 5.0, 7);
+    assert!(distinct(planes.iter().map(|p| p.rc[0])).len() > 1);
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    assert!(planes.len() <= 16 * 5, "{}", planes.len());
+}
+
+/// A seed of the local search whose exit lies on the exit limit, as a
+/// crossing with the ground computed a few ulps outside it: its circles
+/// with the exit unmoved are tried, as for a seed exactly on the limit.
+/// (Before, they were dropped; at the toe, where the circles through the
+/// moved exits all left the limits, the level was empty and ended the local
+/// search: issue #160, step 0.)
+#[test]
+fn the_local_search_keeps_the_exit_of_a_seed_on_the_limit() {
+    let w = 1e-5 * 40.0;
+    let (s, planes) = first_pass([1.0, 8.0, 25.0, 30.0]);
+    let limit = s.search_limits()[2];
+    assert_eq!(limit, 25.0 - w);
+    let on_limit = |p: &SearchPlane| (p.rc[0] - limit).abs() < 1e-7;
+    let base = planes
+        .iter()
+        .find(|p| on_limit(p) && p.lc[0] > 4.0)
+        .expect("a first-pass circle exiting at the limit")
+        .clone();
+    for rc_x in [limit, limit - 1e-12] {
+        let seed = SearchPlane {
+            rc: [rc_x, base.rc[1]],
+            fos: Some(1.0),
+            ..base.clone()
+        };
+        let seeds = vec![seed];
+        let local =
+            generate_local_planes(&s, &seeds, 1000.0, 1.0, &mut plane_keys(&seeds), 4).unwrap();
+        // The entry and the sagitta move with the exit kept (before: none).
+        let kept = local.iter().filter(|p| on_limit(p)).count();
+        assert!(kept >= 4, "rc {rc_x}: {kept} of {}", local.len());
+    }
+}
+
+// ── The first pass: 11 sagittas from 5 % to 95 % of D (issue #160) ──
+
+#[test]
+fn the_first_pass_has_9_entry_and_11_exit_points() {
+    let (_, planes) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    assert_eq!(distinct(planes.iter().map(|p| p.lc[0])).len(), 9);
+    assert_eq!(distinct(planes.iter().map(|p| p.rc[0])).len(), 11);
+    // 11 circles per pair at most, and one touching the base; no circle twice.
+    assert!(planes.len() <= 9 * 11 * 12, "{}", planes.len());
+    assert!(planes.len() > 9 * 11 * 5, "{}", planes.len());
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    // The pair counts scale with the square root of the iterations.
+    let (mut s, _) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    s.update_analysis_options(&opts(json!({ "iterations": 4000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    assert_eq!(distinct(planes.iter().map(|p| p.lc[0])).len(), 18);
+    assert_eq!(distinct(planes.iter().map(|p| p.rc[0])).len(), 22);
+}
+
+#[test]
+fn the_first_pass_spaces_the_sagittas_evenly_from_5_to_95_percent_of_d() {
+    // A deep model, so that every circle of the pair stays in it.
+    let deep: [Pt; 6] = [
+        [-40.0, -40.0],
+        [-40.0, 10.0],
+        [10.0, 10.0],
+        [25.0, 0.0],
+        [80.0, 0.0],
+        [80.0, -40.0],
+    ];
+    let mut s = model(&deep);
+    // One pair, both on the face (the chord on the ground): the entry and
+    // the exit each a point.
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(11.5),
+        entry_right_x: Some(11.5),
+        exit_left_x: Some(23.5),
+        exit_right_x: Some(23.5),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    assert_eq!(planes.len(), 11);
+    let (lc, rc): (Pt, Pt) = ([11.5, 9.0], [23.5, 1.0]);
+    // D: the sagitta of the circle through both ends whose centre is at
+    // the elevation of the higher end (radius half-chord / cos β).
+    let half = (rc[0] - lc[0]).hypot(rc[1] - lc[1]) / 2.0;
+    let cos_beta = (rc[0] - lc[0]) / (2.0 * half);
+    let r_ref = half / cos_beta;
+    let d = r_ref - (r_ref * r_ref - half * half).sqrt();
+    let mut sagittas: Vec<f64> = planes
+        .iter()
+        .map(|p| {
+            // the radius less the centre's distance from the chord
+            let dist = ((rc[0] - lc[0]) * (p.cy - lc[1]) - (rc[1] - lc[1]) * (p.cx - lc[0])).abs()
+                / (2.0 * half);
+            p.radius - dist
+        })
+        .collect();
+    sagittas.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    for (k, s) in sagittas.iter().enumerate() {
+        close(*s / d, 0.05 + 0.09 * k as f64, 9);
+    }
+}
+
+#[test]
+fn a_point_on_a_corner_is_the_two_ends_of_its_widened_limit() {
+    let w = 1e-5 * 40.0;
+    // The exit at the toe: the search limit runs from just above the toe
+    // to the toe, and its circles go through those two ends only (before,
+    // through 16 exit points spread over the 0.4 mm).
+    let (s, planes) = first_pass([1.0, 8.0, 25.0, 25.0]);
+    assert_eq!(s.search_limits(), [1.0, 8.0, 25.0 - w, 25.0]);
+    assert!(!planes.is_empty());
+    for x in distinct(planes.iter().map(|p| p.rc[0])) {
+        assert!(
+            (x - (25.0 - w)).abs() < 1e-7 || (x - 25.0).abs() < 1e-7,
+            "exit {x}"
+        );
+    }
+    // An entry on the crest's corner, widened to both sides.
+    let (s, planes) = first_pass([10.0, 10.0, 26.0, 38.0]);
+    assert_eq!(s.search_limits(), [10.0 - w, 10.0 + w, 26.0, 38.0]);
+    assert!(!planes.is_empty());
+    for x in distinct(planes.iter().map(|p| p.lc[0])) {
+        assert!(
+            (x - (10.0 - w)).abs() < 1e-7 || (x - (10.0 + w)).abs() < 1e-7,
+            "entry {x}"
+        );
+    }
+}
+
+// ── Points evenly along the ground (issue #158) ──────────────────
+
+/// The distinct points, to within 1e-7, in x then y.
+fn distinct_points(ps: impl Iterator<Item = Pt>) -> Vec<Pt> {
+    let mut v: Vec<Pt> = ps.collect();
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.dedup_by(|a, b| (a[0] - b[0]).abs() < 1e-7 && (a[1] - b[1]).abs() < 1e-7);
+    v
+}
+
+#[test]
+fn on_a_straight_range_the_points_are_even_in_x() {
+    // The exit range on the floor: 11 points 1.1 m apart, as in x.
+    let (_, planes) = first_pass([1.0, 8.0, 27.0, 38.0]);
+    let exits = distinct(planes.iter().map(|p| p.rc[0]));
+    assert_eq!(exits.len(), 11);
+    for (k, x) in exits.iter().enumerate() {
+        close(*x, 27.0 + 1.1 * k as f64, 9);
+    }
+}
+
+#[test]
+fn over_a_slope_break_the_points_are_even_along_the_ground() {
+    // The entry range from the crest over its corner (x = 10) onto the
+    // 2:3 face: 9 points at equal distances along the ground.
+    let (_, planes) = first_pass([1.0, 14.0, 27.0, 38.0]);
+    let face = |x: f64| 10.0 - (x - 10.0) * 10.0 / 15.0;
+    let total = 9.0 + (4.0_f64).hypot(10.0 - face(14.0));
+    let expected: Vec<Pt> = (0..9)
+        .map(|k| {
+            let s = total * k as f64 / 8.0;
+            if s <= 9.0 {
+                [1.0 + s, 10.0]
+            } else {
+                let t = (s - 9.0) / (total - 9.0);
+                [10.0 + 4.0 * t, face(10.0 + 4.0 * t)]
+            }
+        })
+        .collect();
+    let entries = distinct_points(planes.iter().map(|p| p.lc));
+    assert_eq!(entries.len(), 9);
+    for (p, q) in entries.iter().zip(&expected) {
+        close(p[0], q[0], 7);
+        close(p[1], q[1], 7);
+    }
+}
+
+/// A crest at y = 15, a 10 m vertical face at x = 20 and a floor at y = 5,
+/// sliding to the right.
+const WALL: [Pt; 6] = [
+    [0.0, 0.0],
+    [0.0, 15.0],
+    [20.0, 15.0],
+    [20.0, 5.0],
+    [40.0, 5.0],
+    [40.0, 0.0],
+];
+
+fn wall_first_pass(exit: [f64; 2]) -> (Slope, Vec<SearchPlane>) {
+    let mut s = model(&WALL);
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(5.0),
+        entry_right_x: Some(16.0),
+        exit_left_x: Some(exit[0]),
+        exit_right_x: Some(exit[1]),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    (s, planes)
+}
+
+#[test]
+fn a_vertical_face_inside_a_range_gets_points_on_it() {
+    // Exit range 15-30: 5 m of crest, the 10 m face, 10 m of floor; the 11
+    // points 2.5 m apart along it, three of them inside the face (before,
+    // in x, none: the face has no width).
+    let (_, planes) = wall_first_pass([15.0, 30.0]);
+    let exits = distinct_points(planes.iter().map(|p| p.rc));
+    for y in [12.5, 10.0, 7.5] {
+        assert!(
+            exits
+                .iter()
+                .any(|p| (p[0] - 20.0).abs() < 1e-9 && (p[1] - y).abs() < 1e-7),
+            "no exit at (20, {y})"
+        );
+    }
+}
+
+#[test]
+fn an_exit_range_at_a_face_ends_at_its_foot() {
+    let foot = [20.0, 5.0 + 1e-5 * 40.0];
+    // Starting at the face: at its foot, not on the crest (the corner rule
+    // does not move this end, as for a single exit there, issue #147).
+    let (s, planes) = wall_first_pass([20.0, 30.0]);
+    assert_eq!(s.search_limits(), [5.0, 16.0, 20.0, 30.0]);
+    assert!(!planes.is_empty());
+    // (a circle through a point of the floor next to the foot can still
+    // come out of the face a little above it)
+    for p in &planes {
+        assert!(p.rc[1] < 15.0 - 1e-3, "exit {:?}", p.rc);
+    }
+    assert!(planes
+        .iter()
+        .any(|p| (p.rc[0] - foot[0]).abs() < 1e-9 && (p.rc[1] - foot[1]).abs() < 1e-9));
+    // Ending at the face: down the face to its foot, and not beyond it.
+    let (s, planes) = wall_first_pass([12.0, 20.0]);
+    assert_eq!(s.search_limits(), [5.0, 16.0, 12.0, 20.0]);
+    for p in &planes {
+        assert!(
+            p.rc[0] <= 20.0 + 1e-9 && p.rc[1] >= foot[1] - 1e-9,
+            "exit {:?}",
+            p.rc
+        );
+    }
+    assert!(planes
+        .iter()
+        .any(|p| (p.rc[0] - 20.0).abs() < 1e-9 && p.rc[1] > foot[1] + 1.0 && p.rc[1] < 14.0));
 }

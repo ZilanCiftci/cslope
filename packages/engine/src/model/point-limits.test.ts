@@ -32,6 +32,35 @@ describe("a search range given as a point", () => {
     expect(Math.abs(crit.rc[0] - 30.5)).toBeLessThan(1e-3);
   });
 
+  it("searches a point side at its point only, without duplicate circles (issue #157)", () => {
+    const distinct = (xs: number[]) =>
+      [...xs].sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-7);
+    // An exit at one x on the floor: one exit, and every surface once.
+    const floor = runVerification(
+      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 35, exitRightX: 35 }),
+      "Morgenstern-Price",
+      mp,
+    );
+    expect(floor.fos).not.toBeNull();
+    const exits = distinct(floor.slope.search.map((p) => p.rc[0]));
+    expect(exits).toHaveLength(1);
+    expect(exits[0]).toBeCloseTo(35, 7);
+    expect(distinct(floor.slope.search.map((p) => p.lc[0])).length).toBeGreaterThan(1);
+    // The toe, a corner: the search limit runs from just above it to the
+    // toe, and the circles end at those two ends only (before, at 16 exit
+    // points spread over the 0.3 mm between them).
+    const w = 1e-5 * 31.5;
+    const toe = runVerification(
+      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 30.5, exitRightX: 30.5 }),
+      "Morgenstern-Price",
+      mp,
+    );
+    expect(toe.slope.searchLimits).toEqual([17, 21.5, 30.5 - w, 30.5]);
+    for (const x of distinct(toe.slope.search.map((p) => p.rc[0]))) {
+      expect(Math.min(Math.abs(x - (30.5 - w)), Math.abs(x - 30.5))).toBeLessThan(1e-7);
+    }
+  });
+
   it("reaches the corner from a range that starts at it", () => {
     // Exit range 30.5–35 starting at the toe: the circles exiting just
     // above it are searched too (an end on a corner of the ground is moved
@@ -108,6 +137,20 @@ describe("a single exit x on a vertical face of the ground", () => {
     expect(Math.abs(poly! / fos! - 1)).toBeLessThan(1e-4);
   });
 
+  it("starts or ends an exit range at the face at its foot (#158)", () => {
+    const foot = 5 + 1e-5 * 40;
+    for (const rtl of [false, true]) {
+      const single = runVerification(wall(rtl, limits), "Morgenstern-Price", constant).fos!;
+      const start = runVerification(wall(rtl, { ...limits, exitRightX: 30 }), "Morgenstern-Price", constant);
+      expect(start.slope.searchLimits).toEqual([11, 16, 20, 30]);
+      expect(start.fos!).toBeLessThanOrEqual(single * (1 + 1e-3));
+      expect(start.slope.search.every((p) => p.rc[1] < 15 - 1e-3)).toBe(true);
+      const end = runVerification(wall(rtl, { ...limits, exitLeftX: 17 }), "Morgenstern-Price", constant);
+      expect(end.fos!).toBeLessThanOrEqual(single * (1 + 1e-3));
+      expect(end.slope.search.every((p) => p.rc[0] <= 20 + 1e-9 && p.rc[1] >= foot - 1e-9)).toBe(true);
+    }
+  });
+
   it("leaves a face that rises towards the exit and an exit range as they were", () => {
     const w = 1e-5 * 40;
     const rising: SlopeDefinition = {
@@ -116,14 +159,17 @@ describe("a single exit x on a vertical face of the ground", () => {
     };
     const r = runVerification(rising, "Morgenstern-Price", constant);
     expect(r.slope.searchLimits).toEqual([11, 16, 30 - w, 30]);
-    // (the factors of safety before the rule, as in the Rust tests)
-    expect(r.fos!).toBeCloseTo(1.150043595810847, 9);
+    // (as in the Rust tests: 1.150043595810847 and 0.392698221225512
+    // before the local search's limit tolerance and the first pass of 11
+    // radii, #160; the second 0.39241043063957864 before the points along
+    // the ground, #158)
+    expect(r.fos!).toBeCloseTo(1.1487376444300625, 9);
     const range = runVerification(
       wall(false, { entryLeftX: 11, entryRightX: 16, exitLeftX: 18, exitRightX: 30 }),
       "Morgenstern-Price",
       constant,
     );
     expect(range.slope.searchLimits).toEqual([11, 16, 18, 30]);
-    expect(range.fos!).toBeCloseTo(0.392698221225512, 9);
+    expect(range.fos!).toBeCloseTo(0.3925454411110143, 9);
   });
 });

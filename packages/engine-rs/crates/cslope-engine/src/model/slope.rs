@@ -1038,6 +1038,8 @@ impl Slope {
     /// (moving them as well moved the search's start on V005's plane face).
     /// An exit given as a single x on a vertical face of the ground stays
     /// [x, x]: its circles end at the foot of the face (`exit_face_point`).
+    /// So does the left end of an exit range on such a face: the range
+    /// starts at the foot of the face, not on its crest (issue #158).
     pub fn search_limits(&self) -> [f64; 4] {
         let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = self.limits;
         let Some(surf) = &self.surface_line else {
@@ -1064,7 +1066,7 @@ impl Slope {
             } else {
                 entry_right_x
             },
-            if at_corner(exit_left_x) && self.exit_face_point().is_none() {
+            if at_corner(exit_left_x) && self.exit_face_foot(exit_left_x).is_none() {
                 js::math::max(x0, exit_left_x - w)
             } else {
                 exit_left_x
@@ -1089,6 +1091,24 @@ impl Slope {
     pub fn exit_face_point(&self) -> Option<Pt> {
         let [_, _, exit_left_x, exit_right_x] = self.limits;
         let surf = self.surface_line.as_ref()?;
+        let xs = &surf.x;
+        if xs.len() < 2 {
+            return None;
+        }
+        let tol = 1e-9 * (js::math::max_of(xs) - js::math::min_of(xs));
+        if (exit_right_x - exit_left_x).abs() > tol {
+            return None;
+        }
+        self.exit_face_foot(exit_left_x)
+    }
+
+    /// The exit point at the foot of a vertical face of the ground at x (as
+    /// `exit_face_point` describes it), for any x: None when x is not on a
+    /// face that descends in the sliding direction or is on one of the
+    /// model's own end faces. An end of an exit range at such a face stands
+    /// for this point too (issue #158).
+    pub fn exit_face_foot(&self, x: f64) -> Option<Pt> {
+        let surf = self.surface_line.as_ref()?;
         let (xs, ys) = (&surf.x, &surf.y);
         if xs.len() < 2 || ys.len() < xs.len() {
             return None;
@@ -1096,8 +1116,7 @@ impl Slope {
         let x0 = js::math::min_of(xs);
         let x1 = js::math::max_of(xs);
         let tol = 1e-9 * (x1 - x0);
-        let x = exit_left_x;
-        if !((exit_right_x - x).abs() <= tol && x > x0 + tol && x < x1 - tol) {
+        if !(x > x0 + tol && x < x1 - tol) {
             return None;
         }
         // The face's own x (the limit may differ from it by rounding).

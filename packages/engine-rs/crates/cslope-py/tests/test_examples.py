@@ -70,7 +70,7 @@ def test_the_examples_in_order(tmp_path, monkeypatch, capsys):
     p = cslope.Project.open(tmp_path / "site.cslp")
     m = p.model("Section A")
     assert m.result_is_current and m.material("Clay").su == 45
-    assert abs(m.result.fos - 1.278588525600526) < 1e-6
+    assert abs(m.result.fos - 1.2785931420775443) < 1e-6
 
     # read_results.py: the saved result and the slice table
     assert "factor of safety Bishop" in out["read_results.py"]
