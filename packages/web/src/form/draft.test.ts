@@ -26,7 +26,7 @@ describe("the form's state", () => {
     expect(first.layers.map((l) => [l.name, l.kind, l.thickness])).toEqual([
       ["Crust", "mohr-coulomb", "1.5"],
       ["Clay", "undrained", "2"],
-      ["Sand", "mohr-coulomb", "5"],
+      ["Sand", "mohr-coulomb", "5.5"],
     ]);
     const f = formState(first);
     expect(f.missing).toEqual([]);
@@ -228,7 +228,7 @@ describe("the form's state", () => {
       "t=excavation&ground=0&H=3&slope=1&bottomWidth=2&water=-1&layers=3" +
       "&layer1.name=Crust&layer1.kind=mohr-coulomb&layer1.t=1.5&layer1.gamma=18&layer1.c=15&layer1.phi=0" +
       "&layer2.name=Clay&layer2.kind=undrained&layer2.t=2&layer2.gamma=16.5&layer2.su=18&layer2.suRate=1.2" +
-      "&layer3.name=Sand&layer3.kind=mohr-coulomb&layer3.t=5&layer3.gamma=20&layer3.c=0&layer3.phi=38" +
+      "&layer3.name=Sand&layer3.kind=mohr-coulomb&layer3.t=5.5&layer3.gamma=20&layer3.c=0&layer3.phi=38" +
       "&road=on&road.distanceFromCrest=1&road.width=4&road.height=0.3&road.gamma=20&road.c=0&road.phi=38&road.trafficLoad=20";
     expect(toQuery(fromQuery("?t=excavation"))).toBe(full);
     expect(formState(fromQuery("?" + full)).params).toEqual(EXCAVATION_DEFAULTS);

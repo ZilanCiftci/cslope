@@ -109,7 +109,7 @@ describe("App", () => {
     expect(screen.getByRole("checkbox", { name: "Haul road behind the crest" })).toBeChecked();
     expect(screen.getByRole("button", { name: /^Crust/ })).toHaveTextContent("Mohr-Coulomb · 1.5 m (0 to −1.5 m) · c′ 15 kPa, φ′ 0°");
     expect(screen.getByRole("button", { name: /^Clay/ })).toHaveTextContent("Undrained · 2 m (−1.5 to −3.5 m) · Su 18 kPa, +1.2 kPa/m");
-    expect(screen.getByRole("button", { name: /^Sand/ })).toHaveTextContent("Mohr-Coulomb · 5 m (−3.5 to −8.5 m) · c′ 0 kPa, φ′ 38°");
+    expect(screen.getByRole("button", { name: /^Sand/ })).toHaveTextContent("Mohr-Coulomb · 5.5 m (−3.5 to −9 m) · c′ 0 kPa, φ′ 38°");
     expect(field("Excavation depth H (m)").value).toBe("3");
     expect(field("Slope 1:n").value).toBe("1");
     expect(field("Bottom width (m)").value).toBe("2");

@@ -554,11 +554,10 @@ function deepened(params: ExcavationParams): AnalysisDocument {
 }
 
 describe("the model's depth", () => {
-  // The examples reach the recommended depth, but for the first visit's: its sand ends at −8.5 m, 0.5 m short of 3H (the
-  // maintainer's values; the form notes it). Every example, that one too, is deepened: F does not change.
-  const shallow = Object.entries(EXCAVATION_EXAMPLES).filter(([, p]) => excavationNotes(p).some((n) => n.startsWith("The model ends")));
-  it("reaches the recommended depth in every example but the first visit's", () => expect(shallow.map(([name]) => name)).toEqual(["defaults"]));
-  for (const [name, params] of Object.entries(EXCAVATION_EXAMPLES)) {
+  // Only where the last layer reaches the recommended depth: a shallower firm base is the user's (a note says so).
+  const deepEnough = Object.entries(EXCAVATION_EXAMPLES).filter(([, p]) => !excavationNotes(p).some((n) => n.startsWith("The model ends")));
+  it("covers every example", () => expect(deepEnough).toHaveLength(Object.keys(EXCAVATION_EXAMPLES).length));
+  for (const [name, params] of deepEnough) {
     it(`${name}: twice as deep, F does not change beyond 1e-3`, async () => {
       const own = (await runDocument(excavationDocument(params))).summary.fos!;
       const deep = (await runDocument(deepened(params))).summary.fos!;
