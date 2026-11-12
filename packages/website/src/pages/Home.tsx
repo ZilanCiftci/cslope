@@ -118,7 +118,7 @@ function WebApp() {
           <p className="text-sm font-semibold text-primary">In the browser</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">Two templates to try without installing</h2>
           <p className="mt-3 leading-relaxed text-muted-foreground text-pretty">
-            An excavation in clay with a haul road, and an embankment on clay. Fill in the form and the cSlope engine
+            An excavation with a haul road, and an embankment on clay. Fill in the form and the cSlope engine
             computes F on your own computer.
           </p>
           <Button asChild size="lg" className="mt-6">

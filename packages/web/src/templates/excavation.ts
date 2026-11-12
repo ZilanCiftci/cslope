@@ -373,7 +373,7 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
 
 export const excavationTemplate: Template<ExcavationParams> = {
   id: "excavation",
-  title: "Excavation in clay with a haul road",
+  title: "Excavation",
   description:
     "An excavation with a slope 1:n in level ground of horizontal layers, with a ground-water level and, behind the crest, a haul road with a traffic load.",
   params: EXCAVATION_PARAMETERS,

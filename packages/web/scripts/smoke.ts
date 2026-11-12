@@ -223,8 +223,8 @@ async function checkPage(page: Page, base: string): Promise<string[]> {
         return el && el.textContent !== b && !el.closest(".opacity-50");
       }, before, { timeout: 30_000 });
       console.log(`  embankment, crust moved below the clay: ${before} → ${await fValue(page).textContent()}`);
-      await page.getByRole("button", { name: "Excavation in clay with a haul road" }).click();
-      await page.getByRole("heading", { level: 1, name: "Excavation in clay with a haul road" }).waitFor({ timeout: 5_000 });
+      await page.getByRole("button", { name: "Excavation", exact: true }).click();
+      await page.getByRole("heading", { level: 1, name: "Excavation", exact: true }).waitFor({ timeout: 5_000 });
       await page.waitForFunction(() => new URLSearchParams(location.search).get("t") === "excavation", null, { timeout: 5_000 });
     } catch (e) {
       problems.push(`the embankment: "${await page.getByRole("status").first().textContent()}" (${e instanceof Error ? e.message.split("\n")[0] : String(e)})`);
@@ -364,7 +364,7 @@ async function checkProjectDownload(browser: Browser, base: string): Promise<str
     if (opened.status !== 0) problems.push(`the app's reader could not open it: ${out}`);
     const want = `F = ${EXPECTED["clay-5m-ponded"].fos.toFixed(3)}`;
     if (!out.includes(want) || !out.includes("input unchanged")) problems.push(`the app's reader says:\n${out}\n(expected "${want}" and "input unchanged")`);
-    if (!/model model-1 \(active\): "Excavation in clay with a haul road", \d+ ground points, 2 material\(s\)/.test(out)) problems.push(`the model is not the section: ${out}`);
+    if (!/model model-1 \(active\): "Excavation", \d+ ground points, 2 material\(s\)/.test(out)) problems.push(`the model is not the section: ${out}`);
     console.log(`  ${out.split("\n").filter((l) => /result:|model /.test(l)).map((l) => l.trim()).join("; ")}`);
   } catch (e) {
     problems.push(`the download: ${e instanceof Error ? e.message.split("\n")[0] : String(e)}`);

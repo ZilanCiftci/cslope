@@ -46,7 +46,7 @@ function pageRun(doc: WebDocument) {
 /** The page's download (packages/web, src/engine/project.ts). */
 function download(doc: WebDocument, result: ReturnType<typeof pageRun> | null) {
   return projectFromDefinition(doc.definition, result, {
-    name: "Excavation in clay with a haul road",
+    name: "Excavation",
     options: doc.options,
     date: "2026-11-07",
     modified: "2026-11-07T12:00:00.000Z",
@@ -75,7 +75,7 @@ describe("a project downloaded from the browser page", () => {
       expect(read.file.models).toHaveLength(1);
       const [model] = read.file.models;
       expect(read.file.activeModelId).toBe(model.id);
-      expect(model.name).toBe("Excavation in clay with a haul road");
+      expect(model.name).toBe("Excavation");
       expect(model.coordinates).toEqual(doc.definition.coordinates);
       expect(model.materials.map((m) => [m.name, m.color])).toEqual(coloured.definition.materials.map((m) => [m.name, m.color]));
       expect(model.options.tensionCrackAuto).toBe(doc.options.tensionCrackAuto);
