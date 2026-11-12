@@ -354,7 +354,12 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
     // critical circle exits at the range's left end: 0.392698221225512
     // before the local search kept the unmoved end of a seed on a limit,
     // 0.39268667489844383 before the first pass of 11 radii, issue #160,
-    // 0.39241043063957864 before the points along the ground, #158.)
+    // 0.39241043063957864 before the points along the ground, #158,
+    // 0.3925454411110143 before the points on the break points of the
+    // ground, #164: the critical surface is nearly planar, radius 341 m,
+    // exiting at the foot of the face, and the search now ends on a circle
+    // of radius 123 m through the same ends, 0.39 % higher; 0.392574 at
+    // 8 000 iterations.)
     let (fos, s) = run_verification(
         wall_def(
             false,
@@ -364,7 +369,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    close(fos.unwrap(), 0.392_545_441_111_014_3, 12);
+    close(fos.unwrap(), 0.394_089_176_983_014_04, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);

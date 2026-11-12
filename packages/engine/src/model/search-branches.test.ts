@@ -113,13 +113,15 @@ describe("the first pass", () => {
     setEntryExitPlanes(s);
     // the exit range on the floor: 1.1 m apart in x
     distinct(s.search.map((p) => p.rc[0])).forEach((x, k) => expect(x).toBeCloseTo(27 + 1.1 * k, 9));
-    // the entry range from the crest over its corner onto the face
+    // the entry range from the crest over its corner onto the face; the
+    // point nearest to the corner (the 6th) lies on it, where the ground
+    // turns by 33.7° (#164)
     const face = (x: number) => 10 - ((x - 10) * 10) / 15;
     const total = 9 + Math.hypot(4, 10 - face(14));
     const entries = distinct(s.search.map((p) => p.lc[0]));
     expect(entries).toHaveLength(9);
     entries.forEach((x, k) => {
-      const d = (total * k) / 8;
+      const d = k === 5 ? 9 : (total * k) / 8;
       expect(x).toBeCloseTo(d <= 9 ? 1 + d : 10 + (4 * (d - 9)) / (total - 9), 7);
     });
   });
@@ -143,6 +145,21 @@ describe("the first pass", () => {
     expect(t.searchLimits).toEqual([5, 16, 20, 30]);
     expect(t.search.every((p) => p.rc[1] < 15 - 1e-3)).toBe(true);
     expect(t.search.some((p) => Math.abs(p.rc[0] - 20) < 1e-9 && Math.abs(p.rc[1] - foot) < 1e-9)).toBe(true);
+  });
+
+  it("puts a point on a break of the ground: just above the toe in an exit range (#164)", () => {
+    const s = model([[0, -10], [0, 10], [10, 10], [25, 0], [40, 0], [40, -10]]);
+    s.setAnalysisLimits({ entryLeftX: 1, entryRightX: 8, exitLeftX: 20, exitRightX: 35 });
+    s.updateAnalysisOptions({ iterations: 1000 });
+    setEntryExitPlanes(s);
+    // the toe (x = 25, a turn of 33.7°) moved up the face by 1e-5 of the width
+    const w = 1e-5 * 40, face = Math.hypot(15, 10);
+    const toe = [25 - (w * 15) / face, (w * 10) / face];
+    const at = (p: number[], q: number[]) => Math.abs(p[0] - q[0]) < 1e-7 && Math.abs(p[1] - q[1]) < 1e-7;
+    expect(s.search.filter((p) => at(p.rc, toe)).length).toBeGreaterThanOrEqual(5);
+    // the ends of the range stay at its limits
+    expect(s.search.some((p) => at(p.rc, [20, 10 / 3]))).toBe(true);
+    expect(s.search.some((p) => at(p.rc, [35, 0]))).toBe(true);
   });
 
   it("gives a side given as a point its point only (#157)", () => {

@@ -823,13 +823,15 @@ fn on_a_straight_range_the_points_are_even_in_x() {
 #[test]
 fn over_a_slope_break_the_points_are_even_along_the_ground() {
     // The entry range from the crest over its corner (x = 10) onto the
-    // 2:3 face: 9 points at equal distances along the ground.
+    // 2:3 face: 9 points at equal distances along the ground, the one
+    // nearest to the corner (the 6th, 0.37 m from it) moved onto it: the
+    // ground turns there by 33.7°, more than 30° (issue #164).
     let (_, planes) = first_pass([1.0, 14.0, 27.0, 38.0]);
     let face = |x: f64| 10.0 - (x - 10.0) * 10.0 / 15.0;
     let total = 9.0 + (4.0_f64).hypot(10.0 - face(14.0));
     let expected: Vec<Pt> = (0..9)
         .map(|k| {
-            let s = total * k as f64 / 8.0;
+            let s = if k == 5 { 9.0 } else { total * k as f64 / 8.0 };
             if s <= 9.0 {
                 [1.0 + s, 10.0]
             } else {
@@ -917,4 +919,167 @@ fn an_exit_range_at_a_face_ends_at_its_foot() {
     assert!(planes
         .iter()
         .any(|p| (p.rc[0] - 20.0).abs() < 1e-9 && p.rc[1] > foot[1] + 1.0 && p.rc[1] < 14.0));
+}
+
+// ── The break points of the ground in the first pass (issue #164) ─
+
+/// The first pass of a model at 1 000 iterations with the given limits.
+fn first_pass_of(coords: &[Pt], limits: [f64; 4]) -> Vec<SearchPlane> {
+    let mut s = model(coords);
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(limits[0]),
+        entry_right_x: Some(limits[1]),
+        exit_left_x: Some(limits[2]),
+        exit_right_x: Some(limits[3]),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    entry_exit_planes(&s).unwrap()
+}
+
+/// The points of the grid among the ends of the first pass's circles: the
+/// distinct ends (to within 1e-7) shared by at least 5 circles. A circle
+/// that runs on in the soil past a grid point (as at a toe or a tooth of
+/// the ground) ends at another crossing with the ground, each its own.
+fn grid_points(ps: impl Iterator<Item = Pt>) -> Vec<Pt> {
+    let all: Vec<Pt> = ps.collect();
+    distinct_points(all.iter().copied())
+        .into_iter()
+        .filter(|p| {
+            all.iter()
+                .filter(|q| (q[0] - p[0]).abs() < 1e-7 && (q[1] - p[1]).abs() < 1e-7)
+                .count()
+                >= 5
+        })
+        .collect()
+}
+
+/// Whether one of the points lies at p, to within 1e-7.
+fn has_point(points: &[Pt], p: Pt) -> bool {
+    points
+        .iter()
+        .any(|q| (q[0] - p[0]).abs() < 1e-7 && (q[1] - p[1]).abs() < 1e-7)
+}
+
+#[test]
+fn an_exit_range_over_the_toe_has_a_point_just_above_the_toe() {
+    // Exit range 20-35 over the toe of BOUNDARY's 2:3 face (x = 25, where
+    // the ground turns by 33.7°): 11 points evenly along the ground, the
+    // one nearest to the toe (0.39 m past it on the floor) moved onto it and then
+    // up the face by 1e-5 of the model's width, as the corner rule puts an
+    // exit at the toe.
+    let w = 1e-5 * 40.0;
+    let (_, planes) = first_pass([1.0, 8.0, 20.0, 35.0]);
+    let exits = grid_points(planes.iter().map(|p| p.rc));
+    assert_eq!(exits.len(), 11, "{exits:?}");
+    let face = 15.0_f64.hypot(10.0);
+    let toe = [25.0 - w * 15.0 / face, w * 10.0 / face];
+    assert!(
+        has_point(&exits, toe),
+        "no exit just above the toe: {exits:?}"
+    );
+    // The ends stay at the limits: on the face at x = 20, on the floor at 35.
+    assert!(has_point(&exits, [20.0, 10.0 / 3.0]));
+    assert!(has_point(&exits, [35.0, 0.0]));
+    // The entry range on the flat crest has no break point: even in x.
+    let entries = distinct(planes.iter().map(|p| p.lc[0]));
+    for (k, x) in entries.iter().enumerate() {
+        close(*x, 1.0 + 7.0 * k as f64 / 8.0, 9);
+    }
+}
+
+#[test]
+fn an_entry_range_over_a_berm_has_points_on_the_crest_and_both_corners() {
+    // A crest at y = 12 to x = 10, a 1:1 face to a 4 m berm at y = 8
+    // (x 14-18), a 1:1 face to the floor at y = 0 (x = 26): the entry range
+    // 2-22 crosses the crest's corner and both corners of the berm (45°
+    // each), and an entry point lies exactly on each.
+    let berm: [Pt; 8] = [
+        [0.0, -10.0],
+        [0.0, 12.0],
+        [10.0, 12.0],
+        [14.0, 8.0],
+        [18.0, 8.0],
+        [26.0, 0.0],
+        [50.0, 0.0],
+        [50.0, -10.0],
+    ];
+    let planes = first_pass_of(&berm, [2.0, 22.0, 30.0, 45.0]);
+    let entries = grid_points(planes.iter().map(|p| p.lc));
+    assert_eq!(entries.len(), 9);
+    for corner in [[10.0, 12.0], [14.0, 8.0], [18.0, 8.0]] {
+        assert!(
+            has_point(&entries, corner),
+            "no entry on {corner:?}: {entries:?}"
+        );
+    }
+    // The ends stay at the limits.
+    assert!(has_point(&entries, [2.0, 12.0]));
+    assert!(has_point(&entries, [22.0, 4.0]));
+}
+
+#[test]
+fn a_ground_with_more_breaks_than_points_keeps_its_sharpest_breaks() {
+    // A saw-toothed crest, as a surveyed ground can be: 8 teeth 1 m high
+    // every 2 m (the ground turns by 90° at the foot of each tooth, 153° at
+    // its tip and 63° behind it), then a bend of 10° at x = 20, in an entry
+    // range with 9 points. At most 4 of them (half of 9) move onto break
+    // points, the sharpest first: the first four tips. The ends stay, and
+    // the bend is no break point.
+    let mut coords: Vec<Pt> = vec![[0.0, -10.0], [0.0, 10.0]];
+    for k in 0..8 {
+        let x = 2.0 + 2.0 * k as f64;
+        coords.extend_from_slice(&[[x, 10.0], [x, 11.0], [x + 0.5, 10.0]]);
+    }
+    coords.extend_from_slice(&[
+        [20.0, 10.0],
+        [24.0, 9.3],
+        [40.0, 0.0],
+        [60.0, 0.0],
+        [60.0, -10.0],
+    ]);
+    let planes = first_pass_of(&coords, [1.0, 23.0, 42.0, 55.0]);
+    let entries = grid_points(planes.iter().map(|p| p.lc));
+    assert_eq!(entries.len(), 9);
+    let on_vertex = |p: &&Pt| {
+        coords
+            .iter()
+            .any(|v| (v[0] - p[0]).abs() < 1e-7 && (v[1] - p[1]).abs() < 1e-7)
+    };
+    let on_breaks: Vec<&Pt> = entries.iter().filter(on_vertex).collect();
+    assert_eq!(on_breaks.len(), 4, "{entries:?}");
+    for (p, x) in on_breaks.iter().zip([2.0, 4.0, 6.0, 8.0]) {
+        close(p[0], x, 9);
+        close(p[1], 11.0, 9);
+    }
+    assert!(has_point(&entries, [1.0, 10.0]));
+    assert!(has_point(&entries, [23.0, 9.475]));
+}
+
+#[test]
+fn a_bend_of_less_than_30_degrees_is_no_break_point() {
+    // The 2:1 slope (26.6°) between a crest at y = 10 to x = 10 and a floor
+    // from x = 30: the points stay evenly along the ground (#158).
+    let gentle: [Pt; 6] = [
+        [0.0, -10.0],
+        [0.0, 10.0],
+        [10.0, 10.0],
+        [30.0, 0.0],
+        [50.0, 0.0],
+        [50.0, -10.0],
+    ];
+    let planes = first_pass_of(&gentle, [1.0, 20.0, 32.0, 45.0]);
+    let entries = grid_points(planes.iter().map(|p| p.lc));
+    assert_eq!(entries.len(), 9);
+    let slope = 10.0_f64.hypot(5.0);
+    let total = 9.0 + slope;
+    for (k, p) in entries.iter().enumerate() {
+        let s = total * k as f64 / 8.0;
+        let x = if s <= 9.0 {
+            1.0 + s
+        } else {
+            10.0 + (s - 9.0) * 10.0 / slope
+        };
+        close(p[0], x, 7);
+    }
 }

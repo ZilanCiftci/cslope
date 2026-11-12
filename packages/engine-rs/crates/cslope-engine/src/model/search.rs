@@ -102,6 +102,19 @@ fn get_search_grid_spec(slope: &Slope) -> SearchGridSpec {
 /// (`generate_planes_with_scale`).
 const FIRST_PASS_CIRCLES: f64 = 11.0;
 
+/// A vertex of the ground where it turns by more than this (30°) is a
+/// break point of a range: the first pass puts a point on it (issue #164).
+/// Chosen by measurement: from 10° to 25° the toe of a 2:1 slope (26.6°)
+/// counted and V026's Morgenstern-Price search fell 2.6 % (further below
+/// Bishop); at 40° fewer imported models gained, and at 50° the toe of a
+/// 1:1 slope (45°) was left out.
+const BREAK_MIN_TURN: f64 = std::f64::consts::FRAC_PI_6;
+
+/// At most this share of a range's first-pass points is moved onto break
+/// points, the sharpest first: a surveyed ground with many vertices keeps
+/// the rest of its points evenly spaced (issue #164).
+const BREAK_MAX_SHARE: f64 = 0.5;
+
 /// The grid of a search between two ranges. The first pass has 9 entry and
 /// 11 exit points at 1 000 iterations, scaled with the square root of the
 /// iterations (FIRST_PASS_CIRCLES circles per pair: 1 089 at 1 000). The
@@ -270,6 +283,73 @@ impl GroundPath {
             }
         }
         s_best
+    }
+
+    /// The break points of the ground inside the path (issue #164): the
+    /// vertices strictly between its ends where the ground turns by more
+    /// than BREAK_MIN_TURN, as distances along the path, the sharpest
+    /// first (ties: in path order).
+    fn break_points(&self) -> Vec<f64> {
+        let l = self.len();
+        let mut out: Vec<(f64, f64)> = Vec::new();
+        for k in 1..self.pts.len() - 1 {
+            let (p, q, r) = (self.pts[k - 1], self.pts[k], self.pts[k + 1]);
+            let (ax, ay) = (q[0] - p[0], q[1] - p[1]);
+            let (bx, by) = (r[0] - q[0], r[1] - q[1]);
+            let turn = js::math::atan2(ax * by - ay * bx, ax * bx + ay * by).abs();
+            let s = self.cum[k];
+            if turn > BREAK_MIN_TURN && s > 1e-9 * l && s < l - 1e-9 * l {
+                out.push((s, turn));
+            }
+        }
+        out.sort_by(|a, b| b.1.total_cmp(&a.1));
+        out.into_iter().map(|(s, _)| s).collect()
+    }
+
+    /// The n points of the first pass along the path (issue #164): n points
+    /// at equal distances, both ends included, of which the inner ones
+    /// nearest to the break points of the ground are moved onto them, the
+    /// sharpest break first and each point at most once. At most
+    /// BREAK_MAX_SHARE of the points (and never an end) are moved, so a
+    /// surveyed ground with many vertices keeps its sharpest ones only.
+    /// `corner_offset`: on an exit range a break point stands for the point
+    /// that far up the ground from it, as the corner rule of
+    /// `Slope::search_limits` puts the exit at the toe (a circle exactly
+    /// through the corner can just touch it and run on in the soil); at the
+    /// foot of a vertical face that is the point `Slope::exit_face_foot`
+    /// gives.
+    fn first_pass_points(&self, n: f64, corner_offset: f64) -> Vec<Pt> {
+        if n < 3.0 {
+            return self.points(n);
+        }
+        let count = n as usize;
+        let l = self.len();
+        let mut s: Vec<f64> = (0..count).map(|i| l * i as f64 / (n - 1.0)).collect();
+        let mut moved = vec![false; count];
+        let max_breaks = js::math::max(1.0, (BREAK_MAX_SHARE * n).floor()) as usize;
+        for b in self.break_points().into_iter().take(max_breaks) {
+            let mut nearest: Option<usize> = None;
+            for i in 1..count - 1 {
+                if !moved[i] && nearest.is_none_or(|j| (s[i] - b).abs() < (s[j] - b).abs()) {
+                    nearest = Some(i);
+                }
+            }
+            let Some(i) = nearest else {
+                break;
+            };
+            s[i] = b;
+            moved[i] = true;
+        }
+        s.iter()
+            .zip(&moved)
+            .map(|(&si, &m)| {
+                if m {
+                    self.at(si - corner_offset)
+                } else {
+                    self.at(si)
+                }
+            })
+            .collect()
     }
 
     /// n points at equal distances along the path, both ends included.
@@ -1411,16 +1491,23 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
     let window = SearchWindow::of(slope);
     let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
 
+    // The corner rule's offset (`Slope::search_limits`): 1e-5 of the
+    // model's width.
+    let corner_offset = slope.surface_line_xy().map_or(0.0, |s| {
+        1e-5 * (js::math::max_of(&s.x) - js::math::min_of(&s.x))
+    });
+
     // Generate entry (left) coordinates: evenly spaced along the ground
     // between the limits (issue #158), which is evenly in x where the
-    // ground there is one straight line.
+    // ground there is one straight line, with points on its break points
+    // (issue #164).
     let mut left_coords: Vec<Pt> = Vec::new();
     if let Some(xs) = &points.entry {
         for &x in xs {
             left_coords.push([x, slope.get_external_y_intersection(x)?]);
         }
     } else if let Some(path) = &entry_path {
-        left_coords = path.points(num_points_top);
+        left_coords = path.first_pass_points(num_points_top, 0.0);
     } else {
         let mut n = 0.0;
         while n < num_points_top {
@@ -1437,7 +1524,7 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
             right_coords.push(slope.exit_ground_point(x)?);
         }
     } else if let Some(path) = &exit_path {
-        right_coords = path.points(num_points_bot + 1.0);
+        right_coords = path.first_pass_points(num_points_bot + 1.0, corner_offset);
     } else {
         let mut n = 0.0;
         while n <= num_points_bot {

@@ -162,7 +162,8 @@ describe("a single exit x on a vertical face of the ground", () => {
     // (as in the Rust tests: 1.150043595810847 and 0.392698221225512
     // before the local search's limit tolerance and the first pass of 11
     // radii, #160; the second 0.39241043063957864 before the points along
-    // the ground, #158)
+    // the ground, #158, and 0.3925454411110143 before the points on the
+    // break points of the ground, #164)
     expect(r.fos!).toBeCloseTo(1.1487376444300625, 9);
     const range = runVerification(
       wall(false, { entryLeftX: 11, entryRightX: 16, exitLeftX: 18, exitRightX: 30 }),
@@ -170,6 +171,6 @@ describe("a single exit x on a vertical face of the ground", () => {
       constant,
     );
     expect(range.slope.searchLimits).toEqual([11, 16, 18, 30]);
-    expect(range.fos!).toBeCloseTo(0.3925454411110143, 9);
+    expect(range.fos!).toBeCloseTo(0.39408917698301404, 9);
   });
 });

@@ -105,11 +105,48 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-12 | Search: a pair given right to left gets its circle tangent to a material interface | 6 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.951 | 1.531 → 1.536 | 523 s (4 workers, load 3.7 at start) |
 | 2026-11-12 | Search: first pass with 11 sagittas from 5 % to 95 % of the reference depth on 9 × 11 entry-exit pairs (issue #160) | 68 | 0.308 → 0.311 | 0.441 → 0.443 | 0.951 → 0.949 | 1.536 → 1.537 | 510 s (4 workers, load 1.0 at start) |
 | 2026-11-12 | Search: entry and exit points evenly along the ground in the first pass, the refinement and the local search; an exit range end on a descending face is its foot (issue #158) | 56 | 0.311 → 0.315 | 0.443 → 0.454 | 0.949 → 0.948 | 1.537 → 1.533 | 518 s (4 workers, load 1.0 at start) |
+| 2026-11-12 | Search: points on the break points of the ground (issue #164) | 4 | 0.315 → 0.315 | 0.454 → 0.454 | 0.948 → 0.947 | 1.533 → 1.529 | 510 s (4 workers, load 2.6 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-12: Search: points on the break points of the ground (issue #164)
+
+Compared with 926a3685. Errors are relative to the reference, in percent. Verification run time: 510 s (4 workers, load 2.6 at start).
+
+**Against other programs (midpoint of their range):** 2 moved (1 closer to the reference, 1 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V028 Bishop simplified | 1.126 | 1.1246 | 1.1233 | -0.124 % | -0.240 % |
+| V104a Bishop simplified | 2.300 | 2.2940 | 2.2942 | -0.261 % | -0.252 % |
+| **Mean error (n = 301)** | | | | -0.199 % | -0.200 % |
+| **Mean absolute error** | | | | 0.315 % | 0.315 % |
+| **RMS error** | | | | 0.454 % | 0.454 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 2 moved (2 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| V002 Janbu corrected, non-circular (Arai & Tagyo (1985)) | 0.430 | 0.4130 | 0.4134 | -3.953 % | -3.860 % |
+| V002 Janbu simplified, non-circular (Arai & Tagyo (1985)) | 0.405 | 0.3919 | 0.3922 | -3.235 % | -3.160 % |
+| **Mean error (n = 123)** | | | | -0.133 % | -0.132 % |
+| **Mean absolute error** | | | | 0.948 % | 0.947 % |
+| **RMS error** | | | | 1.533 % | 1.529 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-12: Search: entry and exit points evenly along the ground in the first pass, the refinement and the local search; an exit range end on a descending face is its foot (issue #158)
 

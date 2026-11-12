@@ -123,14 +123,14 @@
      "method": "Janbu simplified, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu simplified, non-circular",
-     "computed": 0.3919
+     "computed": 0.3922
     },
     {
      "value": 0.43,
      "method": "Janbu corrected, non-circular",
      "source": "Arai & Tagyo (1985)",
      "analysis": "Janbu corrected, non-circular",
-     "computed": 0.413
+     "computed": 0.4134
     },
     {
      "value": 0.43,
@@ -181,12 +181,12 @@
     },
     {
      "method": "Janbu simplified, non-circular",
-     "computed": 0.3919,
+     "computed": 0.3922,
      "programs": null
     },
     {
      "method": "Janbu corrected, non-circular",
-     "computed": 0.413,
+     "computed": 0.4134,
      "programs": null
     },
     {
@@ -1971,7 +1971,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 1.1246,
+     "computed": 1.1233,
      "programs": {
       "min": 1.126,
       "max": 1.126
@@ -7342,7 +7342,7 @@
    "results": [
     {
      "method": "Bishop simplified",
-     "computed": 2.294,
+     "computed": 2.2942,
      "programs": {
       "min": 2.3,
       "max": 2.3
