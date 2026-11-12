@@ -36,6 +36,11 @@ describe("Home page", () => {
     for (const key of ["values", "safetyClass", "etaCu", "etaDrained", "variableLoadBase"]) expect(url.searchParams.has(key), key).toBe(false);
   });
 
+  it("says what cSlope is in the main heading", () => {
+    renderPage();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Open source slope stability software");
+  });
+
   it("keeps the short link under the hero", () => {
     renderPage();
     expect(screen.getByRole("link", { name: "Try in the browser" })).toHaveAttribute("href", SITE.app);

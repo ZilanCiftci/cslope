@@ -9,4 +9,4 @@ export const LIMITATIONS_URL = `${DOCS_URL}#limitations`;
  * The note under the result. The documentation page (DOCS_URL) starts
  * with the same sentence; a test keeps the two equal.
  */
-export const TEMPLATE_NOTE = "A template calculation, not a design: check the model and the result before you use them.";
+export const TEMPLATE_NOTE = "This is a template calculation. Check the model and the result before you use them in a design.";

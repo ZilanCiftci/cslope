@@ -146,7 +146,7 @@ async function checkNavigation(page: Page, base: string): Promise<string[]> {
   await page.goto(base + "/", { waitUntil: "networkidle" });
   await page.getByRole("link", { name: "Every problem and result" }).click();
   try {
-    await page.getByRole("heading", { level: 1, name: "Every result, next to the published ones" }).waitFor({ timeout: 10_000 });
+    await page.getByRole("heading", { level: 1, name: "cSlope's results on published problems" }).waitFor({ timeout: 10_000 });
   } catch {
     problems.push("/ → /verification: the verification page did not appear");
   }
