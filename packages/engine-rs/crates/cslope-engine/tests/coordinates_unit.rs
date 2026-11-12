@@ -303,7 +303,8 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    // (the factors of safety of these three are those before the rule, to the bit)
+    // (the factors of safety of the first two are those before the rule, to
+    // the bit)
     close(fos.unwrap(), 1.150_043_595_810_847, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
@@ -321,7 +322,9 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
-    // A single exit x at the toe of a sloping face (no vertical face).
+    // A single exit x at the toe of a sloping face (no vertical face). Since
+    // issue #157 its circles go through the two ends of the widened limit
+    // only (1.251587687149846 with 16 exit points between them).
     let (fos, s) = run_verification(
         point_slope(Some(
             json!({ "entryLeftX": 17, "entryRightX": 21.5, "exitLeftX": 30.5, "exitRightX": 30.5 }),
@@ -329,7 +332,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         mp(),
     );
-    close(fos.unwrap(), 1.251_587_687_149_846, 12);
+    close(fos.unwrap(), 1.251_608_205_846_085, 12);
     assert_eq!(s.exit_face_point(), None);
     // The model's own end face is no exit face.
     let end = json!({ "entryLeftX": 11, "entryRightX": 16, "exitLeftX": 40, "exitRightX": 40 });

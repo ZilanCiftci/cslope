@@ -13,8 +13,9 @@ use cslope_engine::model::canonical::to_canonical_slope_definition;
 use cslope_engine::model::composite::{composite_floor, floor_y_at};
 use cslope_engine::model::geometry_ops::Side;
 use cslope_engine::model::search::{
-    add_single_circular_plane, add_single_entry_exit_plane, generate_local_planes,
-    generate_refined_planes, is_plane_within_external_boundary, plane_keys, set_entry_exit_planes,
+    add_single_circular_plane, add_single_entry_exit_plane, entry_exit_planes,
+    generate_local_planes, generate_refined_planes, is_plane_within_external_boundary, plane_keys,
+    set_entry_exit_planes,
 };
 use cslope_engine::model::slope::{AnalysisLimitsPatch, AnalysisOptionsPatch, SearchPlane, Slope};
 use cslope_engine::model::surface::{
@@ -598,5 +599,81 @@ fn refined_planes_have_unique_keys_and_respect_the_budget() {
         let k = cslope_engine::model::search::plane_key(p);
         assert!(!keys.contains(&k));
         assert!(seen.insert(k));
+    }
+}
+
+// ── A side of the search given as a point (issue #157) ────────────
+
+/// The first pass on BOUNDARY (crest y = 10 to x = 10, toe at x = 25,
+/// floor y = 0 to x = 40) at 1 000 iterations.
+fn first_pass(limits: [f64; 4]) -> (Slope, Vec<SearchPlane>) {
+    let mut s = model(&BOUNDARY);
+    s.set_analysis_limits(&AnalysisLimitsPatch {
+        entry_left_x: Some(limits[0]),
+        entry_right_x: Some(limits[1]),
+        exit_left_x: Some(limits[2]),
+        exit_right_x: Some(limits[3]),
+    });
+    s.update_analysis_options(&opts(json!({ "iterations": 1000 })))
+        .unwrap();
+    let planes = entry_exit_planes(&s).unwrap();
+    (s, planes)
+}
+
+/// The distinct values, to within 1e-7.
+fn distinct(xs: impl Iterator<Item = f64>) -> Vec<f64> {
+    let mut v: Vec<f64> = xs.collect();
+    v.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    v.dedup_by(|a, b| (*a - *b).abs() < 1e-7);
+    v
+}
+
+#[test]
+fn a_side_given_as_a_point_has_one_point_in_the_first_pass() {
+    // An exit at one x on the floor: one exit point, and no circle twice
+    // (before, all 16 exit points of the grid lay there).
+    let (_, planes) = first_pass([1.0, 8.0, 32.0, 32.0]);
+    assert!(!planes.is_empty());
+    let exits = distinct(planes.iter().map(|p| p.rc[0]));
+    assert_eq!(exits.len(), 1);
+    close(exits[0], 32.0, 7);
+    assert!(distinct(planes.iter().map(|p| p.lc[0])).len() > 1);
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    assert!(planes.len() <= 14 * 5, "{}", planes.len());
+    // An entry at one x on the crest.
+    let (_, planes) = first_pass([5.0, 5.0, 26.0, 38.0]);
+    assert!(!planes.is_empty());
+    let entries = distinct(planes.iter().map(|p| p.lc[0]));
+    assert_eq!(entries.len(), 1);
+    close(entries[0], 5.0, 7);
+    assert!(distinct(planes.iter().map(|p| p.rc[0])).len() > 1);
+    assert_eq!(plane_keys(&planes).len(), planes.len());
+    assert!(planes.len() <= 16 * 5, "{}", planes.len());
+}
+
+#[test]
+fn a_point_on_a_corner_is_the_two_ends_of_its_widened_limit() {
+    let w = 1e-5 * 40.0;
+    // The exit at the toe: the search limit runs from just above the toe
+    // to the toe, and its circles go through those two ends only (before,
+    // through 16 exit points spread over the 0.4 mm).
+    let (s, planes) = first_pass([1.0, 8.0, 25.0, 25.0]);
+    assert_eq!(s.search_limits(), [1.0, 8.0, 25.0 - w, 25.0]);
+    assert!(!planes.is_empty());
+    for x in distinct(planes.iter().map(|p| p.rc[0])) {
+        assert!(
+            (x - (25.0 - w)).abs() < 1e-7 || (x - 25.0).abs() < 1e-7,
+            "exit {x}"
+        );
+    }
+    // An entry on the crest's corner, widened to both sides.
+    let (s, planes) = first_pass([10.0, 10.0, 26.0, 38.0]);
+    assert_eq!(s.search_limits(), [10.0 - w, 10.0 + w, 26.0, 38.0]);
+    assert!(!planes.is_empty());
+    for x in distinct(planes.iter().map(|p| p.lc[0])) {
+        assert!(
+            (x - (10.0 - w)).abs() < 1e-7 || (x - (10.0 + w)).abs() < 1e-7,
+            "entry {x}"
+        );
     }
 }

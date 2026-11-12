@@ -32,6 +32,35 @@ describe("a search range given as a point", () => {
     expect(Math.abs(crit.rc[0] - 30.5)).toBeLessThan(1e-3);
   });
 
+  it("searches a point side at its point only, without duplicate circles (issue #157)", () => {
+    const distinct = (xs: number[]) =>
+      [...xs].sort((a, b) => a - b).filter((x, i, a) => i === 0 || x - a[i - 1] > 1e-7);
+    // An exit at one x on the floor: one exit, and every surface once.
+    const floor = runVerification(
+      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 35, exitRightX: 35 }),
+      "Morgenstern-Price",
+      mp,
+    );
+    expect(floor.fos).not.toBeNull();
+    const exits = distinct(floor.slope.search.map((p) => p.rc[0]));
+    expect(exits).toHaveLength(1);
+    expect(exits[0]).toBeCloseTo(35, 7);
+    expect(distinct(floor.slope.search.map((p) => p.lc[0])).length).toBeGreaterThan(1);
+    // The toe, a corner: the search limit runs from just above it to the
+    // toe, and the circles end at those two ends only (before, at 16 exit
+    // points spread over the 0.3 mm between them).
+    const w = 1e-5 * 31.5;
+    const toe = runVerification(
+      slope({ entryLeftX: 17, entryRightX: 21.5, exitLeftX: 30.5, exitRightX: 30.5 }),
+      "Morgenstern-Price",
+      mp,
+    );
+    expect(toe.slope.searchLimits).toEqual([17, 21.5, 30.5 - w, 30.5]);
+    for (const x of distinct(toe.slope.search.map((p) => p.rc[0]))) {
+      expect(Math.min(Math.abs(x - (30.5 - w)), Math.abs(x - 30.5))).toBeLessThan(1e-7);
+    }
+  });
+
   it("reaches the corner from a range that starts at it", () => {
     // Exit range 30.5–35 starting at the toe: the circles exiting just
     // above it are searched too (an end on a corner of the ground is moved

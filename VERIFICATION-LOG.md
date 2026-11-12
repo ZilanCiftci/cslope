@@ -100,11 +100,44 @@ The script compares the regenerated verification table with the committed one an
 | 2026-11-11 | Slices of a circle without the steep-end cuts (V068 tolerance +1 % for a slicing-sensitive surface) | 166 | 0.316 → 0.308 | 0.447 → 0.441 | 0.936 → 0.948 | 1.519 → 1.531 | 638 s (4 workers, load 1.1 at start) |
 | 2026-11-11 | Reinforcement: active (prestressed) elements always carry their force; the tension-only rule is for passive elements | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 1308 s (4 workers, load 2.3 at start) |
 | 2026-11-11 | Search: a single exit x on a vertical ground face exits at the foot of the face | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 600 s (4 workers, load 2.3 at start) |
+| 2026-11-12 | Search: a side given as a point gets one point in the first pass; a point on a corner is the two ends of its widened limit (issue #157) | 0 | 0.308 → 0.308 | 0.441 → 0.441 | 0.948 → 0.948 | 1.531 → 1.531 | 548 s (4 workers, load 3.3 at start) |
 <!-- summary-end -->
 
 ## Entries
 
 <!-- entries -->
+
+### 2026-11-12: Search: a side given as a point gets one point in the first pass; a point on a corner is the two ends of its widened limit (issue #157)
+
+Compared with f1a2a2b0. Errors are relative to the reference, in percent. Verification run time: 548 s (4 workers, load 3.3 at start).
+
+**Against other programs (midpoint of their range):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 301)** | | | | -0.203 % | -0.203 % |
+| **Mean absolute error** | | | | 0.308 % | 0.308 % |
+| **RMS error** | | | | 0.441 % | 0.441 % |
+| **Largest error** | | | | 2.009 % | 2.009 % |
+
+**Against the papers:** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 123)** | | | | -0.120 % | -0.120 % |
+| **Mean absolute error** | | | | 0.948 % | 0.948 % |
+| **RMS error** | | | | 1.531 % | 1.531 % |
+| **Largest error** | | | | 6.591 % | 6.591 % |
+
+**Finite elements against their references (FE, finite differences, limit analysis, theory):** 0 moved (0 closer to the reference, 0 further).
+
+| Result | Reference | Before | After | Error before | Error after |
+|---|---|---|---|---|---|
+| **Mean error (n = 34)** | | | | -0.273 % | -0.273 % |
+| **Mean absolute error** | | | | 2.016 % | 2.016 % |
+| **RMS error** | | | | 2.734 % | 2.734 % |
+| **Largest error** | | | | 6.325 % | 6.325 % |
+
 
 ### 2026-11-11: Search: a single exit x on a vertical ground face exits at the foot of the face
 

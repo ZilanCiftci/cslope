@@ -41,7 +41,63 @@ pub fn plane_key(plane: &SearchPlane) -> String {
     format!("{}|{}|{}", s(plane.cx), s(plane.cy), s(plane.radius))
 }
 
+/// The sides of the search given as a point: the x of their points in the
+/// first pass, None for a range. A side whose limits are one x has one
+/// point. A point on a corner of the ground, which `Slope::search_limits`
+/// widens by 1e-5 of the model's width, is still a point: its first-pass
+/// points are the two ends of the widened limit, not a grid spread over
+/// that width (issue #157).
+struct PointSides {
+    entry: Option<Vec<f64>>,
+    exit: Option<Vec<f64>>,
+}
+
+fn point_sides(slope: &Slope) -> PointSides {
+    let raw = slope.limits();
+    let limits = slope.search_limits();
+    let width = match slope.surface_line_xy() {
+        Some(s) if s.x.len() >= 2 => js::math::max_of(&s.x) - js::math::min_of(&s.x),
+        _ => {
+            return PointSides {
+                entry: None,
+                exit: None,
+            }
+        }
+    };
+    let tol = 1e-9 * width;
+    let side = |r0: f64, r1: f64, s0: f64, s1: f64| -> Option<Vec<f64>> {
+        if (r1 - r0).abs() > tol {
+            return None;
+        }
+        Some(if s1 - s0 > tol {
+            vec![s0, s1]
+        } else {
+            vec![s0]
+        })
+    };
+    PointSides {
+        entry: side(raw[0], raw[1], limits[0], limits[1]),
+        exit: side(raw[2], raw[3], limits[2], limits[3]),
+    }
+}
+
+/// The grid of the first pass. A side given as a point gets its own points
+/// only (`point_sides`), and the other side and the radii stay as for a
+/// range: the budget of the coinciding points is not spent elsewhere
+/// (issue #157, option C).
 fn get_search_grid_spec(slope: &Slope) -> SearchGridSpec {
+    let mut spec = range_grid_spec(slope);
+    let points = point_sides(slope);
+    if points.entry.is_some() {
+        spec.num_points_top = 1.0;
+    }
+    if points.exit.is_some() {
+        spec.num_points_bot = 0.0;
+    }
+    spec
+}
+
+fn range_grid_spec(slope: &Slope) -> SearchGridSpec {
     let num_circles = js::math::max(5.0, (slope.iterations() / 800.0).floor());
     let point_combinations = slope.iterations() / num_circles;
     let mut num_points_top = point_combinations.sqrt().floor();
@@ -1074,26 +1130,39 @@ pub fn entry_exit_planes(slope: &Slope) -> Result<Vec<SearchPlane>> {
         num_points_top,
         num_points_bot,
     } = get_search_grid_spec(slope);
+    let points = point_sides(slope);
 
     let window = SearchWindow::of(slope);
     let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
 
     // Generate entry (left) coordinates
     let mut left_coords: Vec<Pt> = Vec::new();
-    let mut n = 0.0;
-    while n < num_points_top {
-        let x = entry_left_x + (n / (num_points_top - 1.0)) * (entry_right_x - entry_left_x);
-        left_coords.push([x, slope.get_external_y_intersection(x)?]);
-        n += 1.0;
+    if let Some(xs) = &points.entry {
+        for &x in xs {
+            left_coords.push([x, slope.get_external_y_intersection(x)?]);
+        }
+    } else {
+        let mut n = 0.0;
+        while n < num_points_top {
+            let x = entry_left_x + (n / (num_points_top - 1.0)) * (entry_right_x - entry_left_x);
+            left_coords.push([x, slope.get_external_y_intersection(x)?]);
+            n += 1.0;
+        }
     }
 
     // Generate exit (right) coordinates
     let mut right_coords: Vec<Pt> = Vec::new();
-    let mut n = 0.0;
-    while n <= num_points_bot {
-        let x = exit_left_x + (n / num_points_bot) * (exit_right_x - exit_left_x);
-        right_coords.push(slope.exit_ground_point(x)?);
-        n += 1.0;
+    if let Some(xs) = &points.exit {
+        for &x in xs {
+            right_coords.push(slope.exit_ground_point(x)?);
+        }
+    } else {
+        let mut n = 0.0;
+        while n <= num_points_bot {
+            let x = exit_left_x + (n / num_points_bot) * (exit_right_x - exit_left_x);
+            right_coords.push(slope.exit_ground_point(x)?);
+            n += 1.0;
+        }
     }
 
     // Entry points just behind each load, on top of the grid (within the
