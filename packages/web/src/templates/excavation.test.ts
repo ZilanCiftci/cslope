@@ -26,6 +26,17 @@ const base: ExcavationParams = { ...EXCAVATION_EXAMPLES["clay-5m-water"], layers
 /** Points rounded to 1e-9 m, to compare computed coordinates. */
 const r9 = (pts: [number, number][]) => pts.map(([x, y]) => [Number(x.toFixed(9)) + 0, Number(y.toFixed(9)) + 0]);
 const withLayers = (params: ExcavationParams, ...layers: ExcavationParams["layers"]) => ({ ...params, layers });
+/** The case of issue 161: the crust 1.5 m, the clay 2.5 m down to the excavation bottom (−4 m), gravel 5 m below it. */
+const onBottom: ExcavationParams = {
+  ...EXCAVATION_EXAMPLES["crust-over-clay"],
+  layers: [
+    { name: "Crust", bottomLevel: -1.5, material: { kind: "drained", gamma: 18, c: 2, phi: 32 } },
+    { name: "Clay", bottomLevel: -4, material: { kind: "undrained", gamma: 16.5, su: 18 } },
+    { name: "Gravel", bottomLevel: -9, material: { kind: "drained", gamma: 20, c: 0, phi: 35 } },
+  ],
+};
+const onBottomTrench: ExcavationParams = { ...onBottom, bottomWidth: 2 };
+const onBottomRoad = { distanceFromCrest: 2, width: 4, height: 0.5, fill: { gamma: 20, c: 0, phi: 38 }, trafficLoad: 20 };
 
 describe("the geometry rules", () => {
   it("reaches 1.5 × its depth beyond the crest and the toe, down to the last layer's bottom", () => {
@@ -156,6 +167,96 @@ describe("the geometry rules", () => {
     expect(regionCount(def)).toBe(4);
   });
 
+  it("ends a level on the excavation bottom at the toe, with no new vertex on the face or the right edge", () => {
+    const params = withLayers(
+      base,
+      { bottomLevel: 8, material: { kind: "drained", gamma: 18, c: 2, phi: 30 } },
+      { bottomLevel: 5, material: { kind: "undrained", gamma: 16, su: 20 } },
+      { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 40 } },
+    );
+    expect(excavationProblems(params)).toEqual([]);
+    const def = excavationDocument(params).definition;
+    // The toe (10, 5) and the corner (40, 5) are the level's vertices already.
+    expect(def.coordinates).toEqual([
+      [-30, -10],
+      [-30, 5],
+      [-30, 8],
+      [-30, 10],
+      [0, 10],
+      [4, 8],
+      [10, 5],
+      [40, 5],
+      [40, -10],
+    ]);
+    expect(def.materialBoundaries).toEqual([{ coordinates: [[-30, 8], [4, 8]] }, { coordinates: [[-30, 5], [10, 5]] }]);
+    expect(validateDefinition(def).filter((i) => i.severity === "error")).toEqual([]);
+    expect(regionCount(def)).toBe(3);
+    // Within 1e-9 m of the bottom is on it: the same outline.
+    const near = withLayers(base, { bottomLevel: 5 + 1e-10, material: { kind: "undrained", gamma: 16, su: 20 } }, { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 40 } });
+    expect(excavationProblems(near)).toEqual([]);
+    expect(r9(excavationDocument(near).definition.coordinates)).toEqual([
+      [-30, -10],
+      [-30, 5],
+      [-30, 10],
+      [0, 10],
+      [10, 5],
+      [40, 5],
+      [40, -10],
+    ]);
+  });
+
+  it("ends a trench's level on the bottom at both ends of the bottom, and gives its layer a region on each side", () => {
+    const def = excavationDocument(
+      withLayers(
+        { ...base, bottomWidth: 1 },
+        { bottomLevel: 8, material: { kind: "drained", gamma: 18, c: 2, phi: 30 } },
+        { bottomLevel: 5, material: { kind: "undrained", gamma: 16, su: 20 } },
+        { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 40 } },
+      ),
+    ).definition;
+    expect(def.coordinates).toEqual([
+      [-30, -10],
+      [-30, 5],
+      [-30, 8],
+      [-30, 10],
+      [0, 10],
+      [4, 8],
+      [10, 5],
+      [11, 5],
+      [17, 8],
+      [21, 10],
+      [51, 10],
+      [51, 8],
+      [51, 5],
+      [51, -10],
+    ]);
+    expect(def.materialBoundaries).toEqual([
+      { coordinates: [[-30, 8], [4, 8]] },
+      { coordinates: [[17, 8], [51, 8]] },
+      { coordinates: [[-30, 5], [10, 5]] },
+      { coordinates: [[11, 5], [51, 5]] },
+    ]);
+    expect(def.regionAssignments).toEqual([
+      { point: [-29, 9], materialName: "Layer 1" },
+      { point: [-29, 6.5], materialName: "Layer 2" },
+      { point: [-29, -2.5], materialName: "Layer 3" },
+      { point: [50, 9], materialName: "Layer 1" },
+      { point: [50, 6.5], materialName: "Layer 2" },
+    ]);
+    expect(validateDefinition(def).filter((i) => i.severity === "error")).toEqual([]);
+    expect(regionCount(def)).toBe(5);
+  });
+
+  it("refuses a level closer than 5 cm to the excavation bottom but not on it, offering the bottom itself", () => {
+    const at = (level: number) =>
+      excavationFieldProblems(withLayers(base, { bottomLevel: level, material: { kind: "undrained", gamma: 16, su: 20 } }, { bottomLevel: -10, material: { kind: "undrained", gamma: 16, su: 40 } }));
+    expect(at(4.98)).toEqual([{ field: "layers.0.bottomLevel", message: "Layer 1: the bottom level 4.98 is 0.02 m from the excavation bottom (5): put it at 5, or at least 0.05 m from it." }]);
+    expect(at(5.02).map((p) => p.message)).toEqual(["Layer 1: the bottom level 5.02 is 0.02 m from the excavation bottom (5): put it at 5, or at least 0.05 m from it."]);
+    expect(at(5)).toEqual([]);
+    expect(at(5.05)).toEqual([]);
+    expect(at(4.95)).toEqual([]);
+  });
+
   it("splits a 5 cm crust as its own region", () => {
     const params = withLayers(
       base,
@@ -266,7 +367,7 @@ describe("the geometry rules", () => {
       ),
     ).toEqual([
       "Layer 1: the bottom level 9.97 must be at least 0.05 m below the ground (10).",
-      "Layer 2: the bottom level 5.03 is within 0.05 m of the excavation bottom; move it.",
+      "Layer 2: the bottom level 5.03 is 0.03 m from the excavation bottom (5): put it at 5, or at least 0.05 m from it.",
       "Layer 3: φ′ must be at least 0° and less than 90°.",
     ]);
     expect(() => excavationDocument({ ...base, slope: 0 })).toThrow("Slope 1:n must be from 0.5 to 5.");
@@ -377,12 +478,70 @@ describe("the model's extent", () => {
     });
   }
 
+  for (const [what, params] of [
+    ["one-sided", onBottom],
+    ["a trench", onBottomTrench],
+  ] as const) {
+    it(`a layer that ends at the excavation bottom, ${what}: twice as wide, F does not change beyond 1e-3, and the critical surface keeps off the edges`, async () => {
+      const g = geometry(params);
+      const { result, summary } = await runDocument(excavationDocument(params));
+      const own = summary.fos!;
+      const margin = 0.05 * (g.right - g.left);
+      expect(result.criticalSurface!.entryPoint[0] - g.left, "entry near the left edge").toBeGreaterThan(margin);
+      expect(g.right - result.criticalSurface!.exitPoint[0], "exit near the right edge").toBeGreaterThan(margin);
+      const wide = (await runDocument(widened(params))).summary.fos!;
+      expect(Math.abs(wide - own), `F ${own}, twice as wide ${wide}`).toBeLessThan(1e-3);
+    });
+  }
+
   it("a shallow excavation over deep soft clay: twice as wide, F does not change beyond 1e-3", async () => {
     const deep: ExcavationParams = { ...base, groundLevel: 0, excavationDepth: 2, slope: 3, waterLevel: null, layers: [{ bottomLevel: -20, material: { kind: "undrained", gamma: 16, su: 6 } }] };
     const own = (await runDocument(excavationDocument(deep))).summary.fos!;
     const wide = (await runDocument(widened(deep))).summary.fos!;
     expect(Math.abs(wide - own), `F ${own}, twice as wide ${wide}`).toBeLessThan(1e-3);
   });
+});
+
+describe("a layer that ends at the excavation bottom", () => {
+  const variants: [string, ExcavationParams][] = [
+    ["one-sided", onBottom],
+    ["one-sided with the road", { ...onBottom, road: onBottomRoad }],
+    ["a trench", onBottomTrench],
+    ["a trench with the road", { ...onBottomTrench, road: onBottomRoad }],
+  ];
+  for (const [what, params] of variants) {
+    it(`${what}: builds, validates and runs to F`, async () => {
+      expect(excavationProblems(params)).toEqual([]);
+      const doc = excavationDocument(params);
+      expect(validateDefinition(doc).filter((i) => i.severity === "error")).toEqual([]);
+      // Each layer and the road a region; in a trench the crust and the clay one on each side.
+      expect(regionCount(doc.definition)).toBe(3 + (params.bottomWidth === null ? 0 : 2) + (params.road ? 1 : 0));
+      const { summary, issues } = await runDocument(doc);
+      expect(issues.filter((i) => i.severity === "error")).toEqual([]);
+      expect(summary.fos).not.toBeNull();
+      expect(summary.fos!).toBeGreaterThan(0);
+    });
+  }
+
+  for (const [what, params] of [
+    ["one-sided", onBottom],
+    ["a trench", onBottomTrench],
+  ] as const) {
+    it(`${what}: F is continuous across the bottom (the clay ending 5 cm above it, on it and 5 cm below it)`, async () => {
+      const clayTo = (level: number): ExcavationParams => ({ ...params, layers: params.layers.map((l) => (l.name === "Clay" ? { ...l, bottomLevel: level } : l)) });
+      const F = async (level: number) => (await runDocument(excavationDocument(clayTo(level)))).summary.fos!;
+      const [above2, above, on, below, below2] = [await F(-3.9), await F(-3.95), await F(-4), await F(-4.05), await F(-4.1)];
+      const all = `F ${[above2, above, on, below, below2].join(", ")}`;
+      // F rises as the clay goes deeper (the gravel, c′ 0, has little strength under the shallow cover beyond the toe), faster
+      // below the bottom, where the clay then covers the whole bottom; the case on the bottom lies between its neighbors,
+      // within 2 % of each, and no step to or from it is a jump: none more than 1.5 × the next 5 cm step on the same side.
+      expect(above2 <= above && above <= on && on <= below && below <= below2, all).toBe(true);
+      expect(Math.abs(above - on), all).toBeLessThan(0.02 * on);
+      expect(Math.abs(below - on), all).toBeLessThan(0.02 * on);
+      expect(on - above, all).toBeLessThan(1.5 * (above - above2));
+      expect(below - on, all).toBeLessThan(1.5 * (below2 - below));
+    });
+  }
 });
 
 /** The document with its base twice as far below the ground: the last layer twice as deep. */

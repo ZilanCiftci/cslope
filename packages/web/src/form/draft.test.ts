@@ -190,8 +190,22 @@ describe("the form's state", () => {
     // The excavation is 4 m deep: a layer that ends 2 cm from its bottom, then layers that end above it.
     d.layers[0].thickness = "3.98";
     expect(Object.fromEntries(formState(d).errors)).toEqual({
-      "layers.0.thickness": "Ends at −3.98 m, within 0.05 m of the excavation bottom (−4 m): make it at most 3.95 m or at least 4.05 m thick.",
+      "layers.0.thickness": "Ends at −3.98 m, 0.02 m from the excavation bottom (−4 m): end it at the excavation bottom (4 m thick), or make it at most 3.95 m or at least 4.05 m thick.",
     });
+    // On the bottom itself, it is taken (an excavation down to the top of a layer); 2 cm below it, refused with the same offer.
+    d.layers[0].thickness = "4";
+    expect(Object.fromEntries(formState(d).errors)).toEqual({});
+    expect(formState(d).params.layers.map((l: Layer) => l.bottomLevel)).toEqual([-4, -22.5]);
+    d.layers[0].thickness = "4.02";
+    expect(Object.fromEntries(formState(d).errors)).toEqual({
+      "layers.0.thickness": "Ends at −4.02 m, 0.02 m from the excavation bottom (−4 m): end it at the excavation bottom (4 m thick), or make it at most 3.95 m or at least 4.05 m thick.",
+    });
+    // Three layers, the middle one ending on the bottom: the crust 1.5 m, the clay 2.5 m, the gravel 5 m.
+    d.layers[0].thickness = "1.5";
+    d.layers[1].thickness = "2.5";
+    d.layers.push({ ...d.layers[1], key: "gravel", name: "Gravel", thickness: "5" });
+    expect(Object.fromEntries(formState(d).errors)).toEqual({});
+    d.layers.pop();
     d.layers[0].thickness = "1";
     d.layers[1].thickness = "2.5";
     expect(Object.fromEntries(formState(d).errors)).toEqual({

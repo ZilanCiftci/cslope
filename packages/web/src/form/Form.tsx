@@ -437,7 +437,7 @@ export function Form({ spec, draft, onChange, errors, missing = [], notes, onRem
   const layersError = errors.get("layers");
   const levels = draftLevels(draft);
   const ground = parseNumber(draft.fields.groundLevel ?? "") ?? NaN;
-  const thicknessRule = spec.avoidLevel ? ` It does not end within 0.05 m of the excavation bottom, and the last one ends below it.` : "";
+  const thicknessRule = spec.avoidLevel ? ` It ends at the excavation bottom or at least 0.05 m from it, and the last one ends below it.` : "";
   const groups = (list: GroupSpec[]) =>
     list.map((g) => (
       <TemplateGroup key={g.id} spec={spec} group={g} draft={draft} onChange={onChange} errors={errors}>
