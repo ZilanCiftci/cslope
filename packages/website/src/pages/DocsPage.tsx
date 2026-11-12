@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Menu, Pencil } from "lucide-react";
 
 import { DOCS, SECTIONS, docPath, findDoc, type Doc } from "@/docs/registry";
 import { MDX_COMPONENTS } from "@/docs/mdx-components";
+import { docPageTitle } from "@/docs/page-titles";
 import { usePageMeta } from "@/lib/page-meta";
 import { useEscape } from "@/lib/use-escape";
 import { NotFound } from "@/pages/NotFound";
@@ -103,9 +104,7 @@ export function DocsPage() {
   const [headings, readHeadings] = useHeadings(article);
   const [menuOpen, setMenuOpen] = useState(false);
   useEscape(menuOpen, () => setMenuOpen(false));
-  // Tutorials share titles with reference pages ("Reporting"): say which.
-  const tutorial = doc?.section === "Tutorials" && doc.slug !== "tutorials" ? "Tutorial: " : "";
-  usePageMeta(doc ? (doc.slug ? `${tutorial}${doc.title} · Docs` : "Documentation") : "Page not found", doc?.description, {
+  usePageMeta(doc ? docPageTitle(doc) : "Page not found", doc?.description, {
     canonical: doc != null,
   });
 

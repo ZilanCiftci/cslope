@@ -292,7 +292,7 @@ function ReliabilityTable() {
 
 export function Verification() {
   usePageMeta(
-    "Verification",
+    "Verification against published problems",
     `cSlope on ${VERIFICATION.summary.problems} published slope stability problems: the sources' values, other programs' results and cSlope's results, problem by problem.`,
   );
   const s = VERIFICATION.summary;

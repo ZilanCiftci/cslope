@@ -122,7 +122,7 @@ const AREAS: Area[] = [
 
 export function Features() {
   usePageMeta(
-    "Features",
+    "Features: limit equilibrium slope analysis",
     "What cSlope does: limit equilibrium methods, slip surface search, materials, water, reinforcement, reporting and probabilistic analysis.",
   );
   return (

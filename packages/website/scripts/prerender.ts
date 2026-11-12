@@ -3,15 +3,17 @@
  *
  *  - dist/<path>/index.html for each page and documentation page, with the
  *    page's HTML in #root and its own title, description, og:title,
- *    og:description and, when the origin is known, canonical and og:url;
- *    on docs pages, the stylesheets of the lazily loaded docs;
+ *    og:description, og:type and, when the origin is known, canonical,
+ *    og:url and structured data (JSON-LD); on docs pages with formulas, the
+ *    stylesheets of the lazily loaded docs;
  *  - dist/404.html, the not-found page (served by Vercel with a 404 status);
- *  - dist/sitemap.xml and a Sitemap line in dist/robots.txt, when the
- *    origin is known.
+ *  - dist/sitemap.xml, with each page's last change from git where it is
+ *    known, and a Sitemap line in dist/robots.txt, when the origin is known.
  *
  * Usage: bun scripts/prerender.ts [dist] [dist-ssr]
  */
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { siteOrigin } from "./site-origin";
@@ -22,7 +24,9 @@ export interface PageHead {
   /** The absolute URL of the page, or "" when the origin is unknown. */
   url: string;
   noindex?: boolean;
-  /** Extra tags for the head (stylesheets). */
+  /** og:type: "article" for documentation pages, "website" (the template's) otherwise. */
+  type?: "website" | "article";
+  /** Extra tags for the head (stylesheets, structured data). */
   links?: string[];
 }
 
@@ -44,6 +48,7 @@ export function fillTemplate(template: string, appHtml: string, head: PageHead):
   html = setMeta(html, "name", "description", head.description);
   html = setMeta(html, "property", "og:title", head.title);
   html = setMeta(html, "property", "og:description", head.description);
+  if (head.type) html = setMeta(html, "property", "og:type", head.type);
   const extra: string[] = [...(head.links ?? [])];
   if (head.url) {
     extra.push(`<link rel="canonical" href="${escapeAttr(head.url)}" />`);
@@ -83,9 +88,35 @@ export function lazyStylesheets(manifest: Record<string, ManifestChunk>, src: st
   return [...css].map((f) => `<link rel="stylesheet" crossorigin href="/${f}" />`);
 }
 
-export function sitemap(origin: string, paths: string[]): string {
-  const urls = paths.map((p) => `  <url><loc>${escapeText(origin + (p === "/" ? "/" : p))}</loc></url>`);
+export interface SitemapEntry {
+  path: string;
+  /** The date of the page's last change (YYYY-MM-DD), when known. */
+  lastmod?: string;
+}
+
+export function sitemap(origin: string, pages: SitemapEntry[]): string {
+  const urls = pages.map(({ path: p, lastmod }) => {
+    const loc = `<loc>${escapeText(origin + (p === "/" ? "/" : p))}</loc>`;
+    return `  <url>${loc}${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}</url>`;
+  });
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join("\n")}\n</urlset>\n`;
+}
+
+/**
+ * The time (ISO 8601) of the latest commit that changed any of these files,
+ * or undefined when git cannot tell: outside a repository, for files never
+ * committed, and in a shallow clone (Vercel's) when that commit is the
+ * clone's boundary, which only says the change is at least that old.
+ */
+export function lastCommitTime(files: string[], cwd: string): string | undefined {
+  if (!files.length) return undefined;
+  const git = (...args: string[]) => spawnSync("git", args, { cwd, encoding: "utf8" });
+  const log = git("log", "-1", "--format=%H %cI", "--", ...files);
+  const [hash, time] = log.status === 0 ? log.stdout.trim().split(" ") : [];
+  if (!hash || !time) return undefined;
+  const shallowFile = git("rev-parse", "--path-format=absolute", "--git-path", "shallow").stdout.trim();
+  if (shallowFile && existsSync(shallowFile) && readFileSync(shallowFile, "utf8").split("\n").includes(hash)) return undefined;
+  return time;
 }
 
 /** The file a path is served from: "/" -> index.html, "/docs" -> docs/index.html. */
@@ -94,7 +125,13 @@ export const outputFile = (path: string) => (path === "/" ? "index.html" : `${pa
 interface ServerEntry {
   sitePaths(): string[];
   render(url: string): Promise<{ html: string; title: string; description: string }>;
+  sourceFiles(path: string): string[];
+  structuredData(path: string, origin: string, options: { dateModified?: string }): Record<string, unknown>[];
+  jsonLdTag(things: Record<string, unknown>[]): string;
 }
+
+/** Whether a pre-rendered docs page has formulas, which need the KaTeX stylesheet before the first paint. */
+export const hasFormulas = (html: string) => html.includes('class="katex"');
 
 async function main() {
   const dist = resolve(process.argv[2] ?? "dist");
@@ -107,13 +144,21 @@ async function main() {
   const manifest = JSON.parse(readFileSync(manifestFile, "utf8")) as Record<string, ManifestChunk>;
   const docsLinks = lazyStylesheets(manifest, "src/pages/DocsPage.tsx");
 
+  const root = resolve(import.meta.dirname, "..");
+  const pages: SitemapEntry[] = [];
   for (const path of paths) {
     const page = await entry.render(path);
     const file = join(dist, outputFile(path));
     mkdirSync(dirname(file), { recursive: true });
     const url = origin && origin + (path === "/" ? "/" : path);
-    const links = path === "/docs" || path.startsWith("/docs/") ? docsLinks : [];
-    writeFileSync(file, fillTemplate(template, page.html, { ...page, url, links }));
+    const isDoc = path === "/docs" || path.startsWith("/docs/");
+    const modified = lastCommitTime(entry.sourceFiles(path), root);
+    const jsonLd = entry.jsonLdTag(entry.structuredData(path, origin, { dateModified: modified }));
+    // The KaTeX stylesheet blocks the first paint, so only pages with
+    // formulas link it; on the others it loads with the docs' script.
+    const links = [...(isDoc && hasFormulas(page.html) ? docsLinks : []), ...(jsonLd ? [jsonLd] : [])];
+    writeFileSync(file, fillTemplate(template, page.html, { ...page, url, links, type: isDoc ? "article" : undefined }));
+    pages.push({ path, lastmod: modified?.slice(0, 10) });
   }
 
   const missing = await entry.render("/404");
@@ -122,7 +167,7 @@ async function main() {
   const robots = join(dist, "robots.txt");
   let robotsText = readFileSync(robots, "utf8").trimEnd() + "\n";
   if (origin) {
-    writeFileSync(join(dist, "sitemap.xml"), sitemap(origin, paths));
+    writeFileSync(join(dist, "sitemap.xml"), sitemap(origin, pages));
     robotsText += `\nSitemap: ${origin}/sitemap.xml\n`;
   }
   writeFileSync(robots, robotsText);

@@ -57,6 +57,11 @@ function shareImage(origin: string): Plugin {
         meta("og:image", `${origin}/og-image.png`),
         meta("og:image:width", "1200"),
         meta("og:image:height", "630"),
+        meta(
+          "og:image:alt",
+          "cSlope, open source slope stability software, with a result sheet showing a circular slip surface and its factor of safety",
+        ),
+        meta("og:locale", "en_US"),
         meta("twitter:card", "summary_large_image", "name"),
       ];
     },
