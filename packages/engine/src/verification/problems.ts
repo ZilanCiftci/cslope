@@ -23,7 +23,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Arai & Tagyo (1985), example 1.",
     surface: "search",
     units: "SI",
-    description: "Homogeneous 1.5:1 slope, 20 m high; critical circle search.",
+    description: "Homogeneous 1.5:1 slope, 20 m high; critical-circle search.",
     definition: {"coordinates":[[-30,0],[-30,15],[18,15],[48,35],[100,35],[100,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":41.65,"frictionAngle":15}}],"materialBoundaries":[],"regionAssignments":[{"point":[-28.7,0.05],"materialName":"Soil"}],"analysisLimits":{"entryLeftX":0,"entryRightX":66,"exitLeftX":0,"exitRightX":66}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.409,"publishedBy":"Commercial program A"},
@@ -47,7 +47,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Arai & Tagyo (1985), example 2.",
     surface: "search",
     units: "SI",
-    description: "Slope with a weak middle layer between a stronger upper layer and a very strong base; critical circle search.",
+    description: "Slope with a weak middle layer between a stronger upper layer and a very strong base; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,15],[18,15],[48,35],[96,35],[96,0]],"materials":[{"name":"Upper","model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":29.4,"frictionAngle":12}},{"name":"Middle","model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":9.8,"frictionAngle":5}},{"name":"Lower","model":{"kind":"mohr-coulomb","unitWeight":18.82,"cohesion":294,"frictionAngle":40}}],"materialBoundaries":[{"coordinates":[[24,19],[72,35]],"materialName":""},{"coordinates":[[0,3],[96,35]],"materialName":""}],"regionAssignments":[{"point":[60,34],"materialName":"Upper"},{"point":[60,25],"materialName":"Middle"},{"point":[60,5],"materialName":"Lower"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":0.42,"publishedBy":"Commercial program A"},
@@ -86,7 +86,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Verification manual of a commercial slope stability program.",
     surface: "search",
     units: "SI",
-    description: "12 m high 4:1 slope with the same soil as V008a; critical circle search.",
+    description: "12 m high 4:1 slope with the same soil as V008a; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,0],[48,12],[100,12],[100,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":11.64,"frictionAngle":24.7}}],"materialBoundaries":[],"regionAssignments":[{"point":[1,0.05],"materialName":"Soil"}]},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":2.794,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -120,7 +120,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Baker, R., Frydman, S. & Talesnick, M. (1993). Slope stability analysis for undrained loading conditions. Int. J. Numer. Anal. Meth. Geomech. 17, 15–43.",
     surface: "search",
     units: "SI",
-    description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) with a 6 m crest and a straight 4H:1V downstream face, whose natural-clay part governs; dry; circular search. Theoretical (infinite slope) FOS tan 32°/tan 14.04° = 2.50.",
+    description: "Compacted-clay embankment (c′ = 6.5 kPa, φ′ = 40°) on a deep natural-clay foundation (c′ = 0, φ′ = 32°) with a 6 m crest and a straight 4H:1V downstream face, whose natural-clay part governs; dry; circular search. Theoretical (infinite slope) F = tan 32°/tan 14.04° = 2.50.",
     definition: {"coordinates":[[0,0],[0,95],[80,95],[98,101],[104,101],[128,95],[148,90],[220,90],[220,0]],"materials":[{"name":"Compacted clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6.5,"frictionAngle":40}},{"name":"Natural clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":0,"frictionAngle":32}}],"materialBoundaries":[{"coordinates":[[0,95],[80,95],[128,95],[148,90],[220,90]],"materialName":""}],"regionAssignments":[{"point":[98,99.9],"materialName":"Compacted clay"},{"point":[40,94.5],"materialName":"Natural clay"}],"analysisLimits":{"entryLeftX":104,"entryRightX":148,"exitLeftX":104,"exitRightX":148}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.5,"publishedBy":"Theory (infinite slope)"},
@@ -211,7 +211,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Baker (2003), example 1.",
     surface: "search",
     units: "SI",
-    description: "6 m high slope at about 43° in soil with a linear Mohr-Coulomb fit to a curved envelope; critical circle search.",
+    description: "6 m high slope at about 43° in soil with a linear Mohr-Coulomb fit to a curved envelope; critical-circle search.",
     definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":11.64,"frictionAngle":24.7}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"Soil"}],"analysisLimits":{"entryLeftX":0,"entryRightX":20,"exitLeftX":0,"exitRightX":20}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.536,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -228,7 +228,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Baker (2003) example 3.",
     surface: "search",
     units: "SI",
-    description: "43° slope, 6 m high, with the Mohr-Coulomb envelope fitted to London clay data (c' = 6 kPa, φ' = 32°); critical circle search.",
+    description: "43° slope, 6 m high, with the Mohr-Coulomb envelope fitted to London clay data (c′ = 6 kPa, φ′ = 32°); critical-circle search.",
     definition: {"coordinates":[[-6,-4],[-6,0],[0,0],[6.43,6],[20,6],[20,-4]],"materials":[{"name":"London clay","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":6,"frictionAngle":32}}],"materialBoundaries":[],"regionAssignments":[{"point":[-5.74,-3.95],"materialName":"London clay"}],"orientation":"rtl","analysisLimits":{"entryLeftX":0,"entryRightX":13.7,"exitLeftX":0,"exitRightX":13.7}},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.366,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -389,7 +389,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Cai & Ugai (2000), Soils and Foundations 40(1).",
     surface: "search",
     units: "SI",
-    description: "Homogeneous 1:1.5 slope, 10 m high, without piles; critical circle search.",
+    description: "Homogeneous 1:1.5 slope, 10 m high, without piles; critical-circle search.",
     definition: {"coordinates":[[0,-10],[0,0],[10,0],[25,10],[35,10],[35,-10]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":10,"frictionAngle":20}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.35,-9.95],"materialName":"Soil"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.14,"publishedBy":"Commercial program A"},
@@ -604,7 +604,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Chen, Z. & Shao, C. (1988). Evaluation of minimum factor of safety in slope stability analysis. Can. Geotech. J. 25(4), 735–748.",
     surface: "fixed",
     units: "SI",
-    description: "Weightless, frictionless 10 m slope at 60° under the critical strip load (149.31 kPa) on the Prandtl surface (wedge, fan and passive wedge); theoretical FOS 1.0.",
+    description: "Weightless, frictionless 10 m slope at 60° under the critical strip load (149.31 kPa) on the Prandtl surface (wedge, fan and passive wedge); theoretical F = 1.0.",
     definition: {"coordinates":[[-3,-2],[-3,0],[0,0],[5.7735026919,10],[20,10],[20,-2]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":0.000001,"cohesion":49,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[-2.77,-1.95],"materialName":"Clay"}],"orientation":"rtl","udls":[{"magnitude":149.31,"x1":5.7735026919,"x2":15.7735026919}],"customSurfaces":[{"points":[[-0.05,2.05],[0.773,1.34],[7.6033,3.1698],[7.8995,3.2561],[8.1917,3.3553],[8.4792,3.4671],[8.7616,3.5913],[9.0384,3.7278],[9.3089,3.8762],[9.5727,4.0362],[9.8292,4.2076],[10.078,4.3901],[10.3186,4.5832],[10.5506,4.7866],[10.7735,5],[15.7735,10],[16.0735,10.3]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":1.051,"publishedBy":"Commercial program A","options":{"intersliceFunction":"constant"}},
@@ -666,7 +666,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "Chowdhury & Xu example 1, the Congress Street cut as a commercial program models it (Su = 55, 43, 56 kPa under a strengthless sand cap, digitised piezometric line), on the critical circle tangent to the base of clay 2.",
+    description: "Chowdhury & Xu example 1, the Congress Street cut as a commercial program models it (Su = 55, 43, 56 kPa under a strengthless sand cap, digitized piezometric line), on the critical circle tangent to the base of clay 2.",
     definition: {"coordinates":[[-56.525,-14.993],[-56.525,4.579],[-35.51,4.58],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68],[5,-14.993]],"materials":[{"name":"Sand","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 1","model":{"kind":"undrained","unitWeight":21,"undrainedShearStrength":55,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 2","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":43,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 3","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":56,"suRefDepth":0,"suRateOfChange":0}},{"name":"Bed","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":200,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-57.525,1.229],[6,1.229]],"materialName":""},{"coordinates":[[-57.525,-3.041],[6,-3.041]],"materialName":""},{"coordinates":[[-57.525,-9.141],[6,-9.141]],"materialName":""},{"coordinates":[[-57.525,-12.19],[6,-12.19]],"materialName":""}],"regionAssignments":[{"point":[-55.90975,1.279],"materialName":"Sand"},{"point":[-55.90975,-0.906],"materialName":"Clay 1"},{"point":[-55.90975,-6.091],"materialName":"Clay 2"},{"point":[-55.90975,-10.6655],"materialName":"Clay 3"},{"point":[-55.90975,-13.5915],"materialName":"Bed"}],"orientation":"ltr","waterTable":{"mode":"custom","value":[[-56.525,2.43],[-32.59,2.43],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68]],"followBoundary":false},"customSearchPlanes":[{"cx":-22.188,"cy":20.908,"radius":30.049}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.132,"publishedBy":"Commercial program B","options":{"slices":50}},
@@ -800,7 +800,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "Chowdhury & Xu example 4 (c-φ clays with the digitised piezometric line), circle tangent to the base of clay 2.",
+    description: "Chowdhury & Xu example 4 (c-φ clays with the digitized piezometric line), circle tangent to the base of clay 2.",
     definition: {"coordinates":[[-56.525,-14.993],[-56.525,4.579],[-35.51,4.58],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68],[5,-14.993]],"materials":[{"name":"Sand","model":{"kind":"undrained","unitWeight":22,"undrainedShearStrength":0,"suRefDepth":0,"suRateOfChange":0}},{"name":"Clay 1","model":{"kind":"mohr-coulomb","unitWeight":17,"cohesion":55,"frictionAngle":5}},{"name":"Clay 2","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":43,"frictionAngle":7}},{"name":"Clay 3","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":56,"frictionAngle":8}},{"name":"Bed","model":{"kind":"mohr-coulomb","unitWeight":22,"cohesion":200,"frictionAngle":35}}],"materialBoundaries":[{"coordinates":[[-57.525,1.229],[6,1.229]],"materialName":""},{"coordinates":[[-57.525,-3.041],[6,-3.041]],"materialName":""},{"coordinates":[[-57.525,-9.141],[6,-9.141]],"materialName":""},{"coordinates":[[-57.525,-12.19],[6,-12.19]],"materialName":""}],"regionAssignments":[{"point":[-55.90975,1.279],"materialName":"Sand"},{"point":[-55.90975,-0.906],"materialName":"Clay 1"},{"point":[-55.90975,-6.091],"materialName":"Clay 2"},{"point":[-55.90975,-10.6655],"materialName":"Clay 3"},{"point":[-55.90975,-13.5915],"materialName":"Bed"}],"orientation":"ltr","waterTable":{"mode":"custom","value":[[-56.525,2.43],[-32.59,2.43],[-30.96,1.23],[-28.19,-0.81],[-26.3,-0.81],[-21.533,-3.04],[-8.329,-9.14],[-7.13,-9.68],[5,-9.68]],"followBoundary":false},"customSearchPlanes":[{"cx":-20.313,"cy":21.643,"radius":30.784}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Morgenstern-Price (half-sine)","published":1.422,"publishedBy":"Commercial program B","options":{"slices":50}},
@@ -901,7 +901,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 6.38.",
     surface: "search",
     units: "SI",
-    description: "Homogeneous 2:1 slope with a nearly flat piezometric line; critical circle search. Converted to SI; the water line was traced from a figure.",
+    description: "Homogeneous 2:1 slope with a nearly flat piezometric line; critical-circle search. Converted to SI; the water line was traced from a figure.",
     definition: {"coordinates":[[0,0],[0,12.192],[36.576,12.192],[60.96,24.384],[134.112,24.384],[134.112,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":9.576052,"frictionAngle":20}}],"materialBoundaries":[],"regionAssignments":[{"point":[1.3411199999999999,0.05],"materialName":"Soil"}],"waterTable":{"mode":"custom","value":[[0,12.192],[36.576,12.192],[38.831520000000005,13.167360000000002],[44.92752,14.081760000000001],[55.38216,15.453360000000002],[70.80504,17.28216],[99.60864000000001,20.025360000000003],[134.112,22.86]]}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.142,"publishedBy":"Commercial program A"},
@@ -915,7 +915,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 7.12.",
     surface: "search",
     units: "imperial",
-    description: "Sand embankment on a thick undrained clay foundation; critical circle search.",
+    description: "Sand embankment on a thick undrained clay foundation; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,50],[100,50],[300,150],[400,150],[600,50],[700,50],[700,0]],"materials":[{"name":"Sand","model":{"kind":"mohr-coulomb","unitWeight":140,"cohesion":0,"frictionAngle":40}},{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":140,"cohesion":2500,"frictionAngle":0}}],"materialBoundaries":[{"coordinates":[[-1,50],[701,50]],"materialName":""}],"regionAssignments":[{"point":[101.5,50.05],"materialName":"Sand"},{"point":[7,25],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.228,"publishedBy":"Commercial program A"},
@@ -936,7 +936,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.3.",
     surface: "search",
     units: "imperial",
-    description: "Homogeneous undrained clay slope (φ = 0); critical circle search.",
+    description: "Homogeneous undrained clay slope (φ = 0); critical-circle search.",
     definition: {"coordinates":[[0,0],[0,30],[90,30],[130,80],[240,80],[240,0]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":100,"cohesion":1000,"frictionAngle":0}}],"materialBoundaries":[],"regionAssignments":[{"point":[2.4,0.05],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.126,"publishedBy":"Commercial program A","options":{"iterations":4000,"refinedIterations":2000}},
@@ -988,7 +988,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.4.",
     surface: "search",
     units: "imperial",
-    description: "Cohesionless fill on undrained clay; critical circle search.",
+    description: "Cohesionless fill on undrained clay; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,20],[40,20],[78,35],[130,35],[130,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":120,"cohesion":0,"frictionAngle":30}},{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":120,"cohesion":450,"frictionAngle":0}}],"materialBoundaries":[{"coordinates":[[-1,20],[131,20]],"materialName":""}],"regionAssignments":[{"point":[40.3,20.05],"materialName":"Fill"},{"point":[1.3,10],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.412,"publishedBy":"Commercial program A"},
@@ -1070,7 +1070,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20a.",
     surface: "search",
     units: "SI",
-    description: "Cohesive-frictional fill over sand with a piezometric line; critical circle search. Converted to SI.",
+    description: "Cohesive-frictional fill over sand with a piezometric line; critical-circle search. Converted to SI.",
     definition: {"coordinates":[[0,0],[0,18.288],[18.288,18.288],[42.672000000000004,6.096],[60.96,6.096],[60.96,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":19.635932500000003,"cohesion":28.728156000000002,"frictionAngle":25}},{"name":"Sand","model":{"kind":"mohr-coulomb","unitWeight":20.73554472,"cohesion":0,"frictionAngle":30}}],"materialBoundaries":[{"coordinates":[[-1,6.096],[61.96,6.096]],"materialName":""}],"regionAssignments":[{"point":[0.6096,6.146],"materialName":"Fill"},{"point":[0.6096,3.048],"materialName":"Sand"}],"waterTable":{"mode":"custom","value":[[0,12.192],[30.48,9.144],[42.672000000000004,6.096],[60.96,6.096]]}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.533,"publishedBy":"Commercial program A"},
@@ -1087,7 +1087,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Duncan & Wright, Soil Strength and Slope Stability, fig. 14.20b.",
     surface: "search",
     units: "imperial",
-    description: "Granular fill over clay with undrained strength increasing linearly with depth; critical circle search.",
+    description: "Granular fill over clay with undrained strength increasing linearly with depth; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,40],[55,40],[75,30],[140,30],[140,0]],"materials":[{"name":"Fill","model":{"kind":"mohr-coulomb","unitWeight":123,"cohesion":0,"frictionAngle":36}},{"name":"Clay","model":{"kind":"undrained","unitWeight":97,"undrainedShearStrength":200,"suRefDepth":30,"suRateOfChange":15}}],"materialBoundaries":[{"coordinates":[[-1,30],[141,30]],"materialName":""}],"regionAssignments":[{"point":[1.4,30.05],"materialName":"Fill"},{"point":[1.4,15],"materialName":"Clay"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.313,"publishedBy":"Commercial program A"},
@@ -1389,7 +1389,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Fredlund, D.G. & Krahn, J. (1977). Comparison of slope stability methods of analysis. Can. Geotech. J. 14(3).",
     surface: "fixed",
     units: "imperial",
-    description: "Homogeneous 2:1 slope, 40 ft high, on a firm base; the classic comparison problem of Fredlund & Krahn analyzed with the published circle and no pore pressure.",
+    description: "Homogeneous 2:1 slope, 40 ft high, on a firm base: Fredlund & Krahn's comparison problem, on the published circle and with no pore pressure.",
     definition: {"coordinates":[[0,0],[0,60],[60,60],[140,20],[180,20],[180,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":120,"cohesion":600,"frictionAngle":20}}],"materialBoundaries":[],"regionAssignments":[{"point":[1.8,0.05],"materialName":"Soil"}],"customSearchPlanes":[{"cx":120,"cy":90,"radius":80}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":2.08,"publishedBy":"Fredlund & Krahn"},
@@ -1543,7 +1543,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Giam & Donald (1989), ACADS problem 1(b).",
     surface: "search",
     units: "SI",
-    description: "The ACADS 1(a) slope (10 m high, 2:1) with c' = 32 kPa, φ' = 10° and a water-filled tension crack 4 m deep, the crack zone of a commercial program's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical circle search.",
+    description: "The ACADS 1(a) slope (10 m high, 2:1) with c′ = 32 kPa, φ′ = 10° and a water-filled tension crack 4 m deep, the crack zone of a commercial program's Fig. 2.1 (35 → 31 m; the formula 2c/(γ√Ka) gives 3.814 m); critical-circle search.",
     definition: {"coordinates":[[0,20],[0,25],[30,25],[50,35],[90,35],[90,20]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":32,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.9,20.05],"materialName":"Soil"}],"orientation":"rtl","analysisLimits":{"entryLeftX":20,"entryRightX":70,"exitLeftX":20,"exitRightX":70}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.596,"publishedBy":"Commercial program A","options":{"tensionCrackDepth":4,"tensionCrackWater":1}},
@@ -1586,7 +1586,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Giam & Donald (1989), ACADS problem 3(b).",
     surface: "fixed",
     units: "SI",
-    description: "Slope with a 0.5 m weak layer (c' = 0, φ' = 10°) and a water table at its base, analyzed on the published four-point non-circular surface that runs along the weak layer.",
+    description: "Slope with a 0.5 m weak layer (c′ = 0, φ′ = 10°) and a water table at its base, analyzed on the published four-point non-circular surface that runs along the weak layer.",
     definition: {"coordinates":[[20,20],[20,27.75],[43,27.75],[67.5,40],[84,40],[84,20]],"materials":[{"name":"Soil 1","model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":28.5,"frictionAngle":20}},{"name":"Weak layer","model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":0,"frictionAngle":10}},{"name":"Soil 1 below","model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":28.5,"frictionAngle":20}}],"materialBoundaries":[{"coordinates":[[19,27],[85,27]],"materialName":""},{"coordinates":[[19,26.5],[85,26.5]],"materialName":""}],"regionAssignments":[{"point":[20.64,27.05],"materialName":"Soil 1"},{"point":[20.64,26.75],"materialName":"Weak layer"},{"point":[20.64,23.25],"materialName":"Soil 1 below"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[20,26.5],[84,26.5]]},"customSurfaces":[{"points":[[41.85,27.75],[44,26.5],[63.5,27],[73.31,40]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":1.294,"publishedBy":"Commercial program A","options":{"janbuCorrection":true}},
@@ -1624,7 +1624,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Giam & Donald (1989), ACADS slope stability programs review.",
     surface: "search",
     units: "SI",
-    description: "Weak-layer slope with a piezometric line and two surcharge strips (20 kPa on the bench, 20–40 kPa ramp on the crest); non-circular search. The published spread is wide: a search-difficulty benchmark.",
+    description: "Weak-layer slope with a piezometric line and two surcharge strips (20 kPa on the bench, 20–40 kPa ramp on the crest); non-circular search. The published results are widely spread, so the problem tests the search.",
     definition: {"materials":[{"name":"Soil 1","model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":28.5,"frictionAngle":20}},{"name":"Weak Layer","model":{"kind":"mohr-coulomb","unitWeight":18.84,"cohesion":0,"frictionAngle":10}}],"coordinates":[[20,15],[20,27.75],[43,27.75],[67.5,40],[84,40],[84,15]],"materialBoundaries":[{"coordinates":[[20,18.88],[84,36.8]],"materialName":""},{"coordinates":[[20,18.28],[84,36.2]],"materialName":""}],"regionAssignments":[{"point":[22.3,27.25],"materialName":"Soil 1"},{"point":[36,23.06],"materialName":"Weak Layer"},{"point":[77.6,33.908],"materialName":"Soil 1"}],"waterTable":{"mode":"custom","value":[[20,27.75],[43,27.75],[49,29.8],[60,34],[66,35.8],[74,37.6],[80,38.4],[84,38.4]],"followBoundary":false},"udls":[{"magnitude":20,"x1":23,"x2":43},{"magnitude":20.5,"x1":70,"x2":70.5},{"magnitude":21.5,"x1":70.5,"x2":71},{"magnitude":22.5,"x1":71,"x2":71.5},{"magnitude":23.5,"x1":71.5,"x2":72},{"magnitude":24.5,"x1":72,"x2":72.5},{"magnitude":25.5,"x1":72.5,"x2":73},{"magnitude":26.5,"x1":73,"x2":73.5},{"magnitude":27.5,"x1":73.5,"x2":74},{"magnitude":28.5,"x1":74,"x2":74.5},{"magnitude":29.5,"x1":74.5,"x2":75},{"magnitude":30.5,"x1":75,"x2":75.5},{"magnitude":31.5,"x1":75.5,"x2":76},{"magnitude":32.5,"x1":76,"x2":76.5},{"magnitude":33.5,"x1":76.5,"x2":77},{"magnitude":34.5,"x1":77,"x2":77.5},{"magnitude":35.5,"x1":77.5,"x2":78},{"magnitude":36.5,"x1":78,"x2":78.5},{"magnitude":37.5,"x1":78.5,"x2":79},{"magnitude":38.5,"x1":79,"x2":79.5},{"magnitude":39.5,"x1":79.5,"x2":80}]},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.707,"publishedBy":"Commercial program A (optimized)","options":{"intersliceFunction":"constant","porePressureHead":"phreatic-correction","slices":50,"nonCircularOptimization":true}},
@@ -1718,7 +1718,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Greco (1996), example 5; Chen & Shao (1988).",
     surface: "search",
     units: "SI",
-    description: "Four layers including a weak seam, with a water table; critical circle search, vertical pore-pressure head.",
+    description: "Four layers including a weak seam, with a water table; critical-circle search, vertical pore-pressure head.",
     definition: {"coordinates":[[0,0],[0,20],[55,20],[75,30],[95,40],[100,40],[145,70],[240,70],[240,16],[150,15]],"materials":[{"name":"Layer 1","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":9.8,"frictionAngle":35}},{"name":"Layer 2","model":{"kind":"mohr-coulomb","unitWeight":19,"cohesion":58.8,"frictionAngle":25}},{"name":"Layer 3","model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":19.8,"frictionAngle":30}},{"name":"Seam","model":{"kind":"mohr-coulomb","unitWeight":21.5,"cohesion":9.8,"frictionAngle":16}}],"materialBoundaries":[{"coordinates":[[100,40],[190,55],[241,55]],"materialName":""},{"coordinates":[[75,30],[241,30]],"materialName":""},{"coordinates":[[-1,0.4],[150,15.5],[241,16.51]],"materialName":""}],"regionAssignments":[{"point":[200,62],"materialName":"Layer 1"},{"point":[200,45],"materialName":"Layer 2"},{"point":[100,20],"materialName":"Layer 3"},{"point":[100,10.25],"materialName":"Seam"}],"waterTable":{"mode":"custom","value":[[0,20],[55,20],[75,30],[95,40],[100,40],[190,55],[240,55]]},"analysisLimits":{"entryLeftX":55,"entryRightX":240,"exitLeftX":55,"exitRightX":55}},
     checks: [
       {"method":"Bishop","label":"Bishop simplified (vertical head)","published":1.087,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical"}},
@@ -2315,7 +2315,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Low (1989).",
     surface: "search",
     units: "SI",
-    description: "Embankment on three undrained clay layers of different strength; critical circle search.",
+    description: "Embankment on three undrained clay layers of different strength; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,13.5],[20,13.5],[33.5,9],[38,7.5],[60,7.5],[60,0]],"materials":[{"name":"A","model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":30,"suRefDepth":0,"suRateOfChange":0}},{"name":"B","model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":20,"suRefDepth":0,"suRateOfChange":0}},{"name":"C","model":{"kind":"undrained","unitWeight":18,"undrainedShearStrength":150,"suRefDepth":0,"suRateOfChange":0}}],"materialBoundaries":[{"coordinates":[[-1,9],[61,9]],"materialName":""},{"coordinates":[[-1,4.5],[61,4.5]],"materialName":""}],"regionAssignments":[{"point":[0.6,9.05],"materialName":"A"},{"point":[0.6,6.75],"materialName":"B"},{"point":[0.6,2.25],"materialName":"C"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.439,"publishedBy":"Commercial program A"},
@@ -2502,7 +2502,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "Single-row tieback wall in sand (φ′ = 30°; the tieback from 12 ft up the wall, 15° down, 37 ft long of which 22 ft bonded) with a water table drawn down to the wall toe (digitised from the reference figure) and pore pressure from the vertical head; the printed surface from the wall toe. Converted to SI.",
+    description: "Single-row tieback wall in sand (φ′ = 30°; the tieback from 12 ft up the wall, 15° down, 37 ft long of which 22 ft bonded) with a water table drawn down to the wall toe (digitized from the reference figure) and pore pressure from the vertical head; the printed surface from the wall toe. Converted to SI.",
     definition: {"materials":[{"name":"Sand","model":{"kind":"mohr-coulomb","unitWeight":18.8505,"cohesion":0,"frictionAngle":30}}],"coordinates":[[-15.24,-9.144],[-15.24,-4.572],[-3.048,0],[0,0],[0,6.096],[12.192,10.668],[12.192,-9.144]],"materialBoundaries":[],"regionAssignments":[{"point":[10.9728,9.7108],"materialName":"Sand"}],"waterTable":{"mode":"custom","value":[[-15.24,-4.572],[-3.048,0],[0,0],[0.93574,3.8801],[1.07899,4.39217],[1.31978,4.8707],[1.63068,5.34924],[1.97815,5.73329],[2.32562,6.13258],[2.79197,6.44957],[3.22478,6.7056],[3.7277,6.91286],[12.192,10.00963]],"followBoundary":false},"reinforcements":[{"x1":0,"y1":3.6576,"x2":10.89333,"y2":0.73874,"tensileCapacity":61.16303,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":6.7056}}],"customSurfaces":[{"points":[[0,0],[0.17576,0.17608],[0.348,0.3556],[0.51688,0.5383],[0.68233,0.72409],[0.84431,0.91293],[1.00276,1.10474],[1.15762,1.29946],[1.30884,1.49702],[1.45637,1.69735],[1.60015,1.90038],[1.74014,2.10605],[1.87628,2.31428],[2.00854,2.525],[2.13687,2.73814],[2.26122,2.95363],[2.38154,3.17139],[2.49781,3.39134],[2.60997,3.61341],[2.71799,3.83753],[2.82183,4.06361],[2.92146,4.29158],[3.01684,4.52136],[3.10793,4.75287],[3.19472,4.98604],[3.27716,5.22077],[3.35523,5.45699],[3.42891,5.69462],[3.49816,5.93358],[3.56296,6.17378],[3.62329,6.41515],[3.67914,6.65759],[3.73047,6.90102],[3.77728,7.14537],[3.81954,7.39055],[3.85725,7.63646],[3.89038,7.88304],[3.91893,8.13018],[3.94289,8.37781],[3.96225,8.62585]]}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer (M-P, constant f(x))","published":0.57,"publishedBy":"Commercial program B","options":{"intersliceFunction":"constant","porePressureHead":"vertical","slices":60}},
@@ -2521,7 +2521,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Pockoski & Duncan (2000), Comparison of computer programs for analysis of reinforced slopes. Virginia Tech.",
     surface: "fixed",
     units: "SI",
-    description: "44 ft tied-back excavation in eight layers, water table at grade in front of the wall and at el. 102.5 behind it (a vertical step at the wall), three tieback rows at 20° (88 ft, 40 ft bond). a commercial program's critical circle. Converted to SI.",
+    description: "44 ft tied-back excavation in eight layers, water table at grade in front of the wall and at el. 102.5 behind it (a vertical step at the wall), three tieback rows at 20° (88 ft, 40 ft bond); a commercial program's critical circle. Converted to SI.",
     definition: {"materials":[{"name":"Granular Fill","model":{"kind":"mohr-coulomb","unitWeight":18.91333,"cohesion":0,"frictionAngle":30}},{"name":"Cohesive Fill","model":{"kind":"mohr-coulomb","unitWeight":18.01793,"cohesion":0,"frictionAngle":30}},{"name":"Organic Silt","model":{"kind":"undrained","unitWeight":17.31104,"undrainedShearStrength":43.09223}},{"name":"OC Crust","model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":118.98244}},{"name":"Upper Marine Clay","model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":79.96003}},{"name":"Middle Marine Clay","model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":45.96505}},{"name":"Lower Marine Clay","model":{"kind":"undrained","unitWeight":18.5049,"undrainedShearStrength":51.95008}},{"name":"Glaciomarine Deposits","model":{"kind":"undrained","unitWeight":23.10757,"undrainedShearStrength":71.82039}}],"coordinates":[[15.24,0],[15.24,21.0312],[60.96,21.0312],[60.96,34.4424],[106.68,34.4424],[106.68,0]],"materialBoundaries":[{"coordinates":[[60.96,33.2232],[106.68,33.2232]],"materialName":""},{"coordinates":[[60.96,28.3464],[106.68,28.3464]],"materialName":""},{"coordinates":[[60.96,26.2128],[106.68,26.2128]],"materialName":""},{"coordinates":[[60.96,25.146],[106.68,25.146]],"materialName":""},{"coordinates":[[15.24,21.0312],[60.96,21.0312],[106.68,21.0312]],"materialName":""},{"coordinates":[[15.24,12.192],[106.68,12.192]],"materialName":""},{"coordinates":[[15.24,7.3152],[106.68,7.3152]],"materialName":""}],"regionAssignments":[{"point":[83.82,33.9424],"materialName":"Granular Fill"},{"point":[83.82,32.7232],"materialName":"Cohesive Fill"},{"point":[83.82,27.8464],"materialName":"Organic Silt"},{"point":[83.82,25.7128],"materialName":"OC Crust"},{"point":[83.82,24.646],"materialName":"Upper Marine Clay"},{"point":[38.1,20.5312],"materialName":"Middle Marine Clay"},{"point":[60.96,11.692],"materialName":"Lower Marine Clay"},{"point":[60.96,6.8152],"materialName":"Glaciomarine Deposits"}],"waterTable":{"mode":"custom","value":[[15.24,21.0312],[60.96,21.0312],[60.96,31.242],[106.68,31.242]],"followBoundary":false},"reinforcements":[{"x1":60.96,"y1":31.6992,"x2":86.16481,"y2":22.5254,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}},{"x1":60.96,"y1":27.2796,"x2":86.16481,"y2":18.1058,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}},{"x1":60.96,"y1":22.86,"x2":86.16481,"y2":13.6862,"tensileCapacity":177.9288,"spacing":0.3048,"end1Capacity":0,"end2Capacity":0,"direction":"axial","application":"active","pullout":{"kind":"development","length1":0,"length2":12.192}}],"customSearchPlanes":[{"cx":63.4938,"cy":45.30486,"radius":37.98966}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.147,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":60}},
@@ -2974,7 +2974,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "The V088 dam family with single unit weights (embankment c = 200 psf, φ = 25°, γ = 115; sand 0/35/130; clay 0/27/115), slightly flatter faces and ponded water at el. 20 on both faces. the reference circle (−135, 169, R = 169.0), ending at the crest (−15, 50). Converted to SI.",
+    description: "The V088 dam family with single unit weights (embankment c = 200 psf, φ = 25°, γ = 115; sand 0/35/130; clay 0/27/115), slightly flatter faces and ponded water at el. 20 on both faces; the reference circle (−135, 169, R = 169.0), ending at the crest (−15, 50). Converted to SI.",
     definition: {"coordinates":[[-68.58,-12.192],[-68.58,0],[-67.6656,0],[-5.1816,15.092781600000002],[-4.572,15.24],[4.572,15.24],[5.1816,15.092781600000002],[67.6656,0],[68.58,0],[68.58,-12.192]],"materials":[{"name":"Embankment","model":{"kind":"mohr-coulomb","unitWeight":18.065057900000003,"cohesion":9.576052,"frictionAngle":25}},{"name":"Sand","model":{"kind":"mohr-coulomb","unitWeight":20.4213698,"cohesion":0,"frictionAngle":35}},{"name":"Foundation clay","model":{"kind":"mohr-coulomb","unitWeight":18.065057900000003,"cohesion":0,"frictionAngle":27}},{"name":"Rock","model":{"kind":"mohr-coulomb","unitWeight":25.133993600000004,"cohesion":0,"frictionAngle":45}}],"materialBoundaries":[{"coordinates":[[-68.58,0],[-5.1816,0],[-2.4384,-3.048],[2.4384,-3.048],[5.1816,0],[68.58,0]],"materialName":""},{"coordinates":[[-68.58,-3.048],[68.58,-3.048]],"materialName":""},{"coordinates":[[-68.58,-11.277600000000001],[68.58,-11.277600000000001]],"materialName":""}],"regionAssignments":[{"point":[0,13.716000000000001],"materialName":"Embankment"},{"point":[-36.8808,-1.524],"materialName":"Sand"},{"point":[36.8808,-1.524],"materialName":"Sand"},{"point":[0,-7.162800000000001],"materialName":"Foundation clay"},{"point":[0,-11.7348],"materialName":"Rock"}],"orientation":"rtl","waterTable":{"mode":"custom","value":[[-68.58,6.096],[68.58,6.096]],"followBoundary":false},"customSearchPlanes":[{"cx":-41.148,"cy":51.5112,"radius":51.5112}],"customPlanesOnly":true},
     checks: [
       {"method":"Janbu","label":"Janbu corrected (f0)","published":2.29,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","janbuCorrection":true}},
@@ -3100,7 +3100,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Yamagami & Ueta (1988).",
     surface: "search",
     units: "SI",
-    description: "Homogeneous 2:1 slope, 5 m high; critical circle search.",
+    description: "Homogeneous 2:1 slope, 5 m high; critical-circle search.",
     definition: {"coordinates":[[0,0],[0,5],[5,5],[15,10],[25,10],[25,0]],"materials":[{"name":"Soil","model":{"kind":"mohr-coulomb","unitWeight":17.64,"cohesion":9.8,"frictionAngle":10}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.25,0.05],"materialName":"Soil"}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.344,"publishedBy":"Commercial program A"},
@@ -3154,7 +3154,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Yamagami et al. (2000).",
     surface: "fixed",
     units: "SI",
-    description: "As V095b with a micro-pile row (1 m spacing) whose shear strength of 10.7 kN acts as a passive force tangent to the slip surface, on the reference with-pile circle (2.674, 7.376, R = 8.102).",
+    description: "As V095a with a micro-pile row (1 m spacing) whose shear strength of 10.7 kN acts as a passive force tangent to the slip surface, on the reference with-pile circle (2.674, 7.376, R = 8.102).",
     definition: {"materials":[{"name":"Material 1","model":{"kind":"mohr-coulomb","unitWeight":15.68,"cohesion":4.9,"frictionAngle":10}}],"coordinates":[[-6,-5],[-6,0],[0,0],[8,4],[12,4],[12,-5]],"materialBoundaries":[],"regionAssignments":[{"point":[10,3.5],"materialName":"Material 1"}],"piles":[{"x1":9,"y1":4,"x2":9,"y2":-2,"spacing":1,"force":10.7,"direction":"tangent","application":"passive"}],"reinforcements":[],"customSearchPlanes":[{"cx":2.674,"cy":7.376,"radius":8.102}],"customPlanesOnly":true},
     checks: [
       {"method":"Bishop","label":"Bishop simplified","published":1.193,"publishedBy":"Commercial program A","options":{"porePressureHead":"vertical","slices":50}},
@@ -3228,7 +3228,7 @@ export const PROBLEMS: RawCase[] = [
     surface: "fixed",
     units: "SI",
     inputFromFigure: true,
-    description: "The V096a slope, dry, no tension crack, on the paper's surface 3 digitised from its fig. 3: least-squares circle (9.7, 21.3, R = 29.8) through the drawn surface, leaving the lower bench at x = −11.1 and entering the crest at x = 38.8 (±0.3 m).",
+    description: "The V096a slope, dry, no tension crack, on the paper's surface 3 digitized from its fig. 3: least-squares circle (9.7, 21.3, R = 29.8) through the drawn surface, leaving the lower bench at x = −11.1 and entering the crest at x = 38.8 (±0.3 m).",
     definition: {"coordinates":[[-20,-9],[-20,0],[0,0],[6,3],[18,9],[30,15],[50,15],[50,-9]],"materials":[{"name":"Layer 1","model":{"kind":"mohr-coulomb","unitWeight":18.8,"cohesion":20,"frictionAngle":18}},{"name":"Layer 2","model":{"kind":"mohr-coulomb","unitWeight":18.5,"cohesion":40,"frictionAngle":22}},{"name":"Layer 3","model":{"kind":"mohr-coulomb","unitWeight":18.4,"cohesion":25,"frictionAngle":26}},{"name":"Layer 4","model":{"kind":"mohr-coulomb","unitWeight":18,"cohesion":10,"frictionAngle":12}}],"materialBoundaries":[{"coordinates":[[-21,9],[51,9]],"materialName":""},{"coordinates":[[-21,3],[51,3]],"materialName":""},{"coordinates":[[-21,-6],[51,-6]],"materialName":""}],"regionAssignments":[{"point":[18.15,9.05],"materialName":"Layer 1"},{"point":[12.2,6],"materialName":"Layer 2"},{"point":[-19.3,-1.5],"materialName":"Layer 3"},{"point":[-19.3,-7.5],"materialName":"Layer 4"}],"orientation":"rtl","customSearchPlanes":[{"cx":9.7,"cy":21.3,"radius":29.8}],"customPlanesOnly":true},
     checks: [
       {"method":"Morgenstern-Price","label":"Spencer","published":1.836,"publishedBy":"Zhu & Lee (2002)","options":{"intersliceFunction":"constant"}},
@@ -3280,7 +3280,7 @@ export const PROBLEMS: RawCase[] = [
     reference: "Verification manual of a commercial slope stability program.",
     surface: "fixed",
     units: "SI",
-    description: "As V097a, but with the characteristic strength c' = 10 kPa, φ' = 28° and Design Approach 3 material factors (set M2: γc' = γφ' = 1.25) applied by the analysis; the surcharge is permanent (factor 1.0). The FOS is the over-design factor on design values.",
+    description: "As V097a, but with the characteristic strength c′ = 10 kPa, φ′ = 28° and Design Approach 3 material factors (set M2: γc′ = γφ′ = 1.25) applied by the analysis; the surcharge is permanent (factor 1.0). F is the over-design factor on design values.",
     definition: {"coordinates":[[0,0],[0,5],[30,5],[50,15],[80,15],[80,0]],"materials":[{"name":"Clay","model":{"kind":"mohr-coulomb","unitWeight":20,"cohesion":10,"frictionAngle":28}}],"materialBoundaries":[],"regionAssignments":[{"point":[0.8,0.05],"materialName":"Clay"}],"customSearchPlanes":[{"cx":35.4,"cy":25.467,"radius":22.099}],"customPlanesOnly":true,"waterTable":{"mode":"custom","value":[[0,5],[30,5],[45.5,9],[70,12],[80,12]]},"udls":[{"magnitude":35,"x1":52,"x2":62}]},
     checks: [
       {"method":"Bishop","label":"Bishop simplified, design values","published":1.173,"publishedBy":"Commercial program B","options":{"partialFactors":{"cu":1.4,"cohesion":1.25,"tanPhi":1.25,"variableLoad":1}}},
