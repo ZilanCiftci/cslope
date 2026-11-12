@@ -27,11 +27,13 @@
  *   the slope face (or the right edge, below the bottom), and its interior
  *   boundary runs between those two vertices; one region assignment per
  *   layer on the ground side (a layer under the bottom is one region with
- *   its ground side). In a trench a level above the bottom also has a
- *   boundary from the opposite face to the right edge, and the layer a
- *   second region assignment there.
+ *   its ground side). A level on the bottom (within 1e-9 m) runs from the
+ *   left edge to the toe, the toe being its vertex. In a trench a level
+ *   above or on the bottom also has a boundary from the opposite face (on
+ *   the bottom: the far end of the bottom) to the right edge, and the
+ *   layer a second region assignment there.
  * - Layers are at least 5 cm thick, and no level is within 5 cm of the
- *   excavation bottom.
+ *   excavation bottom unless on it.
  * - The road is its own region above the ground, with the fill material,
  *   its sides 1:2.5 (ROAD_FILL_SLOPE) and the near edge of its top at the given distance
  *   behind the crest (its side cut at the crest when closer), and a
@@ -120,7 +122,7 @@ export const EXCAVATION_PARAMETERS = {
   waterLevel: WATER_LEVEL,
   layer: {
     ...LAYER_PARAMETERS,
-    bottomLevel: { ...LAYER_PARAMETERS.bottomLevel, description: "The elevation of the layer's bottom. A layer is at least 0.05 m thick and does not end within 0.05 m of the excavation bottom." },
+    bottomLevel: { ...LAYER_PARAMETERS.bottomLevel, description: "The elevation of the layer's bottom. A layer is at least 0.05 m thick and ends either at the excavation bottom or at least 0.05 m from it." },
   },
   road: {
     distanceFromCrest: p("distanceFromCrest", "Distance from the crest to the road (m)", "m", 0, 50, 0.5, "From the crest to the near edge of the road's top, where the load starts; the fill's side goes down 1:2.5 from there, cut at the crest."),
@@ -242,6 +244,10 @@ export function excavationNotes(params: ExcavationParams): string[] {
   return out;
 }
 
+/** A level within this distance of the excavation bottom is on it (m): its boundary ends at the toe. */
+const ON_BOTTOM = 1e-9;
+const onBottom = (level: number, g: ExcavationGeometry) => Math.abs(level - g.bottom) <= ON_BOTTOM;
+
 /** Where a level above the bottom meets the face, and (in a trench) the opposite face. */
 const faceXOf = (params: ExcavationParams, g: ExcavationGeometry) => (level: number) => params.slope * (g.ground - level);
 const farFaceXOf = (params: ExcavationParams, g: ExcavationGeometry) => (level: number) => (g.trench?.bottomEnd ?? g.toeX) + params.slope * (level - g.bottom);
@@ -254,8 +260,9 @@ const farFaceXOf = (params: ExcavationParams, g: ExcavationGeometry) => (level: 
  */
 export function exteriorOf(params: ExcavationParams, g: ExcavationGeometry = geometry(params)): Point[] {
   const { ground: G, bottom, base, toeX, left, right, road, trench } = g;
-  const above = g.levels.filter((l) => l > bottom);
-  const below = g.levels.filter((l) => l < bottom);
+  // A level on the bottom is in neither: the toe (and the far end of a trench's bottom) is its vertex.
+  const above = g.levels.filter((l) => l > bottom + ON_BOTTOM);
+  const below = g.levels.filter((l) => l < bottom - ON_BOTTOM);
   const faceX = faceXOf(params, g);
   const exterior: Point[] = [[left, base], ...[...g.levels].reverse().map((l): Point => [left, l]), [left, G]];
   if (road) {
@@ -281,14 +288,27 @@ export function exteriorOf(params: ExcavationParams, g: ExcavationGeometry = geo
 
 /**
  * The boundaries between the layers, each between two vertices of the
- * outline: from the left edge to the face above the bottom, or to the right
- * edge below it; in a trench also from the opposite face to the right edge.
+ * outline: from the left edge to the face above the bottom, to the toe on
+ * it, or to the right edge below it; in a trench also from the opposite
+ * face (on the bottom: the far end of the bottom) to the right edge.
  */
 export function levelBoundaries(params: ExcavationParams, g: ExcavationGeometry = geometry(params)): [Point, Point][] {
   const faceX = faceXOf(params, g);
   const farFaceX = farFaceXOf(params, g);
   const out: [Point, Point][] = [];
   for (const level of g.levels) {
+    if (onBottom(level, g)) {
+      out.push([
+        [g.left, level],
+        [g.toeX, g.bottom],
+      ]);
+      if (g.trench)
+        out.push([
+          [g.trench.bottomEnd, g.bottom],
+          [g.right, level],
+        ]);
+      continue;
+    }
     if (level < g.bottom) {
       out.push([
         [g.left, level],
@@ -322,11 +342,11 @@ export function excavationDocument(params: ExcavationParams): AnalysisDocument {
   const inset = Math.min(1, params.excavationDepth / 2);
   const names = addLayers(d, params.layers, G, left + inset);
   for (const boundary of levelBoundaries(params, g)) d.addInteriorBoundary(boundary);
-  // In a trench, a layer that ends above the bottom is a second region beyond the opposite face.
+  // In a trench, a layer that ends above or on the bottom is a second region beyond the opposite face.
   if (trench) {
     let top = G;
     for (const [i, layer] of params.layers.entries()) {
-      if (layer.bottomLevel > bottom) d.assign(names[i], [right - inset, (top + layer.bottomLevel) / 2]);
+      if (layer.bottomLevel > bottom - ON_BOTTOM) d.assign(names[i], [right - inset, (top + layer.bottomLevel) / 2]);
       top = layer.bottomLevel;
     }
   }

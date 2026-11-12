@@ -65,7 +65,8 @@ export interface ThicknessProblem {
  * The problems of the thicknesses, as the templates' rules on the bottom
  * levels give them: each layer at least 0.05 m thick, no bottom below the
  * lowest level (−100 m); with `avoid` (an excavation's bottom), no bottom
- * but the last within 0.05 m of it, and the last at least 0.05 m below it.
+ * but the last within 0.05 m of it unless on it, and the last at least
+ * 0.05 m below it.
  * `values[i]` is null for an empty or non-numeric thickness (that layer and
  * those below it are not checked against the levels).
  */
@@ -91,10 +92,13 @@ export function thicknessProblems(ground: number, values: (number | null)[], avo
     if (bottom < lowest) add(`Must be at most ${num(top - lowest)} m: the layer would end at ${levelText(bottom)} m, below the lowest level (${levelText(lowest)} m).`);
     else if (avoid && Number.isFinite(avoid.level)) {
       const exit = round(top - avoid.level);
-      if (!last && Math.abs(bottom - avoid.level) < thin - 1e-9) {
+      // On the level itself (1e-9 m) is allowed; only a sliver thinner than 0.05 m is refused.
+      const off = Math.abs(bottom - avoid.level);
+      if (!last && off > 1e-9 && off < thin - 1e-9) {
         const thinner = round(exit - thin);
         const options = thinner >= thin ? `at most ${num(thinner)} m or at least ${num(exit + thin)} m` : `at least ${num(exit + thin)} m`;
-        add(`Ends at ${levelText(bottom)} m, within ${thin} m of ${avoid.text} (${levelText(avoid.level)} m): make it ${options} thick.`);
+        const onLevel = exit >= thin - 1e-9 ? `end it at ${avoid.text} (${num(exit)} m thick), or ` : "";
+        add(`Ends at ${levelText(bottom)} m, ${num(off)} m from ${avoid.text} (${levelText(avoid.level)} m): ${onLevel}make it ${options} thick.`);
       }
       if (last && bottom > avoid.level - thin + 1e-9) {
         const total = round(ground - avoid.level + thin);
