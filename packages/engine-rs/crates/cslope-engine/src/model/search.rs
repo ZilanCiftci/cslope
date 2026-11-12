@@ -251,13 +251,16 @@ impl SearchWindow {
     }
 }
 
+/// How far (in x) an end of a surface may lie outside the search limits.
+const LIMIT_TOL: f64 = 1e-9;
+
 /// True when a plane's actual entry/exit points lie within the search
 /// limits and it is longer (horizontally) than the minimum failure
 /// distance. Circles generated through grid points can intersect the
 /// ground elsewhere, so this must be checked on the plane itself.
 fn is_plane_within_search_limits(window: &SearchWindow, plane: &SearchPlane) -> bool {
     let [entry_left_x, entry_right_x, exit_left_x, exit_right_x] = window.limits;
-    let tol = 1e-9;
+    let tol = LIMIT_TOL;
     plane.lc[0] >= entry_left_x - tol
         && plane.lc[0] <= entry_right_x + tol
         && plane.rc[0] >= exit_left_x - tol
@@ -1041,14 +1044,21 @@ pub fn generate_local_planes(
             seed.radius + centre_to_chord
         };
 
+        // The ends are checked against the limits with the tolerance of
+        // is_plane_within_search_limits: a seed ending at a limit has its
+        // end computed as a crossing with the ground, which can lie a few
+        // ulps outside it, and without the tolerance its unmoved end was
+        // dropped. A seed at a corner-widened limit (e.g. the toe) then
+        // kept only the moved ends, whose circles all left the limits, and
+        // the empty level ended the local search early (issue #160).
         for de in [-entry_step, 0.0, entry_step] {
             let ex = seed.lc[0] + de;
-            if ex < entry_left_x || ex > entry_right_x {
+            if ex < entry_left_x - LIMIT_TOL || ex > entry_right_x + LIMIT_TOL {
                 continue;
             }
             for dx in [-exit_step, 0.0, exit_step] {
                 let xx = seed.rc[0] + dx;
-                if xx < exit_left_x || xx > exit_right_x {
+                if xx < exit_left_x - LIMIT_TOL || xx > exit_right_x + LIMIT_TOL {
                     continue;
                 }
                 let lc: Pt = [ex, slope.get_external_y_intersection(ex)?];

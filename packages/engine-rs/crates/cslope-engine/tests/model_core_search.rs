@@ -651,6 +651,40 @@ fn a_side_given_as_a_point_has_one_point_in_the_first_pass() {
     assert!(planes.len() <= 16 * 5, "{}", planes.len());
 }
 
+/// A seed of the local search whose exit lies on the exit limit, as a
+/// crossing with the ground computed a few ulps outside it: its circles
+/// with the exit unmoved are tried, as for a seed exactly on the limit.
+/// (Before, they were dropped; at the toe, where the circles through the
+/// moved exits all left the limits, the level was empty and ended the local
+/// search: issue #160, step 0.)
+#[test]
+fn the_local_search_keeps_the_exit_of_a_seed_on_the_limit() {
+    let w = 1e-5 * 40.0;
+    let (s, planes) = first_pass([1.0, 8.0, 25.0, 30.0]);
+    let limit = s.search_limits()[2];
+    assert_eq!(limit, 25.0 - w);
+    let on_limit = |p: &SearchPlane| (p.rc[0] - limit).abs() < 1e-7;
+    let base = planes
+        .iter()
+        .find(|p| on_limit(p) && p.lc[0] > 4.0)
+        .expect("a first-pass circle exiting at the limit")
+        .clone();
+    for rc_x in [limit, limit - 1e-12] {
+        let seed = SearchPlane {
+            rc: [rc_x, base.rc[1]],
+            fos: Some(1.0),
+            ..base.clone()
+        };
+        let seeds = vec![seed];
+        let local =
+            generate_local_planes(&s, &seeds, 1000.0, 1.0, &mut plane_keys(&seeds), 4).unwrap();
+        // The entry and the sagitta move with the exit kept: 3 × 3 − 1
+        // circles, all with the seed's exit.
+        let kept = local.iter().filter(|p| on_limit(p)).count();
+        assert!(kept >= 8, "rc {rc_x}: {kept} of {}", local.len());
+    }
+}
+
 #[test]
 fn a_point_on_a_corner_is_the_two_ends_of_its_widened_limit() {
     let w = 1e-5 * 40.0;

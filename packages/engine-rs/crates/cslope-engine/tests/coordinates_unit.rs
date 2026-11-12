@@ -303,12 +303,15 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    // (the factors of safety of the first two are those before the rule, to
-    // the bit)
+    // (the factor of safety of the first is that before the rule, to the
+    // bit)
     close(fos.unwrap(), 1.150_043_595_810_847, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 30.0 - w, 30.0]);
-    // An exit range across the face: the ground at each x, as before.
+    // An exit range across the face: the ground at each x, as before. (Its
+    // critical circle exits at the range's left end: 0.392698221225512
+    // before the local search kept the unmoved end of a seed on a limit,
+    // issue #160.)
     let (fos, s) = run_verification(
         wall_def(
             false,
@@ -318,7 +321,7 @@ fn a_rising_face_an_exit_range_and_a_sloping_toe_are_as_before() {
         "Morgenstern-Price",
         constant(),
     );
-    close(fos.unwrap(), 0.392_698_221_225_512, 12);
+    close(fos.unwrap(), 0.392_686_674_898_443_83, 12);
     assert_eq!(s.exit_face_point(), None);
     assert_eq!(s.search_limits(), [11.0, 16.0, 18.0, 30.0]);
     assert_eq!(s.exit_ground_point(20.0).unwrap(), [20.0, 10.0]);
