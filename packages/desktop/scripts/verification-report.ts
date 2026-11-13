@@ -112,6 +112,11 @@ const INK: [number, number, number] = [33, 37, 41];
 const MUTED: [number, number, number] = [108, 117, 125];
 const ACCENT: [number, number, number] = [23, 92, 140];
 const RULE: [number, number, number] = [206, 212, 218];
+/** The figures' grid: hairlines in the table rule color, under the model. */
+const GRID_WIDTH = 0.1;
+/** Target and least distance between the figures' axis ticks, in mm on the page. */
+const TICK_MM = 10;
+const TICK_MIN_MM = 6;
 const PASS: [number, number, number] = [25, 135, 84];
 const FAIL: [number, number, number] = [200, 35, 51];
 const HEAD_BG: [number, number, number] = [233, 238, 243];
@@ -381,8 +386,8 @@ function criticalPlane(slope: Slope): Plane | null {
   return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc, rc: best.rc, fos: best.fos!, points: best.points };
 }
 
-function niceStep(range: number, target = 6): number {
-  const raw = range / target;
+/** The smallest step of the 1, 2, 2.5, 5 series that is at least raw. */
+function niceStepAbove(raw: number): number {
   const mag = 10 ** Math.floor(Math.log10(raw));
   for (const s of [1, 2, 2.5, 5, 10]) if (s * mag >= raw) return s * mag;
   return 10 * mag;
@@ -438,6 +443,26 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   const ox = fx + (fw - (x1 - x0) * s) / 2;
   const oy = fy;
   const P = (x: number, yy: number): Pt => [ox + (mx(x) - x0) * s, oy + (y1 - yy) * s];
+  const ax0 = ox;
+  const ay0 = oy + (y1 - y0) * s;
+  const axRight = ox + (x1 - x0) * s;
+  // One step on both axes (the scales are equal): ticks about 10 mm apart on
+  // the page, closer on a flat model so that y still gets about four, but
+  // never closer than 6 mm.
+  const step = niceStepAbove(Math.max(TICK_MIN_MM / s, Math.min(TICK_MM / s, (y1 - y0) / 4)));
+  const ticks = (lo: number, hi: number) => {
+    const out: number[] = [];
+    for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + 1e-9; k++) out.push(k * step);
+    return out;
+  };
+  const xTicks = ticks(x0, x1);
+  const yTicks = ticks(y0, y1);
+
+  // Grid at the axis ticks, drawn first so that the model covers it.
+  pdf.setDrawColor(...RULE);
+  pdf.setLineWidth(GRID_WIDTH);
+  for (const v of xTicks) pdf.line(ox + (v - x0) * s, ay0, ox + (v - x0) * s, oy);
+  for (const v of yTicks) pdf.line(ax0, oy + (y1 - v) * s, axRight, oy + (y1 - v) * s);
 
   // Material regions.
   const faces = polygonizeRegions(
@@ -628,24 +653,26 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   // Axes.
   pdf.setDrawColor(...MUTED);
   pdf.setLineWidth(0.2);
-  const ax0 = ox;
-  const ay0 = oy + (y1 - y0) * s;
-  pdf.line(ax0, ay0, ox + (x1 - x0) * s, ay0);
+  pdf.line(ax0, ay0, axRight, ay0);
   pdf.line(ax0, ay0, ax0, oy);
   font(6.5, "normal", MUTED);
-  const sx = niceStep(x1 - x0);
-  for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
+  // A label that would touch the one before it is left out; its tick stays.
+  let labelEnd = -Infinity;
+  for (const v of xTicks) {
     const px = ox + (v - x0) * s;
     pdf.line(px, ay0, px, ay0 + 1);
-    pdf.text(String(+v.toFixed(2)), px, ay0 + 1.5, { align: "center", baseline: "top" });
+    const text = String(+v.toFixed(2));
+    const half = pdf.getTextWidth(text) / 2;
+    if (px - half < labelEnd + 1) continue;
+    pdf.text(text, px, ay0 + 1.5, { align: "center", baseline: "top" });
+    labelEnd = px + half;
   }
-  const sy = niceStep(y1 - y0, 4);
-  for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
+  for (const v of yTicks) {
     const py = oy + (y1 - v) * s;
     pdf.line(ax0 - 1, py, ax0, py);
     pdf.text(String(+v.toFixed(2)), ax0 - 1.5, py, { align: "right", baseline: "middle" });
   }
-  pdf.text(`x (${units.length})`, ox + (x1 - x0) * s, ay0 + 5, { align: "right", baseline: "top" });
+  pdf.text(`x (${units.length})`, axRight, ay0 + 5, { align: "right", baseline: "top" });
   pdf.text(`y (${units.length})`, ax0 - 1, oy - 1.5, { align: "center", baseline: "bottom" });
 
   y = Math.max(fy + fh, ay0 + 6) + 4;
