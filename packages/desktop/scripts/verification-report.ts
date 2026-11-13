@@ -3,7 +3,7 @@
  *
  * Runs every published verification problem (packages/engine/src/
  * verification/cases.ts) through the engine and writes a PDF: a summary of
- * the errors against the other programs, the literature and the finite
+ * the deviations from the other programs, the literature and the finite
  * element references (the statistics of VERIFICATION-LOG.md, computed here
  * from the results), then one section per problem with a figure (geometry,
  * materials, water, loads, critical surface), the material table and one
@@ -1014,7 +1014,7 @@ function tableCaption(text: string) {
 }
 
 /**
- * Histograms of the signed errors, one panel per comparison on the same
+ * Histograms of the signed deviations, one panel per comparison on the same
  * x scale (small multiples: one series each, so no legend).
  */
 function errorHistograms(panels: { title: string; points: Point[] }[]) {
@@ -1067,7 +1067,7 @@ function errorHistograms(panels: { title: string; points: Point[] }[]) {
     pdf.line(bx(v), base, bx(v), base + 1);
     pdf.text(v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`, bx(v), base + 1.5, { align: "center", baseline: "top" });
   }
-  pdf.text("Error (%): cSlope above the reference to the right", x0 + w, base + 5, { align: "right", baseline: "top" });
+  pdf.text("Deviation (%): cSlope above the reference to the right", x0 + w, base + 5, { align: "right", baseline: "top" });
   y = base + 10;
 }
 
@@ -1178,8 +1178,8 @@ table(
     ["Problems", String(CASES.length)],
     ["cSlope analyses", String(nAnalyses)],
     ["Values published by the sources", String(nPublished)],
-    ["Mean absolute error against other programs", `${abs2(programStat.meanAbs)} (${programStat.n} results)`],
-    ["Mean absolute error against the literature", `${abs2(literatureStat.meanAbs)} (${literatureStat.n} values)`],
+    ["Mean absolute deviation from other programs", `${abs2(programStat.meanAbs)} (${programStat.n} results)`],
+    ["Mean absolute deviation from the literature", `${abs2(literatureStat.meanAbs)} (${literatureStat.n} values)`],
     ...(PUBLIC
       ? []
       : [
@@ -1246,11 +1246,11 @@ newPage();
 heading("2  Summary of results", 1);
 const SUMMARY = "2  Summary of results";
 paragraph(
-  `cSlope was run on ${CASES.length} problems, with ${nAnalyses} analyses. Each result is compared with two kinds of reference. The first is the results that other slope stability programs publish for the same analysis in their verification manuals: ${programStat.n} results, compared with the midpoint of the programs' range where more than one program gives a value. The second is the literature: ${literatureStat.n} values from papers, books, design manuals and theory. The finite element factors of safety are compared with published finite element, finite difference, limit analysis and theoretical values (${femStat.n} references). The error is cSlope's factor of safety minus the reference, in percent of the reference, so a negative mean error means that cSlope is lower on average.`,
+  `cSlope was run on ${CASES.length} problems, with ${nAnalyses} analyses. Each result is compared with two kinds of reference. The first is the results that other slope stability programs publish for the same analysis in their verification manuals: ${programStat.n} results, compared with the midpoint of the programs' range where more than one program gives a value. The second is the literature: ${literatureStat.n} values from papers, books, design manuals and theory. The finite element factors of safety are compared with published finite element, finite difference, limit analysis and theoretical values (${femStat.n} references). The deviation is cSlope's factor of safety minus the reference, in percent of the reference, so a negative mean deviation means that cSlope is lower on average.`,
 );
 y += 2;
-heading("2.1  Errors against each reference", 2, { toc: true, bookmarkUnder: SUMMARY });
-tableCaption(`Table ${++tableNo}. Errors of cSlope's factors of safety in percent of the reference.`);
+heading("2.1  Deviations from each reference", 2, { toc: true, bookmarkUnder: SUMMARY });
+tableCaption(`Table ${++tableNo}. Deviations of cSlope's factors of safety from each reference, in percent of the reference.`);
 const statRow = (label: string, s: Stat, tol: string): Cell[] => [label, String(s.n), pct2(s.mean), abs2(s.meanAbs), abs2(s.rms), abs2(s.maxAbs), tol];
 table(
   [
@@ -1271,11 +1271,11 @@ table(
 );
 const largestOf = (ps: Point[]) => {
   const [p] = largest(ps, 1);
-  return p ? `${abs2(p.error)} (${p.id}, ${p.analysis})` : "–";
+  return p ? `${pct2(p.error)} (${p.id}, ${p.analysis})` : "–";
 };
 paragraph(
-  `Against the other programs, ${within(programPoints, 0.5)} of the ${programStat.n} results lie within 0.5 %, ${within(programPoints, 1)} within 1 % and ${within(programPoints, 2)} within 2 %; the largest error is ${largestOf(programPoints)}. ` +
-    `Against the literature the spread is wider: ${within(literaturePoints, 1)} of ${literatureStat.n} values lie within 1 %, ${within(literaturePoints, 2)} within 2 % and ${within(literaturePoints, 5)} within 5 %, and the largest error is ${largestOf(literaturePoints)}. ` +
+  `Against the other programs, ${within(programPoints, 0.5)} of the ${programStat.n} results lie within 0.5 %, ${within(programPoints, 1)} within 1 % and ${within(programPoints, 2)} within 2 %; the largest deviation is ${largestOf(programPoints)}. ` +
+    `Against the literature the spread is wider: ${within(literaturePoints, 1)} of ${literatureStat.n} values lie within 1 %, ${within(literaturePoints, 2)} within 2 % and ${within(literaturePoints, 5)} within 5 %, and the largest deviation is ${largestOf(literaturePoints)}. ` +
     "Many literature values are printed to two decimals, some are read from charts, some come from hand calculations or from another method such as finite elements or a trial wedge, and on some problems the sources differ from each other; section 2.4 lists the largest deviations.",
 );
 y += 1;
@@ -1287,13 +1287,13 @@ paragraph(
     "Section 3 and appendix A show every difference but do not mark single results as passed or failed.",
 );
 y += 2;
-heading("2.2  Distribution of the errors", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
+heading("2.2  Distribution of the deviations", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
 errorHistograms([
   { title: `Against other programs (${programStat.n} results)`, points: programPoints },
   { title: `Against the literature (${literatureStat.n} values)`, points: literaturePoints },
   ...(femStat.n ? [{ title: `Finite elements against their references (${femStat.n})`, points: femPoints }] : []),
 ]);
-caption(`Figure ${++figureNo}. Number of results per 0.25 % of error. The dashed line is zero error.`);
+caption(`Figure ${++figureNo}. Number of results per 0.25 % of deviation. The dashed line is zero deviation.`);
 
 heading("2.3  By method", 2, { toc: true, bookmarkUnder: SUMMARY });
 const FAMILIES: { label: string; test: (analysis: string) => boolean }[] = [
@@ -1306,7 +1306,7 @@ const familyCells = (ps: Point[]): Cell[] => {
   const s = statOf(ps);
   return s.n ? [String(s.n), abs2(s.meanAbs), abs2(s.maxAbs)] : ["0", "–", "–"];
 };
-tableCaption(`Table ${++tableNo}. Mean absolute and largest error by method, against the other programs and against the literature.`);
+tableCaption(`Table ${++tableNo}. Mean absolute and largest deviation by method, from the other programs and from the literature.`);
 table(
   [
     { title: "Method", width: 64 },
@@ -1328,7 +1328,7 @@ paragraph(
 y += 2;
 heading("2.4  Largest deviations", 2, { toc: true, bookmarkUnder: SUMMARY });
 paragraph(
-  "The largest errors against each reference, with the notes of those problems. The problem id links to its section.",
+  "The largest deviations from each reference, with the notes of those problems. The problem id links to its section.",
   9,
 );
 const deviationTable = (title: string, ps: Point[]) => {
@@ -1340,7 +1340,7 @@ const deviationTable = (title: string, ps: Point[]) => {
       { title: "Reference", width: 18, align: "right" },
       { title: "Source", width: 56 },
       { title: "cSlope", width: 15, align: "right" },
-      { title: "Error", width: CONTENT_W - 153, align: "right" },
+      { title: "Deviation", width: CONTENT_W - 153, align: "right" },
     ],
     ps.map((p) => [{ text: `${p.id} (${sectionOf.get(p.id)})`, link: p.id }, p.analysis, p.reference, p.source, fmt(p.computed), pct2(p.error)]),
     7.8,
@@ -1349,9 +1349,9 @@ const deviationTable = (title: string, ps: Point[]) => {
 const topPrograms = largest(programPoints, 5);
 const topLiterature = largest(literaturePoints, 5);
 const topFem = largest(femPoints, 3);
-deviationTable(`Table ${++tableNo}. The five largest errors against other programs (reference: the midpoint of their range).`, topPrograms);
-deviationTable(`Table ${++tableNo}. The five largest errors against the literature.`, topLiterature);
-if (topFem.length) deviationTable(`Table ${++tableNo}. The three largest errors of the finite element analysis against its references.`, topFem);
+deviationTable(`Table ${++tableNo}. The five largest deviations from other programs (reference: the midpoint of their range).`, topPrograms);
+deviationTable(`Table ${++tableNo}. The five largest deviations from the literature.`, topLiterature);
+if (topFem.length) deviationTable(`Table ${++tableNo}. The three largest deviations of the finite element analysis from its references.`, topFem);
 {
   const ids = [...new Set([...topPrograms, ...topLiterature, ...topFem].map((p) => p.id))];
   const noted = ids.filter((id) => caseById.get(id)?.publicNote);
