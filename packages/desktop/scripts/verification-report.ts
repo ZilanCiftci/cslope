@@ -112,8 +112,9 @@ const INK: [number, number, number] = [33, 37, 41];
 const MUTED: [number, number, number] = [108, 117, 125];
 const ACCENT: [number, number, number] = [23, 92, 140];
 const RULE: [number, number, number] = [206, 212, 218];
-/** The figures' grid: hairlines in the table rule color, under the model. */
+/** The figures' grid: see-through hairlines in the muted text color, over the soil and under the lines. */
 const GRID_WIDTH = 0.1;
+const GRID_OPACITY = 0.35;
 /** Target and least distance between the figures' axis ticks, in mm on the page. */
 const TICK_MM = 10;
 const TICK_MIN_MM = 6;
@@ -124,15 +125,64 @@ const WATER: [number, number, number] = [30, 110, 220];
 const LOAD: [number, number, number] = [180, 40, 40];
 const SURFACE: [number, number, number] = [200, 30, 30];
 
-const MATERIAL_FILLS: [number, number, number][] = [
-  [244, 223, 177],
-  [190, 214, 160],
-  [176, 205, 232],
-  [222, 196, 226],
-  [240, 190, 170],
-  [205, 205, 190],
-  [170, 220, 210],
+/**
+ * Soil classes: every material is drawn in the color of its class, so that
+ * the same kind of soil looks the same in every problem. The hues follow the
+ * browser version's layer swatches (packages/web/src/templates/colors.ts),
+ * lightened for print where the fill is large.
+ */
+type SoilClass = "clay" | "organic" | "sand" | "friction" | "cphi" | "rock" | "weak";
+const SOIL_CLASSES: { id: SoilClass; label: string; rule: string; fill: RGB }[] = [
+  { id: "sand", label: "Sand", rule: "named sand (not sandy clay)", fill: [238, 224, 160] },
+  { id: "friction", label: "Gravel, fill and other friction soil", rule: "named fill, embankment, gravel, rockfill, filter, till and the like; otherwise c′ = 0", fill: [212, 163, 115] },
+  { id: "cphi", label: "Soil with c′ and φ′", rule: "no telling name, c′ > 0 and φ′ > 0", fill: [206, 192, 168] },
+  { id: "clay", label: "Clay and undrained soil", rule: "named clay or crust; otherwise undrained (φ = 0, Su models)", fill: [159, 183, 201] },
+  { id: "organic", label: "Silt, peat and organic soil", rule: "named silt, peat, mud or organic", fill: [170, 186, 150] },
+  { id: "rock", label: "Rock", rule: "named rock, limestone or hard base or layer", fill: [158, 158, 154] },
+  { id: "weak", label: "Weak layer or seam", rule: "named weak, seam or joint", fill: [181, 131, 141] },
 ];
+/** How far the tints of one class spread: the first material of a class lighter, the last darker. */
+const TINT_LIGHTER = 0.3;
+const TINT_DARKER = 0.25;
+
+/** The class of a material: its name first, its strength model where the name says nothing. */
+function soilClass(name: string, model: MaterialModel | undefined): SoilClass {
+  const n = name.toLowerCase();
+  if (/\b(weak|seam|joint)\b/.test(n)) return "weak";
+  if (/silt|peat|organic|\bmud\b/.test(n)) return "organic";
+  if (/\b(rock|limestone|bedrock)\b|\bhard (base|layer)\b/.test(n)) return "rock";
+  const clay = /\bclay(ey)?\b|\bcrust\b|\bcore\b/.test(n);
+  if (/\bsand\b/.test(n) && (!clay || /^sand\b/.test(n))) return "sand";
+  if (clay) return "clay";
+  if (/fill|embankment|gravel|gabion|granular|filter|shell|transition|\btill\b|spoil|drain|reinforced/.test(n)) return "friction";
+  switch (model?.kind) {
+    case "mohr-coulomb":
+      if (model.frictionAngle === 0) return "clay";
+      return model.cohesion === 0 && !model.cohesionRateOfChange ? "friction" : "cphi";
+    case "impenetrable":
+    case "high-strength":
+      return "rock";
+    case undefined:
+      return "cphi";
+    default:
+      return "clay";
+  }
+}
+
+const mix = (c: RGB, t: number): RGB => c.map((v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t))) as RGB;
+
+/** Each material's fill: its class color, in tints from lighter to darker when a problem has several of a class. */
+function materialFills(materials: { name: string; model?: MaterialModel }[]): Map<string, RGB> {
+  const classes = materials.map((m) => soilClass(m.name, m.model));
+  const out = new Map<string, RGB>();
+  materials.forEach((m, i) => {
+    const same = classes.filter((c) => c === classes[i]).length;
+    const k = classes.slice(0, i).filter((c) => c === classes[i]).length;
+    const base = SOIL_CLASSES.find((c) => c.id === classes[i])!.fill;
+    out.set(m.name, same === 1 ? base : mix(base, TINT_LIGHTER - ((TINT_LIGHTER + TINT_DARKER) * k) / (same - 1)));
+  });
+  return out;
+}
 
 const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
 pdf.setProperties({
@@ -458,19 +508,13 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   const xTicks = ticks(x0, x1);
   const yTicks = ticks(y0, y1);
 
-  // Grid at the axis ticks, drawn first so that the model covers it.
-  pdf.setDrawColor(...RULE);
-  pdf.setLineWidth(GRID_WIDTH);
-  for (const v of xTicks) pdf.line(ox + (v - x0) * s, ay0, ox + (v - x0) * s, oy);
-  for (const v of yTicks) pdf.line(ax0, oy + (y1 - v) * s, axRight, oy + (y1 - v) * s);
-
   // Material regions.
   const faces = polygonizeRegions(
     canon.coordinates.map((c) => c[0]),
     canon.coordinates.map((c) => c[1]),
     (canon.materialBoundaries ?? []).map((b) => b.coordinates),
   );
-  const matIndex = (name: string) => Math.max(0, canon.materials.findIndex((m) => m.name === name));
+  const fills = materialFills(canon.materials);
   for (const face of faces) {
     const fxs = face.outer.map((c) => c[0]);
     const fys = face.outer.map((c) => c[1]);
@@ -478,8 +522,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       isPointInPolygon(p[0], p[1], fxs, fys) &&
       !face.holes.some((h) => isPointInPolygon(p[0], p[1], h.map((c) => c[0]), h.map((c) => c[1])));
     const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point));
-    const idx = hit ? matIndex(hit.materialName) : 0;
-    pdf.setFillColor(...MATERIAL_FILLS[idx % MATERIAL_FILLS.length]);
+    pdf.setFillColor(...(fills.get(hit?.materialName ?? canon.materials[0]?.name ?? "") ?? SOIL_CLASSES[0].fill));
     const rings = [face.outer, ...face.holes];
     const ops: [number, number][][] = rings.map((r) => r.map(([px, py]) => P(px, py)));
     for (const [k, ring] of ops.entries()) {
@@ -490,6 +533,16 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       if (k === ops.length - 1) pdf.fillEvenOdd();
     }
   }
+  // Grid at the axis ticks, over the soil but under every line: see-through
+  // hairlines, so that the soil colors show through.
+  pdf.saveGraphicsState();
+  pdf.setGState(new GState({ "stroke-opacity": GRID_OPACITY }));
+  pdf.setDrawColor(...MUTED);
+  pdf.setLineWidth(GRID_WIDTH);
+  for (const v of xTicks) pdf.line(ox + (v - x0) * s, ay0, ox + (v - x0) * s, oy);
+  for (const v of yTicks) pdf.line(ax0, oy + (y1 - v) * s, axRight, oy + (y1 - v) * s);
+  pdf.restoreGraphicsState();
+
   // Outline and boundaries.
   pdf.setDrawColor(...INK);
   pdf.setLineWidth(0.35);
@@ -746,7 +799,6 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   font(8, "italic", MUTED);
   pdf.text(label, PAGE_W / 2, y, { align: "center", baseline: "top" });
   y += 6;
-  return matIndex;
 }
 
 // ── Running the problems ─────────────────────────────────────────────
@@ -1266,6 +1318,18 @@ heading("How to read the tables", 2, { toc: false, keep: 12 });
 paragraph(
   "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Diff. is cSlope's value minus the reference, in percent of the reference: the lower end of a published range, the midpoint of the programs' range, as in the statistics of section 2. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
 );
+y += 2;
+heading("Soil colors", 2, { toc: false, keep: 50 });
+paragraph(
+  "The figures and material tables color each material by its kind of soil, the same in every problem. The class comes from the material's name, and from its strength model where the name does not tell. Where a problem has several materials of one class, they are drawn in tints of its color, lighter to darker in the order of the material table.",
+);
+table(
+  [
+    { title: "Class", width: 62 },
+    { title: "Rule", width: CONTENT_W - 62 },
+  ],
+  SOIL_CLASSES.map((c) => [{ text: c.label, swatch: c.fill }, c.rule]),
+);
 
 // ── 2 Summary ────────────────────────────────────────────────────────
 
@@ -1431,7 +1495,8 @@ caseResults.forEach((r, i) => {
   y += 2;
   const first = analysisRows(r)[0];
   const surfaceName = c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : nonCircular ? "critical surface" : "critical circle";
-  const matIndex = figure(
+  const fills = materialFills(c.definition.materials);
+  figure(
     c.definition,
     r.slope,
     r.plane,
@@ -1451,7 +1516,7 @@ caseResults.forEach((r, i) => {
     c.definition.materials.map((m) => {
       const d = describeModel(m.model, units);
       return [
-        { text: m.name, swatch: MATERIAL_FILLS[matIndex(m.name) % MATERIAL_FILLS.length] },
+        { text: m.name, swatch: fills.get(m.name) },
         d.kind,
         d.gamma,
         d.strength,
