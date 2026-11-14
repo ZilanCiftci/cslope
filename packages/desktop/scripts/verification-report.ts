@@ -3,7 +3,7 @@
  *
  * Runs every published verification problem (packages/engine/src/
  * verification/cases.ts) through the engine and writes a PDF: a summary of
- * the errors against the other programs, the literature and the finite
+ * the deviations from the other programs, the literature and the finite
  * element references (the statistics of VERIFICATION-LOG.md, computed here
  * from the results), then one section per problem with a figure (geometry,
  * materials, water, loads, critical surface), the material table and one
@@ -112,6 +112,12 @@ const INK: [number, number, number] = [33, 37, 41];
 const MUTED: [number, number, number] = [108, 117, 125];
 const ACCENT: [number, number, number] = [23, 92, 140];
 const RULE: [number, number, number] = [206, 212, 218];
+/** The figures' grid: see-through hairlines in the muted text color, over the soil and under the lines. */
+const GRID_WIDTH = 0.1;
+const GRID_OPACITY = 0.35;
+/** Target and least distance between the figures' axis ticks, in mm on the page. */
+const TICK_MM = 10;
+const TICK_MIN_MM = 6;
 const PASS: [number, number, number] = [25, 135, 84];
 const FAIL: [number, number, number] = [200, 35, 51];
 const HEAD_BG: [number, number, number] = [233, 238, 243];
@@ -119,15 +125,179 @@ const WATER: [number, number, number] = [30, 110, 220];
 const LOAD: [number, number, number] = [180, 40, 40];
 const SURFACE: [number, number, number] = [200, 30, 30];
 
-const MATERIAL_FILLS: [number, number, number][] = [
-  [244, 223, 177],
-  [190, 214, 160],
-  [176, 205, 232],
-  [222, 196, 226],
-  [240, 190, 170],
-  [205, 205, 190],
-  [170, 220, 210],
+/**
+ * Soil classes: every material is drawn in the color of its class, so that
+ * the same kind of soil looks the same in every problem. The hues follow the
+ * browser version's layer swatches (packages/web/src/templates/colors.ts),
+ * lightened for print where the fill is large. soilClass decides the class:
+ * - sand: named sand (not sandy clay);
+ * - friction (gravel, fill and other friction soil): named fill, embankment,
+ *   gravel, rockfill, filter, till and the like; otherwise c′ = 0;
+ * - cphi (soil with c′ and φ′): no telling name, c′ > 0 and φ′ > 0;
+ * - clay (clay and undrained soil): named clay or crust; otherwise undrained
+ *   (φ = 0, Su models). A warm grey-brown without blue, so that it reads
+ *   as clay and not as water, greyer than cphi's beige;
+ * - organic: named silt, peat, mud or organic;
+ * - rock: named rock, limestone or hard base or layer. A cool grey, darker
+ *   than the clay, so that the two stay apart;
+ * - weak (weak layer or seam): named weak, seam or joint.
+ */
+type SoilClass = "clay" | "organic" | "sand" | "friction" | "cphi" | "rock" | "weak";
+const SOIL_CLASSES: { id: SoilClass; fill: RGB }[] = [
+  { id: "sand", fill: [238, 224, 160] },
+  { id: "friction", fill: [212, 163, 115] },
+  { id: "cphi", fill: [206, 192, 168] },
+  { id: "clay", fill: [172, 160, 156] },
+  { id: "organic", fill: [170, 186, 150] },
+  { id: "rock", fill: [132, 134, 136] },
+  { id: "weak", fill: [181, 131, 141] },
 ];
+/** How far the tints of one class spread: the weakest material of a class lighter, the strongest darker. */
+const TINT_LIGHTER = 0.3;
+const TINT_DARKER = 0.2;
+/** The least step between two tints of one class, so that neighbors stay apart. */
+const TINT_MIN_STEP = 0.08;
+/**
+ * How far the range may stretch when the least step needs it: darker first,
+ * as far as the slip surface, the grid and black text still read on the
+ * darkest class (rock), then lighter, short of the paper.
+ */
+const TINT_DARKEST = 0.3;
+const TINT_LIGHTEST = 0.85;
+/** The normal stress at which the strength of a material is compared, kPa (the same stress in psf in an imperial problem). */
+const STRENGTH_SIGMA = 100;
+const KPA_PER_PSF = 0.04788026;
+
+/** The class of a material: its name first, its strength model where the name says nothing. */
+function soilClass(name: string, model: MaterialModel | undefined): SoilClass {
+  const n = name.toLowerCase();
+  if (/\b(weak|seam|joint)\b/.test(n)) return "weak";
+  if (/silt|peat|organic|\bmud\b/.test(n)) return "organic";
+  if (/\b(rock|limestone|bedrock)\b|\bhard (base|layer)\b/.test(n)) return "rock";
+  const clay = /\bclay(ey)?\b|\bcrust\b|\bcore\b/.test(n);
+  if (/\bsand\b/.test(n) && (!clay || /^sand\b/.test(n))) return "sand";
+  if (clay) return "clay";
+  if (/fill|embankment|gravel|gabion|granular|filter|shell|transition|\btill\b|spoil|drain|reinforced/.test(n)) return "friction";
+  switch (model?.kind) {
+    case "mohr-coulomb":
+      if (model.frictionAngle === 0) return "clay";
+      return model.cohesion === 0 && !model.cohesionRateOfChange ? "friction" : "cphi";
+    case "impenetrable":
+    case "high-strength":
+      return "rock";
+    case undefined:
+      return "cphi";
+    default:
+      return "clay";
+  }
+}
+
+/**
+ * One number for the strength of a material, in the problem's stress unit,
+ * to rank the materials of a class (only the order within a problem is
+ * used). Drained models: the shear strength τ = c′ + σ·tan φ′ at the normal
+ * stress σ (STRENGTH_SIGMA), which orders c′ = 0 soils by φ′ and is Su for
+ * a Mohr-Coulomb soil with φ = 0. Undrained models: Su at the reference or
+ * top of the definition, the increase with depth left out. SHANSEP: its
+ * ratio times σ, which orders SHANSEP soils by the ratio and compares them
+ * with a plain Su (or a drained τ) of the same class. Rock that no surface
+ * may cross: the strongest. A strength above the water line is left out.
+ */
+function strengthOf(model: MaterialModel | undefined, sigma: number): number {
+  const tau = (c: number, phi: number) => c + sigma * Math.tan((phi * Math.PI) / 180);
+  switch (model?.kind) {
+    case "mohr-coulomb":
+    case "anisotropic-function":
+      return tau(model.cohesion, model.frictionAngle);
+    case "spatial-mohr-coulomb":
+      return model.dataPoints.reduce((sum, p) => sum + tau(p[2], p[3]), 0) / Math.max(model.dataPoints.length, 1);
+    case "undrained":
+      return model.undrainedShearStrength;
+    case "s-f-depth":
+    case "s-f-datum":
+      return model.suRef;
+    case "shansep":
+      return model.ratio * sigma;
+    case "lime-cement-columns":
+      return (1 - model.areaRatio) * model.soilSu + model.areaRatio * model.columnSu;
+    case "hoek-brown":
+      return model.ucs;
+    case "shear-normal": {
+      // τ at σ, interpolated in the (σ, τ) table, constant beyond its ends.
+      const pts = [...model.points].sort((a, b) => a[0] - b[0]);
+      if (!pts.length) return NaN;
+      if (sigma <= pts[0][0]) return pts[0][1];
+      for (let k = 1; k < pts.length; k++) {
+        const [s0, t0] = pts[k - 1];
+        const [s1, t1] = pts[k];
+        if (sigma <= s1) return s1 === s0 ? t1 : t0 + ((t1 - t0) * (sigma - s0)) / (s1 - s0);
+      }
+      return pts[pts.length - 1][1];
+    }
+    case "impenetrable":
+    case "high-strength":
+      return Infinity;
+    default:
+      return NaN;
+  }
+}
+
+/**
+ * The tints of the materials of one class, from their strengths, given in
+ * the order of the material table. Every material gets its own tint:
+ * - the order: by strength, weakest first; equal strengths (to four
+ *   significant digits) by their place in the table, earlier first; a
+ *   material of unknown strength right after the material before it in the
+ *   table (first, when it leads the table);
+ * - the tints: the first TINT_LIGHTER lighter, the last TINT_DARKER darker,
+ *   the others at equal steps between, so that a stronger material is never
+ *   lighter than a weaker one;
+ * - a step below TINT_MIN_STEP (more than seven materials) is kept at
+ *   TINT_MIN_STEP: the range stretches at the dark end, down to TINT_DARKEST,
+ *   then at the light end, up to TINT_LIGHTEST; past both the steps shrink;
+ * - one material: 0, the class's own color.
+ * Positive lightens, negative darkens.
+ */
+function tintsByStrength(strengths: number[]): number[] {
+  const n = strengths.length;
+  if (n < 2) return strengths.map(() => 0);
+  // Four significant digits, so that strengths equal on paper rank equal (and then by table order).
+  const key = (s: number) => (Number.isFinite(s) ? Number(s.toPrecision(4)) : s);
+  const order = strengths
+    .map((s, i) => ({ s: key(s), i }))
+    .filter((m) => !Number.isNaN(m.s))
+    .sort((a, b) => a.s - b.s || a.i - b.i)
+    .map((m) => m.i);
+  strengths.forEach((s, i) => {
+    if (!Number.isNaN(key(s))) return;
+    // After the material before it in the table, which is placed already (it is known, or an unknown placed earlier).
+    order.splice(i === 0 ? 0 : order.indexOf(i - 1) + 1, 0, i);
+  });
+  let light = TINT_LIGHTER;
+  let dark = TINT_DARKER;
+  const need = TINT_MIN_STEP * (n - 1);
+  if (light + dark < need) dark = Math.min(TINT_DARKEST, need - light);
+  if (light + dark < need) light = Math.min(TINT_LIGHTEST, need - dark);
+  const step = (light + dark) / (n - 1);
+  const tints = new Array<number>(n);
+  order.forEach((i, rank) => (tints[i] = light - step * rank));
+  return tints;
+}
+
+const mix = (c: RGB, t: number): RGB => c.map((v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t))) as RGB;
+
+/** Each material's fill: its class color, in tints by strength when a problem has several of a class. */
+function materialFills(materials: { name: string; model?: MaterialModel }[], units: Units): Map<string, RGB> {
+  const sigma = units.stress === "psf" ? STRENGTH_SIGMA / KPA_PER_PSF : STRENGTH_SIGMA;
+  const classes = materials.map((m) => soilClass(m.name, m.model));
+  const out = new Map<string, RGB>();
+  for (const cls of SOIL_CLASSES) {
+    const members = materials.filter((_, i) => classes[i] === cls.id);
+    const tints = tintsByStrength(members.map((m) => strengthOf(m.model, sigma)));
+    members.forEach((m, k) => out.set(m.name, mix(cls.fill, tints[k])));
+  }
+  return out;
+}
 
 const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true });
 pdf.setProperties({
@@ -381,11 +551,266 @@ function criticalPlane(slope: Slope): Plane | null {
   return { cx: best.cx, cy: best.cy, radius: best.radius, lc: best.lc, rc: best.rc, fos: best.fos!, points: best.points };
 }
 
-function niceStep(range: number, target = 6): number {
-  const raw = range / target;
+/** The smallest step of the 1, 2, 2.5, 5 series that is at least raw. */
+function niceStepAbove(raw: number): number {
   const mag = 10 ** Math.floor(Math.log10(raw));
   for (const s of [1, 2, 2.5, 5, 10]) if (s * mag >= raw) return s * mag;
   return 10 * mag;
+}
+
+// ── Callouts for layers too thin to see ──────────────────────────────
+
+/** A box on the page, mm: left, top, right, bottom. */
+type Box = [number, number, number, number];
+type Seg = [Pt, Pt];
+/** A drawn region of a material: its outer ring and holes, on the page. */
+interface DrawnRegion {
+  name: string;
+  rings: Pt[][];
+}
+/** A material whose every region is narrower than this on the page (mm) gets a callout. */
+const CALLOUT_WIDTH = 1.2;
+/** Or whose regions together cover less than this (mm²). */
+const CALLOUT_AREA = 2;
+/** The callout's text size: the axes' tick labels. */
+const CALLOUT_SIZE = 6.5;
+const CALLOUT_LEADER = 0.12;
+const CALLOUT_SWATCH = 1.6;
+/** The least gap between a callout and anything else in the figure, mm. */
+const CALLOUT_GAP = 0.6;
+const PAPER: RGB = [255, 255, 255];
+
+/** The box of a one-line text, in the current font, at the alphabetic baseline y. */
+function textBox(text: string, x: number, y: number, align: "left" | "center" | "right"): Box {
+  const w = pdf.getTextWidth(text);
+  const cap = pdf.getFontSize() * 0.3528 * 0.75;
+  const left = align === "left" ? x : align === "center" ? x - w / 2 : x - w;
+  return [left, y - cap, left + w, y + 0.4];
+}
+
+const ringArea = (r: Pt[]) => r.reduce((a, p, i) => a + (p[0] * r[(i + 1) % r.length][1] - r[(i + 1) % r.length][0] * p[1]), 0) / 2;
+const ringLength = (r: Pt[]) => r.reduce((a, p, i) => a + Math.hypot(r[(i + 1) % r.length][0] - p[0], r[(i + 1) % r.length][1] - p[1]), 0);
+const inRings = (p: Pt, rings: Pt[][]) =>
+  rings.reduce((inside, r) => (isPointInPolygon(p[0], p[1], r.map((c) => c[0]), r.map((c) => c[1])) ? !inside : inside), false);
+/**
+ * The width of a region: that of the rectangle with the same area and
+ * perimeter, w = (P − √(P² − 16A)) / 4. The thickness of a thin band,
+ * straight or bent, and the side of a square; a round region (where the
+ * root is imaginary) gets P / 4.
+ */
+function regionWidth(rings: Pt[][]): { width: number; area: number } {
+  const area = Math.abs(ringArea(rings[0])) - rings.slice(1).reduce((a, r) => a + Math.abs(ringArea(r)), 0);
+  const per = rings.reduce((a, r) => a + ringLength(r), 0);
+  return { width: (per - Math.sqrt(Math.max(0, per * per - 16 * area))) / 4, area };
+}
+
+function segsCross([a, b]: Seg, [c, d]: Seg): boolean {
+  const o = (p: Pt, q: Pt, r: Pt) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  return o(c, d, a) * o(c, d, b) < 0 && o(a, b, c) * o(a, b, d) < 0;
+}
+const grow = (b: Box, g: number): Box => [b[0] - g, b[1] - g, b[2] + g, b[3] + g];
+const boxesMeet = (a: Box, b: Box) => a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3];
+const inBox = (p: Pt, b: Box) => p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3];
+function segMeetsBox(sg: Seg, b: Box): boolean {
+  if (inBox(sg[0], b) || inBox(sg[1], b)) return true;
+  const c: Pt[] = [
+    [b[0], b[1]],
+    [b[2], b[1]],
+    [b[2], b[3]],
+    [b[0], b[3]],
+  ];
+  return c.some((p, i) => segsCross(sg, [p, c[(i + 1) % 4]]));
+}
+function distToSeg(p: Pt, [a, b]: Seg): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+}
+
+/** Points inside a region along its length (its longest chord, from the left), at the given fractions, each in the middle of the region across. */
+function pointsAlong(rings: Pt[][], fractions: number[]): { p: Pt; f: number }[] {
+  const outer = rings[0];
+  let a = outer[0];
+  let b = outer[0];
+  let best = -1;
+  for (const p of outer) {
+    for (const q of outer) {
+      const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (d > best) [best, a, b] = [d, p, q];
+    }
+  }
+  if (best <= 0) return [];
+  if (b[0] < a[0]) [a, b] = [b, a];
+  const ux = (b[0] - a[0]) / best;
+  const uy = (b[1] - a[1]) / best;
+  const out: { p: Pt; f: number }[] = [];
+  for (const f of fractions) {
+    const c: Pt = [a[0] + ux * best * f, a[1] + uy * best * f];
+    // The line across the chord through c, and where it meets the region's edges (as offsets along (-uy, ux)).
+    const ts: number[] = [];
+    for (const r of rings) {
+      for (let i = 0; i < r.length; i++) {
+        const p = r[i];
+        const q = r[(i + 1) % r.length];
+        const along = (z: Pt) => (z[0] - c[0]) * ux + (z[1] - c[1]) * uy;
+        const s0 = along(p);
+        const s1 = along(q);
+        if (s0 < 0 === s1 < 0 || s0 === s1) continue;
+        const t = s0 / (s0 - s1);
+        ts.push((p[0] + (q[0] - p[0]) * t - c[0]) * -uy + (p[1] + (q[1] - p[1]) * t - c[1]) * ux);
+      }
+    }
+    ts.sort((m, n) => m - n);
+    let mid: Pt | null = null;
+    let span = 0;
+    for (let k = 0; k + 1 < ts.length; k++) {
+      const off = (ts[k] + ts[k + 1]) / 2;
+      const m: Pt = [c[0] - uy * off, c[1] + ux * off];
+      if (ts[k + 1] - ts[k] > span && inRings(m, rings)) [mid, span] = [m, ts[k + 1] - ts[k]];
+    }
+    if (mid) out.push({ p: mid, f });
+  }
+  return out;
+}
+
+/** The callouts drawn and those that found no room, for the run's log. */
+const calloutsDrawn: string[] = [];
+const calloutsLeftOut: string[] = [];
+
+/**
+ * Flag the materials too thin to show their fill: every region of the
+ * material narrower than CALLOUT_WIDTH on the page (regionWidth), or all
+ * of them together smaller than CALLOUT_AREA. A hairline leader runs at an
+ * angle from a dot on the layer, about a third along it and away from the
+ * slip surface and the loads, to the material's name after a swatch of its
+ * fill. The label goes in the air above the ground where it fits, else
+ * beside or below the model, and over the soil (on its white halo) only as
+ * a last resort; always inside the plot and clear of the slip surface, the
+ * F label, the loads and the other callouts, whose leaders never cross. The
+ * thinnest material is placed first; one that finds no room is left out.
+ */
+function callouts(o: {
+  drawn: DrawnRegion[];
+  fills: Map<string, RGB>;
+  plot: Box;
+  ground: Pt[];
+  clear: Box[];
+  clearLines: Seg[];
+  slipLines: Seg[];
+  otherLines: Seg[];
+  label: string;
+}) {
+  const byName = new Map<string, { rings: Pt[][]; width: number; area: number }[]>();
+  for (const r of o.drawn) {
+    const w = regionWidth(r.rings);
+    if (!(w.area > 0)) continue;
+    byName.set(r.name, [...(byName.get(r.name) ?? []), { rings: r.rings, ...w }]);
+  }
+  const thin = [...byName.entries()]
+    .map(([name, regions]) => ({
+      name,
+      regions: regions.sort((a, b) => b.area - a.area),
+      width: Math.max(...regions.map((r) => r.width)),
+      area: regions.reduce((a, r) => a + r.area, 0),
+    }))
+    .filter((m) => m.width < CALLOUT_WIDTH || m.area < CALLOUT_AREA)
+    .sort((a, b) => a.width - b.width);
+  if (!thin.length) return;
+
+  const xs = o.ground.map((p) => p[0]);
+  const ys = o.ground.map((p) => p[1]);
+  const groundEdges: Seg[] = o.ground.map((p, i) => [p, o.ground[(i + 1) % o.ground.length]]);
+  const inGround = (p: Pt) => isPointInPolygon(p[0], p[1], xs, ys);
+  // Whether the ground is below a point (page y grows downwards).
+  const groundBelow = (p: Pt) =>
+    groundEdges.some(([a, b]) => a[0] < p[0] !== b[0] < p[0] && a[1] + ((b[1] - a[1]) * (p[0] - a[0])) / (b[0] - a[0]) > p[1]);
+  const samples = (b: Box): Pt[] => {
+    const out: Pt[] = [];
+    for (let i = 0; i <= 4; i++) for (const yy of [b[1], (b[1] + b[3]) / 2, b[3]]) out.push([b[0] + ((b[2] - b[0]) * i) / 4, yy]);
+    return out;
+  };
+  const plot = grow(o.plot, -0.8);
+  const placedBoxes: Box[] = [];
+  const placedLeaders: Seg[] = [];
+  const dots: Box[] = [];
+  const fractions = [1 / 3, 2 / 3, 0.25, 0.4, 0.75, 0.5, 0.2, 0.6, 0.8, 0.15, 0.85];
+  const angles = [50, 35, 65, 20, 80].flatMap((d) => [d, 180 - d, -d, -180 + d]).concat([0, 180]);
+  const lengths = [4, 6, 8, 10, 13, 16, 20, 25, 30, 36, 44, 54];
+  const h = 2.4;
+
+  for (const m of thin) {
+    font(CALLOUT_SIZE, "normal", INK);
+    const tw = pdf.getTextWidth(m.name);
+    const anchors = m.regions.flatMap((r, ri) => pointsAlong(r.rings, fractions).map((a) => ({ ...a, ri })));
+    let best: { cost: number; a: Pt; e: Pt; box: Box; halo: boolean } | null = null;
+    for (const a of anchors) {
+      const near = (d: number, within: number) => Math.max(0, within - d) * 12;
+      let aCost = Math.abs(a.f - 1 / 3) * 12 + a.ri * 10;
+      aCost += o.slipLines.reduce((c, sg) => Math.max(c, near(distToSeg(a.p, sg), 5)), 0);
+      aCost += o.otherLines.reduce((c, sg) => Math.max(c, near(distToSeg(a.p, sg), 2)), 0);
+      aCost += [...o.clear, ...placedBoxes].filter((b) => inBox(a.p, grow(b, 2.5))).length * 40;
+      if (best && aCost >= best.cost) continue;
+      for (const deg of angles) {
+        const rad = (deg * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const right = Math.abs(cos) > 1e-9 ? cos > 0 : a.p[0] < (o.plot[0] + o.plot[2]) / 2;
+        for (const len of lengths) {
+          let cost = aCost + len + (deg < 0 ? 6 : 0) + (deg === 0 || deg === 180 ? 4 : 0);
+          if (best && cost >= best.cost) break;
+          const e: Pt = [a.p[0] + len * cos, a.p[1] - len * Math.sin(rad)];
+          const x0 = right ? e[0] + 0.5 : e[0] - 0.5 - CALLOUT_SWATCH - 0.7 - tw;
+          const box: Box = [x0, e[1] - h / 2, x0 + CALLOUT_SWATCH + 0.7 + tw, e[1] + h / 2];
+          const leader: Seg = [a.p, e];
+          // Hard: inside the plot, clear of what is placed, of the slip surface and of the loads.
+          if (box[0] < plot[0] || box[2] > plot[2] || box[1] < plot[1] || box[3] > plot[3]) continue;
+          const gbox = grow(box, CALLOUT_GAP);
+          if ([...o.clear, ...placedBoxes, ...dots].some((b) => boxesMeet(gbox, b))) continue;
+          if ([...o.clearLines, ...o.slipLines, ...placedLeaders].some((sg) => segMeetsBox(sg, gbox))) continue;
+          if ([...o.clear, ...placedBoxes].some((b) => segMeetsBox(leader, grow(b, 0.3)))) continue;
+          if ([...o.clearLines, ...placedLeaders].some((sg) => segsCross(leader, sg))) continue;
+          // Soft: in the air, else beside or below the model, over the soil last; few lines crossed.
+          const pts = samples(gbox);
+          const halo = pts.some(inGround) || groundEdges.some((sg) => segMeetsBox(sg, gbox));
+          cost += halo ? 400 : pts.every(groundBelow) ? 0 : 30;
+          cost += o.slipLines.filter((sg) => segsCross(leader, sg)).length * 60;
+          cost += o.otherLines.filter((sg) => segMeetsBox(sg, gbox)).length * 40;
+          cost += o.otherLines.filter((sg) => segsCross(leader, sg)).length * 8;
+          // A leader that runs close along another line reads as part of it.
+          const along = Array.from({ length: 9 }, (_, k): Pt => [a.p[0] + ((e[0] - a.p[0]) * (k + 1)) / 10, a.p[1] + ((e[1] - a.p[1]) * (k + 1)) / 10]);
+          cost += along.filter((q) => [...o.slipLines, ...o.otherLines].some((sg) => distToSeg(q, sg) < 1)).length * 4;
+          if (!best || cost < best.cost) best = { cost, a: a.p, e, box, halo };
+        }
+      }
+    }
+    const id = o.label.replace(/^Figure \d+\. /, "").split(":")[0];
+    if (!best) {
+      calloutsLeftOut.push(`${id}: ${m.name}`);
+      continue;
+    }
+    calloutsDrawn.push(`${id}: ${m.name} (${m.width.toFixed(2)} mm, ${m.area.toFixed(1)} mm²${best.halo ? ", over the soil" : ""})`);
+    const { a, e, box } = best;
+    pdf.setDrawColor(...MUTED);
+    pdf.setLineWidth(CALLOUT_LEADER);
+    pdf.line(a[0], a[1], e[0], e[1]);
+    pdf.setFillColor(...MUTED);
+    pdf.circle(a[0], a[1], 0.35, "F");
+    const sy = e[1] - CALLOUT_SWATCH / 2;
+    pdf.setFillColor(...(o.fills.get(m.name) ?? SOIL_CLASSES[0].fill));
+    pdf.setLineWidth(0.1);
+    pdf.rect(box[0], sy, CALLOUT_SWATCH, CALLOUT_SWATCH, "FD");
+    // A white halo under the name, so that the grid does not cut through it.
+    const tx = box[0] + CALLOUT_SWATCH + 0.7;
+    font(CALLOUT_SIZE, "normal", PAPER);
+    pdf.setDrawColor(...PAPER);
+    pdf.setLineWidth(0.5);
+    pdf.text(m.name, tx, e[1], { baseline: "middle", renderingMode: "stroke" });
+    font(CALLOUT_SIZE, "normal", INK);
+    pdf.text(m.name, tx, e[1], { baseline: "middle" });
+    placedBoxes.push(box);
+    placedLeaders.push([a, e]);
+    dots.push([a[0] - 0.5, a[1] - 0.5, a[0] + 0.5, a[1] + 0.5]);
+  }
 }
 
 /**
@@ -438,6 +863,20 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   const ox = fx + (fw - (x1 - x0) * s) / 2;
   const oy = fy;
   const P = (x: number, yy: number): Pt => [ox + (mx(x) - x0) * s, oy + (y1 - yy) * s];
+  const ax0 = ox;
+  const ay0 = oy + (y1 - y0) * s;
+  const axRight = ox + (x1 - x0) * s;
+  // One step on both axes (the scales are equal): ticks about 10 mm apart on
+  // the page, closer on a flat model so that y still gets about four, but
+  // never closer than 6 mm.
+  const step = niceStepAbove(Math.max(TICK_MIN_MM / s, Math.min(TICK_MM / s, (y1 - y0) / 4)));
+  const ticks = (lo: number, hi: number) => {
+    const out: number[] = [];
+    for (let k = Math.ceil(lo / step - 1e-9); k * step <= hi + 1e-9; k++) out.push(k * step);
+    return out;
+  };
+  const xTicks = ticks(x0, x1);
+  const yTicks = ticks(y0, y1);
 
   // Material regions.
   const faces = polygonizeRegions(
@@ -445,7 +884,13 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     canon.coordinates.map((c) => c[1]),
     (canon.materialBoundaries ?? []).map((b) => b.coordinates),
   );
-  const matIndex = (name: string) => Math.max(0, canon.materials.findIndex((m) => m.name === name));
+  const fills = materialFills(canon.materials, units);
+  // What the callouts must know: the drawn regions, and what they must keep clear of (page mm).
+  const drawn: DrawnRegion[] = [];
+  const clear: Box[] = [];
+  const clearLines: Seg[] = [];
+  const slipLines: Seg[] = [];
+  const otherLines: Seg[] = [];
   for (const face of faces) {
     const fxs = face.outer.map((c) => c[0]);
     const fys = face.outer.map((c) => c[1]);
@@ -453,10 +898,11 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       isPointInPolygon(p[0], p[1], fxs, fys) &&
       !face.holes.some((h) => isPointInPolygon(p[0], p[1], h.map((c) => c[0]), h.map((c) => c[1])));
     const hit = (canon.regionAssignments ?? []).find((a) => inFace(a.point));
-    const idx = hit ? matIndex(hit.materialName) : 0;
-    pdf.setFillColor(...MATERIAL_FILLS[idx % MATERIAL_FILLS.length]);
+    const materialName = hit?.materialName ?? canon.materials[0]?.name ?? "";
+    pdf.setFillColor(...(fills.get(materialName) ?? SOIL_CLASSES[0].fill));
     const rings = [face.outer, ...face.holes];
     const ops: [number, number][][] = rings.map((r) => r.map(([px, py]) => P(px, py)));
+    drawn.push({ name: materialName, rings: ops });
     for (const [k, ring] of ops.entries()) {
       const [sx, sy] = ring[0];
       pdf.moveTo(sx, sy);
@@ -465,6 +911,16 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       if (k === ops.length - 1) pdf.fillEvenOdd();
     }
   }
+  // Grid at the axis ticks, over the soil but under every line: see-through
+  // hairlines, so that the soil colors show through.
+  pdf.saveGraphicsState();
+  pdf.setGState(new GState({ "stroke-opacity": GRID_OPACITY }));
+  pdf.setDrawColor(...MUTED);
+  pdf.setLineWidth(GRID_WIDTH);
+  for (const v of xTicks) pdf.line(ox + (v - x0) * s, ay0, ox + (v - x0) * s, oy);
+  for (const v of yTicks) pdf.line(ax0, oy + (y1 - v) * s, axRight, oy + (y1 - v) * s);
+  pdf.restoreGraphicsState();
+
   // Outline and boundaries.
   pdf.setDrawColor(...INK);
   pdf.setLineWidth(0.35);
@@ -517,6 +973,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       const a = P(sorted[i][0], sorted[i][1]);
       const b = P(sorted[i + 1][0], sorted[i + 1][1]);
       pdf.line(a[0], a[1], b[0], b[1]);
+      otherLines.push([a, b]);
     }
     pdf.setLineDashPattern([1.2, 0.9], 0);
     pdf.setLineWidth(0.3);
@@ -543,6 +1000,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     const [px, py] = P(wx, wy);
     pdf.setFillColor(...WATER);
     pdf.triangle(px - 1.3, py - 2, px + 1.3, py - 2, px, py, "F");
+    clear.push([px - 1.4, py - 2.1, px + 1.4, py + 1.4]);
     pdf.line(px - 1.2, py + 0.7, px + 1.2, py + 0.7);
     pdf.line(px - 0.7, py + 1.3, px + 0.7, py + 1.3);
   }
@@ -556,6 +1014,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setLineWidth(0.3);
     pdf.line(px, py - len, px, py - 1.4);
     pdf.triangle(px - 0.9, py - 1.6, px + 0.9, py - 1.6, px, py, "F");
+    clear.push([px - 1, py - len, px + 1, py]);
     return [px, py - len] as Pt;
   };
   for (const u of canon.udls ?? []) {
@@ -563,15 +1022,21 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     const tops: Pt[] = [];
     for (let i = 0; i <= n; i++) tops.push(arrow(u.x1 + ((u.x2 - u.x1) * i) / n, LOAD, 5));
     pdf.setDrawColor(...LOAD);
-    for (let i = 0; i + 1 < tops.length; i++) pdf.line(tops[i][0], tops[i][1], tops[i + 1][0], tops[i + 1][1]);
+    for (let i = 0; i + 1 < tops.length; i++) {
+      pdf.line(tops[i][0], tops[i][1], tops[i + 1][0], tops[i + 1][1]);
+      clearLines.push([tops[i], tops[i + 1]]);
+    }
     font(7, "normal", LOAD);
     const mid = tops[Math.floor(tops.length / 2)];
-    pdf.text(`q = ${u.magnitude} ${units.stress}`, mid[0], mid[1] - 1, { align: "center" });
+    const qText = `q = ${u.magnitude} ${units.stress}`;
+    pdf.text(qText, mid[0], mid[1] - 1, { align: "center" });
+    clear.push(textBox(qText, mid[0], mid[1] - 1, "center"));
   }
   for (const l of canon.lineLoads ?? []) {
     const top = arrow(l.x, LOAD, 8);
     font(7, "normal", LOAD);
     pdf.text(`P = ${l.magnitude}`, top[0], top[1] - 1, { align: "center" });
+    clear.push(textBox(`P = ${l.magnitude}`, top[0], top[1] - 1, "center"));
   }
   // Reinforcement: the bar, with the head (end 1) marked.
   for (const r of canon.reinforcements ?? []) {
@@ -580,6 +1045,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setDrawColor(142, 68, 173);
     pdf.setLineWidth(0.35);
     pdf.line(ax, ay, bx, by);
+    otherLines.push([[ax, ay], [bx, by]]);
     pdf.setFillColor(142, 68, 173);
     pdf.circle(ax, ay, 0.5, "F");
   }
@@ -590,6 +1056,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setDrawColor(93, 64, 55);
     pdf.setLineWidth(0.8);
     pdf.line(ax, ay, bx, by);
+    otherLines.push([[ax, ay], [bx, by]]);
   }
 
   // Critical surface.
@@ -604,7 +1071,10 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     });
     for (const [x, yy] of pts) {
       const p = P(x, yy);
-      if (prev) pdf.line(prev[0], prev[1], p[0], p[1]);
+      if (prev) {
+        pdf.line(prev[0], prev[1], p[0], p[1]);
+        slipLines.push([prev, p]);
+      }
       prev = p;
     }
     const [ccx, ccy] = P(plane.cx, plane.cy);
@@ -614,7 +1084,10 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     pdf.setLineDashPattern([0.8, 0.8], 0);
     for (const e of [plane.lc, plane.rc]) {
       const [ex, ey] = P(e[0], e[1]);
-      if (inside) pdf.line(ccx, ccy, ex, ey);
+      if (inside) {
+        pdf.line(ccx, ccy, ex, ey);
+        otherLines.push([[ccx, ccy], [ex, ey]]);
+      }
     }
     pdf.setLineDashPattern([], 0);
     if (inside) {
@@ -622,31 +1095,46 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
       pdf.circle(ccx, ccy, 0.7, "F");
       font(8, "bold", SURFACE);
       pdf.text(fmt(plane.fos), ccx + 1.8, ccy - 1, { baseline: "bottom" });
+      clear.push([ccx - 1, ccy - 1 - lineH(8) * 0.8, ccx + 1.8 + pdf.getTextWidth(fmt(plane.fos)), ccy + 1]);
     }
   }
 
   // Axes.
   pdf.setDrawColor(...MUTED);
   pdf.setLineWidth(0.2);
-  const ax0 = ox;
-  const ay0 = oy + (y1 - y0) * s;
-  pdf.line(ax0, ay0, ox + (x1 - x0) * s, ay0);
+  pdf.line(ax0, ay0, axRight, ay0);
   pdf.line(ax0, ay0, ax0, oy);
   font(6.5, "normal", MUTED);
-  const sx = niceStep(x1 - x0);
-  for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
+  // A label that would touch the one before it is left out; its tick stays.
+  let labelEnd = -Infinity;
+  for (const v of xTicks) {
     const px = ox + (v - x0) * s;
     pdf.line(px, ay0, px, ay0 + 1);
-    pdf.text(String(+v.toFixed(2)), px, ay0 + 1.5, { align: "center", baseline: "top" });
+    const text = String(+v.toFixed(2));
+    const half = pdf.getTextWidth(text) / 2;
+    if (px - half < labelEnd + 1) continue;
+    pdf.text(text, px, ay0 + 1.5, { align: "center", baseline: "top" });
+    labelEnd = px + half;
   }
-  const sy = niceStep(y1 - y0, 4);
-  for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
+  for (const v of yTicks) {
     const py = oy + (y1 - v) * s;
     pdf.line(ax0 - 1, py, ax0, py);
     pdf.text(String(+v.toFixed(2)), ax0 - 1.5, py, { align: "right", baseline: "middle" });
   }
-  pdf.text(`x (${units.length})`, ox + (x1 - x0) * s, ay0 + 5, { align: "right", baseline: "top" });
+  pdf.text(`x (${units.length})`, axRight, ay0 + 5, { align: "right", baseline: "top" });
   pdf.text(`y (${units.length})`, ax0 - 1, oy - 1.5, { align: "center", baseline: "bottom" });
+
+  callouts({
+    drawn,
+    fills,
+    plot: [ax0, oy, axRight, ay0],
+    ground: outline,
+    clear,
+    clearLines,
+    slipLines,
+    otherLines,
+    label,
+  });
 
   y = Math.max(fy + fh, ay0 + 6) + 4;
   // Legend: one sample per kind of line drawn, so the figure reads in greyscale too.
@@ -719,7 +1207,6 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
   font(8, "italic", MUTED);
   pdf.text(label, PAGE_W / 2, y, { align: "center", baseline: "top" });
   y += 6;
-  return matIndex;
 }
 
 // ── Running the problems ─────────────────────────────────────────────
@@ -1014,7 +1501,7 @@ function tableCaption(text: string) {
 }
 
 /**
- * Histograms of the signed errors, one panel per comparison on the same
+ * Histograms of the signed deviations, one panel per comparison on the same
  * x scale (small multiples: one series each, so no legend).
  */
 function errorHistograms(panels: { title: string; points: Point[] }[]) {
@@ -1067,7 +1554,7 @@ function errorHistograms(panels: { title: string; points: Point[] }[]) {
     pdf.line(bx(v), base, bx(v), base + 1);
     pdf.text(v === 0 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v)}`, bx(v), base + 1.5, { align: "center", baseline: "top" });
   }
-  pdf.text("Error (%): cSlope above the reference to the right", x0 + w, base + 5, { align: "right", baseline: "top" });
+  pdf.text("Deviation (%): cSlope above the reference to the right", x0 + w, base + 5, { align: "right", baseline: "top" });
   y = base + 10;
 }
 
@@ -1086,8 +1573,8 @@ interface ComparisonRows {
 
 /**
  * One row per analysis: cSlope's value, each published value for the same
- * method with its source and the difference (sub-rows when there are
- * several), and the other programs' range with the difference from its
+ * method with its source and the deviation (sub-rows when there are
+ * several), and the other programs' range with the deviation from its
  * midpoint. Published values whose method cSlope does not have follow, not
  * compared.
  */
@@ -1143,10 +1630,10 @@ const COMPARISON_COLUMNS: Column[] = [
   { title: "Analysis", width: 42 },
   { title: "cSlope", width: 14, align: "right" },
   { title: "Published", width: 17, align: "right" },
-  { title: "Source", width: 47 },
-  { title: "Diff.", width: 17, align: "right" },
-  { title: "Other programs", width: 23, align: "right" },
-  { title: "Diff.", width: 14, align: "right" },
+  { title: "Source", width: 45 },
+  { title: "Dev.", width: 17, align: "right" },
+  { title: "Other programs", width: 25, align: "right" },
+  { title: "Dev.", width: 14, align: "right" },
 ];
 
 // ── Cover ────────────────────────────────────────────────────────────
@@ -1178,8 +1665,8 @@ table(
     ["Problems", String(CASES.length)],
     ["cSlope analyses", String(nAnalyses)],
     ["Values published by the sources", String(nPublished)],
-    ["Mean absolute error against other programs", `${abs2(programStat.meanAbs)} (${programStat.n} results)`],
-    ["Mean absolute error against the literature", `${abs2(literatureStat.meanAbs)} (${literatureStat.n} values)`],
+    ["Mean absolute deviation from other programs", `${abs2(programStat.meanAbs)} (${programStat.n} results)`],
+    ["Mean absolute deviation from the literature", `${abs2(literatureStat.meanAbs)} (${literatureStat.n} values)`],
     ...(PUBLIC
       ? []
       : [
@@ -1237,7 +1724,7 @@ paragraph(
 y += 2;
 heading("How to read the tables", 2, { toc: false, keep: 12 });
 paragraph(
-  "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Diff. is cSlope's value minus the reference, in percent of the reference: the lower end of a published range, the midpoint of the programs' range, as in the statistics of section 2. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
+  "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Dev. is the deviation, cSlope's value minus the reference in percent of the reference, as in the statistics of section 2; the reference of a published range is its lower end, that of the programs' range its midpoint. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
 );
 
 // ── 2 Summary ────────────────────────────────────────────────────────
@@ -1246,11 +1733,11 @@ newPage();
 heading("2  Summary of results", 1);
 const SUMMARY = "2  Summary of results";
 paragraph(
-  `cSlope was run on ${CASES.length} problems, with ${nAnalyses} analyses. Each result is compared with two kinds of reference. The first is the results that other slope stability programs publish for the same analysis in their verification manuals: ${programStat.n} results, compared with the midpoint of the programs' range where more than one program gives a value. The second is the literature: ${literatureStat.n} values from papers, books, design manuals and theory. The finite element factors of safety are compared with published finite element, finite difference, limit analysis and theoretical values (${femStat.n} references). The error is cSlope's factor of safety minus the reference, in percent of the reference, so a negative mean error means that cSlope is lower on average.`,
+  `cSlope was run on ${CASES.length} problems, with ${nAnalyses} analyses. Each result is compared with two kinds of reference. The first is the results that other slope stability programs publish for the same analysis in their verification manuals: ${programStat.n} results, compared with the midpoint of the programs' range where more than one program gives a value. The second is the literature: ${literatureStat.n} values from papers, books, design manuals and theory. The finite element factors of safety are compared with published finite element, finite difference, limit analysis and theoretical values (${femStat.n} references). The deviation is cSlope's factor of safety minus the reference, in percent of the reference, so a negative mean deviation means that cSlope is lower on average.`,
 );
 y += 2;
-heading("2.1  Errors against each reference", 2, { toc: true, bookmarkUnder: SUMMARY });
-tableCaption(`Table ${++tableNo}. Errors of cSlope's factors of safety in percent of the reference.`);
+heading("2.1  Deviations from each reference", 2, { toc: true, bookmarkUnder: SUMMARY });
+tableCaption(`Table ${++tableNo}. Deviations of cSlope's factors of safety from each reference, in percent of the reference.`);
 const statRow = (label: string, s: Stat, tol: string): Cell[] => [label, String(s.n), pct2(s.mean), abs2(s.meanAbs), abs2(s.rms), abs2(s.maxAbs), tol];
 table(
   [
@@ -1271,11 +1758,11 @@ table(
 );
 const largestOf = (ps: Point[]) => {
   const [p] = largest(ps, 1);
-  return p ? `${abs2(p.error)} (${p.id}, ${p.analysis})` : "–";
+  return p ? `${pct2(p.error)} (${p.id}, ${p.analysis})` : "–";
 };
 paragraph(
-  `Against the other programs, ${within(programPoints, 0.5)} of the ${programStat.n} results lie within 0.5 %, ${within(programPoints, 1)} within 1 % and ${within(programPoints, 2)} within 2 %; the largest error is ${largestOf(programPoints)}. ` +
-    `Against the literature the spread is wider: ${within(literaturePoints, 1)} of ${literatureStat.n} values lie within 1 %, ${within(literaturePoints, 2)} within 2 % and ${within(literaturePoints, 5)} within 5 %, and the largest error is ${largestOf(literaturePoints)}. ` +
+  `Against the other programs, ${within(programPoints, 0.5)} of the ${programStat.n} results lie within 0.5 %, ${within(programPoints, 1)} within 1 % and ${within(programPoints, 2)} within 2 %; the largest deviation is ${largestOf(programPoints)}. ` +
+    `Against the literature the spread is wider: ${within(literaturePoints, 1)} of ${literatureStat.n} values lie within 1 %, ${within(literaturePoints, 2)} within 2 % and ${within(literaturePoints, 5)} within 5 %, and the largest deviation is ${largestOf(literaturePoints)}. ` +
     "Many literature values are printed to two decimals, some are read from charts, some come from hand calculations or from another method such as finite elements or a trial wedge, and on some problems the sources differ from each other; section 2.4 lists the largest deviations.",
 );
 y += 1;
@@ -1284,16 +1771,16 @@ paragraph(
     "A check agrees when cSlope is within 1 % of the reference on a given surface and 2 % for a search, plus half a unit of the reference's last printed digit, plus 1 % where the input or the reference was read from a figure, plus 1 % where the surface ends in a vertical or near-vertical scarp; 5 % against a finite element value. " +
     `The finite element references have their own rule (section 4)${nFemDisputed ? `; ${count(nFemDisputed, "disputed reference is", "disputed references are")} shown there and not counted` : ""}. ` +
     `The ${reliabilityRows.length} reliability indices and probabilities of failure of the probabilistic problems are compared with absolute tolerances: ${reliabilityRows.filter((x) => x.pass).length} of ${reliabilityRows.length} agree. ` +
-    "Section 3 and appendix A show every difference but do not mark single results as passed or failed.",
+    "Section 3 and appendix A show every deviation but do not mark single results as passed or failed.",
 );
 y += 2;
-heading("2.2  Distribution of the errors", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
+heading("2.2  Distribution of the deviations", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
 errorHistograms([
   { title: `Against other programs (${programStat.n} results)`, points: programPoints },
   { title: `Against the literature (${literatureStat.n} values)`, points: literaturePoints },
   ...(femStat.n ? [{ title: `Finite elements against their references (${femStat.n})`, points: femPoints }] : []),
 ]);
-caption(`Figure ${++figureNo}. Number of results per 0.25 % of error. The dashed line is zero error.`);
+caption(`Figure ${++figureNo}. Number of results per 0.25 % of deviation. The dashed line is zero deviation.`);
 
 heading("2.3  By method", 2, { toc: true, bookmarkUnder: SUMMARY });
 const FAMILIES: { label: string; test: (analysis: string) => boolean }[] = [
@@ -1306,7 +1793,7 @@ const familyCells = (ps: Point[]): Cell[] => {
   const s = statOf(ps);
   return s.n ? [String(s.n), abs2(s.meanAbs), abs2(s.maxAbs)] : ["0", "–", "–"];
 };
-tableCaption(`Table ${++tableNo}. Mean absolute and largest error by method, against the other programs and against the literature.`);
+tableCaption(`Table ${++tableNo}. Mean absolute and largest deviation by method, from the other programs and from the literature.`);
 table(
   [
     { title: "Method", width: 64 },
@@ -1328,7 +1815,7 @@ paragraph(
 y += 2;
 heading("2.4  Largest deviations", 2, { toc: true, bookmarkUnder: SUMMARY });
 paragraph(
-  "The largest errors against each reference, with the notes of those problems. The problem id links to its section.",
+  "The largest deviations from each reference, with the notes of those problems. The problem id links to its section.",
   9,
 );
 const deviationTable = (title: string, ps: Point[]) => {
@@ -1340,7 +1827,7 @@ const deviationTable = (title: string, ps: Point[]) => {
       { title: "Reference", width: 18, align: "right" },
       { title: "Source", width: 56 },
       { title: "cSlope", width: 15, align: "right" },
-      { title: "Error", width: CONTENT_W - 153, align: "right" },
+      { title: "Deviation", width: CONTENT_W - 153, align: "right" },
     ],
     ps.map((p) => [{ text: `${p.id} (${sectionOf.get(p.id)})`, link: p.id }, p.analysis, p.reference, p.source, fmt(p.computed), pct2(p.error)]),
     7.8,
@@ -1349,9 +1836,9 @@ const deviationTable = (title: string, ps: Point[]) => {
 const topPrograms = largest(programPoints, 5);
 const topLiterature = largest(literaturePoints, 5);
 const topFem = largest(femPoints, 3);
-deviationTable(`Table ${++tableNo}. The five largest errors against other programs (reference: the midpoint of their range).`, topPrograms);
-deviationTable(`Table ${++tableNo}. The five largest errors against the literature.`, topLiterature);
-if (topFem.length) deviationTable(`Table ${++tableNo}. The three largest errors of the finite element analysis against its references.`, topFem);
+deviationTable(`Table ${++tableNo}. The five largest deviations from other programs (reference: the midpoint of their range).`, topPrograms);
+deviationTable(`Table ${++tableNo}. The five largest deviations from the literature.`, topLiterature);
+if (topFem.length) deviationTable(`Table ${++tableNo}. The three largest deviations of the finite element analysis from its references.`, topFem);
 {
   const ids = [...new Set([...topPrograms, ...topLiterature, ...topFem].map((p) => p.id))];
   const noted = ids.filter((id) => caseById.get(id)?.publicNote);
@@ -1404,7 +1891,8 @@ caseResults.forEach((r, i) => {
   y += 2;
   const first = analysisRows(r)[0];
   const surfaceName = c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : nonCircular ? "critical surface" : "critical circle";
-  const matIndex = figure(
+  const fills = materialFills(c.definition.materials, units);
+  figure(
     c.definition,
     r.slope,
     r.plane,
@@ -1424,7 +1912,7 @@ caseResults.forEach((r, i) => {
     c.definition.materials.map((m) => {
       const d = describeModel(m.model, units);
       return [
-        { text: m.name, swatch: MATERIAL_FILLS[matIndex(m.name) % MATERIAL_FILLS.length] },
+        { text: m.name, swatch: fills.get(m.name) },
         d.kind,
         d.gamma,
         d.strength,
@@ -1453,7 +1941,7 @@ caseResults.forEach((r, i) => {
         { title: "Published by", width: 34 },
         { title: "Published", width: 19, align: "right" },
         { title: "cSlope", width: 17, align: "right" },
-        { title: "Difference", width: 19, align: "right" },
+        { title: "Deviation", width: 19, align: "right" },
         { title: "Tolerance", width: 17, align: "right" },
         { title: "", width: CONTENT_W - 162, align: "center" },
       ],
@@ -1474,7 +1962,7 @@ caseResults.forEach((r, i) => {
     if (!reliability.length) continue;
     y += 1;
     paragraph(
-      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}).${PUBLIC ? "" : " Differences in β and Pf are absolute."}`,
+      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}).${PUBLIC ? "" : " Deviations in β and Pf are absolute."}`,
       8.5,
     );
     if (PUBLIC) {
@@ -1499,7 +1987,7 @@ caseResults.forEach((r, i) => {
           { title: "Published by", width: 34 },
           { title: "Published", width: 19, align: "right" },
           { title: "cSlope", width: 17, align: "right" },
-          { title: "Difference", width: 19, align: "right" },
+          { title: "Deviation", width: 19, align: "right" },
           { title: "Tolerance", width: 17, align: "right" },
           { title: "", width: CONTENT_W - 162, align: "center" },
         ],
@@ -1587,7 +2075,7 @@ if (FEM_CASES.length && committed) {
           { title: "Flow rule", width: 23 },
           { title: "Elements: F", width: 33 },
           { title: "cSlope", width: 13, align: "right" },
-          { title: "Diff.", width: CONTENT_W - 158, align: "right" },
+          { title: "Dev.", width: CONTENT_W - 158, align: "right" },
         ]
       : [
           { title: "Problem", width: 14 },
@@ -1596,7 +2084,7 @@ if (FEM_CASES.length && committed) {
           { title: "Flow rule", width: 23 },
           { title: "Elements: F", width: 28 },
           { title: "cSlope", width: 12, align: "right" },
-          { title: "Diff.", width: 14, align: "right" },
+          { title: "Dev.", width: 14, align: "right" },
           { title: "", width: CONTENT_W - 155, align: "center" },
         ],
     rows,
@@ -1638,9 +2126,9 @@ y += 1;
       { title: "cSlope", width: 12, align: "right" },
       { title: "Published", width: 14, align: "right" },
       { title: "Source", width: 41 },
-      { title: "Diff.", width: 14, align: "right" },
+      { title: "Dev.", width: 14, align: "right" },
       { title: "Other programs", width: 21, align: "right" },
-      { title: "Diff.", width: 13, align: "right" },
+      { title: "Dev.", width: 13, align: "right" },
       { title: "Page", width: CONTENT_W - 164, align: "right" },
     ],
     rows,
@@ -1682,7 +2170,7 @@ if (!PUBLIC) {
       { title: "Check", width: 40 },
       { title: "Published", width: 18, align: "right" },
       { title: "cSlope", width: 15, align: "right" },
-      { title: "Diff.", width: 15, align: "right" },
+      { title: "Dev.", width: 15, align: "right" },
       { title: "", width: CONTENT_W - 160, align: "center" },
     ],
     [
@@ -1765,6 +2253,8 @@ for (let p = 2; p <= pages; p++) {
 }
 
 if (!fs.existsSync(path.dirname(OUT))) fs.mkdirSync(path.dirname(OUT), { recursive: true });
+if (calloutsDrawn.length) console.log(`Callouts for thin layers: ${calloutsDrawn.join("; ")}.`);
+if (calloutsLeftOut.length) console.warn(`Callouts left out (no room): ${calloutsLeftOut.join("; ")}.`);
 fs.writeFileSync(OUT, Buffer.from(pdf.output("arraybuffer")));
 console.log(`\n${nPass}/${nChecks} checks within tolerance (not shown per result in the public edition). Wrote ${path.relative(process.cwd(), OUT)} (${pages} pages).`);
 if (nPass < nChecks) process.exitCode = 1;
