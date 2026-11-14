@@ -135,10 +135,11 @@ const SURFACE: [number, number, number] = [200, 30, 30];
  *   gravel, rockfill, filter, till and the like; otherwise c′ = 0;
  * - cphi (soil with c′ and φ′): no telling name, c′ > 0 and φ′ > 0;
  * - clay (clay and undrained soil): named clay or crust; otherwise undrained
- *   (φ = 0, Su models). A grey-blue pulled towards brown, so that it reads
- *   as clay and not as water, and stays apart from cphi's beige and rock's grey;
+ *   (φ = 0, Su models). A warm grey-brown without blue, so that it reads
+ *   as clay and not as water, greyer than cphi's beige;
  * - organic: named silt, peat, mud or organic;
- * - rock: named rock, limestone or hard base or layer;
+ * - rock: named rock, limestone or hard base or layer. A cool grey, darker
+ *   than the clay, so that the two stay apart;
  * - weak (weak layer or seam): named weak, seam or joint.
  */
 type SoilClass = "clay" | "organic" | "sand" | "friction" | "cphi" | "rock" | "weak";
@@ -146,9 +147,9 @@ const SOIL_CLASSES: { id: SoilClass; fill: RGB }[] = [
   { id: "sand", fill: [238, 224, 160] },
   { id: "friction", fill: [212, 163, 115] },
   { id: "cphi", fill: [206, 192, 168] },
-  { id: "clay", fill: [156, 163, 180] },
+  { id: "clay", fill: [172, 160, 156] },
   { id: "organic", fill: [170, 186, 150] },
-  { id: "rock", fill: [158, 158, 154] },
+  { id: "rock", fill: [132, 134, 136] },
   { id: "weak", fill: [181, 131, 141] },
 ];
 /** How far the tints of one class spread: the weakest material of a class lighter, the strongest darker. */
