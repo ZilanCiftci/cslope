@@ -141,9 +141,29 @@ const SOIL_CLASSES: { id: SoilClass; label: string; rule: string; fill: RGB }[] 
   { id: "rock", label: "Rock", rule: "named rock, limestone or hard base or layer", fill: [158, 158, 154] },
   { id: "weak", label: "Weak layer or seam", rule: "named weak, seam or joint", fill: [181, 131, 141] },
 ];
-/** How far the tints of one class spread: the first material of a class lighter, the last darker. */
+/** How far the tints of one class spread: the weakest material of a class lighter, the strongest darker. */
 const TINT_LIGHTER = 0.3;
-const TINT_DARKER = 0.25;
+const TINT_DARKER = 0.2;
+/**
+ * "rank": within a problem, the materials of a class are tinted by their
+ * order of strength. "absolute": by strength on a fixed log scale per class
+ * (TINT_RANGE), the same strength giving the same tint in every problem.
+ * CSLOPE_REPORT_TINTS=absolute selects the second, to compare the two.
+ */
+const TINT_SCALE: "rank" | "absolute" = process.env.CSLOPE_REPORT_TINTS === "absolute" ? "absolute" : "rank";
+/** The strengths (kPa, from strengthKpa) at the light and the dark end of each class's absolute scale. */
+const TINT_RANGE: Record<SoilClass, [number, number]> = {
+  clay: [10, 200],
+  organic: [5, 100],
+  weak: [5, 100],
+  sand: [100 * Math.tan((25 * Math.PI) / 180), 100 * Math.tan((45 * Math.PI) / 180)],
+  friction: [100 * Math.tan((25 * Math.PI) / 180), 100 * Math.tan((45 * Math.PI) / 180)],
+  cphi: [50, 300],
+  rock: [100, 2000],
+};
+/** The normal stress at which the strength of a material is compared, kPa. */
+const STRENGTH_SIGMA = 100;
+const KPA_PER_PSF = 0.04788026;
 
 /** The class of a material: its name first, its strength model where the name says nothing. */
 function soilClass(name: string, model: MaterialModel | undefined): SoilClass {
