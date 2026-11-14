@@ -129,39 +129,32 @@ const SURFACE: [number, number, number] = [200, 30, 30];
  * Soil classes: every material is drawn in the color of its class, so that
  * the same kind of soil looks the same in every problem. The hues follow the
  * browser version's layer swatches (packages/web/src/templates/colors.ts),
- * lightened for print where the fill is large.
+ * lightened for print where the fill is large. soilClass decides the class:
+ * - sand: named sand (not sandy clay);
+ * - friction (gravel, fill and other friction soil): named fill, embankment,
+ *   gravel, rockfill, filter, till and the like; otherwise c′ = 0;
+ * - cphi (soil with c′ and φ′): no telling name, c′ > 0 and φ′ > 0;
+ * - clay (clay and undrained soil): named clay or crust; otherwise undrained
+ *   (φ = 0, Su models). A grey-blue pulled towards brown, so that it reads
+ *   as clay and not as water, and stays apart from cphi's beige and rock's grey;
+ * - organic: named silt, peat, mud or organic;
+ * - rock: named rock, limestone or hard base or layer;
+ * - weak (weak layer or seam): named weak, seam or joint.
  */
 type SoilClass = "clay" | "organic" | "sand" | "friction" | "cphi" | "rock" | "weak";
-const SOIL_CLASSES: { id: SoilClass; label: string; rule: string; fill: RGB }[] = [
-  { id: "sand", label: "Sand", rule: "named sand (not sandy clay)", fill: [238, 224, 160] },
-  { id: "friction", label: "Gravel, fill and other friction soil", rule: "named fill, embankment, gravel, rockfill, filter, till and the like; otherwise c′ = 0", fill: [212, 163, 115] },
-  { id: "cphi", label: "Soil with c′ and φ′", rule: "no telling name, c′ > 0 and φ′ > 0", fill: [206, 192, 168] },
-  { id: "clay", label: "Clay and undrained soil", rule: "named clay or crust; otherwise undrained (φ = 0, Su models)", fill: [159, 183, 201] },
-  { id: "organic", label: "Silt, peat and organic soil", rule: "named silt, peat, mud or organic", fill: [170, 186, 150] },
-  { id: "rock", label: "Rock", rule: "named rock, limestone or hard base or layer", fill: [158, 158, 154] },
-  { id: "weak", label: "Weak layer or seam", rule: "named weak, seam or joint", fill: [181, 131, 141] },
+const SOIL_CLASSES: { id: SoilClass; fill: RGB }[] = [
+  { id: "sand", fill: [238, 224, 160] },
+  { id: "friction", fill: [212, 163, 115] },
+  { id: "cphi", fill: [206, 192, 168] },
+  { id: "clay", fill: [156, 163, 180] },
+  { id: "organic", fill: [170, 186, 150] },
+  { id: "rock", fill: [158, 158, 154] },
+  { id: "weak", fill: [181, 131, 141] },
 ];
 /** How far the tints of one class spread: the weakest material of a class lighter, the strongest darker. */
 const TINT_LIGHTER = 0.3;
 const TINT_DARKER = 0.2;
-/**
- * "rank": within a problem, the materials of a class are tinted by their
- * order of strength. "absolute": by strength on a fixed log scale per class
- * (TINT_RANGE), the same strength giving the same tint in every problem.
- * CSLOPE_REPORT_TINTS=absolute selects the second, to compare the two.
- */
-const TINT_SCALE: "rank" | "absolute" = process.env.CSLOPE_REPORT_TINTS === "absolute" ? "absolute" : "rank";
-/** The strengths (kPa, from strengthKpa) at the light and the dark end of each class's absolute scale. */
-const TINT_RANGE: Record<SoilClass, [number, number]> = {
-  clay: [10, 200],
-  organic: [5, 100],
-  weak: [5, 100],
-  sand: [100 * Math.tan((25 * Math.PI) / 180), 100 * Math.tan((45 * Math.PI) / 180)],
-  friction: [100 * Math.tan((25 * Math.PI) / 180), 100 * Math.tan((45 * Math.PI) / 180)],
-  cphi: [50, 300],
-  rock: [100, 2000],
-};
-/** The normal stress at which the strength of a material is compared, kPa. */
+/** The normal stress at which the strength of a material is compared, kPa (the same stress in psf in an imperial problem). */
 const STRENGTH_SIGMA = 100;
 const KPA_PER_PSF = 0.04788026;
 
@@ -189,18 +182,85 @@ function soilClass(name: string, model: MaterialModel | undefined): SoilClass {
   }
 }
 
+/**
+ * One number for the strength of a material, in the problem's stress unit,
+ * to rank the materials of a class (only the order within a problem is
+ * used). Drained models: the shear strength τ = c′ + σ·tan φ′ at the normal
+ * stress σ (STRENGTH_SIGMA), which orders c′ = 0 soils by φ′ and is Su for
+ * a Mohr-Coulomb soil with φ = 0. Undrained models: Su at the reference or
+ * top of the definition, the increase with depth left out. SHANSEP: its
+ * ratio times σ, which orders SHANSEP soils by the ratio and compares them
+ * with a plain Su (or a drained τ) of the same class. Rock that no surface
+ * may cross: the strongest. A strength above the water line is left out.
+ */
+function strengthOf(model: MaterialModel | undefined, sigma: number): number {
+  const tau = (c: number, phi: number) => c + sigma * Math.tan((phi * Math.PI) / 180);
+  switch (model?.kind) {
+    case "mohr-coulomb":
+    case "anisotropic-function":
+      return tau(model.cohesion, model.frictionAngle);
+    case "spatial-mohr-coulomb":
+      return model.dataPoints.reduce((sum, p) => sum + tau(p[2], p[3]), 0) / Math.max(model.dataPoints.length, 1);
+    case "undrained":
+      return model.undrainedShearStrength;
+    case "s-f-depth":
+    case "s-f-datum":
+      return model.suRef;
+    case "shansep":
+      return model.ratio * sigma;
+    case "lime-cement-columns":
+      return (1 - model.areaRatio) * model.soilSu + model.areaRatio * model.columnSu;
+    case "hoek-brown":
+      return model.ucs;
+    case "shear-normal": {
+      // τ at σ, interpolated in the (σ, τ) table, constant beyond its ends.
+      const pts = [...model.points].sort((a, b) => a[0] - b[0]);
+      if (!pts.length) return NaN;
+      if (sigma <= pts[0][0]) return pts[0][1];
+      for (let k = 1; k < pts.length; k++) {
+        const [s0, t0] = pts[k - 1];
+        const [s1, t1] = pts[k];
+        if (sigma <= s1) return s1 === s0 ? t1 : t0 + ((t1 - t0) * (sigma - s0)) / (s1 - s0);
+      }
+      return pts[pts.length - 1][1];
+    }
+    case "impenetrable":
+    case "high-strength":
+      return Infinity;
+    default:
+      return NaN;
+  }
+}
+
+/**
+ * The tints of the materials of one class, from their strengths: the
+ * weakest lightest (TINT_LIGHTER), the strongest darkest (TINT_DARKER), the
+ * others evenly between by rank, so that equal strengths get the same tint.
+ * A single strength (one material, or several equally strong) or an unknown
+ * one gets 0, the class's own color. Positive lightens, negative darkens.
+ */
+function tintsByStrength(strengths: number[]): number[] {
+  // Four significant digits, so that strengths equal on paper rank equal.
+  const key = (s: number) => (Number.isFinite(s) ? Number(s.toPrecision(4)) : s);
+  const levels = [...new Set(strengths.map(key).filter((s) => !Number.isNaN(s)))].sort((a, b) => a - b);
+  return strengths.map((s) => {
+    const k = levels.indexOf(key(s));
+    return levels.length < 2 || k < 0 ? 0 : TINT_LIGHTER - ((TINT_LIGHTER + TINT_DARKER) * k) / (levels.length - 1);
+  });
+}
+
 const mix = (c: RGB, t: number): RGB => c.map((v) => Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t))) as RGB;
 
-/** Each material's fill: its class color, in tints from lighter to darker when a problem has several of a class. */
-function materialFills(materials: { name: string; model?: MaterialModel }[]): Map<string, RGB> {
+/** Each material's fill: its class color, in tints by strength when a problem has several of a class. */
+function materialFills(materials: { name: string; model?: MaterialModel }[], units: Units): Map<string, RGB> {
+  const sigma = units.stress === "psf" ? STRENGTH_SIGMA / KPA_PER_PSF : STRENGTH_SIGMA;
   const classes = materials.map((m) => soilClass(m.name, m.model));
   const out = new Map<string, RGB>();
-  materials.forEach((m, i) => {
-    const same = classes.filter((c) => c === classes[i]).length;
-    const k = classes.slice(0, i).filter((c) => c === classes[i]).length;
-    const base = SOIL_CLASSES.find((c) => c.id === classes[i])!.fill;
-    out.set(m.name, same === 1 ? base : mix(base, TINT_LIGHTER - ((TINT_LIGHTER + TINT_DARKER) * k) / (same - 1)));
-  });
+  for (const cls of SOIL_CLASSES) {
+    const members = materials.filter((_, i) => classes[i] === cls.id);
+    const tints = tintsByStrength(members.map((m) => strengthOf(m.model, sigma)));
+    members.forEach((m, k) => out.set(m.name, mix(cls.fill, tints[k])));
+  }
   return out;
 }
 
@@ -534,7 +594,7 @@ function figure(def: SlopeDefinition, slope: Slope, plane: Plane | null, label: 
     canon.coordinates.map((c) => c[1]),
     (canon.materialBoundaries ?? []).map((b) => b.coordinates),
   );
-  const fills = materialFills(canon.materials);
+  const fills = materialFills(canon.materials, units);
   for (const face of faces) {
     const fxs = face.outer.map((c) => c[0]);
     const fys = face.outer.map((c) => c[1]);
@@ -1185,8 +1245,8 @@ interface ComparisonRows {
 
 /**
  * One row per analysis: cSlope's value, each published value for the same
- * method with its source and the difference (sub-rows when there are
- * several), and the other programs' range with the difference from its
+ * method with its source and the deviation (sub-rows when there are
+ * several), and the other programs' range with the deviation from its
  * midpoint. Published values whose method cSlope does not have follow, not
  * compared.
  */
@@ -1242,10 +1302,10 @@ const COMPARISON_COLUMNS: Column[] = [
   { title: "Analysis", width: 42 },
   { title: "cSlope", width: 14, align: "right" },
   { title: "Published", width: 17, align: "right" },
-  { title: "Source", width: 47 },
-  { title: "Diff.", width: 17, align: "right" },
-  { title: "Other programs", width: 23, align: "right" },
-  { title: "Diff.", width: 14, align: "right" },
+  { title: "Source", width: 45 },
+  { title: "Dev.", width: 17, align: "right" },
+  { title: "Other programs", width: 25, align: "right" },
+  { title: "Dev.", width: 14, align: "right" },
 ];
 
 // ── Cover ────────────────────────────────────────────────────────────
@@ -1336,19 +1396,7 @@ paragraph(
 y += 2;
 heading("How to read the tables", 2, { toc: false, keep: 12 });
 paragraph(
-  "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Diff. is cSlope's value minus the reference, in percent of the reference: the lower end of a published range, the midpoint of the programs' range, as in the statistics of section 2. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
-);
-y += 2;
-heading("Soil colors", 2, { toc: false, keep: 50 });
-paragraph(
-  "The figures and material tables color each material by its kind of soil, the same in every problem. The class comes from the material's name, and from its strength model where the name does not tell. Where a problem has several materials of one class, they are drawn in tints of its color, lighter to darker in the order of the material table.",
-);
-table(
-  [
-    { title: "Class", width: 62 },
-    { title: "Rule", width: CONTENT_W - 62 },
-  ],
-  SOIL_CLASSES.map((c) => [{ text: c.label, swatch: c.fill }, c.rule]),
+  "In section 3 and in appendix A each row is one cSlope analysis (a method on a surface or a search): cSlope's factor of safety, each value the literature publishes for the same method with its source, and the range of the other programs' results. Dev. is the deviation, cSlope's value minus the reference in percent of the reference, as in the statistics of section 2; the reference of a published range is its lower end, that of the programs' range its midpoint. A finite element result between a published pair of bounds is marked \"in bounds\". A published value whose method cSlope does not have is listed with \"–\" in the Analysis column and is not compared. A value marked * is disputed: it is shown with the reason and left out of the statistics.",
 );
 
 // ── 2 Summary ────────────────────────────────────────────────────────
@@ -1395,7 +1443,7 @@ paragraph(
     "A check agrees when cSlope is within 1 % of the reference on a given surface and 2 % for a search, plus half a unit of the reference's last printed digit, plus 1 % where the input or the reference was read from a figure, plus 1 % where the surface ends in a vertical or near-vertical scarp; 5 % against a finite element value. " +
     `The finite element references have their own rule (section 4)${nFemDisputed ? `; ${count(nFemDisputed, "disputed reference is", "disputed references are")} shown there and not counted` : ""}. ` +
     `The ${reliabilityRows.length} reliability indices and probabilities of failure of the probabilistic problems are compared with absolute tolerances: ${reliabilityRows.filter((x) => x.pass).length} of ${reliabilityRows.length} agree. ` +
-    "Section 3 and appendix A show every difference but do not mark single results as passed or failed.",
+    "Section 3 and appendix A show every deviation but do not mark single results as passed or failed.",
 );
 y += 2;
 heading("2.2  Distribution of the deviations", 2, { toc: true, bookmarkUnder: SUMMARY, keep: 115 });
@@ -1515,7 +1563,7 @@ caseResults.forEach((r, i) => {
   y += 2;
   const first = analysisRows(r)[0];
   const surfaceName = c.surface === "fixed" ? (nonCircular ? "analyzed surface" : "analyzed circle") : nonCircular ? "critical surface" : "critical circle";
-  const fills = materialFills(c.definition.materials);
+  const fills = materialFills(c.definition.materials, units);
   figure(
     c.definition,
     r.slope,
@@ -1565,7 +1613,7 @@ caseResults.forEach((r, i) => {
         { title: "Published by", width: 34 },
         { title: "Published", width: 19, align: "right" },
         { title: "cSlope", width: 17, align: "right" },
-        { title: "Difference", width: 19, align: "right" },
+        { title: "Deviation", width: 19, align: "right" },
         { title: "Tolerance", width: 17, align: "right" },
         { title: "", width: CONTENT_W - 162, align: "center" },
       ],
@@ -1586,7 +1634,7 @@ caseResults.forEach((r, i) => {
     if (!reliability.length) continue;
     y += 1;
     paragraph(
-      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}).${PUBLIC ? "" : " Differences in β and Pf are absolute."}`,
+      `Probabilistic analysis on the same surface: ${rc.variables.length} normal variables (${rc.correlations?.length ? rc.correlations.map((k) => `ρ = ${k.rho}`).join(", ") + " between pairs" : "independent"}); Taylor series (mean ± σ) and Monte Carlo with ${rc.samples} samples (seed ${rc.seed}).${PUBLIC ? "" : " Deviations in β and Pf are absolute."}`,
       8.5,
     );
     if (PUBLIC) {
@@ -1611,7 +1659,7 @@ caseResults.forEach((r, i) => {
           { title: "Published by", width: 34 },
           { title: "Published", width: 19, align: "right" },
           { title: "cSlope", width: 17, align: "right" },
-          { title: "Difference", width: 19, align: "right" },
+          { title: "Deviation", width: 19, align: "right" },
           { title: "Tolerance", width: 17, align: "right" },
           { title: "", width: CONTENT_W - 162, align: "center" },
         ],
@@ -1699,7 +1747,7 @@ if (FEM_CASES.length && committed) {
           { title: "Flow rule", width: 23 },
           { title: "Elements: F", width: 33 },
           { title: "cSlope", width: 13, align: "right" },
-          { title: "Diff.", width: CONTENT_W - 158, align: "right" },
+          { title: "Dev.", width: CONTENT_W - 158, align: "right" },
         ]
       : [
           { title: "Problem", width: 14 },
@@ -1708,7 +1756,7 @@ if (FEM_CASES.length && committed) {
           { title: "Flow rule", width: 23 },
           { title: "Elements: F", width: 28 },
           { title: "cSlope", width: 12, align: "right" },
-          { title: "Diff.", width: 14, align: "right" },
+          { title: "Dev.", width: 14, align: "right" },
           { title: "", width: CONTENT_W - 155, align: "center" },
         ],
     rows,
@@ -1750,9 +1798,9 @@ y += 1;
       { title: "cSlope", width: 12, align: "right" },
       { title: "Published", width: 14, align: "right" },
       { title: "Source", width: 41 },
-      { title: "Diff.", width: 14, align: "right" },
+      { title: "Dev.", width: 14, align: "right" },
       { title: "Other programs", width: 21, align: "right" },
-      { title: "Diff.", width: 13, align: "right" },
+      { title: "Dev.", width: 13, align: "right" },
       { title: "Page", width: CONTENT_W - 164, align: "right" },
     ],
     rows,
@@ -1794,7 +1842,7 @@ if (!PUBLIC) {
       { title: "Check", width: 40 },
       { title: "Published", width: 18, align: "right" },
       { title: "cSlope", width: 15, align: "right" },
-      { title: "Diff.", width: 15, align: "right" },
+      { title: "Dev.", width: 15, align: "right" },
       { title: "", width: CONTENT_W - 160, align: "center" },
     ],
     [
