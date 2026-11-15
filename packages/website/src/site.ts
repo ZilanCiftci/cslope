@@ -2,10 +2,10 @@
 export const SITE = {
   name: "cSlope",
   /** The home page's title after the name. */
-  tagline: "Open source slope stability software",
+  tagline: "Free, open source slope stability software",
   /** The home page's description in search results and link previews. */
   metaDescription:
-    "Open source slope stability software. Limit equilibrium analysis by Bishop, Janbu and Morgenstern-Price on circular and non-circular slip surfaces.",
+    "Free, open source slope stability software. Limit equilibrium analysis by Bishop, Janbu and Morgenstern-Price on circular and non-circular slip surfaces.",
   description:
     "Open source limit equilibrium software for slope stability analysis.",
   github: "https://github.com/ZilanCiftci/cslope",
