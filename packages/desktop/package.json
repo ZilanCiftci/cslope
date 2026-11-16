@@ -22,7 +22,7 @@
     "@cslope/engine": "workspace:*",
     "chroma-js": "^3.2.0",
     "jspdf": "^4.2.1",
-    "lucide-react": "^0.575.0",
+    "lucide-react": "^1.72.0",
     "pdfjs-dist": "6.5.438",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
