@@ -46,7 +46,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
     "globals": "^17.14.0",
-    "jsdom": "^28.0.0",
+    "jsdom": "^31.0.1",
     "playwright": "^1.65.0",
     "rehype-katex": "^7.0.1",
     "rehype-slug": "^6.0.0",
