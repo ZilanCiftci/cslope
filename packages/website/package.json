@@ -53,7 +53,7 @@
     "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "remark-mdx-frontmatter": "^5.2.0",
+    "remark-mdx-frontmatter": "^6.0.0",
     "rollup-plugin-license": "3.7.1",
     "sharp": "^0.35.5",
     "tailwindcss": "^4.3.4",
