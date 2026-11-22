@@ -4,6 +4,7 @@ import type { AppState, ViewLock } from "./types";
 import { isProjectDirty, markProjectClean, withoutPaperViewport } from "./unsaved";
 import { marksClearOfTitleBlock, modelViewLock, sameViewLock, viewLockContains } from "../features/view/viewLock";
 import { paperContentOf } from "../features/view/extents";
+import { benchmarkSheetViewLock, isBenchmarkSheet } from "./benchmark-sheet";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createCanvasSelectionSlice, selectionMirror } from "./slices/canvasSelectionSlice";
@@ -185,7 +186,20 @@ useAppStore.subscribe((state, prev) => {
     const automatic = (l: ViewLock) =>
       sameViewLock(l, modelViewLock(prevContent, prev.resultViewSettings)) ||
       sameViewLock(l, modelViewLock({ ...prevContent, marks: [] }, prev.resultViewSettings));
-    if (lock && marks.length > 0 && !marksClearOfTitleBlock(lock, state.resultViewSettings.annotations, marks) && automatic(lock)) {
+    let refit: ViewLock | null = null;
+    if (isBenchmarkSheet(state.resultViewSettings.annotations)) {
+      // A benchmark's sheet (Help › Benchmarks) has its own frame, the model
+      // low under the title block and the material table: refit it the same
+      // way, with the marks clear of both.
+      const fit = (s: AppState, c: typeof content) => benchmarkSheetViewLock(s, c, s.resultViewSettings);
+      const next = fit(state, content);
+      const wasFitted = (l: ViewLock) =>
+        [fit(prev, prevContent), fit(prev, { ...prevContent, marks: [] })].some((f) => f !== null && sameViewLock(l, f));
+      if (lock && next && !sameViewLock(lock, next) && wasFitted(lock)) refit = next;
+    } else if (lock && marks.length > 0 && !marksClearOfTitleBlock(lock, state.resultViewSettings.annotations, marks) && automatic(lock)) {
+      refit = modelViewLock(content, state.resultViewSettings);
+    }
+    if (refit) {
       const history = useAppStore.temporal.getState();
       const tracking = history.isTracking;
       // Running an analysis is not an unsaved change: a clean project
@@ -193,7 +207,7 @@ useAppStore.subscribe((state, prev) => {
       const wasClean = !isProjectDirty(prev);
       history.pause();
       try {
-        state.setResultViewSettings({ viewLock: modelViewLock(content, state.resultViewSettings) });
+        state.setResultViewSettings({ viewLock: refit });
       } finally {
         if (tracking) history.resume();
       }
