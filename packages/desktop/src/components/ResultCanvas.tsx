@@ -24,6 +24,7 @@ import {
   type CanvasWheelEvent,
 } from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
+import { pageTitleLine } from "../features/export/page-title";
 import { PAPER_ZOOM_MAX, PAPER_ZOOM_MIN,
   ARROW_HEIGHT_PX,
   RULER_SIZE_PX,
@@ -106,6 +107,54 @@ export function ResultCanvas() {
   // Imported head and reference lines, drawn as on the edit canvas.
   const waternet = useAppStore((s) => s.waternet);
   const backgrounds = useAppStore((s) => s.backgrounds);
+  // Page 1's title line, previewed in the sheet's top margin as the PDF writes it.
+  const customSearchPlanes = useAppStore((s) => s.customSearchPlanes);
+  const earlierStage = useAppStore((s) => s.earlierStage);
+  const models = useAppStore((s) => s.models);
+  const activeModelId = useAppStore((s) => s.activeModelId);
+  const pageTitle = useMemo(
+    () =>
+      pageTitleLine({
+        result,
+        resultViewSettings,
+        options,
+        analysisLimits,
+        orientation,
+        piezometricLine,
+        materials,
+        udls,
+        lineLoads,
+        reinforcements,
+        piles,
+        customPlanesOnly,
+        customSearchPlanes,
+        waternet,
+        earlierStage,
+        projectInfo,
+        models,
+        activeModelId,
+      }),
+    [
+      result,
+      resultViewSettings,
+      options,
+      analysisLimits,
+      orientation,
+      piezometricLine,
+      materials,
+      udls,
+      lineLoads,
+      reinforcements,
+      piles,
+      customPlanesOnly,
+      customSearchPlanes,
+      waternet,
+      earlierStage,
+      projectInfo,
+      models,
+      activeModelId,
+    ],
+  );
   const {
     setAnalysisLimits,
     updateUdl,
@@ -365,6 +414,7 @@ export function ResultCanvas() {
       w: canvasSize.width,
       h: canvasSize.height,
       paperBottomReserve: SCREEN_PAPER_BOTTOM_RESERVE_PX,
+      pageTitle,
       mode,
       result,
       resultViewSettings,
@@ -426,6 +476,7 @@ export function ResultCanvas() {
       parameters,
       options,
       customPlanesOnly,
+      pageTitle,
     ],
   );
 

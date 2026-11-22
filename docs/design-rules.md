@@ -69,7 +69,7 @@ Short rules for a uniform look and feel in packages/desktop. Follow them for eve
 - Placed images and PDFs are drawn inverted (with `lighten`) in the dark theme, with an "Invert in dark theme" switch per drawing, on by default. DWG and DXF drawings use the theme's drawing ink.
 - Selection on the canvas: the accent color, handles as round accent dots with a ring (8–10 px); locked objects show a padlock on hover. Click selects, then drag moves; nothing moves on the first click.
 - Highlights from a window (a slice hovered in the Results plot, a region picked in Assign materials) are an accent fill at 35 % with a 1.5 px accent outline, and vanish when the window closes.
-- The result view and the PDF draw the same layers in the same order; what is on screen is what prints. Exceptions for reading on screen: the material table's text is at least 9 px and the color bar's at least 10 px (the PDF keeps their paper size). Tables and plates on the sheet have an opaque fill.
+- The result view and the PDF draw the same layers in the same order; what is on screen is what prints. The sheet in the result view is the PDF page at the screen's zoom: every size on it (text, the material table, the color bar, the F label, ticks and their labels, line widths, symbols) is in paper units, scaled by one factor, with no minimum pixel size; the zoom control enlarges small text. The view also shows the page's title line in the top margin when the PDF prints it. Sizes the PDF gives in mm are constants in `features/rendering/style-spec.ts`, used by both. Tables and plates on the sheet have an opaque fill.
 
 ## Accessibility and tests
 

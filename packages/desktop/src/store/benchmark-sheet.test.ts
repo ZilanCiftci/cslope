@@ -48,8 +48,8 @@ describe("the sheet of a benchmark opened from Help › Benchmarks", () => {
     const tableY = (id: string) => models.find((m) => m.name.startsWith(`${id} `))!.resultViewSettings!.annotations.find((a) => a.type === "material-table")!.y;
     // V023's block is narrow enough for the table beside it.
     expect(tableY("V023")).toBe(0.065);
-    // V038b's two-line title reaches under the table's place.
-    expect(tableY("V038b")).toBeGreaterThan(0.2);
+    // V021a's reference line runs under the table's place (the table at its paper size, as the PDF draws it; V038b's now fits beside its title).
+    expect(tableY("V021a")).toBeGreaterThan(0.2);
     expect(models.every((m) => isBenchmarkSheet(m.resultViewSettings!.annotations))).toBe(true);
   });
 

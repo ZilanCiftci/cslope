@@ -95,6 +95,28 @@ import {
   CENTER_DOT_RADIUS_PX,
   CRITICAL_SURFACE_LINE_WIDTH_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
+  MATERIAL_TABLE_RULE_MM,
+  MATERIAL_TABLE_SWATCH_BORDER_MM,
+  COLOR_BAR_LINE_MM,
+  SLIP_SURFACE_LINE_MM,
+  FOS_LABEL_FONT_PT,
+  FOS_LABEL_OFFSET_MM,
+  FOS_LABEL_PLATE_BOTTOM_MM,
+  FOS_LABEL_PLATE_SIDE_MM,
+  FOS_LABEL_PLATE_TOP_MM,
+  FOS_LABEL_RAISE_MM,
+  FOS_LABEL_STACK_GAP_MM,
+  FOS_LABEL_UNDERLINE_MM,
+  PLOT_FRAME_LINE_MM,
+  RULER_COLOR,
+  RULER_FONT_PT,
+  RULER_LABEL_GAP_MM,
+  RULER_MINOR_TICK_LINE_MM,
+  RULER_MINOR_TICK_MM,
+  RULER_TICK_LINE_MM,
+  RULER_TICK_MM,
+  RULER_X_LABEL_BASELINE_MM,
+  RULER_Y_LABEL_BASELINE_MM,
 } from "../rendering/style-spec";
 import { fosLabelScale, fosLabelText, pdfScaled } from "../results/layer-styles";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
@@ -203,9 +225,8 @@ export function drawRulerFrame(
   gridSpacing?: number,
   minorTicks?: number,
 ) {
-  const TICK_LEN = 2.0;
-  const MINI_TICK = 1.0;
-  const FONT_SIZE = 9;
+  const TICK_LEN = RULER_TICK_MM;
+  const MINI_TICK = RULER_MINOR_TICK_MM;
 
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
   const worldPerMm = 1 / (viewScale * tf.mmPerPx);
@@ -225,10 +246,10 @@ export function drawRulerFrame(
   );
   const minorTickCount = minorTicks ?? 0;
 
-  pdf.setFontSize(FONT_SIZE);
+  pdf.setFontSize(RULER_FONT_PT);
   setSansFont(pdf, "normal");
-  pdf.setTextColor(50, 50, 50);
-  pdf.setDrawColor(50, 50, 50);
+  pdf.setTextColor(...RULER_COLOR.rgb);
+  pdf.setDrawColor(...RULER_COLOR.rgb);
 
   const ifx = innerFrame.x;
   const ify = innerFrame.y;
@@ -240,10 +261,10 @@ export function drawRulerFrame(
   for (let gx = xStart; gx <= worldRight; gx += rulerStep) {
     const [px] = tf.worldToPdf(gx, 0);
     if (px < ifx || px > ifx + ifw) continue;
-    pdf.setLineWidth(0.2);
+    pdf.setLineWidth(RULER_TICK_LINE_MM);
     pdf.line(px, btmY, px, btmY + TICK_LEN);
     const label = formatRulerLabel(gx, rulerStep);
-    pdf.text(label, px, btmY + TICK_LEN + FONT_SIZE * 0.35 + 1.0, {
+    pdf.text(label, px, btmY + TICK_LEN + RULER_X_LABEL_BASELINE_MM, {
       align: "center",
     });
   }
@@ -256,7 +277,7 @@ export function drawRulerFrame(
       if (px < ifx || px > ifx + ifw) continue;
       if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001)
         continue;
-      pdf.setLineWidth(0.15);
+      pdf.setLineWidth(RULER_MINOR_TICK_LINE_MM);
       pdf.line(px, btmY, px, btmY + MINI_TICK);
     }
   }
@@ -265,10 +286,10 @@ export function drawRulerFrame(
   for (let gy = yStart; gy <= worldTop; gy += rulerStep) {
     const [, py] = tf.worldToPdf(0, gy);
     if (py < ify || py > ify + ifh) continue;
-    pdf.setLineWidth(0.2);
+    pdf.setLineWidth(RULER_TICK_LINE_MM);
     pdf.line(ifx, py, ifx - TICK_LEN, py);
     const label = formatRulerLabel(gy, rulerStep);
-    pdf.text(label, ifx - TICK_LEN - 1.0, py + FONT_SIZE * 0.12, {
+    pdf.text(label, ifx - TICK_LEN - RULER_LABEL_GAP_MM, py + RULER_Y_LABEL_BASELINE_MM, {
       align: "right",
     });
   }
@@ -281,13 +302,13 @@ export function drawRulerFrame(
       if (py < ify || py > ify + ifh) continue;
       if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001)
         continue;
-      pdf.setLineWidth(0.15);
+      pdf.setLineWidth(RULER_MINOR_TICK_LINE_MM);
       pdf.line(ifx, py, ifx - MINI_TICK, py);
     }
   }
 
   pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.4);
+  pdf.setLineWidth(PLOT_FRAME_LINE_MM);
   pdf.rect(ifx, ify, ifw, ifh, "S");
 }
 
@@ -1002,7 +1023,7 @@ export function drawSlipSurfaces(
 
     const style = rvs.layerStyles?.surfaces;
     pdf.setDrawColor(...color);
-    pdf.setLineWidth(pdfScaled(0.15, style?.width, SLIP_SURFACE_LINE_WIDTH_PX));
+    pdf.setLineWidth(pdfScaled(SLIP_SURFACE_LINE_MM, style?.width, SLIP_SURFACE_LINE_WIDTH_PX));
     setOpacity(pdf, 1, style?.opacity ?? SLIP_SURFACE_OPACITY);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
@@ -1239,12 +1260,24 @@ export function fosLabelLayoutPdf(
   const [ccx, ccy] = tf.worldToPdf(...fosLabelAnchor(surf));
   const text = fosLabelText(surf.fos, style);
   const k = fosLabelScale(style);
-  const labelX = ccx + 3;
+  const labelX = ccx + FOS_LABEL_OFFSET_MM;
   const y = ccy + dy;
-  const font = { size: 10 * k, family: mapFont(style?.fontFamily ?? "sans-serif"), style: style?.bold === false ? ("normal" as const) : ("bold" as const) };
+  const font = { size: FOS_LABEL_FONT_PT * k, family: mapFont(style?.fontFamily ?? "sans-serif"), style: style?.bold === false ? ("normal" as const) : ("bold" as const) };
   setFosLabelFont(pdf, font);
   const width = pdf.getTextWidth(text);
-  return { text, font, labelX, y, width, box: { left: labelX - 0.5, top: y - 4.5 * k, right: labelX + width + 0.5, bottom: y + 1 * k } };
+  return {
+    text,
+    font,
+    labelX,
+    y,
+    width,
+    box: {
+      left: labelX - FOS_LABEL_PLATE_SIDE_MM,
+      top: y - FOS_LABEL_PLATE_TOP_MM * k,
+      right: labelX + width + FOS_LABEL_PLATE_SIDE_MM,
+      bottom: y + FOS_LABEL_PLATE_BOTTOM_MM * k,
+    },
+  };
 }
 
 function setFosLabelFont(pdf: jsPDF, font: FosLabelPdf["font"]) {
@@ -1261,11 +1294,11 @@ function drawFosLabelPdf(pdf: jsPDF, label: FosLabelPdf, rgb: [number, number, n
   pdf.rect(box.left, box.top, box.right - box.left, box.bottom - box.top, "F");
 
   pdf.setTextColor(...rgb);
-  pdf.text(text, labelX, y - 1 * (label.font.size / 10));
+  pdf.text(text, labelX, y - FOS_LABEL_RAISE_MM * (label.font.size / FOS_LABEL_FONT_PT));
 
   pdf.setDrawColor(...rgb);
-  pdf.setLineWidth(0.2);
-  pdf.line(labelX - 0.2, y, labelX + width + 0.2, y);
+  pdf.setLineWidth(FOS_LABEL_UNDERLINE_MM);
+  pdf.line(labelX - FOS_LABEL_UNDERLINE_MM, y, labelX + width + FOS_LABEL_UNDERLINE_MM, y);
 }
 
 /**
@@ -1322,7 +1355,7 @@ export function drawCustomSurfaceLabels(pdf: jsPDF, tf: PdfTransform, result: An
   const boxes: Box[] = [];
   for (const surf of surfaces) {
     let label = fosLabelLayoutPdf(pdf, tf, surf, 0, style);
-    const step = label.box.bottom - label.box.top + 0.5;
+    const step = label.box.bottom - label.box.top + FOS_LABEL_STACK_GAP_MM;
     for (let n = 1; n <= 20 && placed.some((b) => boxesOverlap(label.box, b, 0)); n++) {
       label = fosLabelLayoutPdf(pdf, tf, surf, n * step, style);
     }
@@ -1727,7 +1760,7 @@ function drawColorBarAnnotation(
   }
 
   pdf.setDrawColor(...MARKER_COLOR.rgb);
-  pdf.setLineWidth(0.2);
+  pdf.setLineWidth(COLOR_BAR_LINE_MM);
   pdf.rect(x, barY, barW, barH, "S");
 
   pdf.setFontSize(labelPt);
@@ -1742,7 +1775,7 @@ function drawColorBarAnnotation(
     const ty = barY + frac * barH;
 
     pdf.setDrawColor(...MARKER_COLOR.rgb);
-    pdf.setLineWidth(0.2);
+    pdf.setLineWidth(COLOR_BAR_LINE_MM);
     pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
 
     pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE), labelX, ty, {
@@ -1822,7 +1855,7 @@ function drawTablePdf(
         const swatchY = ry + (rowH - swatchW) / 2;
         pdf.rect(swatchX, swatchY, swatchW, swatchW, "F");
         pdf.setDrawColor(102, 102, 102);
-        pdf.setLineWidth(0.1);
+        pdf.setLineWidth(MATERIAL_TABLE_SWATCH_BORDER_MM);
         pdf.rect(swatchX, swatchY, swatchW, swatchW, "S");
       }
       if (c === 0) {
@@ -1841,7 +1874,7 @@ function drawTablePdf(
   }
 
   pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(0.2);
+  pdf.setLineWidth(MATERIAL_TABLE_RULE_MM);
   pdf.line(x, y + headerH, x + totalW, y + headerH);
   let rule = y + headerH;
   for (let r = 0; r < rows.length - 1; r++) {

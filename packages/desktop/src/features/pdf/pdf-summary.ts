@@ -3,6 +3,7 @@ import type { ProjectInfo } from "../../store/types";
 import type { SummarySection } from "../export/analysisSummary";
 import { setSansFont } from "./pdf-fonts";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
+import { PAGE_TITLE_GAP_MM, PAGE_TITLE_MIN_ROOM_MM, PAGE_TITLE_PT, PAGE_TITLE_RAISE_MM } from "../rendering/style-spec";
 
 /** Header of the summary pages. */
 export interface SummaryHeader {
@@ -58,10 +59,10 @@ export function drawingTitleParts(sections: SummarySection[], header: SummaryHea
 export function drawOutOfDateNote(pdf: jsPDF, frame: { left: number; top: number; width: number }): number {
   const right = frame.left + frame.width;
   setSansFont(pdf, "bold");
-  pdf.setFontSize(BODY_PT);
+  pdf.setFontSize(PAGE_TITLE_PT);
   pdf.setTextColor(0, 0, 0);
   const [line] = pdf.splitTextToSize(RESULT_OUT_OF_DATE_NOTE, frame.width) as string[];
-  pdf.text(line, right, frame.top - 2.5, { align: "right" });
+  pdf.text(line, right, frame.top - PAGE_TITLE_RAISE_MM, { align: "right" });
   return right - pdf.getTextWidth(line);
 }
 
@@ -77,21 +78,21 @@ export function drawDrawingTitle(
 ): void {
   const { name, result } = drawingTitleParts(sections, header);
   if (!name && !result) return;
-  const end = frame.right !== undefined ? frame.right - 4 : frame.left + frame.width;
-  const y = frame.top - 2.5;
-  pdf.setFontSize(BODY_PT);
+  const end = frame.right !== undefined ? frame.right - PAGE_TITLE_GAP_MM : frame.left + frame.width;
+  const y = frame.top - PAGE_TITLE_RAISE_MM;
+  pdf.setFontSize(PAGE_TITLE_PT);
   pdf.setTextColor(0, 0, 0);
   let x = frame.left;
   if (name) {
     setSansFont(pdf, "bold");
     pdf.text(name, x, y);
-    x += pdf.getTextWidth(name) + 4;
+    x += pdf.getTextWidth(name) + PAGE_TITLE_GAP_MM;
   }
   if (result) {
     setSansFont(pdf, "normal");
     const room = end - x;
     // (no room left beside a long name and the out-of-date note: the summary pages carry it)
-    if (room >= 10) {
+    if (room >= PAGE_TITLE_MIN_ROOM_MM) {
       const [line] = pdf.splitTextToSize(result, room) as string[];
       pdf.text(line ?? result, x, y);
     }

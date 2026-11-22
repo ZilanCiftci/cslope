@@ -52,10 +52,9 @@ const SIDE_GAP = 0.015;
 const FOS_TEXT = "0.000";
 
 /**
- * Sheet scale (px per annotation px) at which the table is measured: a
- * sheet 600 px tall, about what a full-HD screen shows. The canvas draws
- * the table's text no smaller than 9 px, so there the table is half as
- * large again as in the PDF (and larger still on a smaller sheet).
+ * Sheet scale (px per annotation px) at which the table is measured. The
+ * view draws the table at its paper size, as the PDF does, so any scale
+ * gives the same box on the paper.
  */
 const TABLE_SHEET_SCALE = 1;
 
