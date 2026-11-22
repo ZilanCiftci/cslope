@@ -515,6 +515,7 @@ export interface ResultViewSettings {
   showSlices: boolean;
   showFosLabel: boolean;
   showCentreMarker: boolean;
+  /** Draw the sheet's grid (Layers › Grid; its style in `layerStyles.grid`). */
   showGrid: boolean;
   showSoilColor?: boolean;
   /** Shade the plastic zone of a finite element result (default: shown). */
@@ -528,7 +529,11 @@ export interface ResultViewSettings {
   showCustomSurfaces?: boolean;
   /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
   gridSpacing?: number;
-  /** Grid line spacing in world units. undefined or 0 = the tick spacing. */
+  /**
+   * Grid line spacing in world units (Layers › Grid › Spacing). undefined
+   * or 0 = the tick spacing; without a tick spacing of the user's, the
+   * labelled ticks follow it (utils/ruler.ts sheetTickStep).
+   */
   gridLineSpacing?: number;
   /** Number of minor tick subdivisions between major ticks. 0 = none. */
   minorTicks?: number;
@@ -577,6 +582,12 @@ export interface ResultLayerStyles {
   slices?: { color?: string; width?: number };
   /** size: the radius of the center dot (px); radiusLines: the lines to the entry and exit. */
   center?: { color?: string; size?: number; radiusLines?: boolean };
+  /**
+   * The sheet's grid: its lines' color and width (px, as the other layers'
+   * widths) and, with `subdivisions` (2 to 10), minor lines that divide
+   * each grid interval, `minorWidth` wide (px), in the same color.
+   */
+  grid?: { color?: string; width?: number; subdivisions?: number; minorWidth?: number };
   /** fontSize in px at paper zoom 1; decimals of the factor of safety. */
   fosLabel?: { fontSize?: number; fontFamily?: string; color?: string; bold?: boolean; decimals?: number };
 }

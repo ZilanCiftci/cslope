@@ -27,6 +27,7 @@ import {
   SLIP_SURFACE_OPACITY,
   CUSTOM_SURFACE_COLOR,
   CRITICAL_SURFACE_COLOR,
+  GRID_COLOR,
   UDL_LOAD_COLOR,
   FOS_LABEL_FONT_PT,
   MM_PER_PT,
@@ -1585,11 +1586,13 @@ describe("drawCanvas — result mode", () => {
         -(cy - h / 2) / scale + CY,
       ];
       const rec = drawResult({ worldToCanvas: w2c, canvasToWorld: c2w, viewScale: scale, resultViewSettings: rvs({ showGrid: true }) });
+      // (the sheet's grid: GRID_COLOR, as the PDF; its lines in one path, a moveTo and a lineTo each)
       const gridX = rec
-        .strokes("rgba(0, 0, 0, 0.1)")
-        .map(pathPoints)
-        .filter(([a, b]) => a[0] === b[0])
-        .map(([a]) => a[0]);
+        .strokes(GRID_COLOR.hex)
+        .flatMap((p) => {
+          const pts = pathPoints(p);
+          return pts.flatMap((a, i) => (i % 2 === 0 && pts[i + 1] && a[0] === pts[i + 1][0] ? [a[0]] : []));
+        });
       const tickX = rec.texts.filter((t) => t.state.textAlign === "center" && /^-?\d+(\.\d+)?$/.test(t.text)).map((t) => t.x);
       expect(tickX.length, `scale ${scale}`).toBeGreaterThan(1);
       for (const x of tickX) {
@@ -1601,8 +1604,8 @@ describe("drawCanvas — result mode", () => {
   it("hides the grid when switched off", () => {
     const on = drawResult({ resultViewSettings: rvs({ showGrid: true }) });
     const off = drawResult({ resultViewSettings: rvs({ showGrid: false }) });
-    expect(on.strokes("rgba(0, 0, 0, 0.1)").length).toBeGreaterThan(0);
-    expect(off.strokes("rgba(0, 0, 0, 0.1)")).toHaveLength(0);
+    expect(on.strokes(GRID_COLOR.hex).length).toBeGreaterThan(0);
+    expect(off.strokes(GRID_COLOR.hex)).toHaveLength(0);
   });
 
   it("renders text annotations with resolved placeholders, one line per row", () => {

@@ -32,8 +32,10 @@ import {
   clampMinorTicks,
   computeRulerStep,
   formatRulerLabel,
-  resolveTickStep,
+  sheetGridStep,
+  sheetTickStep,
 } from "../../utils/ruler";
+import { gridLinePositions, sheetGridStyle } from "../rendering/sheet-grid";
 import {
   buildMaterialTableData,
   computePaperFrame,
@@ -936,10 +938,9 @@ export function drawCanvas(
   const baseLayerList = resultLayerList?.slice(0, baseLayerTotal) ?? [];
   const soilIndex = baseLayerList.findIndex((l) => l.key === "soilColor");
   const soilInBase = soilIndex >= 0;
-  const baseDrawings = (from: number, to: number) =>
-    baseLayerList.slice(from, to).flatMap((l) => (l.kind === "drawing" ? [l.drawing] : []));
-  const baseDrawingsBelowSoil = soilInBase ? baseDrawings(0, soilIndex) : [];
-  const baseDrawingsAboveSoil = baseDrawings(soilInBase ? soilIndex + 1 : 0, baseLayerList.length);
+  // The base layers under the soil colours and over them (drawings, the grid), each in its order.
+  const baseBelowSoil = soilInBase ? baseLayerList.slice(0, soilIndex) : [];
+  const baseAboveSoil = baseLayerList.slice(soilInBase ? soilIndex + 1 : 0);
 
   // Background
   ctx.fillStyle = BG_COLOR;
@@ -1069,14 +1070,15 @@ export function drawCanvas(
     const paperHeightMm = landscape
       ? Math.min(dimW, dimH)
       : Math.max(dimW, dimH);
-    resultTickStep = resolveTickStep(
-      resultViewSettings.gridSpacing,
+    resultTickStep = sheetTickStep(
       computeRulerStep(
         innerRightX - innerLeftX,
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
         paperWidthMm,
         [innerLeftX, innerRightX],
       ),
+      resultViewSettings.gridSpacing,
+      resultViewSettings.gridLineSpacing,
     );
     const virtualW = 1200;
     const virtualH = (1200 * paperHeightMm) / paperWidthMm;
@@ -1132,10 +1134,10 @@ export function drawCanvas(
   // On the paper the grid lines run through the labelled ticks; their
   // separately rounded automatic steps used to differ (e.g. grid 5 m,
   // ticks 2 m).
-  // The grid has a spacing of its own when the user sets one (Properties).
+  // The grid has a spacing of its own when the user sets one (Layers › Grid).
   const gridStep =
     resultTickStep !== null
-      ? resolveTickStep(resultViewSettings.gridLineSpacing, resultTickStep)
+      ? sheetGridStep(resultTickStep, resultViewSettings.gridLineSpacing)
       : autoGridStep;
 
   ctx.strokeStyle = GRID_COLOR;
@@ -1146,6 +1148,37 @@ export function drawCanvas(
 
   const drawGridLayer = () => {
     if (!showGrid) return;
+
+    // The result sheet: the grid as the PDF draws it (Layers › Grid), its
+    // widths in mm on the paper, its minor lines under the major ones.
+    if (resultTickStep !== null) {
+      const style = sheetGridStyle(LS.grid);
+      const mmPerUnit = Math.abs(worldToCanvas(1, 0, w, h)[0] - worldToCanvas(0, 0, w, h)[0]) / sheetPxPerMm;
+      const xs = gridLinePositions(gridWorldBounds.xMin, gridWorldBounds.xMax, gridStep, style.subdivisions, mmPerUnit);
+      const ys = gridLinePositions(gridWorldBounds.yMin, gridWorldBounds.yMax, gridStep, style.subdivisions, mmPerUnit);
+      ctx.save();
+      ctx.strokeStyle = style.color ?? INK.sheetGrid;
+      for (const [lines, widthMm] of [
+        [{ x: xs.minor, y: ys.minor }, style.minorMm],
+        [{ x: xs.major, y: ys.major }, style.majorMm],
+      ] as const) {
+        ctx.lineWidth = widthMm * sheetPxPerMm;
+        ctx.beginPath();
+        for (const gx of lines.x) {
+          const [px] = worldToCanvas(gx, 0, w, h);
+          ctx.moveTo(px, gridCanvasBounds.yMin);
+          ctx.lineTo(px, gridCanvasBounds.yMax);
+        }
+        for (const gy of lines.y) {
+          const [, py] = worldToCanvas(0, gy, w, h);
+          ctx.moveTo(gridCanvasBounds.xMin, py);
+          ctx.lineTo(gridCanvasBounds.xMax, py);
+        }
+        if (lines.x.length + lines.y.length > 0) ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
 
     // Vertical grid lines
     ctx.strokeStyle = GRID_COLOR;
@@ -1300,12 +1333,17 @@ export function drawCanvas(
       drawUnderlays(ctx, [d], (x, y) => worldToCanvas(x, y, w, h), { pixelRatio, ink: INK.drawingInk, dark: DARK_THEME, include: (p) => p.visible });
     }
   };
-  // Drawings below the soil colours in the order (default: none).
-  if (baseDrawingsBelowSoil.length > 0) {
-    ctx.save();
-    drawDrawingLayers(baseDrawingsBelowSoil);
-    ctx.restore();
-  }
+  // The drawings and the grid of the base, each where it stands in the order.
+  const drawBaseLayers = (list: typeof baseLayerList) => {
+    for (const l of list) {
+      ctx.save();
+      if (l.kind === "drawing") drawDrawingLayers([l.drawing]);
+      else if (l.key === "grid") drawGridLayer();
+      ctx.restore();
+    }
+  };
+  // Drawings (and the grid) below the soil colours in the order (default: none).
+  drawBaseLayers(baseBelowSoil);
   if (coordinates.length >= 3) {
     // Over a result the soil colours here only at the bottom of the
     // layers' order (as by default); otherwise a step of their own.
@@ -1367,8 +1405,8 @@ export function drawCanvas(
 
   // ── Placed drawings: above the fills, below the grid and every line ──
   // (draw-underlays.ts says why), as a sheet at their opacity. In the
-  // result view only those shown in results.
-  if (backgrounds.length > 0) {
+  // result view only those shown in results, each a layer of the base.
+  if (backgrounds.length > 0 && !resultLayerList) {
     // Where the rulers are drawn (AxisOverlay: not on the result sheet),
     // the drawing stays off them: its texts would show through the
     // rulers' numbers.
@@ -1379,19 +1417,20 @@ export function drawCanvas(
       ctx.rect(RULER_SIZE_PX, 0, Math.max(0, w - RULER_SIZE_PX), Math.max(0, h - RULER_SIZE_PX));
       ctx.clip();
     }
-    if (resultLayerList) drawDrawingLayers(baseDrawingsAboveSoil);
-    else
-      drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
-        pixelRatio,
-        ink: INK.drawingInk,
-        dark: DARK_THEME,
-        include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
-      });
+    drawUnderlays(ctx, backgrounds, (x, y) => worldToCanvas(x, y, w, h), {
+      pixelRatio,
+      ink: INK.drawingInk,
+      dark: DARK_THEME,
+      include: (p) => p.visible && (mode !== "result" || p.showInResults === true),
+    });
     ctx.restore();
   }
 
-  // Draw grid above model fills so lines remain visible over colored regions.
-  drawGridLayer();
+  // Draw grid above model fills so lines remain visible over colored regions;
+  // over a result, the drawings and the grid above the soil colours in the
+  // layers' order (the grid elsewhere in the order is a step of its own).
+  if (resultLayerList) drawBaseLayers(baseAboveSoil);
+  else drawGridLayer();
 
   // ── External boundary stroke ─────────────────────────
   if (coordinates.length >= 3) {
@@ -3157,12 +3196,13 @@ export function drawCanvas(
         : Math.min(dimW, dimH);
       const innerFrameWidthMm =
         paperWidthMm * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
-      const rulerStep = resolveTickStep(
-        resultViewSettings.gridSpacing,
+      const rulerStep = sheetTickStep(
         computeRulerStep(worldSpan, innerFrameWidthMm, paperWidthMm, [
           worldLeftTick,
           worldRightTick,
         ]),
+        resultViewSettings.gridSpacing,
+        resultViewSettings.gridLineSpacing,
       );
       const minorTickCount = clampMinorTicks(resultViewSettings.minorTicks ?? 0);
 
@@ -3659,6 +3699,7 @@ export function drawCanvas(
         else if (step.kind === "references") drawReferenceLayer(step.annotations);
         else if (step.kind === "drawings") drawDrawingLayers(step.drawings);
         else if (step.layer === "soilColor") paintSoilFills();
+        else if (step.layer === "grid") drawGridLayer();
         else if (step.layer === "femMesh") drawFemMeshLayer();
         else if (step.layer === "femPlasticZone") drawPlasticZoneLayer();
         else if (step.layer === "customSurfaces") drawCustomSurfacesLayer();

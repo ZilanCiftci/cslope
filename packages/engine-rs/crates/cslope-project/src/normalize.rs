@@ -2162,8 +2162,9 @@ fn stage_udl(raw: &Value, names: &[&str]) -> Option<Value> {
 const PAPER_SIZES: [&str; 5] = ["A4", "A3", "A2", "A1", "A0"];
 
 /// `DISPLAY_LAYER_KEYS` (features/results/layers.ts).
-const DISPLAY_LAYER_KEYS: [&str; 8] = [
+const DISPLAY_LAYER_KEYS: [&str; 9] = [
     "soilColor",
+    "grid",
     "femMesh",
     "femPlasticZone",
     "customSurfaces",
@@ -2634,7 +2635,7 @@ fn reference_annotation(o: &Obj, path: &str, cx: &Ctx) -> Option<Value> {
 
 /// The fields of each layer's style and what each holds
 /// (`FIELDS`, features/results/layer-styles.ts).
-const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 9] = [
+const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 10] = [
     ("soilColor", &[("opacity", "opacity")]),
     (
         "femMesh",
@@ -2677,6 +2678,15 @@ const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 9] = [
             ("decimals", "decimals"),
         ],
     ),
+    (
+        "grid",
+        &[
+            ("color", "color"),
+            ("width", "width"),
+            ("subdivisions", "subdivisions"),
+            ("minorWidth", "width"),
+        ],
+    ),
 ];
 
 /// `validField`: a style field's value if it is a valid one of its kind.
@@ -2690,6 +2700,9 @@ fn layer_style_field(kind: &str, v: Option<&Value>) -> Option<Value> {
         "opacity" => num(v).filter(|x| (0.0..=1.0).contains(x)).map(|x| json!(x)),
         "decimals" => num(v)
             .filter(|x| x.fract() == 0.0 && (0.0..=4.0).contains(x))
+            .map(|x| json!(x)),
+        "subdivisions" => num(v)
+            .filter(|x| x.fract() == 0.0 && (2.0..=10.0).contains(x))
             .map(|x| json!(x)),
         "width" => num(v)
             .filter(|x| (0.1..=10.0).contains(x))

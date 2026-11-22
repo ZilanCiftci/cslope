@@ -703,6 +703,34 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-grid-properties",
+    title: "Result sidebar, the Grid layer selected: color, line width, spacing, minor lines on",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showGrid: true, gridLineSpacing: 2, layerStyles: { grid: { subdivisions: 4 } } }); s.setSelectedResultLayer("grid"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-grid-minor",
+    title: "Result view with a fixed grid spacing (2 m) and minor lines (4 subdivisions), the Grid properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showGrid: true, gridSpacing: undefined, gridLineSpacing: 2, layerStyles: { grid: { subdivisions: 4 } } }); s.setSelectedResultLayer("grid"); }`);
+    },
+  },
+  {
+    id: "main-result-grid-off",
+    title: "Result view with the Grid layer turned off (greyed in Layers), its properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showGrid: false }); s.setSelectedResultLayer("grid"); }`);
+    },
+  },
+  {
     id: "main-result-table-off-reopened",
     title: "Result view after the material table was turned off and the project saved and opened again: the table listed off, not drawn",
     area: "main-result",

@@ -13,17 +13,18 @@ import { afterEach, describe, expect, it } from "vitest";
 import { jsPDF } from "jspdf";
 import type { AnalysisResult, SlipSurfaceResult } from "@cslope/engine";
 import { VERIFICATION_CASES } from "@cslope/engine/verification";
-import { drawAnnotations } from "./pdf-drawing";
+import { drawAnnotations, drawGrid, drawRulerFrame } from "./pdf-drawing";
 import { setSansFont } from "./pdf-fonts";
 import { drawCanvas, type DrawCanvasParams } from "../canvas/draw";
 import { createRecordingContext, type TextCall } from "../../test/recording-context";
 import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import { BENCHMARK_MODELS } from "../../store/benchmarks";
 import { verificationModel } from "../../store/verification-models";
-import { DEFAULT_PIEZO_LINE } from "../../store/defaults";
+import { DEFAULT_PIEZO_LINE, PLOT_MARGINS } from "../../store/defaults";
 import type { ModelEntry } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
-import { MM_PER_PT, RULER_COLOR } from "../rendering/style-spec";
+import { GRID_COLOR, MM_PER_PT, RULER_COLOR } from "../rendering/style-spec";
+import { hexRgb } from "../results/layer-styles";
 
 // The PDF's virtual canvas: the sheet as wide as the PDF lays it out (any size would do).
 const W = 1200;
@@ -58,8 +59,8 @@ function pdfMeasure() {
   };
 }
 
-/** The sheet as the canvas draws it: its texts as shares of the paper, their font size in mm on the paper. */
-function canvasTexts(model: ModelEntry) {
+/** The sheet as the canvas draws it (a recording). */
+function drawSheet(model: ModelEntry) {
   const rec = createRecordingContext(W, H);
   const measure = pdfMeasure();
   rec.ctx.measureText = ((text: string) => ({ width: measure(rec.ctx.font, text), actualBoundingBoxAscent: 0, actualBoundingBoxDescent: 0 })) as never;
@@ -94,6 +95,13 @@ function canvasTexts(model: ModelEntry) {
     surfaceYAtX: (x) => surfaceYAtX(model.coordinates, x),
   };
   drawCanvas(rec.ctx, params);
+  return rec;
+}
+
+/** The sheet as the canvas draws it: its texts as shares of the paper, their font size in mm on the paper. */
+function canvasTexts(model: ModelEntry) {
+  const rec = drawSheet(model);
+  const rvs = model.resultViewSettings!;
   const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
   const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
   return rec.texts.map((t: TextCall) => ({
@@ -197,5 +205,135 @@ describe("the sheet's tick labels", () => {
     const labels = canvasTexts(userModel()).filter((t) => /^-?\d+$/.test(t.text) && (t.x < 0.05 || t.y > 0.95));
     expect(labels.length).toBeGreaterThan(4);
     for (const l of labels) expect(l.color).toBe(RULER_COLOR.hex);
+  });
+});
+
+describe("the sheet's grid", () => {
+  /** The model with its grid on: a fixed spacing, minor lines, a style of the user's (or the default). */
+  const gridModel = (styled: boolean): ModelEntry => {
+    const m = userModel();
+    return {
+      ...m,
+      resultViewSettings: {
+        ...m.resultViewSettings!,
+        showGrid: true,
+        gridSpacing: undefined,
+        gridLineSpacing: 3,
+        layerStyles: { grid: styled ? { color: "#336699", width: 2, subdivisions: 4, minorWidth: 0.8 } : { subdivisions: 4 } },
+      },
+    };
+  };
+  type Line = { at: number; vertical: boolean; widthMm: number; color: string };
+  const key = (l: Line) => `${l.vertical ? "x" : "y"}${l.at.toFixed(4)}`;
+
+  /** The canvas's grid lines (stroked in `color`): place as a share of the paper, width in mm. */
+  function viewLines(model: ModelEntry, color: string): Line[] {
+    const rec = drawSheet(model);
+    const rvs = model.resultViewSettings!;
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const out: Line[] = [];
+    for (const p of rec.strokes()) {
+      if (String(p.state.strokeStyle).toLowerCase() !== color) continue;
+      for (let i = 0; i + 1 < p.segments.length; i += 2) {
+        const [a, b] = [p.segments[i], p.segments[i + 1]] as { x: number; y: number }[];
+        const vertical = Math.abs(a.x - b.x) < 1e-9;
+        out.push({
+          at: vertical ? (a.x - pf.x) / pf.w : (a.y - pf.y) / pf.h,
+          vertical,
+          widthMm: (p.state.lineWidth / pf.w) * paper.width,
+          color,
+        });
+      }
+    }
+    return out;
+  }
+
+  /** The PDF's transform of the same sheet (the canvas's view on the PDF's page). */
+  function pdfSheet(model: ModelEntry) {
+    const rvs = model.resultViewSettings!;
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const mmPerPx = paper.width / pf.w;
+    const canvasToPdf = (cx: number, cy: number): [number, number] => [(cx - pf.x) * mmPerPx, (cy - pf.y) * mmPerPx];
+    const tf = {
+      canvasToPdf,
+      worldToPdf: (x: number, y: number) => canvasToPdf(W / 2 + (x - 30) * 10, H / 2 - (y - 10) * 10),
+      mmPerPx,
+      paperW: paper.width,
+      paperH: paper.height,
+    };
+    const frame = {
+      x: paper.width * PLOT_MARGINS.L,
+      y: paper.height * PLOT_MARGINS.T,
+      w: paper.width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
+      h: paper.height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B),
+    };
+    const pdf = new jsPDF({ unit: "mm", format: [paper.width, paper.height], orientation: "landscape" });
+    return { pdf, tf, frame, paper, rvs };
+  }
+
+  function pdfLines(model: ModelEntry): Line[] {
+    const { pdf, tf, frame, paper, rvs } = pdfSheet(model);
+    const out: Line[] = [];
+    let width = 0;
+    const setLineWidth = pdf.setLineWidth.bind(pdf);
+    pdf.setLineWidth = ((w: number) => {
+      width = w;
+      return setLineWidth(w);
+    });
+    pdf.line = ((x1: number, y1: number, x2: number) => {
+      const vertical = Math.abs(x1 - x2) < 1e-9;
+      out.push({ at: vertical ? x1 / paper.width : y1 / paper.height, vertical, widthMm: width, color: pdf.getDrawColor().toLowerCase() });
+      return pdf;
+    });
+    drawGrid(pdf, tf, 10, frame, rvs.gridSpacing, rvs.gridLineSpacing, rvs.layerStyles?.grid);
+    return out;
+  }
+
+  it.each([
+    ["a style of the user's", true, "#336699"],
+    ["the default style", false, GRID_COLOR.hex],
+  ])("%s: the same lines, minor lines, widths and color in the view and the PDF", (_, styled, color) => {
+    const model = gridModel(styled);
+    const view = viewLines(model, color);
+    const pdf = pdfLines(model);
+    expect(pdf.length).toBeGreaterThan(40);
+    // (jsPDF writes a grey as a grey level: #dcdcdc reads back as #dbdbdb)
+    const near = (c: string) => hexRgb(c).every((v, i) => Math.abs(v - hexRgb(color)[i]) <= 1);
+    expect(pdf.every((l) => near(l.color))).toBe(true);
+    // Two widths: the major and the minor lines.
+    const widths = [...new Set(pdf.map((l) => l.widthMm.toFixed(4)))].sort();
+    expect(widths).toEqual(styled ? ["0.0800", "0.2000"] : ["0.0500", "0.1000"]);
+    expect(view.length).toBe(pdf.length);
+    const byKey = new Map(view.map((l) => [key(l), l]));
+    for (const p of pdf) {
+      const v = byKey.get(key(p));
+      expect(v, key(p)).toBeDefined();
+      expect(v!.widthMm).toBeCloseTo(p.widthMm, 6);
+    }
+  });
+
+  it("puts every labelled tick on a grid line when the grid has a fixed spacing", () => {
+    const model = gridModel(false);
+    const { pdf, tf, frame, paper, rvs } = pdfSheet(model);
+    const labels: { text: string; x: number }[] = [];
+    const text = pdf.text.bind(pdf);
+    pdf.text = ((...args: Parameters<typeof pdf.text>) => {
+      const [t, x, y] = args as unknown as [string, number, number];
+      if (y > frame.y + frame.h) labels.push({ text: String(t), x: x / paper.width });
+      return text(...args);
+    }) as typeof pdf.text;
+    drawRulerFrame(pdf, tf, 10, frame, rvs.gridSpacing, 0, rvs.gridLineSpacing);
+    expect(labels.length).toBeGreaterThan(3);
+    // Multiples of the grid spacing (3 m) ...
+    for (const l of labels) expect(Math.abs(Number(l.text) % 3)).toBe(0);
+    // ... on the PDF's major grid lines, and the view's labels the same.
+    const majors = pdfLines(model).filter((l) => l.vertical && l.widthMm > 0.06);
+    for (const l of labels) expect(majors.some((m) => Math.abs(m.at - l.x) < 1e-6), l.text).toBe(true);
+    const viewLabels = canvasTexts(model)
+      .filter((t) => /^-?\d+$/.test(t.text) && t.y > 0.95)
+      .map((t) => t.text);
+    expect(viewLabels).toEqual(labels.map((l) => l.text));
   });
 });

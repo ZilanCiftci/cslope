@@ -262,3 +262,29 @@ def test_keeps_a_table_and_a_bar_turned_off_and_surfaces_off(tmp_path):
     again = tmp_path / "again.cslp"
     project.open(target).save(again)
     assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
+
+
+@needs_fixtures
+def test_keeps_the_grid_layer_its_style_and_place(tmp_path):
+    # (as the app writes them: the grid off, a fixed spacing, its style with
+    # minor lines, and its place in the layer order)
+    def edit(v):
+        view = v["resultViewSettings"]
+        view["showGrid"] = False
+        view["gridLineSpacing"] = 2.5
+        view["layerOrder"] = ["soilColor", "surfaces", "grid"]
+        view["layerStyles"] = {"grid": {"color": "#336699", "width": 2, "subdivisions": 4, "minorWidth": 0.5}}
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "grid.cslp", "models/model-1/model.json", edit)
+    p = project.open(src)
+    target = tmp_path / "saved.cslp"
+    p.save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["showGrid"] is False
+    assert view["gridLineSpacing"] == 2.5
+    assert view["layerOrder"] == ["soilColor", "surfaces", "grid"]
+    assert view["layerStyles"] == {"grid": {"color": "#336699", "width": 2, "subdivisions": 4, "minorWidth": 0.5}}
+    # saved again, the same entry
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]

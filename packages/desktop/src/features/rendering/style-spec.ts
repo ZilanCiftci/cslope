@@ -225,6 +225,21 @@ export const RULER_COLOR: DualColor = { hex: "#323232", rgb: [50, 50, 50] };
 /** The plot frame's line. */
 export const PLOT_FRAME_LINE_MM = 0.4;
 /**
+ * The sheet's grid (Layers › Grid): light grey on white paper, its lines
+ * GRID_LINE_MM wide on the paper at the style's default width
+ * (GRID_LINE_WIDTH_PX); a style's width scales it (width / that default),
+ * in the view and the PDF alike. The minor lines between them are half as
+ * wide by default, in the same color.
+ */
+export const GRID_COLOR: DualColor = { hex: "#dcdcdc", rgb: [220, 220, 220] };
+export const GRID_LINE_MM = 0.1;
+export const GRID_LINE_WIDTH_PX = 1;
+export const GRID_MINOR_LINE_WIDTH_PX = 0.5;
+/** The minor lines' subdivisions of a grid interval when they are turned on. */
+export const GRID_DEFAULT_SUBDIVISIONS = 5;
+/** Minor lines closer than this on the paper (mm) are not drawn. */
+export const GRID_MINOR_MIN_SPACING_MM = 1;
+/**
  * The canvas's family for the sheet's sans-serif text: Arial's metrics, as
  * the PDF's embedded Liberation Sans has, so that text takes the same room.
  */

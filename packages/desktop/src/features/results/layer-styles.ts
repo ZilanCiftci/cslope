@@ -15,7 +15,7 @@ export const LAYER_FONT_FAMILIES = [
   { label: "Monospace", value: "monospace" },
 ] as const;
 
-type FieldKind = "color" | "width" | "opacity" | "fontSize" | "fontFamily" | "bool" | "decimals" | "size";
+type FieldKind = "color" | "width" | "opacity" | "fontSize" | "fontFamily" | "bool" | "decimals" | "size" | "subdivisions";
 
 /** The fields of each layer's style and what each holds. */
 const FIELDS: { [K in keyof ResultLayerStyles]-?: Record<string, FieldKind> } = {
@@ -28,6 +28,7 @@ const FIELDS: { [K in keyof ResultLayerStyles]-?: Record<string, FieldKind> } = 
   slices: { color: "color", width: "width" },
   center: { color: "color", size: "size", radiusLines: "bool" },
   fosLabel: { fontSize: "fontSize", fontFamily: "fontFamily", color: "color", bold: "bool", decimals: "decimals" },
+  grid: { color: "color", width: "width", subdivisions: "subdivisions", minorWidth: "width" },
 };
 
 /** The bounds of the numbers (line widths and sizes in px at paper zoom 1). */
@@ -36,6 +37,7 @@ export const LAYER_STYLE_LIMITS = {
   size: { min: 0.5, max: 20 },
   fontSize: { min: 4, max: 72 },
   decimals: { min: 0, max: 4 },
+  subdivisions: { min: 2, max: 10 },
 } as const;
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
@@ -52,7 +54,8 @@ function validField(kind: FieldKind, v: unknown): unknown {
     case "opacity":
       return typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1 ? v : undefined;
     case "decimals":
-      return Number.isInteger(v) && (v as number) >= LAYER_STYLE_LIMITS.decimals.min && (v as number) <= LAYER_STYLE_LIMITS.decimals.max
+    case "subdivisions":
+      return Number.isInteger(v) && (v as number) >= LAYER_STYLE_LIMITS[kind].min && (v as number) <= LAYER_STYLE_LIMITS[kind].max
         ? v
         : undefined;
     default: {

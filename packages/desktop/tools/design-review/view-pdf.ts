@@ -11,7 +11,8 @@
  * Models: V002, V038b and V085 as Help › Benchmarks opens them, and the
  * first example with its material table and a color bar, and that example with
  * two styled slice plots ("plot"). VIEW_PDF_ONLY=v002,user
- * picks some; DESIGN_REVIEW_SKIP_BUILD=1 reuses the last build. Needs
+ * picks some; VIEW_PDF_GRID=1 turns the grid on with a fixed spacing and minor
+ * lines; DESIGN_REVIEW_SKIP_BUILD=1 reuses the last build. Needs
  * pdftoppm and ImageMagick's convert.
  */
 
@@ -56,6 +57,10 @@ async function load(page: Page, model: unknown | null, sheet?: string) {
   await runAnalysis(page);
   await store(page, `(s) => { s.setMode("result"); if (!s.resultViewSettings.annotations.some((a) => a.type === "color-bar")) { s.addAnnotation("color-bar"); } s.setSelectedAnnotations([]); }`);
   if (sheet) await store(page, sheet);
+  // VIEW_PDF_GRID=1: the grid on, a fixed spacing of 2 m with minor lines (Layers › Grid).
+  if (process.env.VIEW_PDF_GRID) {
+    await store(page, `(s) => s.setResultViewSettings({ showGrid: true, gridSpacing: undefined, gridLineSpacing: 2, layerStyles: { ...s.resultViewSettings.layerStyles, grid: { subdivisions: 4 } } })`);
+  }
   await page.waitForTimeout(800);
 }
 

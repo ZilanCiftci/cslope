@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AnalysisResult } from "@cslope/engine";
 import {
   annotationsInLayerOrder,
+  baseLayerCount,
   defaultLayers,
   layerSteps,
   mergeLayerOrder,
@@ -24,7 +25,8 @@ const CS = { cx: 10, cy: 12, radius: 10, fos: 1.2, entryPoint: [2, 8], exitPoint
 
 function src(over: Partial<ResultViewSettings> = {}, extra: Partial<LayerSource> = {}): LayerSource {
   return {
-    resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: ANNOS, ...over },
+    // (the grid off unless a test turns it on: its place is tested on its own)
+    resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, showGrid: false, annotations: ANNOS, ...over },
     result: { criticalSurface: CS } as unknown as AnalysisResult,
     ...extra,
   };
@@ -158,7 +160,7 @@ describe("listed layers (Properties › Layers)", () => {
     const s = src({ showSlices: false, showSurfaces: false, annotations: ANNOS.filter((a) => a.type !== "material-table") });
     expect(resultLayerKeys(s)).not.toContain("slices");
     const listed = resultLayers(s, true);
-    expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["surfaces", "slices", "material-table", "color-bar"]);
+    expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["grid", "surfaces", "slices", "material-table", "color-bar"]);
     // Off layers of a kind the result has nothing for are not listed.
     expect(listed.map((l) => l.key)).not.toContain("femMesh");
     expect(listed.map((l) => l.key)).not.toContain("customSurfaces");
@@ -182,5 +184,23 @@ describe("listed layers (Properties › Layers)", () => {
     const order = movedLayerOrder(s, "t", 0, true);
     expect(order).toContain("m");
     expect(order).not.toContain("color-bar");
+  });
+  it("lists the grid as a built-in layer over the soil colors and drawings, under the model's lines, on or off by showGrid", () => {
+    const on = src({ showGrid: true }, { backgrounds: [drawing("a", 1)] });
+    expect(resultLayerKeys(on).slice(0, 4)).toEqual(["soilColor", "drawing:a", "grid", "r"]);
+    // drawn with the model's base drawing (under its lines), as always
+    expect(baseLayerCount(resultLayers(on))).toBe(3);
+    // off: not drawn, listed greyed where it stands
+    const off = src({ showGrid: false });
+    expect(resultLayerKeys(off)).not.toContain("grid");
+    expect(resultLayers(off, true).find((l) => l.key === "grid")).toMatchObject({ kind: "display", off: true });
+    // moved over the surfaces: a step of its own, over the model's lines
+    const moved = src({ showGrid: true, layerOrder: ["soilColor", "r", "surfaces", "grid"] });
+    const layers = resultLayers(moved);
+    expect(baseLayerCount(layers)).toBe(1);
+    expect(layerSteps(layers.slice(1))).toContainEqual({ kind: "display", layer: "grid" });
+    // a stored order of an older file (without the grid) puts it in its default place
+    expect(resultLayerKeys(src({ showGrid: true, layerOrder: ["soilColor", "r", "surfaces"] })).slice(0, 2)).toEqual(["soilColor", "grid"]);
+    expect(normalizeLayerOrder(["grid", "soilColor"], [])).toEqual(["grid", "soilColor"]);
   });
 });

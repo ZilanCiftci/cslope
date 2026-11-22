@@ -101,6 +101,8 @@
      on a thin halo of the sheet's colour (draw.ts). */
   --color-canvas-ink: #eef0f2;
   --color-canvas-grid-line: rgba(255,255,255,0.07);
+  /* The result sheet's grid (Layers › Grid): faint on the dark sheet. */
+  --color-canvas-sheet-grid: #5a6169;
   --color-canvas-udl: #ffa198;
   --color-canvas-udl-hover: #ffc9c2;
   --color-canvas-udl-hatch: #ffd2cc;
@@ -239,6 +241,7 @@
   /* The print colours (as the PDF). */
   --color-canvas-ink: #000000;
   --color-canvas-grid-line: rgba(0, 0, 0, 0.1);
+  --color-canvas-sheet-grid: #dcdcdc; /* GRID_COLOR, as the PDF */
   --color-canvas-udl: #cc0000;
   --color-canvas-udl-hover: #ff0000;
   --color-canvas-udl-hatch: #cc0000;
