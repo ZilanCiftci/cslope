@@ -2162,17 +2162,19 @@ fn stage_udl(raw: &Value, names: &[&str]) -> Option<Value> {
 const PAPER_SIZES: [&str; 5] = ["A4", "A3", "A2", "A1", "A0"];
 
 /// `DISPLAY_LAYER_KEYS` (features/results/layers.ts).
-const DISPLAY_LAYER_KEYS: [&str; 9] = [
+const DISPLAY_LAYER_KEYS: [&str; 8] = [
     "soilColor",
     "femMesh",
     "femPlasticZone",
-    "surfaces",
     "customSurfaces",
-    "criticalSurface",
+    "surfaces",
     "slices",
     "center",
     "fosLabel",
 ];
+/// `LEGACY_CRITICAL_SURFACE_KEY`: the critical surface's layer before it was
+/// one with the other surfaces; a stored order reads it as "surfaces".
+const LEGACY_CRITICAL_SURFACE_KEY: &str = "criticalSurface";
 const DRAWING_LAYER_PREFIX: &str = "drawing:";
 
 /// `FOS_SCHEME_PRESETS` ids and "custom" (utils/fos-color.ts).
@@ -2238,6 +2240,7 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
             "showFemPlasticZone",
             "showFemMesh",
             "showCustomSurfaces",
+            "showSurfaces",
             "gridSpacing",
             "gridLineSpacing",
             "minorTicks",
@@ -2314,6 +2317,10 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     if view.get("showCustomSurfaces") == Some(&Value::Bool(true)) {
         out.insert("showCustomSurfaces".into(), json!(true));
     }
+    // the surfaces, where they are not drawn (the default: drawn)
+    if view.get("showSurfaces") == Some(&Value::Bool(false)) {
+        out.insert("showSurfaces".into(), json!(false));
+    }
     if let Some(g) = num(view.get("gridSpacing")) {
         out.insert("gridSpacing".into(), json!(g));
     }
@@ -2353,6 +2360,12 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     if let Some(Value::Array(order)) = view.get("layerOrder") {
         let mut kept: Vec<&str> = Vec::new();
         for k in order.iter().filter_map(Value::as_str) {
+            // (the critical surface's old layer is the surfaces layer)
+            let k = if k == LEGACY_CRITICAL_SURFACE_KEY {
+                "surfaces"
+            } else {
+                k
+            };
             if kept.contains(&k) {
                 continue;
             }

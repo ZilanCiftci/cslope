@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { useAppStore } from "../../../store/app-store";
 import { normalizeResultView } from "../../../store/persistence";
 import { fileTooLarge } from "../../../features/project/file-limits";
-import { DraftNumberInput } from "../DraftNumberInput";
 import { isElectron } from "../../../utils/is-electron";
 import {
   buildExportFilename,
@@ -14,24 +13,15 @@ import {
   computeInnerFrame,
 } from "../../../features/view/paper";
 import {
-  CentreIcon,
-  ColorBarIcon,
   ExportTemplateIcon,
-  FeMeshIcon,
-  FosLabelIcon,
   ImportTemplateIcon,
-  MaterialTableIcon,
   PdfIcon,
-  PlasticZoneIcon,
   PlotIcon,
   ProbabilisticIcon,
   ReferenceLineIcon,
   ResultsPlotIcon,
   SensitivityIcon,
   SettingsIcon,
-  SlicesIcon,
-  SoilColorsIcon,
-  SurfacesIcon,
   TextIcon,
 } from "../../icons/ribbon";
 import {
@@ -56,7 +46,7 @@ import {
 } from "../../../features/annotations/reference";
 import { surfaceYAtX } from "../../../features/view/surface";
 import { LARGE_ICON, SMALL_ICON } from "./icon-props";
-import type { AppState, SurfaceDisplayMode } from "../../../store/types";
+import type { AppState } from "../../../store/types";
 import { pdfUnderlays, type PdfUnderlay } from "../../../features/drawings/pdf-underlay";
 import { isResultOutOfDate } from "../../../store/out-of-date";
 import { buildSliceTable, toCsv } from "../../../features/export/sliceTable";
@@ -76,15 +66,7 @@ interface Props {
 export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   const result = useAppStore((s) => s.result);
   const hasResult = Boolean(result?.allSurfaces?.length);
-  // The display settings can be set before a run; until there is a result
-  // their tooltips say why nothing changes.
-  const displayTip = (tip: string) => (hasResult ? tip : `${tip}\n${NO_RESULT_HINT}`);
   const addAnnotation = useAppStore((s) => s.addAnnotation);
-  const setBuiltInShown = useAppStore((s) => s.setBuiltInAnnotationShown);
-  // The table and the colour bar are built-in layers: their buttons turn
-  // them on and off (where they were), as their eyes in Properties › Layers.
-  const toggleAnnotation = (type: "material-table" | "color-bar") =>
-    setBuiltInShown(type, !rvs.annotations.some((a) => a.type === type));
   const addReferenceAnnotation = useAppStore((s) => s.addReferenceAnnotation);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
@@ -93,8 +75,6 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   // edge of the window it opens to the left instead.
   const [exportMenuToLeft, setExportMenuToLeft] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement | null>(null);
-  const [displayMenuOpen, setDisplayMenuOpen] = useState(false);
-  const displayMenuRef = useRef<HTMLDivElement | null>(null);
 
   const getInnerFrameWorldBounds = (
     state: ReturnType<typeof useAppStore.getState>,
@@ -224,28 +204,23 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   };
 
   // The menus close with the tab (they are not open when it is shown again).
-  if (!isOpen && (exportMenuOpen || displayMenuOpen)) {
+  if (!isOpen && exportMenuOpen) {
     setExportMenuOpen(false);
-    setDisplayMenuOpen(false);
   }
 
   // ... and on Escape or a click outside them, as the other ribbon menus.
   useEffect(() => {
-    if (!exportMenuOpen && !displayMenuOpen) return;
+    if (!exportMenuOpen) return;
 
     const onDocumentPointerDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (exportMenuOpen && !exportMenuRef.current?.contains(target)) {
         setExportMenuOpen(false);
       }
-      if (displayMenuOpen && !displayMenuRef.current?.contains(target)) {
-        setDisplayMenuOpen(false);
-      }
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setExportMenuOpen(false);
-      setDisplayMenuOpen(false);
     };
 
     document.addEventListener("mousedown", onDocumentPointerDown);
@@ -254,7 +229,7 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
       document.removeEventListener("mousedown", onDocumentPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [exportMenuOpen, displayMenuOpen]);
+  }, [exportMenuOpen]);
 
   const openResultsPlot = () => {
     if (isElectron) {
@@ -330,141 +305,15 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
               />
             </RibbonGroup>
             <RibbonSep />
-            <RibbonGroup label="Display">
+            {/* What the sheet draws is turned on and off in Properties › Layers. */}
+            <RibbonGroup label="Sheet">
               <RibbonStack>
-                <div className="relative" ref={displayMenuRef}>
-                  <RibbonSmallButton
-                    icon={<SurfacesIcon {...SMALL_ICON} />}
-                    label="Surfaces"
-                    title={displayTip(`Surfaces: ${rvs.surfaceDisplay === "critical" ? "Critical" : rvs.surfaceDisplay === "all" ? "All" : "Filter"}`)}
-                    onClick={() => setDisplayMenuOpen((o) => !o)}
-                    hasDropdown
-                    expanded={displayMenuOpen}
-                  />
-                  {displayMenuOpen && (
-                    <div
-                      className={`absolute top-[1.6rem] left-0 ${MENU_FRAME_CLASS} ${RIBBON_POPUP_Z}`}
-                      style={{ ...MENU_FRAME_STYLE, minWidth: 160 }}
-                      // Choices and fields, not only commands: a group.
-                      role="group"
-                      aria-label="Surfaces"
-                    >
-                      {(
-                        [
-                          { value: "critical", label: "Critical only" },
-                          { value: "all", label: "All surfaces" },
-                          { value: "filter", label: "Filter by F" },
-                        ] as { value: SurfaceDisplayMode; label: string }[]
-                      ).map((item) => (
-                        // The current mode has a check mark.
-                        <MenuItem
-                          key={item.value}
-                          role={null}
-                          checked={rvs.surfaceDisplay === item.value}
-                          onClick={() => {
-                            setRvs({ surfaceDisplay: item.value });
-                            setDisplayMenuOpen(false);
-                          }}
-                        >
-                          {item.label}
-                        </MenuItem>
-                      ))}
-                      {(result?.customSurfaces?.length ?? 0) > 0 && (
-                        <MenuField
-                          separator
-                          title="Draw the custom search planes' surfaces, dashed, each with its factor of safety"
-                        >
-                          <input
-                            type="checkbox"
-                            className="accent-[var(--color-vsc-accent)]"
-                            checked={rvs.showCustomSurfaces === true}
-                            onChange={(e) => setRvs({ showCustomSurfaces: e.target.checked })}
-                            aria-label="Show custom surfaces"
-                          />
-                          Custom surfaces
-                        </MenuField>
-                      )}
-                      {rvs.surfaceDisplay === "filter" && (
-                        <MenuField separator>
-                          F ≤
-                          <DraftNumberInput
-                            min={0.01}
-                            step={0.05}
-                            value={rvs.fosFilterMax}
-                            onValueChange={(value) => {
-                              if (value > 0) setRvs({ fosFilterMax: value });
-                            }}
-                            aria-label="Maximum F shown"
-                            className="w-16 tabular-nums"
-                          />
-                        </MenuField>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <RibbonSmallButton
-                  icon={<SlicesIcon {...SMALL_ICON} />}
-                  label="Slices"
-                  title={displayTip("Show slices")}
-                  onClick={() => setRvs({ showSlices: !rvs.showSlices })}
-                  active={rvs.showSlices}
-                />
-                <RibbonSmallButton
-                  icon={<FosLabelIcon {...SMALL_ICON} />}
-                  label="F label"
-                  title={displayTip("Show F label")}
-                  onClick={() => setRvs({ showFosLabel: !rvs.showFosLabel })}
-                  active={rvs.showFosLabel}
-                />
-                <RibbonSmallButton
-                  icon={<CentreIcon {...SMALL_ICON} />}
-                  label="Center"
-                  title={displayTip("Show center mark")}
-                  onClick={() =>
-                    setRvs({ showCentreMarker: !rvs.showCentreMarker })
-                  }
-                  active={rvs.showCentreMarker}
-                />
-                <RibbonSmallButton
-                  icon={<SoilColorsIcon {...SMALL_ICON} />}
-                  label="Soil colors"
-                  title={displayTip("Soil colors")}
-                  onClick={() =>
-                    setRvs({ showSoilColor: !(rvs.showSoilColor ?? true) })
-                  }
-                  active={rvs.showSoilColor ?? true}
-                />
-                {result?.fem && (
-                  <RibbonSmallButton
-                    icon={<PlasticZoneIcon {...SMALL_ICON} />}
-                    label="Plastic zone"
-                    title="Shade the plastic zone (the failure mechanism) of the finite element analysis, which is experimental."
-                    onClick={() =>
-                      setRvs({ showFemPlasticZone: !(rvs.showFemPlasticZone ?? true) })
-                    }
-                    active={rvs.showFemPlasticZone ?? true}
-                  />
-                )}
-                {result?.fem && (
-                  <RibbonSmallButton
-                    icon={<FeMeshIcon {...SMALL_ICON} />}
-                    label="FE mesh"
-                    title="Draw the last mesh of the finite element analysis, finer where the failure mechanism lies. Finite elements are experimental."
-                    onClick={() => setRvs({ showFemMesh: !(rvs.showFemMesh ?? false) })}
-                    active={rvs.showFemMesh ?? false}
-                  />
-                )}
                 <RibbonSmallButton
                   icon={<SettingsIcon {...SMALL_ICON} />}
                   label="Sheet settings"
-                  title={displayTip("Sheet settings")}
+                  title={hasResult ? "Sheet settings" : `Sheet settings\n${NO_RESULT_HINT}`}
                   onClick={showSheetSettings}
                 />
-              </RibbonStack>
-            </RibbonGroup>
-            <RibbonSep />
-            <RibbonGroup label="Annotations">
-              <RibbonStack>
                 <RibbonSmallButton
                   icon={<TextIcon {...SMALL_ICON} />}
                   label="Text"
@@ -476,20 +325,6 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                   label="Plot"
                   title="Add plot"
                   onClick={() => addAnnotation("plot")}
-                />
-                <RibbonSmallButton
-                  icon={<MaterialTableIcon {...SMALL_ICON} />}
-                  label="Material table"
-                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Turn off the material table" : "Turn on the material table"}
-                  onClick={() => toggleAnnotation("material-table")}
-                  active={rvs.annotations.some((a) => a.type === "material-table")}
-                />
-                <RibbonSmallButton
-                  icon={<ColorBarIcon {...SMALL_ICON} />}
-                  label="Color bar"
-                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Turn off the color bar" : "Turn on the color bar"}
-                  onClick={() => toggleAnnotation("color-bar")}
-                  active={rvs.annotations.some((a) => a.type === "color-bar")}
                 />
                 <RibbonMenuButton
                   icon={<ReferenceLineIcon {...SMALL_ICON} />}

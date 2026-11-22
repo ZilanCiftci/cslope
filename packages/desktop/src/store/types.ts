@@ -357,7 +357,7 @@ export interface PaperAnnotation {
    * Colour bar: the FOS range of the scale, which also colours the
    * surfaces of the plot. "auto" (absent): from the critical FOS to a cap
    * near it; "fixed": scaleMin to scaleMax; "filter": the span of
-   * Surfaces ▸ Filter by FOS (critical FOS to fosFilterMax).
+   * the surface filter, Layers › Surfaces (critical FOS to fosFilterMax).
    */
   scaleMode?: ColorScaleMode;
   scaleMin?: number;
@@ -454,6 +454,12 @@ export type Annotation = PaperAnnotation | ReferenceAnnotation;
 export interface ResultViewSettings {
   surfaceDisplay: SurfaceDisplayMode;
   fosFilterMax: number;
+  /**
+   * Draw the surfaces (Layers › Surfaces): the critical surface and, with
+   * `surfaceDisplay` "all" or "filter", the others (default: drawn; only
+   * `false` is saved).
+   */
+  showSurfaces?: boolean;
   showSlices: boolean;
   showFosLabel: boolean;
   showCentreMarker: boolean;

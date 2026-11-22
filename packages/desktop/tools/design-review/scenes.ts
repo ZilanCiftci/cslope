@@ -603,7 +603,7 @@ const sidebarScenes: Scene[] = [
           center: { color: "#0066cc", size: 5 },
           soilColor: { opacity: 0.5 },
         } });
-        s.setSelectedResultLayer("criticalSurface");
+        s.setSelectedResultLayer("surfaces");
       }`);
     },
   },
@@ -712,13 +712,12 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "main-result-color-bar",
-    title: "Result view: Results › Color bar added below the material table (at the window's zoom)",
+    title: "Result view: the color bar turned on in Layers, below the material table (at the window's zoom)",
     area: "main-result",
     result: true,
     open: async (ctx) => {
       await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "all", showSlices: false })`);
-      await ctx.tab("Results");
-      await ctx.click("Color bar");
+      await ctx.click("Turn on: Color bar");
       await ctx.store(`(s) => s.setSelectedAnnotations([])`);
       await ctx.page.waitForTimeout(500);
     },
@@ -804,19 +803,6 @@ const menus: Scene[] = [
       await ctx.tab("Model");
       await ctx.click("More drawing commands");
       return { focus: menu(ctx, "More drawing commands") };
-    },
-  },
-  { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) }; } },
-  {
-    id: "menu-results-surfaces-filter",
-    title: "Results › Surfaces ▾ menu, Filter by F (with the F field)",
-    area: "menus",
-    result: true,
-    open: async (ctx) => {
-      await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "filter" })`);
-      await ctx.tab("Results");
-      await ctx.click("Surfaces");
-      return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) };
     },
   },
   { id: "menu-results-reference-line", title: "Results › Reference line ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Reference line"); return { focus: menu(ctx, "Reference line") }; } },

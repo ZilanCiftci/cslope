@@ -94,7 +94,7 @@ describe("display layer properties", () => {
     history().clear();
     render(<ResultSidebar />);
     fireEvent.click(row("surfaces"));
-    const group = screen.getByRole("group", { name: "Surfaces properties" });
+    const group = within(screen.getByRole("group", { name: "Surfaces properties" })).getByRole("group", { name: "Other surfaces" });
     const width = within(group).getByLabelText("Line width (px)");
     expect(width).toHaveAttribute("placeholder", "1");
     fireEvent.change(width, { target: { value: "2.5" } });
@@ -112,12 +112,12 @@ describe("display layer properties", () => {
     fireEvent.click(row("center"));
     fireEvent.click(screen.getByRole("checkbox", { name: "Radius lines to the entry and exit" }));
     expect(rvs().layerStyles).toEqual({ center: { radiusLines: false } });
-    fireEvent.click(screen.getByRole("button", { name: /^Turn off \(as the Center button in the ribbon\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn off: Center" }));
     expect(rvs().showCentreMarker).toBe(false);
     // Turned off, it stays selected: its properties can be set before it is turned on.
     expect(useAppStore.getState().selectedResultLayer).toBe("center");
     expect(screen.getByRole("group", { name: "Center properties" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /^Turn on \(as the Center button in the ribbon\)/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn on: Center" }));
     expect(rvs().showCentreMarker).toBe(true);
   });
 });
@@ -125,11 +125,11 @@ describe("display layer properties", () => {
 describe("surfaces layer properties", () => {
   const MANY = { ...RESULT, maxFOS: 2, allSurfaces: [surface(1.234), surface(1.3), surface(1.45), surface(1.6), surface(2)] } as unknown as AnalysisResult;
 
-  it("chooses the critical surface or all surfaces, as the ribbon's Surfaces menu", () => {
+  it("chooses the critical surface or all surfaces; the layer stays on", () => {
     act(() => useAppStore.setState({ result: MANY }));
     render(<ResultSidebar />);
-    // Off by default (the critical surface only), and still listed.
-    expect(row("surfaces")).toHaveAccessibleName("Surfaces (off)");
+    // On by default, showing the critical surface only.
+    expect(row("surfaces")).toHaveAccessibleName("Surfaces");
     fireEvent.click(row("surfaces"));
     const group = screen.getByRole("group", { name: "Surfaces properties" });
     expect(within(group).getByRole("button", { name: "Critical surface" })).toHaveAttribute("aria-pressed", "true");
@@ -142,7 +142,22 @@ describe("surfaces layer properties", () => {
     expect(history().pastStates).toHaveLength(1);
     fireEvent.click(within(group).getByRole("button", { name: "Critical surface" }));
     expect(rvs().surfaceDisplay).toBe("critical");
-    expect(row("surfaces")).toHaveAccessibleName("Surfaces (off)");
+    expect(row("surfaces")).toHaveAccessibleName("Surfaces");
+  });
+
+  it("holds the critical surface's color and line width under its own heading; Reset clears both kinds", () => {
+    render(<ResultSidebar />);
+    fireEvent.click(row("surfaces"));
+    const props = screen.getByRole("group", { name: "Surfaces properties" });
+    expect(within(props).getByRole("heading", { name: "Critical surface" })).toBeInTheDocument();
+    expect(within(props).getByRole("heading", { name: "Other surfaces" })).toBeInTheDocument();
+    const critical = within(props).getByRole("group", { name: "Critical surface" });
+    fireEvent.change(within(critical).getByLabelText("Line width (px)"), { target: { value: "3" } });
+    const other = within(props).getByRole("group", { name: "Other surfaces" });
+    fireEvent.change(within(other).getByLabelText("Opacity (%)"), { target: { value: "40" } });
+    expect(rvs().layerStyles).toEqual({ criticalSurface: { width: 3 }, surfaces: { opacity: 0.4 } });
+    fireEvent.click(within(props).getByRole("button", { name: "Reset to default" }));
+    expect(rvs().layerStyles).toBeUndefined();
   });
 
   it("filters the surfaces on F with a decimal comma, and counts those drawn", () => {

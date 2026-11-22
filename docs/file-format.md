@@ -134,6 +134,8 @@ A reader validates every member by name as the app does for a JSON project (`par
 
 `options.waterUnitWeight` (optional, since 2026-11-11) is the model's unit weight of water γw in kN/m³; a reader keeps it when it is a number greater than 0 and drops any other value without an error. Absent (every file saved before it, and a model left at the default) is 9.807 kN/m³, so older files open and run unchanged. The app does not write it when the model uses the default.
 
+`resultViewSettings.showSurfaces` (optional, since 2026-11-22) turns every slip surface of the result sheet off, the critical one too (Layers › Surfaces); it is written only as `false`, and a reader keeps it only when it is `false`. Absent: drawn, as in every file saved before it. In `resultViewSettings.layerOrder` (the order of the sheet's layers, bottom first) the key `"criticalSurface"` of files saved before 2026-11-22 names the same layer as `"surfaces"`: a reader reads it as `"surfaces"` and keeps the first of the two where it stands, so an older file opens with its surfaces where they were; a writer writes `"surfaces"` only.
+
 The user documentation (`packages/website/src/docs/file-format.mdx` and the reference pages it links) describes the meaning of these; the TypeScript types are the exact schema.
 
 ### 4.4 models/\<id\>/result.json

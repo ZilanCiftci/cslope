@@ -3,8 +3,8 @@
  * over the model, in an order the user can change (Properties › Layers).
  *
  * A layer is an annotation (by its id), a placed drawing shown in results
- * ("drawing:" and its id) or one of the display layers the Results ribbon
- * turns on and off (a fixed key). The renderers take only the layers that
+ * ("drawing:" and its id) or one of the display layers (a fixed key),
+ * turned on and off in Properties › Layers. The renderers take only the layers that
  * are drawn; Properties › Layers also lists the display layers turned off
  * (and the material table turned off), greyed, so they can be turned on
  * again there (`listedLayers`). A drawing not shown in results is not
@@ -27,24 +27,29 @@ export const DISPLAY_LAYER_KEYS = [
   "soilColor",
   "femMesh",
   "femPlasticZone",
-  "surfaces",
   "customSurfaces",
-  "criticalSurface",
+  "surfaces",
   "slices",
   "center",
   "fosLabel",
 ] as const;
 
+/**
+ * The key of the critical surface's own layer before it was one with the
+ * other surfaces ("surfaces"): a stored order that names it reads as the
+ * surfaces layer, in the place of the first of the two.
+ */
+export const LEGACY_CRITICAL_SURFACE_KEY = "criticalSurface";
+
 export type DisplayLayerKey = (typeof DISPLAY_LAYER_KEYS)[number];
 
-/** A display layer's name (as the ribbon's button; the heading of its properties). */
+/** A display layer's name (its row in Layers; the heading of its properties). */
 export const DISPLAY_LAYER_NAMES: Record<DisplayLayerKey, string> = {
   soilColor: "Soil colors",
   femMesh: "FE mesh",
   femPlasticZone: "Plastic zone",
   surfaces: "Surfaces",
   customSurfaces: "Custom surfaces",
-  criticalSurface: "Critical surface",
   slices: "Slices",
   center: "Center",
   fosLabel: "F label",
@@ -67,6 +72,7 @@ export interface LayerSource {
     | "annotations"
     | "layerOrder"
     | "surfaceDisplay"
+    | "showSurfaces"
     | "showSlices"
     | "showFosLabel"
     | "showCentreMarker"
@@ -77,6 +83,8 @@ export interface LayerSource {
   >;
   result?: Pick<AnalysisResult, "fem" | "criticalSurface" | "customSurfaces"> | null;
   backgrounds?: readonly BackgroundImage[];
+  /** Whether the model has custom search planes (their layer is listed before a run). */
+  hasCustomPlanes?: boolean;
   /**
    * The built-in annotations (material table, color bar) of the model
    * turned off this session (the store's `offAnnotations`), listed greyed
@@ -106,10 +114,10 @@ export const builtInLayerKey = (type: BuiltInAnnotationType) => type;
 export const isBuiltInPlaceholderKey = (key: string) => isBuiltInAnnotationType(key);
 
 /**
- * Whether a display layer can be drawn at all (listed in Layers, on or
- * off): the finite element layers with a finite element result, the
- * custom surfaces with custom surfaces in the result, the critical
- * surface with one; the others always.
+ * Whether a display layer is listed in Layers (on or off): the finite
+ * element layers with a finite element result, the custom surfaces when
+ * the model has custom search planes or the result has custom surfaces;
+ * the others always.
  */
 export function displayLayerAvailable(key: DisplayLayerKey, src: LayerSource): boolean {
   const result = src.result ?? null;
@@ -118,37 +126,46 @@ export function displayLayerAvailable(key: DisplayLayerKey, src: LayerSource): b
     case "femPlasticZone":
       return !!result?.fem;
     case "customSurfaces":
-      return (result?.customSurfaces ?? []).some((c) => !!c.surface);
-    case "criticalSurface":
-      return !!result?.criticalSurface;
+      return src.hasCustomPlanes === true || (result?.customSurfaces ?? []).some((c) => !!c.surface);
     default:
       return true;
   }
 }
 
-/** Whether a display layer is drawn (turned on, and there is something to draw). */
-export function displayLayerShown(key: DisplayLayerKey, src: LayerSource): boolean {
-  const rvs = src.resultViewSettings;
-  const result = src.result ?? null;
+/** Whether a display layer is turned on (its setting; drawn when there is something to draw). */
+export function displayLayerOn(key: DisplayLayerKey, rvs: LayerSource["resultViewSettings"]): boolean {
   switch (key) {
     case "soilColor":
       return rvs.showSoilColor !== false;
     case "femMesh":
-      return !!result?.fem && rvs.showFemMesh === true;
+      return rvs.showFemMesh === true;
     case "femPlasticZone":
-      return !!result?.fem && rvs.showFemPlasticZone !== false;
+      return rvs.showFemPlasticZone !== false;
     case "surfaces":
-      return rvs.surfaceDisplay !== "critical";
+      return rvs.showSurfaces !== false;
     case "customSurfaces":
-      return rvs.showCustomSurfaces === true && (result?.customSurfaces ?? []).some((c) => !!c.surface);
-    case "criticalSurface":
-      return !!result?.criticalSurface;
+      return rvs.showCustomSurfaces === true;
     case "slices":
       return rvs.showSlices;
     case "center":
       return rvs.showCentreMarker;
     case "fosLabel":
       return rvs.showFosLabel;
+  }
+}
+
+/** Whether a display layer is drawn (turned on, and there is something to draw). */
+export function displayLayerShown(key: DisplayLayerKey, src: LayerSource): boolean {
+  if (!displayLayerOn(key, src.resultViewSettings)) return false;
+  const result = src.result ?? null;
+  switch (key) {
+    case "femMesh":
+    case "femPlasticZone":
+      return !!result?.fem;
+    case "customSurfaces":
+      return (result?.customSurfaces ?? []).some((c) => !!c.surface);
+    default:
+      return true;
   }
 }
 
@@ -164,8 +181,10 @@ function resultDrawings(src: LayerSource): BackgroundImage[] {
 export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
   const annotations = src.resultViewSettings.annotations;
   const display = (key: DisplayLayerKey): ResultLayer[] => {
-    if (displayLayerShown(key, src)) return [{ key, kind: "display", layer: key }];
-    return listed && displayLayerAvailable(key, src) ? [{ key, kind: "display", layer: key, off: true }] : [];
+    if (!listed) return displayLayerShown(key, src) ? [{ key, kind: "display", layer: key }] : [];
+    if (!displayLayerAvailable(key, src)) return [];
+    // Listed by its setting: on (drawn once there is something to draw) or off.
+    return displayLayerOn(key, src.resultViewSettings) ? [{ key, kind: "display", layer: key }] : [{ key, kind: "display", layer: key, off: true }];
   };
   // The built-in annotations turned off: those remembered, else one row of the type.
   const offBuiltIn = (): ResultLayer[] => {
@@ -190,9 +209,9 @@ export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
     ...display("femPlasticZone"),
     // reference lines: in the model, under the surfaces
     ...annos(true),
-    ...display("surfaces"),
     ...display("customSurfaces"),
-    ...display("criticalSurface"),
+    // every surface and the critical one, with its slices, center and label after it
+    ...display("surfaces"),
     ...display("slices"),
     ...display("center"),
     ...display("fosLabel"),
@@ -314,13 +333,16 @@ function storedLayerOrder(src: LayerSource, visible: readonly string[]): string[
 /**
  * A stored layer order as read from a file: strings only, each once, of
  * the display layers, drawings and the given annotations; absent when
- * nothing is left.
+ * nothing is left. The critical surface's old key reads as the surfaces
+ * layer ("surfaces" and "criticalSurface" are one layer, in the place of
+ * the first of the two).
  */
 export function normalizeLayerOrder(raw: unknown, annotations: readonly Annotation[]): string[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   const ids = new Set(annotations.map((a) => a.id));
   const out: string[] = [];
-  for (const k of raw) {
+  for (const rawKey of raw as unknown[]) {
+    const k = rawKey === LEGACY_CRITICAL_SURFACE_KEY ? "surfaces" : rawKey;
     if (typeof k !== "string" || out.includes(k)) continue;
     if (isDisplayLayerKey(k) || ids.has(k) || (k.startsWith(DRAWING_LAYER_PREFIX) && k.length > DRAWING_LAYER_PREFIX.length)) out.push(k);
   }
@@ -329,14 +351,15 @@ export function normalizeLayerOrder(raw: unknown, annotations: readonly Annotati
 
 /**
  * The steps of a drawing in the layer order, for the renderers: the
- * critical surface draws the slices, the center and the FOS label in
- * its own steps (between its fill, its line and its forces) when they
- * follow it directly in their default order, as they always were;
+ * surfaces layer ("critical": the other surfaces, then the critical one)
+ * draws the slices, the center and the FOS label in its own steps
+ * (between the critical surface's fill, its line and its forces) when
+ * they follow it directly in their default order, as they always were;
  * otherwise each is drawn on its own, where it stands.
  */
 export type LayerStep =
   | { kind: "critical"; withSlices: boolean; withCenter: boolean; withFosLabel: boolean }
-  | { kind: "display"; layer: Exclude<DisplayLayerKey, "criticalSurface"> }
+  | { kind: "display"; layer: Exclude<DisplayLayerKey, "surfaces"> }
   | { kind: "references"; annotations: Annotation[] }
   | { kind: "paper"; annotation: Annotation }
   | { kind: "drawings"; drawings: BackgroundImage[] };
@@ -356,7 +379,7 @@ export function layerSteps(layers: readonly ResultLayer[]): LayerStep[] {
       if (l.annotation.type !== "reference") steps.push({ kind: "paper", annotation: l.annotation });
       else if (last?.kind === "references") last.annotations.push(l.annotation);
       else steps.push({ kind: "references", annotations: [l.annotation] });
-    } else if (l.layer === "criticalSurface") {
+    } else if (l.layer === "surfaces") {
       const fused = new Set<string>();
       let rank = -1;
       while (i + 1 < layers.length) {

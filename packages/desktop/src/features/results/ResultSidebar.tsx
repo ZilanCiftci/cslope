@@ -502,8 +502,9 @@ export function ResultSidebar() {
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
   // A display layer selected in Layers, on or off (set up before it is turned on): its properties.
+  const hasCustomPlanes = useAppStore((s) => s.customSearchPlanes.length > 0);
   const selectedLayer =
-    selectedResultLayer && displayLayerAvailable(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds })
+    selectedResultLayer && displayLayerAvailable(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds, hasCustomPlanes })
       ? selectedResultLayer
       : null;
 
@@ -731,7 +732,7 @@ export function ResultSidebar() {
         onToggle={() => toggleSection("layers")}
       >
         {/* What the sheet draws, topmost first: the annotations and the
-            display layers turned on in the ribbon, in an order of the
+            display layers (on or off, greyed), in an order of the
             model's (drag a row or Alt+Up/Down). */}
         <LayersList resolveText={resolveText} />
       </Section>

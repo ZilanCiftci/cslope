@@ -697,6 +697,22 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect(view.layerOrder).toEqual(["m", "c1", "t"]);
   });
 
+  it("reads an old file's critical surface layer as the one surfaces layer, its styles kept; surfaces off only as false", () => {
+    const view = normalizeResultView({
+      surfaceDisplay: "filter",
+      fosFilterMax: 1.3,
+      layerOrder: ["soilColor", "criticalSurface", "slices", "surfaces", "fosLabel"],
+      layerStyles: { criticalSurface: { color: "#0066cc", width: 3 }, surfaces: { opacity: 0.4 } },
+    });
+    expect(view.layerOrder).toEqual(["soilColor", "surfaces", "slices", "fosLabel"]);
+    expect(view.layerStyles).toEqual({ criticalSurface: { color: "#0066cc", width: 3 }, surfaces: { opacity: 0.4 } });
+    expect(view).toMatchObject({ surfaceDisplay: "filter", fosFilterMax: 1.3 });
+    expect("showSurfaces" in view).toBe(false);
+    expect(normalizeResultView({ showSurfaces: false }).showSurfaces).toBe(false);
+    expect("showSurfaces" in normalizeResultView({ showSurfaces: true })).toBe(false);
+    expect("showSurfaces" in normalizeResultView({ showSurfaces: "no" })).toBe(false);
+  });
+
   it("keeps a valid view lock", () => {
     const view = normalizeResultView({
       viewLock: { bottomLeft: [0, -2], topRight: [10, 5] },

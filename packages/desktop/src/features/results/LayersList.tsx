@@ -1,8 +1,8 @@
 /**
  * Properties › Layers: what the result sheet draws, topmost first, as in a
- * drawing program. The annotations and the display layers the Results
- * ribbon turns on (soil colors, surfaces, slices, center, FOS label, ...)
- * and the drawings shown in results. A row is dragged by its grip, or moved
+ * drawing program. The annotations, the display layers (soil colors,
+ * surfaces, slices, center, F label, ...) and the drawings shown in
+ * results. A row is dragged by its grip, or moved
  * with Alt+Up and Alt+Down, to change the order the result view and the
  * PDF draw them in (the model's `layerOrder`, an undo step). A click on an
  * annotation selects it (Ctrl, Cmd or Shift: adds it); its button removes
@@ -10,13 +10,13 @@
  * (LayerProperties) show in the sidebar, also while it is off.
  *
  * The built-in layers (the display layers, the material table and the
- * color bar) are never removed: their eye turns them off and on, as the
- * ribbon does, and a layer turned off stays listed, greyed, with its eye
- * showing. A drawing's button takes it out of the results ("Show in
+ * color bar) are never removed: their eye turns them off and on (this
+ * list is the only place to do so), and a layer turned off stays listed,
+ * greyed, with its eye showing. A drawing's button takes it out of the results ("Show in
  * results").
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Eye, EyeOff, GripVertical, Target, X } from "lucide-react";
+import { Eye, EyeOff, GripVertical, X } from "lucide-react";
 import {
   CentreIcon,
   ColorBarIcon,
@@ -48,7 +48,7 @@ import {
   type ResultLayer,
 } from "./layers";
 
-// The ribbon's icon of each thing (the button that adds or shows it), at list size.
+// The icon of each thing (the domain icons of the ribbon), at list size.
 const ICON = { size: 14, strokeWidth: 1.75, "aria-hidden": true } as const;
 
 type Toggle = { off: Partial<ResultViewSettings>; on: Partial<ResultViewSettings> };
@@ -61,33 +61,25 @@ const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; toggle?: Toggle }> = {
     icon: <PlasticZoneIcon {...ICON} />,
     toggle: { off: { showFemPlasticZone: false }, on: { showFemPlasticZone: true } },
   },
-  surfaces: { icon: <SurfacesIcon {...ICON} />, toggle: { off: { surfaceDisplay: "critical" }, on: { surfaceDisplay: "all" } } },
+  // Every surface, the critical one too (Show and the filter are its properties).
+  surfaces: { icon: <SurfacesIcon {...ICON} />, toggle: { off: { showSurfaces: false }, on: { showSurfaces: undefined } } },
   customSurfaces: {
     icon: <CustomPlanesIcon {...ICON} />,
     toggle: { off: { showCustomSurfaces: false }, on: { showCustomSurfaces: true } },
   },
-  // Always drawn: no button (and no ribbon icon).
-  criticalSurface: { icon: <Target {...ICON} /> },
   slices: { icon: <SlicesIcon {...ICON} />, toggle: { off: { showSlices: false }, on: { showSlices: true } } },
   center: { icon: <CentreIcon {...ICON} />, toggle: { off: { showCentreMarker: false }, on: { showCentreMarker: true } } },
   fosLabel: { icon: <FosLabelIcon {...ICON} />, toggle: { off: { showFosLabel: false }, on: { showFosLabel: true } } },
 };
 
-/** The names of the built-in annotations (as their ribbon buttons). */
+/** The names of the built-in annotations. */
 const BUILT_IN_NAMES: Record<BuiltInAnnotationType, string> = {
   "material-table": "Material table",
   "color-bar": "Color bar",
 };
 
 /** What the eye of a built-in layer says it does: turn it off, or on when `off`. */
-function toggleTitle(name: string, surfaces: boolean, off: boolean): string {
-  if (surfaces) {
-    return off
-      ? "Turn on (shows all surfaces, as Surfaces › All surfaces in the ribbon)"
-      : "Turn off (shows the critical surface only, as Surfaces › Critical only in the ribbon)";
-  }
-  return `${off ? "Turn on" : "Turn off"} (as the ${name} button in the ribbon)`;
-}
+const toggleTitle = (off: boolean) => (off ? "Turn on" : "Turn off");
 
 /** The built-in type of an annotation layer (material table, color bar), or null. */
 function builtInType(layer: ResultLayer): BuiltInAnnotationType | null {
@@ -125,6 +117,8 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
   const offAnnotations = useAppStore((s) => s.offAnnotations[s.activeModelId]);
   const setBuiltInShown = useAppStore((s) => s.setBuiltInAnnotationShown);
   const result = useAppStore((s) => s.result);
+  // The custom surfaces' layer is listed before a run when the model has custom planes.
+  const hasCustomPlanes = useAppStore((s) => s.customSearchPlanes.length > 0);
   const backgrounds = useAppStore((s) => s.backgrounds);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
   const removeAnnotation = useAppStore((s) => s.removeAnnotation);
@@ -135,7 +129,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
   const selectedLayer = useAppStore((s) => s.selectedResultLayer);
   const setSelectedLayer = useAppStore((s) => s.setSelectedResultLayer);
 
-  const src: LayerSource = { resultViewSettings: rvs, result, backgrounds, offBuiltIns: offAnnotations };
+  const src: LayerSource = { resultViewSettings: rvs, result, backgrounds, offBuiltIns: offAnnotations, hasCustomPlanes };
   // Topmost first, with the built-in layers turned off.
   const layers = resultLayers(src, true).reverse();
 
@@ -234,7 +228,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
         const builtIn = type !== null || (layer.kind === "display" && DISPLAY[layer.layer].toggle !== undefined);
         const removable = !builtIn && layer.kind !== "display";
         const buttonTitle = builtIn
-          ? toggleTitle(name, layer.kind === "display" && layer.layer === "surfaces", off)
+          ? toggleTitle(off)
           : layer.kind === "annotation"
             ? "Remove annotation"
             : "Hide from the results (turns off Show in results)";
