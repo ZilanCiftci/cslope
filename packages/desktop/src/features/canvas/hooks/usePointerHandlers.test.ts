@@ -724,11 +724,17 @@ describe("annotations in the result view", () => {
     });
   });
 
-  it("selects an annotation and drags it by the paper fraction moved", () => {
-    const { down, move, deps } = setup({ mode: "result" });
+  it("selects an annotation without moving it, then drags it by the paper fraction moved", () => {
+    const first = setup({ mode: "result" });
     const [x, y] = at(0.2, 0.2);
+    first.down(x, y);
+    expect(first.deps.setSelectedAnnotations).toHaveBeenCalledWith(["a"]);
+    first.move(x + pf().w * 0.1, y + pf().h * 0.05);
+    first.up(x + pf().w * 0.1, y + pf().h * 0.05);
+    expect(first.deps.updateAnnotation).not.toHaveBeenCalled();
+    // Selected: a drag moves it.
+    const { down, move, deps } = setup({ mode: "result", selectedAnnotationIds: ["a"] });
     down(x, y);
-    expect(deps.setSelectedAnnotations).toHaveBeenCalledWith(["a"]);
     move(x + pf().w * 0.1, y + pf().h * 0.05);
     const [id, patch] = vi.mocked(deps.updateAnnotation).mock.calls.at(-1)!;
     expect(id).toBe("a");
@@ -989,14 +995,72 @@ describe("reference annotations in the result view", () => {
     const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     const bar = { id: "bar", type: "color-bar" as const, x: (sx - pf.x) / pf.w, y: (sy - pf.y) / pf.h };
     useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, bar] } });
-    const { deps, h, down, move } = setup({ mode: "result" });
+    const { deps, h, down, move, up } = setup({ mode: "result" });
     move(sx, sy);
     expect(h().hoverHit).toEqual({ kind: "annotation", annoId: "bar" });
     down(sx, sy);
     expect(deps.setSelectedAnnotations).toHaveBeenCalledWith(["bar"]);
-    move(sx + 10, sy);
-    expect(vi.mocked(deps.updateAnnotation).mock.calls.at(-1)![0]).toBe("bar");
+    up(sx, sy);
+    // Selected: a drag moves the bar.
+    const selected = setup({ mode: "result", selectedAnnotationIds: ["bar"] });
+    selected.down(sx, sy);
+    selected.move(sx + 10, sy);
+    expect(vi.mocked(selected.deps.updateAnnotation).mock.calls.at(-1)![0]).toBe("bar");
     expect(line().points).toEqual(LINE.points);
+  });
+
+  describe("a text annotation over a selected circle's centre", () => {
+    // The text's anchor on the circle's centre (15, 18): without a result it is hit within 15 px of it.
+    const textOver = () => {
+      const [sx, sy] = toScreen(15, 18);
+      const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
+      const text = { id: "t", type: "text" as const, x: (sx - pf.x) / pf.w, y: (sy - pf.y) / pf.h, text: "Over" };
+      useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, text] } });
+      return text;
+    };
+
+    it("drags the selected circle's centre, not the text over it, in one undo step", () => {
+      const text = textOver();
+      const { deps, h, down, move, up } = setup({ mode: "result", selectedAnnotationIds: ["c"], updateAnnotation: realUpdate });
+      const [cx, cy] = toScreen(15, 18);
+      move(cx, cy);
+      expect(h().hoverHit).toEqual({ kind: "referenceCircle", annoId: "c", handle: "centre" });
+      down(cx, cy);
+      expect(deps.setSelectedAnnotations).not.toHaveBeenCalled();
+      move(cx + 5, cy + 5);
+      up(cx + 5, cy + 5);
+      expect(circle()).toMatchObject({ cx: 16, cy: 17, radius: 12 });
+      const anno = () => useAppStore.getState().resultViewSettings.annotations.find((a) => a.id === "t");
+      expect(anno()).toEqual(text);
+      expect(useAppStore.temporal.getState().pastStates).toHaveLength(1);
+    });
+
+    it("picks the text where it does not overlap the circle, and the text over an unselected circle", () => {
+      textOver();
+      const [cx, cy] = toScreen(15, 18);
+      // 12 px right of the centre: the text (15 px) but not the centre handle (8 px).
+      const beside = setup({ mode: "result", selectedAnnotationIds: ["c"] });
+      beside.down(cx + 12, cy);
+      expect(beside.deps.setSelectedAnnotations).toHaveBeenCalledWith(["t"]);
+      // Nothing selected: the text is on top.
+      const none = setup({ mode: "result" });
+      none.down(cx, cy);
+      expect(none.deps.setSelectedAnnotations).toHaveBeenCalledWith(["t"]);
+      // Ctrl changes the selection: the topmost object is toggled.
+      const ctrl = setup({ mode: "result", selectedAnnotationIds: ["c"] });
+      ctrl.down(cx, cy, { ctrlKey: true });
+      expect(ctrl.deps.toggleAnnotationSelection).toHaveBeenCalledWith("t", true);
+    });
+
+    it("with both selected, takes the circle's centre handle first and the text beside it", () => {
+      textOver();
+      const both = setup({ mode: "result", selectedAnnotationIds: ["c", "t"], updateAnnotation: realUpdate });
+      const [cx, cy] = toScreen(15, 18);
+      both.move(cx, cy);
+      expect(both.h().hoverHit).toEqual({ kind: "referenceCircle", annoId: "c", handle: "centre" });
+      both.move(cx + 12, cy);
+      expect(both.h().hoverHit).toEqual({ kind: "annotation", annoId: "t" });
+    });
   });
 
   it("hovers reference handles and lines", () => {

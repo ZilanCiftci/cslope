@@ -47,7 +47,7 @@ import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
 import type { PointHit } from "./types";
 import { drawUnderlays, placementCanvasCorners } from "../drawings/draw-underlays";
-import { drawReferenceLabels, drawReferenceLines, referenceSegments, type DrawnReference } from "./reference-draw";
+import { drawReferenceLabels, drawReferenceLines, drawReferenceSelections, referenceSegments, type DrawnReference } from "./reference-draw";
 import { baseLayerCount, isPaperStep, layerSteps, resultLayers } from "../results/layers";
 import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
@@ -2563,9 +2563,7 @@ export function drawCanvas(
           groundYAt: surfaceYAtX,
           paperZoom,
           defaultColor: REFERENCE_COLOR,
-          selectedIds: selectedAnnotationIds,
           hoverHit,
-          handleStroke: PAPER_FILL_COLOR || BG_COLOR,
         }),
       );
     };
@@ -3181,6 +3179,8 @@ export function drawCanvas(
 
     // ── Annotations ──────────────────────────────────────
     // A paper annotation (references are drawn with the model above).
+    // The selected ones, outlined after every layer.
+    const selectedPaper: PaperAnnotation[] = [];
     const drawPaperAnnotation = (anno: PaperAnnotation) => {
       // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
@@ -3483,26 +3483,8 @@ export function drawCanvas(
         ctx.restore();
       }
 
-      // Selection highlight for selected annotations
-      if (selectedAnnotationIds.includes(anno.id)) {
-        const bounds = getAnnotationBoundsPx(ctx, {
-          annotation: anno,
-          paperFrame: pf,
-          result,
-          materials,
-          piezometricLine,
-          projectInfo,
-          parameters,
-          resultView: rvs,
-        });
-        ctx.save();
-        ctx.strokeStyle = "#0078d4";
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
-        ctx.setLineDash([]);
-        ctx.restore();
-      }
+      // A selected annotation's outline is drawn after every layer.
+      if (selectedAnnotationIds.includes(anno.id)) selectedPaper.push(anno);
     };
 
     // The steps in order, the model's layers clipped to the plot area, the
@@ -3560,6 +3542,38 @@ export function drawCanvas(
       }
       if (i === lastModelStep) finishModel();
     });
+
+    // The selection, over every layer and annotation, so that a selected
+    // object's handles and outline are never hidden by what lies over it;
+    // the objects themselves keep their place in the order above. The
+    // reference handles in the plot area, as their lines.
+    clipToPlot();
+    drawReferenceSelections(ctx, drawnReferences, {
+      toC: (x, y) => worldToCanvas(x, y, w, h),
+      selectedIds: selectedAnnotationIds,
+      hoverHit,
+      handleStroke: PAPER_FILL_COLOR || BG_COLOR,
+    });
+    unclip();
+    for (const anno of selectedPaper) {
+      const bounds = getAnnotationBoundsPx(ctx, {
+        annotation: anno,
+        paperFrame: pf,
+        result,
+        materials,
+        piezometricLine,
+        projectInfo,
+        parameters,
+        resultView: rvs,
+      });
+      ctx.save();
+      ctx.strokeStyle = "#0078d4";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.strokeRect(bounds.x, bounds.y, bounds.w, bounds.h);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
 
     // Selection highlight for paper/axis properties target.
     if (selectedResultObject === "paper-frame") {
