@@ -114,7 +114,51 @@ describe("display layer properties", () => {
     expect(rvs().layerStyles).toEqual({ center: { radiusLines: false } });
     fireEvent.click(screen.getByRole("button", { name: /^Turn off \(as the Center button in the ribbon\)/ }));
     expect(rvs().showCentreMarker).toBe(false);
-    expect(useAppStore.getState().selectedResultLayer).toBeNull();
-    expect(screen.queryByRole("group", { name: "Center properties" })).toBeNull();
+    // Turned off, it stays selected: its properties can be set before it is turned on.
+    expect(useAppStore.getState().selectedResultLayer).toBe("center");
+    expect(screen.getByRole("group", { name: "Center properties" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^Turn on \(as the Center button in the ribbon\)/ }));
+    expect(rvs().showCentreMarker).toBe(true);
+  });
+});
+
+describe("surfaces layer properties", () => {
+  const MANY = { ...RESULT, maxFOS: 2, allSurfaces: [surface(1.234), surface(1.3), surface(1.45), surface(1.6), surface(2)] } as unknown as AnalysisResult;
+
+  it("chooses the critical surface or all surfaces, as the ribbon's Surfaces menu", () => {
+    act(() => useAppStore.setState({ result: MANY }));
+    render(<ResultSidebar />);
+    // Off by default (the critical surface only), and still listed.
+    expect(row("surfaces")).toHaveAccessibleName("Surfaces (off)");
+    fireEvent.click(row("surfaces"));
+    const group = screen.getByRole("group", { name: "Surfaces properties" });
+    expect(within(group).getByRole("button", { name: "Critical surface" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).queryByRole("checkbox", { name: "Filter on F" })).toBeNull();
+    fireEvent.click(within(group).getByRole("button", { name: "All surfaces" }));
+    expect(rvs().surfaceDisplay).toBe("all");
+    expect(row("surfaces")).toHaveAccessibleName("Surfaces");
+    expect(within(group).getByRole("button", { name: "All surfaces" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(group).getByRole("status", { name: "Surfaces drawn" })).toHaveTextContent("5 of 5 surfaces");
+    expect(history().pastStates).toHaveLength(1);
+    fireEvent.click(within(group).getByRole("button", { name: "Critical surface" }));
+    expect(rvs().surfaceDisplay).toBe("critical");
+    expect(row("surfaces")).toHaveAccessibleName("Surfaces (off)");
+  });
+
+  it("filters the surfaces on F with a decimal comma, and counts those drawn", () => {
+    act(() => useAppStore.setState({ result: MANY }));
+    act(() => useAppStore.getState().setResultViewSettings({ surfaceDisplay: "all" }));
+    render(<ResultSidebar />);
+    fireEvent.click(row("surfaces"));
+    const group = screen.getByRole("group", { name: "Surfaces properties" });
+    fireEvent.click(within(group).getByRole("checkbox", { name: "Filter on F" }));
+    expect(rvs().surfaceDisplay).toBe("filter");
+    fireEvent.change(within(group).getByLabelText("Show surfaces with F ≤"), { target: { value: "1,5" } });
+    expect(rvs().fosFilterMax).toBe(1.5);
+    expect(within(group).getByRole("status", { name: "Surfaces drawn" })).toHaveTextContent("3 of 5 surfaces");
+    // Off again: all surfaces, the limit kept.
+    fireEvent.click(within(group).getByRole("checkbox", { name: "Filter on F" }));
+    expect(rvs().surfaceDisplay).toBe("all");
+    expect(rvs().fosFilterMax).toBe(1.5);
   });
 });

@@ -817,7 +817,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = normalizeAnnotations(view.annotations).map(normalizeColorBarScale);
+  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale));
   const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
   const layerStyles = normalizeLayerStyles((view as { layerStyles?: unknown }).layerStyles);
 
@@ -913,6 +913,18 @@ export function normalizeColorBarScale(anno: Annotation): Annotation {
     ...(isHexColor(raw.schemeMid) ? { schemeMid: raw.schemeMid } : {}),
   };
   return { ...rest, ...scale } as Annotation;
+}
+
+/**
+ * The annotations with one color bar at most: the color bar is a built-in
+ * layer of the sheet, turned on and off, never two. Files saved before
+ * could hold several; the first in the list (the lowest drawn by default)
+ * is kept, the others are dropped.
+ */
+export function singleColorBar(annotations: Annotation[]): Annotation[] {
+  const first = annotations.findIndex((a) => a.type === "color-bar");
+  if (first < 0) return annotations;
+  return annotations.filter((a, i) => a.type !== "color-bar" || i === first);
 }
 
 /**

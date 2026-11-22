@@ -19,6 +19,9 @@
  */
 
 import type { Locator, Page } from "playwright";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../src/constants";
+import { computePaperFrame } from "../../src/features/view/paper";
+import type { PaperSize } from "../../src/store/types";
 
 export type Area = "main-edit" | "main-result" | "sidebar" | "menus" | "windows" | "dialogs" | "canvas";
 export type Theme = "light" | "dark";
@@ -634,6 +637,62 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-layers-off",
+    title: "Result sidebar, Layers list with built-in layers turned off (greyed, eye shown): soil colors, slices, material table",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => {
+        s.setBuiltInAnnotationShown("color-bar", true);
+        s.setBuiltInAnnotationShown("material-table", false);
+        s.setResultViewSettings({ showSoilColor: false, showSlices: false });
+        s.setSelectedAnnotations([]);
+      }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-layers-off",
+    title: "Result view with soil colors, slices and the material table turned off in Layers, the color bar on",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => {
+        s.setBuiltInAnnotationShown("color-bar", true);
+        s.setBuiltInAnnotationShown("material-table", false);
+        s.setResultViewSettings({ showSoilColor: false, showSlices: false });
+        s.setSelectedAnnotations([]);
+      }`);
+    },
+  },
+  {
+    id: "result-surfaces-critical",
+    title: "Result sidebar, the Surfaces layer (off) selected: Show Critical surface",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ surfaceDisplay: "critical" }); s.setSelectedResultLayer("surfaces"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-surfaces-filter",
+    title: "Result view, all surfaces filtered on F with the Surfaces properties and the color bar following the filter",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s, store) => {
+        const r = s.result;
+        const limit = r ? Math.round((r.minFOS + (r.maxFOS - r.minFOS) * 0.15) * 100) / 100 : 1.5;
+        s.setBuiltInAnnotationShown("color-bar", true);
+        const bar = store.getState().resultViewSettings.annotations.find((a) => a.type === "color-bar");
+        if (bar) s.updateAnnotation(bar.id, { scaleMode: "filter" });
+        s.setResultViewSettings({ surfaceDisplay: "filter", fosFilterMax: limit });
+        s.setSelectedResultLayer("surfaces");
+      }`);
+    },
+  },
+  {
     id: "result-sheet",
     title: "Result sidebar, Sheet section (Results › Sheet settings)",
     area: "sidebar",
@@ -1055,6 +1114,45 @@ const canvasScenes: Scene[] = [
       const p = pts[Math.min(2, pts.length - 1)];
       await ctx.page.mouse.move(p.x - 20, p.y - 20);
       await ctx.page.mouse.move(p.x, p.y, { steps: 4 });
+    },
+  },
+  {
+    id: "canvas-result-reference-under-text",
+    title: "Result view: a selected reference circle whose centre lies under a text annotation (the handle on top)",
+    area: "canvas",
+    result: true,
+    open: async (ctx) => {
+      await ctx.tab("Results");
+      await ctx.click("Reference line");
+      await menu(ctx, "Reference line").getByRole("menuitem", { name: "Circle" }).click();
+      const c = await ctx.store<{ id: string; cx: number; cy: number }>(
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "reference" && a.shape === "circle").pop(); return { id: a.id, cx: a.cx, cy: a.cy }; }`,
+      );
+      // The text's top-left corner a little up and left of the centre, so its glyphs cover it.
+      const canvas = await ctx.page.locator("[data-testid='slope-canvas']").boundingBox();
+      if (!canvas) throw new Error("No canvas");
+      const centre = await ctx.at(c.cx, c.cy);
+      const frame = await ctx.store<{ paperSize: PaperSize; landscape: boolean; zoom?: number; offsetX?: number; offsetY?: number }>(
+        `(s) => s.resultViewSettings.paperFrame`,
+      );
+      const pf = computePaperFrame(
+        canvas.width,
+        canvas.height,
+        frame.paperSize,
+        frame.landscape,
+        frame.zoom ?? 1,
+        frame.offsetX ?? 0,
+        frame.offsetY ?? 0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
+      );
+      const x = (centre.x - canvas.x - 14 - pf.x) / pf.w;
+      const y = (centre.y - canvas.y - 18 - pf.y) / pf.h;
+      await ctx.store(
+        `(s, store, p) => { s.addAnnotation("text"); const t = store.getState().resultViewSettings.annotations.filter((a) => a.type === "text").pop(); s.updateAnnotation(t.id, { x: p.x, y: p.y, anchor: "top-left", text: "MMM", fontSize: 32, bold: true }); s.setSelectedAnnotations([p.id]); }`,
+        { x, y, id: c.id },
+      );
+      await ctx.page.mouse.move(canvas.x + 4, canvas.y + 4);
+      await ctx.wait(300);
     },
   },
   {

@@ -10,6 +10,7 @@ import { modelViewLock, viewLockContains } from "../view/viewLock";
 import { paperContentOf } from "../view/extents";
 import type { Annotation } from "../../store/types";
 import { markResultOutOfDate, RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
+import { normalizeResultView } from "../../store/persistence";
 
 const surface = (fos: number) => ({ cx: 10, cy: 12, radius: 10, fos, entryPoint: [2, 8], exitPoint: [18, 2] });
 
@@ -240,9 +241,12 @@ describe("ResultSidebar layers list", () => {
     fireEvent.click(screen.getByText("Color bar"), { ctrlKey: true });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["p", "c"]);
 
-    // Topmost first: the last annotation (the color bar) is the first row.
+    // Topmost first: the plot is the first row that can be removed; the
+    // color bar (the first row) and the material table are turned off instead.
     fireEvent.click(screen.getAllByTitle("Remove annotation")[0]);
-    expect(annotations().map((a) => a.id)).toEqual(["t1", "t2", "m", "p"]);
+    expect(annotations().map((a) => a.id)).toEqual(["t1", "t2", "m", "c"]);
+    expect(screen.getByRole("button", { name: "Turn off (as the Color bar button in the ribbon): Color bar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Turn off (as the Material table button in the ribbon): Material table" })).toBeInTheDocument();
   });
 
   it("lists a text annotation by its text as the sheet shows it", () => {
@@ -267,7 +271,7 @@ describe("ResultSidebar layers list", () => {
     expect(screen.getByLabelText("Text on the sheet")).toHaveTextContent("T-ACADS Non-Homogeneous FOS 2");
   });
 
-  it("says when nothing is drawn", () => {
+  it("lists the built-in layers turned off when nothing is drawn", () => {
     act(() =>
       useAppStore.setState({
         result: null,
@@ -282,7 +286,16 @@ describe("ResultSidebar layers list", () => {
       }),
     );
     render(<ResultSidebar />);
-    expect(screen.getByText("Nothing is drawn yet.")).toBeInTheDocument();
+    const rows = within(screen.getByRole("list", { name: "Layers, topmost first" })).getAllByRole("listitem");
+    expect(rows.map((r) => r.getAttribute("aria-label"))).toEqual([
+      "Color bar (off)",
+      "Material table (off)",
+      "F label (off)",
+      "Center (off)",
+      "Slices (off)",
+      "Surfaces (off)",
+      "Soil colors (off)",
+    ]);
     expect(screen.getByText("Select an object on the canvas to edit its properties.")).toBeInTheDocument();
   });
 
@@ -295,9 +308,86 @@ describe("ResultSidebar layers list", () => {
     expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "criticalSurface", "surfaces", "soilColor"]);
     expect(screen.getByText("Soil colors")).toBeInTheDocument();
     expect(screen.getByText("Critical surface")).toBeInTheDocument();
-    // Turned off in the ribbon: not listed.
+    // Turned off in the ribbon: still listed where they were, greyed and named off.
     act(() => setRvsNow({ showSlices: false, surfaceDisplay: "critical" }));
-    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "criticalSurface", "soilColor"]);
+    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "criticalSurface", "surfaces", "soilColor"]);
+    const list = within(screen.getByRole("list", { name: "Layers, topmost first" }));
+    expect(list.getByRole("listitem", { name: "Slices (off)" })).toBeInTheDocument();
+    expect(list.getByRole("listitem", { name: "Surfaces (off)" })).toBeInTheDocument();
+    expect(list.getByRole("listitem", { name: "Center" })).toBeInTheDocument();
+  });
+
+  it("turns an off built-in layer on again from its eye, in step with the ribbon's state", () => {
+    render(<ResultSidebar />);
+    const eye = () => screen.getByRole("button", { name: /\(as the Soil colors button in the ribbon\): Soil colors$/ });
+    expect(eye()).toHaveAccessibleName("Turn off (as the Soil colors button in the ribbon): Soil colors");
+    expect(eye()).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(eye());
+    expect(rvs().showSoilColor).toBe(false);
+    expect(screen.getByRole("listitem", { name: "Soil colors (off)" })).toBeInTheDocument();
+    expect(eye()).toHaveAccessibleName("Turn on (as the Soil colors button in the ribbon): Soil colors");
+    expect(eye()).toHaveAttribute("aria-pressed", "true");
+    expect(eye()).toHaveAttribute("title", "Turn on (as the Soil colors button in the ribbon)");
+    // One undo step, as the ribbon's button.
+    expect(useAppStore.temporal.getState().pastStates.length).toBeGreaterThan(0);
+    fireEvent.click(eye());
+    expect(rvs().showSoilColor).toBe(true);
+    expect(screen.getByRole("listitem", { name: "Soil colors" })).toBeInTheDocument();
+    // The ribbon's state (the store) shows in the list.
+    act(() => setRvsNow({ showSoilColor: false }));
+    expect(eye()).toHaveAccessibleName("Turn on (as the Soil colors button in the ribbon): Soil colors");
+    // The Delete key turns nothing off and removes nothing.
+    fireEvent.keyDown(screen.getByRole("listitem", { name: "Soil colors (off)" }), { key: "Delete" });
+    expect(rvs().showSoilColor).toBe(false);
+  });
+
+  it("turns the material table and the color bar off and on, where they were, never removed", () => {
+    render(<ResultSidebar />);
+    act(() => useAppStore.getState().updateAnnotation("m", { x: 0.7, y: 0.4, tableColumns: ["model"] }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn off (as the Material table button in the ribbon): Material table" }));
+    expect(annotations().some((a) => a.type === "material-table")).toBe(false);
+    const off = screen.getByRole("listitem", { name: "Material table (off)" });
+    // The Delete key does nothing on it.
+    fireEvent.keyDown(off, { key: "Delete" });
+    expect(screen.getByRole("listitem", { name: "Material table (off)" })).toBeInTheDocument();
+    expect(rowKeys().indexOf("m")).toBe(2);
+    fireEvent.click(screen.getByRole("button", { name: "Turn on (as the Material table button in the ribbon): Material table" }));
+    expect(anno("m")).toMatchObject({ x: 0.7, y: 0.4, tableColumns: ["model"] });
+    expect(rowKeys().indexOf("m")).toBe(2);
+    // On, the Delete key does nothing either.
+    fireEvent.keyDown(screen.getByRole("listitem", { name: "Material table" }), { key: "Delete" });
+    expect(anno("m")).toBeDefined();
+
+    // A second color bar cannot be added.
+    act(() => useAppStore.getState().addAnnotation("color-bar"));
+    expect(annotations().filter((a) => a.type === "color-bar")).toHaveLength(1);
+  });
+
+  it("opens an old file's material table on, where it was; a file without one has it off", () => {
+    const opened = (annotations: unknown[]) =>
+      act(() => useAppStore.setState({ resultViewSettings: normalizeResultView({ ...DEFAULT_RESULT_VIEW_SETTINGS, annotations }) }));
+    opened([{ id: "old", type: "material-table", x: 0.5, y: 0.6 }, { id: "c1", type: "color-bar", x: 0.9, y: 0.3 }, { id: "c2", type: "color-bar", x: 0.1, y: 0.3 }]);
+    render(<ResultSidebar />);
+    expect(screen.getByRole("listitem", { name: "Material table" })).toBeInTheDocument();
+    expect(anno("old")).toMatchObject({ x: 0.5, y: 0.6 });
+    expect(screen.getAllByRole("listitem", { name: /^Color bar/ })).toHaveLength(1);
+    opened([]);
+    expect(screen.getByRole("listitem", { name: "Material table (off)" })).toBeInTheDocument();
+    expect(screen.getByRole("listitem", { name: "Color bar (off)" })).toBeInTheDocument();
+    // On from its eye: a new table at its default place.
+    fireEvent.click(screen.getByRole("button", { name: "Turn on (as the Material table button in the ribbon): Material table" }));
+    expect(annotations().filter((a) => a.type === "material-table")).toHaveLength(1);
+  });
+
+  it("turns on a color bar remembered while off, with its settings, not a new one", () => {
+    render(<ResultSidebar />);
+    act(() => useAppStore.getState().updateAnnotation("c", { scaleMode: "fixed", scaleMin: 1, scaleMax: 3, x: 0.3 }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn off (as the Color bar button in the ribbon): Color bar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Turn on (as the Color bar button in the ribbon): Color bar" }));
+    const bars = annotations().filter((a) => a.type === "color-bar");
+    expect(bars).toHaveLength(1);
+    expect(bars[0]).toMatchObject({ id: "c", scaleMode: "fixed", scaleMin: 1, scaleMax: 3, x: 0.3 });
+    expect(screen.queryByRole("button", { name: /^Remove annotation: Color bar/ })).toBeNull();
   });
 
   it("turns a display layer off with its button, as the ribbon does; the critical surface has none", () => {
@@ -316,9 +406,10 @@ describe("ResultSidebar layers list", () => {
   it("moves a row with Alt+Up and Alt+Down, stored bottom first in the model's layer order (one undo step)", () => {
     render(<ResultSidebar />);
     const row = (key: string) => screen.getAllByTestId("layer-row").find((r) => r.getAttribute("data-layer") === key)!;
+    // (over the surfaces, listed while off)
     fireEvent.keyDown(row("soilColor"), { key: "ArrowUp", altKey: true });
-    expect(rowKeys().slice(-3)).toEqual(["slices", "soilColor", "criticalSurface"]);
-    expect(rvs().layerOrder).toEqual(["criticalSurface", "soilColor", "slices", "center", "fosLabel", "t1", "t2", "m", "p", "c"]);
+    expect(rowKeys().slice(-3)).toEqual(["criticalSurface", "soilColor", "surfaces"]);
+    expect(rvs().layerOrder).toEqual(["surfaces", "soilColor", "criticalSurface", "slices", "center", "fosLabel", "t1", "t2", "m", "p", "c"]);
     expect(document.activeElement).toBe(row("soilColor"));
     fireEvent.keyDown(row("t1"), { key: "ArrowDown", altKey: true });
     expect(rowKeys().slice(4, 6)).toEqual(["fosLabel", "t1"]);
@@ -350,24 +441,25 @@ describe("ResultSidebar layers list", () => {
     fireEvent.drop(target, { clientY: 120, dataTransfer });
     expect(screen.queryByTestId("layer-drop-indicator")).toBeNull();
     // Below the slices: drawn under them, over the critical surface.
-    expect(rowKeys().slice(-4)).toEqual(["slices", "t1", "criticalSurface", "soilColor"]);
-    expect(rvs().layerOrder).toEqual(["soilColor", "criticalSurface", "t1", "slices", "center", "fosLabel", "t2", "m", "p", "c"]);
+    expect(rowKeys().slice(-5)).toEqual(["slices", "t1", "criticalSurface", "surfaces", "soilColor"]);
+    expect(rvs().layerOrder).toEqual(["soilColor", "surfaces", "criticalSurface", "t1", "slices", "center", "fosLabel", "t2", "m", "p", "c"]);
   });
 
   it("keeps the place of a layer turned off and on again; a new annotation goes on top", () => {
     act(() => setRvsNow({ layerOrder: ["soilColor", "slices", "criticalSurface", "center", "fosLabel", "t1", "t2", "m", "p", "c"] }));
     render(<ResultSidebar />);
-    expect(rowKeys().slice(-3)).toEqual(["criticalSurface", "slices", "soilColor"]);
+    expect(rowKeys().slice(-4)).toEqual(["criticalSurface", "slices", "surfaces", "soilColor"]);
     act(() => setRvsNow({ showSlices: false }));
-    expect(rowKeys()).not.toContain("slices");
+    expect(rowKeys().slice(-4)).toEqual(["criticalSurface", "slices", "surfaces", "soilColor"]);
+    expect(screen.getByRole("listitem", { name: "Slices (off)" })).toBeInTheDocument();
     act(() => setRvsNow({ showSlices: true }));
-    expect(rowKeys().slice(-3)).toEqual(["criticalSurface", "slices", "soilColor"]);
+    expect(rowKeys().slice(-4)).toEqual(["criticalSurface", "slices", "surfaces", "soilColor"]);
     act(() => useAppStore.getState().addAnnotation("text"));
     const added = annotations().at(-1)!.id;
     expect(rowKeys()[0]).toBe(added);
     // Removing an annotation drops it from the order.
     fireEvent.click(screen.getAllByTitle("Remove annotation")[1]);
-    expect(rvs().layerOrder).not.toContain("c");
+    expect(rvs().layerOrder).not.toContain("p");
   });
 
   it("lists a drawing shown in results and takes it out of the results with its button", () => {

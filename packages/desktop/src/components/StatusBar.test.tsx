@@ -223,6 +223,11 @@ describe("StatusBar", () => {
     const bar = screen.getByRole("progressbar", { name: "Run all progress" });
     expect(bar).toHaveAttribute("aria-valuenow", "42");
     expect((bar.firstChild as HTMLElement).style.width).toBe("42%");
+    // The count keeps the width of its widest value ("20/20"), with digits
+    // of equal width, so the bar does not move as it counts.
+    const count = screen.getByText("7/20");
+    expect(count.style.minWidth).toBe("5ch");
+    expect(count.style.fontVariantNumeric).toBe("tabular-nums");
     // (the batch stands for the "Analyzing" of a single run)
     expect(screen.queryByText("Analyzing")).toBeNull();
   });

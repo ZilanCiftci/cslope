@@ -67,19 +67,14 @@ function strokePolyline(ctx: CanvasRenderingContext2D, pts: readonly (readonly [
 
 /**
  * Draws the lines; returns what was drawn for the label pass and the
- * label layout (the segments other labels keep clear of). A selected
- * annotation (result view) shows its handles: a polyline's vertices, a
- * circle's centre with a cross and, when the circle is clipped, its
- * hidden part as a faint ring; the handle or line under the pointer is
- * highlighted.
+ * label layout (the segments other labels keep clear of). The line or
+ * rim under the pointer is highlighted. A selected annotation's handles
+ * are drawn later, over everything, by drawReferenceSelections.
  */
 export function drawReferenceLines(
   ctx: CanvasRenderingContext2D,
   p: ReferenceSceneParams & {
-    selectedIds?: readonly string[];
     hoverHit?: PointHit | null;
-    /** Outline colour of the handles (the active stroke colour). */
-    handleStroke?: string;
   },
 ): DrawnReference[] {
   const drawn: DrawnReference[] = [];
@@ -89,7 +84,6 @@ export function drawReferenceLines(
     const pts = referenceWorldPoints(anno, p.groundYAt).map(([x, y]) => p.toC(x, y));
     const color = anno.color ?? p.defaultColor;
     const width = referenceWidth(anno) * z;
-    const selected = p.mode === "result" && (p.selectedIds?.includes(anno.id) ?? false);
     const hovered = p.mode === "result" && hoverId === anno.id;
     ctx.save();
     ctx.lineJoin = "round";
@@ -108,39 +102,70 @@ export function drawReferenceLines(
       ctx.setLineDash(referenceDashPattern(anno.dash, referenceWidth(anno)).map((d) => d * z));
       strokePolyline(ctx, pts);
     }
-    if (selected) {
-      ctx.setLineDash([]);
-      ctx.lineCap = "butt";
-      if (anno.shape === "circle") {
-        const [cx, cy] = p.toC(anno.cx, anno.cy);
-        const [ex] = p.toC(anno.cx + anno.radius, anno.cy);
-        const r = Math.abs(ex - cx);
-        if ((anno.clip ?? "ground") === "ground") {
-          // The whole circle, faint: what a rim drag resizes.
-          ctx.strokeStyle = color;
-          ctx.globalAlpha = 0.3;
-          ctx.lineWidth = 1;
-          ctx.setLineDash([3, 3]);
-          ctx.beginPath();
-          ctx.arc(cx, cy, r, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.setLineDash([]);
-          ctx.globalAlpha = 1;
-        }
-        const hover = p.hoverHit?.kind === "referenceCircle" && p.hoverHit.annoId === anno.id && p.hoverHit.handle === "centre";
-        drawHandle(ctx, cx, cy, hover, p.handleStroke ?? color, true);
-      } else {
-        anno.points.forEach(([x, y], i) => {
-          const [px, py] = p.toC(x, y);
-          const hover = p.hoverHit?.kind === "referenceVertex" && p.hoverHit.annoId === anno.id && p.hoverHit.pointIndex === i;
-          drawHandle(ctx, px, py, hover, p.handleStroke ?? color, false);
-        });
-      }
-    }
     ctx.restore();
     drawn.push({ anno, pts, color });
   }
   return drawn;
+}
+
+/**
+ * The handles of the selected reference annotations among those drawn,
+ * after every other layer and annotation (text, material table, F label,
+ * colour bar), so that they are never hidden: a polyline's vertices, a
+ * circle's centre with a cross and, when the circle is clipped, its hidden
+ * part as a faint ring. The hovered handle is highlighted.
+ */
+export function drawReferenceSelections(
+  ctx: CanvasRenderingContext2D,
+  drawn: readonly DrawnReference[],
+  p: {
+    toC: (x: number, y: number) => [number, number];
+    selectedIds: readonly string[];
+    hoverHit?: PointHit | null;
+    handleStroke?: string;
+  },
+) {
+  for (const { anno, color } of drawn) {
+    if (!p.selectedIds.includes(anno.id)) continue;
+    ctx.save();
+    drawReferenceSelection(ctx, anno, color, p);
+    ctx.restore();
+  }
+}
+
+function drawReferenceSelection(
+  ctx: CanvasRenderingContext2D,
+  anno: ReferenceAnnotation,
+  color: string,
+  p: { toC: (x: number, y: number) => [number, number]; hoverHit?: PointHit | null; handleStroke?: string },
+) {
+  ctx.setLineDash([]);
+  ctx.lineCap = "butt";
+  if (anno.shape === "circle") {
+    const [cx, cy] = p.toC(anno.cx, anno.cy);
+    const [ex] = p.toC(anno.cx + anno.radius, anno.cy);
+    const r = Math.abs(ex - cx);
+    if ((anno.clip ?? "ground") === "ground") {
+      // The whole circle, faint: what a rim drag resizes.
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+    const hover = p.hoverHit?.kind === "referenceCircle" && p.hoverHit.annoId === anno.id && p.hoverHit.handle === "centre";
+    drawHandle(ctx, cx, cy, hover, p.handleStroke ?? color, true);
+  } else {
+    anno.points.forEach(([x, y], i) => {
+      const [px, py] = p.toC(x, y);
+      const hover = p.hoverHit?.kind === "referenceVertex" && p.hoverHit.annoId === anno.id && p.hoverHit.pointIndex === i;
+      drawHandle(ctx, px, py, hover, p.handleStroke ?? color, false);
+    });
+  }
 }
 
 function drawHandle(ctx: CanvasRenderingContext2D, px: number, py: number, hover: boolean, stroke: string, cross: boolean) {

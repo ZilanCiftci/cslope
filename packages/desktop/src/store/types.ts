@@ -373,6 +373,19 @@ export interface PaperAnnotation {
 
 export type ColorScaleMode = "auto" | "fixed" | "filter";
 
+/**
+ * The paper annotations that are built-in layers of the result sheet:
+ * turned on and off (Properties › Layers), never removed; one color bar
+ * at most.
+ */
+export type BuiltInAnnotationType = "material-table" | "color-bar";
+
+export const BUILT_IN_ANNOTATION_TYPES: readonly BuiltInAnnotationType[] = ["material-table", "color-bar"];
+
+export function isBuiltInAnnotationType(type: string): type is BuiltInAnnotationType {
+  return (BUILT_IN_ANNOTATION_TYPES as readonly string[]).includes(type);
+}
+
 export type ReferenceDash = "solid" | "dashed" | "dotted";
 
 /**
@@ -986,6 +999,21 @@ export interface ResultViewSlice {
   addReferenceFromCustomPlane: (planeId: string) => string | null;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
+  /**
+   * The built-in annotations (material table, color bar) turned off this
+   * session, by model id: turned on again where they were, with their
+   * settings. UI state: not saved, not undone (one turned off when the
+   * project is saved opens off, and comes back at its default place).
+   */
+  offAnnotations: Record<string, Annotation[]>;
+  /**
+   * Turns a built-in annotation (the material table, the color bar) on or
+   * off (Properties › Layers, the ribbon): off takes the model's ones of
+   * that type off the sheet and remembers them; on puts the remembered
+   * ones back, or adds one at its default place. One undo step; their
+   * place in the layer order is kept.
+   */
+  setBuiltInAnnotationShown: (type: BuiltInAnnotationType, shown: boolean) => void;
   setSelectedAnnotations: (ids: string[]) => void;
   toggleAnnotationSelection: (id: string, additive: boolean) => void;
   setSelectedResultObject: (target: "paper-frame" | null) => void;

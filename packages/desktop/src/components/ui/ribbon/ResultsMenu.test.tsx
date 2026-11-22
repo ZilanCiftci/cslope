@@ -260,8 +260,8 @@ describe("ResultsMenu", () => {
     store().setResultViewSettings({ annotations: [] });
     await userEvent.click(screen.getByTitle("Add text"));
     await userEvent.click(screen.getByTitle("Add plot"));
-    await userEvent.click(screen.getByTitle("Add material table"));
-    await userEvent.click(screen.getByTitle("Add color bar"));
+    await userEvent.click(screen.getByTitle("Turn on the material table"));
+    await userEvent.click(screen.getByTitle("Turn on the color bar"));
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
@@ -271,12 +271,18 @@ describe("ResultsMenu", () => {
     expect([bar.x, bar.anchor]).toEqual([0.94, "top-right"]);
     expect(bar.y).toBeGreaterThan(box.y + box.h);
     expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
-    expect(screen.getByTitle("Remove color bar")).toHaveAttribute("aria-pressed", "true");
-    // A second click removes the one there instead of adding another.
-    await userEvent.click(screen.getByTitle("Remove color bar"));
-    await userEvent.click(screen.getByTitle("Remove material table"));
+    expect(screen.getByTitle("Turn off the color bar")).toHaveAttribute("aria-pressed", "true");
+    // A second click turns the one there off instead of adding another.
+    act(() => store().updateAnnotation(bar.id, { x: 0.5, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 }));
+    await userEvent.click(screen.getByTitle("Turn off the color bar"));
+    await userEvent.click(screen.getByTitle("Turn off the material table"));
     expect(store().resultViewSettings.annotations.map((a) => a.type)).toEqual(["text", "plot"]);
-    expect(screen.getByTitle("Add color bar")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByTitle("Turn on the color bar")).toHaveAttribute("aria-pressed", "false");
+    // On again: where it was, with its settings, and still one.
+    await userEvent.click(screen.getByTitle("Turn on the color bar"));
+    const back = store().resultViewSettings.annotations.filter((a) => a.type === "color-bar");
+    expect(back).toHaveLength(1);
+    expect(back[0]).toMatchObject({ id: bar.id, x: 0.5, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 });
   });
 
   it("exports the view settings as a template", async () => {
