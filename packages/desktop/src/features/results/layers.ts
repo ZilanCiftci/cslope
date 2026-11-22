@@ -25,6 +25,7 @@ import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
 /** The display layers, in their default order (bottom first). */
 export const DISPLAY_LAYER_KEYS = [
   "soilColor",
+  "grid",
   "femMesh",
   "femPlasticZone",
   "customSurfaces",
@@ -46,6 +47,7 @@ export type DisplayLayerKey = (typeof DISPLAY_LAYER_KEYS)[number];
 /** A display layer's name (its row in Layers; the heading of its properties). */
 export const DISPLAY_LAYER_NAMES: Record<DisplayLayerKey, string> = {
   soilColor: "Soil colors",
+  grid: "Grid",
   femMesh: "FE mesh",
   femPlasticZone: "Plastic zone",
   surfaces: "Surfaces",
@@ -77,6 +79,7 @@ export interface LayerSource {
     | "showFosLabel"
     | "showCentreMarker"
     | "showSoilColor"
+    | "showGrid"
     | "showFemPlasticZone"
     | "showFemMesh"
     | "showCustomSurfaces"
@@ -130,6 +133,8 @@ export function displayLayerOn(key: DisplayLayerKey, rvs: LayerSource["resultVie
   switch (key) {
     case "soilColor":
       return rvs.showSoilColor !== false;
+    case "grid":
+      return rvs.showGrid !== false;
     case "femMesh":
       return rvs.showFemMesh === true;
     case "femPlasticZone":
@@ -198,6 +203,8 @@ export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
   return [
     ...display("soilColor"),
     ...resultDrawings(src).map((d): ResultLayer => ({ key: drawingLayerKey(d.id), kind: "drawing", drawing: d })),
+    // the grid: over the soil colors and drawings, under the model's lines (where it was always drawn)
+    ...display("grid"),
     ...display("femMesh"),
     ...display("femPlasticZone"),
     // reference lines: in the model, under the surfaces
@@ -394,12 +401,13 @@ export function layerSteps(layers: readonly ResultLayer[]): LayerStep[] {
 export const isPaperStep = (s: LayerStep) => s.kind === "paper";
 
 /**
- * The layers drawn with the model's base drawing, under the grid and the
- * lines: the soil colours and drawings at the bottom of the order, as by
- * default. The rest are drawn over the model's lines, where they stand.
+ * The layers drawn with the model's base drawing, under the model's
+ * lines: the soil colours, drawings and the grid at the bottom of the
+ * order, as by default, each in its place there. The rest are drawn over
+ * the model's lines, where they stand.
  */
 export function baseLayerCount(layers: readonly ResultLayer[]): number {
   let n = 0;
-  while (n < layers.length && (layers[n].kind === "drawing" || layers[n].key === "soilColor")) n++;
+  while (n < layers.length && (layers[n].kind === "drawing" || layers[n].key === "soilColor" || layers[n].key === "grid")) n++;
   return n;
 }

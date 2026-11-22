@@ -1,7 +1,7 @@
 /**
  * Properties › Layers: what the result sheet draws, topmost first, as in a
  * drawing program. The annotations, the display layers (soil colors,
- * surfaces, slices, center, F label, ...) and the drawings shown in
+ * grid, surfaces, slices, center, F label, ...) and the drawings shown in
  * results. A row is dragged by its grip, or moved
  * with Alt+Up and Alt+Down, to change the order the result view and the
  * PDF draw them in (the model's `layerOrder`, an undo step). A click on an
@@ -24,6 +24,7 @@ import {
   DrawingIcon,
   FeMeshIcon,
   FosLabelIcon,
+  GridIcon,
   MaterialTableIcon,
   PlasticZoneIcon,
   PlotIcon,
@@ -56,6 +57,7 @@ type Toggle = { off: Partial<ResultViewSettings>; on: Partial<ResultViewSettings
 /** A display layer's icon and what turns it off and on (its name: DISPLAY_LAYER_NAMES). */
 const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; toggle?: Toggle }> = {
   soilColor: { icon: <SoilColorsIcon {...ICON} />, toggle: { off: { showSoilColor: false }, on: { showSoilColor: true } } },
+  grid: { icon: <GridIcon {...ICON} />, toggle: { off: { showGrid: false }, on: { showGrid: true } } },
   femMesh: { icon: <FeMeshIcon {...ICON} />, toggle: { off: { showFemMesh: false }, on: { showFemMesh: true } } },
   femPlasticZone: {
     icon: <PlasticZoneIcon {...ICON} />,

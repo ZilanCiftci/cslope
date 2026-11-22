@@ -109,6 +109,32 @@ export function resolveTickStep(
   return userSpacing;
 }
 
+/** A spacing of the user's when it is usable next to the automatic step (resolveTickStep), else undefined. */
+function usableSpacing(spacing: number | undefined, autoStep: number): number | undefined {
+  return resolveTickStep(spacing, autoStep) === spacing ? spacing : undefined;
+}
+
+/**
+ * The step of the sheet's labelled ticks: the user's tick spacing (Sheet ›
+ * Tick spacing); without one, and with a grid spacing of the user's (Layers
+ * › Grid › Spacing), the smallest multiple of the grid spacing that is at
+ * least the automatic step, so every label sits on a grid line and labels
+ * never crowd; otherwise the automatic step. The canvas and the PDF use it
+ * alike.
+ */
+export function sheetTickStep(autoStep: number, tickSpacing?: number, gridLineSpacing?: number): number {
+  const tick = usableSpacing(tickSpacing, autoStep);
+  if (tick !== undefined) return tick;
+  const grid = usableSpacing(gridLineSpacing, autoStep);
+  if (grid === undefined) return autoStep;
+  return Math.max(1, Math.ceil(autoStep / grid - 1e-9)) * grid;
+}
+
+/** The step of the sheet's grid lines: the user's grid spacing when usable, else the labelled ticks' step. */
+export function sheetGridStep(tickStep: number, gridLineSpacing?: number): number {
+  return resolveTickStep(gridLineSpacing, tickStep);
+}
+
 /** Minor ruler ticks between labels: a whole number from 0 to 20 (a huge count made the tick loops endless). */
 export function clampMinorTicks(n: number): number {
   return Number.isFinite(n) ? Math.max(0, Math.min(20, Math.round(n))) : 0;

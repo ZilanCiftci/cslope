@@ -645,6 +645,35 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
       },
     },
   },
+  {
+    name: "result sheet: the grid off, moved over the surfaces, with a fixed spacing and minor lines",
+    raw: {
+      id: "sheet-grid",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        showGrid: false,
+        gridLineSpacing: 2.5,
+        annotations: [{ id: "t", type: "text", x: 0.1, y: 0.1, text: "T" }],
+        layerOrder: ["soilColor", "surfaces", "grid", "t"],
+        layerStyles: {
+          grid: { color: "#336699", width: 2, subdivisions: 4, minorWidth: 0.5 },
+          slices: { width: 0.4 },
+        },
+      },
+    },
+  },
+  {
+    name: "result sheet: a grid style with values out of bounds (dropped)",
+    raw: {
+      id: "sheet-grid-bad",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        layerStyles: { grid: { color: "blue", width: 0, subdivisions: 3.5, minorWidth: 12 } },
+      },
+    },
+  },
 ];
 
 // Every value of every option control on the first example, and a model

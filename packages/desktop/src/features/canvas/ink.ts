@@ -1,6 +1,7 @@
 import {
   ANNOTATION_DEFAULT_TEXT_COLOR,
   CRITICAL_SURFACE_COLOR,
+  GRID_COLOR,
   LINE_LOAD_COLOR,
   PIEZO_COLOR,
   UDL_LOAD_COLOR,
@@ -60,8 +61,10 @@ export interface CanvasInk {
   /** Reinforcement numbers and force labels; pile labels. */
   reinforcementText: string;
   pileText: string;
-  /** The grid lines of the edit canvas (and the result's grid). */
+  /** The grid lines of the edit canvas. */
   gridLine: string;
+  /** The result sheet's grid (Layers › Grid; the PDF's GRID_COLOR). */
+  sheetGrid: string;
   /** The lines and texts of a DWG or DXF drawing placed under a model. */
   drawingInk: string;
 }
@@ -98,6 +101,7 @@ export const PRINT_INK: Readonly<CanvasInk> = {
   reinforcementText: "#8e44ad",
   pileText: "#5d4037",
   gridLine: "rgba(0, 0, 0, 0.1)",
+  sheetGrid: GRID_COLOR.hex,
   drawingInk: "#3a434c",
 };
 
@@ -133,6 +137,7 @@ export const INK_TOKENS: Readonly<Record<keyof CanvasInk, string>> = {
   reinforcementText: "--color-canvas-reinforcement-text",
   pileText: "--color-canvas-pile-text",
   gridLine: "--color-canvas-grid-line",
+  sheetGrid: "--color-canvas-sheet-grid",
   drawingInk: "--color-canvas-drawing-ink",
 };
 
