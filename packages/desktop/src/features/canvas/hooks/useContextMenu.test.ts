@@ -466,6 +466,20 @@ describe("useContextMenu — reference annotations", () => {
     expect(menu()).toBeNull();
   });
 
+  it("acts on the selected circle where a text lies over its centre, on the text when the circle is not selected", () => {
+    const [cx, cy] = at(15, 18);
+    const pf = computePaperFrame(RECT.width, RECT.height, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
+    const text = { id: "t", type: "text" as const, x: (cx - RECT.left - pf.x) / pf.w, y: (cy - RECT.top - pf.y) / pf.h, text: "Over" };
+    useAppStore.setState({ resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [LINE, CIRCLE, text] } });
+    const selected = setup({ mode: "result", selectedAnnotationIds: ["c"] });
+    selected.open(cx, cy);
+    expect(selected.menu()!.items.map((i) => i.label)).toEqual(["Delete reference circle"]);
+    const none = setup({ mode: "result" });
+    none.open(cx, cy);
+    expect(none.params.setSelectedAnnotations).toHaveBeenCalledWith(["t"]);
+    expect(none.menu()).toBeNull();
+  });
+
   it("deletes a circle from its arc or centre", () => {
     const { open, menu, click } = setup({ mode: "result" });
     open(...at(15, 6));
