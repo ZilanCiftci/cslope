@@ -258,7 +258,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
             className="group relative flex items-center gap-1.5 h-6 pl-3 pr-0.5 mx-1 rounded-sm text-[12px] select-none cursor-pointer outline-none focus-visible:ring-1 focus-visible:ring-(--color-vsc-accent) hover:bg-(--color-vsc-list-hover)"
             style={{
               background: selected ? "var(--color-vsc-selected-bg)" : undefined,
-              color: off ? "var(--color-vsc-text-muted)" : selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
+              color: off ? "var(--color-vsc-field-disabled-text)" : selected ? "var(--color-vsc-text-bright)" : "var(--color-vsc-text)",
               opacity: dragKey === layer.key ? 0.5 : 1,
             }}
             title={off ? `${title} (off)` : title}
