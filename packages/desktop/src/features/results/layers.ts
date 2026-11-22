@@ -4,9 +4,11 @@
  *
  * A layer is an annotation (by its id), a placed drawing shown in results
  * ("drawing:" and its id) or one of the display layers the Results ribbon
- * turns on and off (a fixed key). Only the layers that are drawn are in
- * the list: a display layer turned off is not, a drawing not shown in
- * results is not.
+ * turns on and off (a fixed key). The renderers take only the layers that
+ * are drawn; Properties › Layers also lists the display layers turned off
+ * (and the material table turned off), greyed, so they can be turned on
+ * again there (`listedLayers`). A drawing not shown in results is not
+ * listed.
  *
  * The order is the model's `resultViewSettings.layerOrder`, bottom first
  * (the drawing order). Absent: the default order below, which is the order
@@ -17,7 +19,7 @@
  * where it was.
  */
 import type { AnalysisResult } from "@cslope/engine";
-import type { Annotation, BackgroundImage, ResultViewSettings } from "../../store/types";
+import { BUILT_IN_ANNOTATION_TYPES, isBuiltInAnnotationType, type Annotation, type BackgroundImage, type BuiltInAnnotationType, type ResultViewSettings } from "../../store/types";
 import { sortedBackgrounds } from "../../store/slices/backgroundsSlice";
 
 /** The display layers, in their default order (bottom first). */
@@ -75,12 +77,54 @@ export interface LayerSource {
   >;
   result?: Pick<AnalysisResult, "fem" | "criticalSurface" | "customSurfaces"> | null;
   backgrounds?: readonly BackgroundImage[];
+  /**
+   * The built-in annotations (material table, color bar) of the model
+   * turned off this session (the store's `offAnnotations`), listed greyed
+   * where they stood. A built-in type with none on the sheet and none here
+   * is listed as one row on top (`builtInLayerKey`).
+   */
+  offBuiltIns?: readonly Annotation[];
 }
 
+/**
+ * A layer. `off` (listed layers only): turned off, not drawn, listed
+ * greyed so it can be turned on again.
+ */
 export type ResultLayer =
-  | { key: string; kind: "annotation"; annotation: Annotation }
-  | { key: string; kind: "drawing"; drawing: BackgroundImage }
-  | { key: DisplayLayerKey; kind: "display"; layer: DisplayLayerKey };
+  | { key: string; kind: "annotation"; annotation: Annotation; off?: boolean }
+  | { key: string; kind: "drawing"; drawing: BackgroundImage; off?: boolean }
+  | { key: DisplayLayerKey; kind: "display"; layer: DisplayLayerKey; off?: boolean };
+
+/**
+ * The key of the row of a built-in annotation (its type: "material-table",
+ * "color-bar") in a model that has none, turned off: it has no place in
+ * the stored order of its own.
+ */
+export const builtInLayerKey = (type: BuiltInAnnotationType) => type;
+
+/** Whether a key is that of such a row. */
+export const isBuiltInPlaceholderKey = (key: string) => isBuiltInAnnotationType(key);
+
+/**
+ * Whether a display layer can be drawn at all (listed in Layers, on or
+ * off): the finite element layers with a finite element result, the
+ * custom surfaces with custom surfaces in the result, the critical
+ * surface with one; the others always.
+ */
+export function displayLayerAvailable(key: DisplayLayerKey, src: LayerSource): boolean {
+  const result = src.result ?? null;
+  switch (key) {
+    case "femMesh":
+    case "femPlasticZone":
+      return !!result?.fem;
+    case "customSurfaces":
+      return (result?.customSurfaces ?? []).some((c) => !!c.surface);
+    case "criticalSurface":
+      return !!result?.criticalSurface;
+    default:
+      return true;
+  }
+}
 
 /** Whether a display layer is drawn (turned on, and there is something to draw). */
 export function displayLayerShown(key: DisplayLayerKey, src: LayerSource): boolean {
@@ -113,15 +157,32 @@ function resultDrawings(src: LayerSource): BackgroundImage[] {
   return sortedBackgrounds(src.backgrounds ?? []).filter((b) => b.visible && b.showInResults === true);
 }
 
-/** The layers drawn, in the default order (bottom first). */
-export function defaultLayers(src: LayerSource): ResultLayer[] {
+/**
+ * The layers drawn, in the default order (bottom first); with `listed`,
+ * also the layers turned off that Properties › Layers lists (`off`).
+ */
+export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
   const annotations = src.resultViewSettings.annotations;
-  const display = (key: DisplayLayerKey): ResultLayer[] =>
-    displayLayerShown(key, src) ? [{ key, kind: "display", layer: key }] : [];
-  const annos = (reference: boolean): ResultLayer[] =>
-    annotations
+  const display = (key: DisplayLayerKey): ResultLayer[] => {
+    if (displayLayerShown(key, src)) return [{ key, kind: "display", layer: key }];
+    return listed && displayLayerAvailable(key, src) ? [{ key, kind: "display", layer: key, off: true }] : [];
+  };
+  // The built-in annotations turned off: those remembered, else one row of the type.
+  const offBuiltIn = (): ResultLayer[] => {
+    if (!listed) return [];
+    return BUILT_IN_ANNOTATION_TYPES.flatMap((type): ResultLayer[] => {
+      if (annotations.some((a) => a.type === type)) return [];
+      const off = (src.offBuiltIns ?? []).filter((a) => a.type === type);
+      const shown = off.length > 0 ? off : [{ id: builtInLayerKey(type), type, x: 0, y: 0 } as Annotation];
+      return shown.map((a) => ({ key: a.id, kind: "annotation", annotation: a, off: true }));
+    });
+  };
+  const annos = (reference: boolean): ResultLayer[] => [
+    ...annotations
       .filter((a) => (a.type === "reference") === reference)
-      .map((a) => ({ key: a.id, kind: "annotation", annotation: a }));
+      .map((a): ResultLayer => ({ key: a.id, kind: "annotation", annotation: a })),
+    ...(reference ? [] : offBuiltIn()),
+  ];
   return [
     ...display("soilColor"),
     ...resultDrawings(src).map((d): ResultLayer => ({ key: drawingLayerKey(d.id), kind: "drawing", drawing: d })),
@@ -181,9 +242,13 @@ export function mergeLayerOrder(
   return out;
 }
 
-/** The layers drawn, in the model's order (bottom first). */
-export function resultLayers(src: LayerSource): ResultLayer[] {
-  const defaults = defaultLayers(src);
+/**
+ * The layers drawn, in the model's order (bottom first); with `listed`,
+ * also the layers turned off that Properties › Layers lists, where they
+ * stand in that order.
+ */
+export function resultLayers(src: LayerSource, listed = false): ResultLayer[] {
+  const defaults = defaultLayers(src, listed);
   const stored = src.resultViewSettings.layerOrder;
   if (!stored || stored.length === 0) return defaults;
   const byKey = new Map(defaults.map((l) => [l.key, l]));
@@ -198,9 +263,9 @@ export function resultLayers(src: LayerSource): ResultLayer[] {
   return order.map((k) => byKey.get(k)!);
 }
 
-/** The keys of the layers drawn, in the model's order (bottom first). */
-export function resultLayerKeys(src: LayerSource): string[] {
-  return resultLayers(src).map((l) => l.key);
+/** The keys of the layers drawn (with `listed`: listed), in the model's order (bottom first). */
+export function resultLayerKeys(src: LayerSource, listed = false): string[] {
+  return resultLayers(src, listed).map((l) => l.key);
 }
 
 /** The annotations in the order they are drawn (bottom first): the topmost is hit first. */
@@ -210,12 +275,14 @@ export function annotationsInLayerOrder(src: LayerSource): Annotation[] {
 
 /**
  * The stored order (bottom first) with the layer `key` moved to `index`
- * of the layers drawn (bottom first, after the move). The keys of layers
- * not drawn now keep their place after the key they followed; those of
- * annotations and drawings that no longer exist are dropped.
+ * of the layers drawn (with `listed`: of the layers listed), bottom
+ * first, after the move. The keys of layers not drawn now keep their
+ * place after the key they followed; those of annotations and drawings
+ * that no longer exist are dropped (a built-in annotation turned off this
+ * session keeps its place).
  */
-export function movedLayerOrder(src: LayerSource, key: string, index: number): string[] {
-  const keys = resultLayerKeys(src);
+export function movedLayerOrder(src: LayerSource, key: string, index: number, listed = false): string[] {
+  const keys = resultLayerKeys(src, listed).filter((k) => !isBuiltInPlaceholderKey(k));
   const from = keys.indexOf(key);
   if (from < 0) return storedLayerOrder(src, keys);
   const next = keys.filter((k) => k !== key);
@@ -225,7 +292,7 @@ export function movedLayerOrder(src: LayerSource, key: string, index: number): s
 
 /** `visible` (the layers drawn, bottom first) with the remembered keys of the others put back. */
 function storedLayerOrder(src: LayerSource, visible: readonly string[]): string[] {
-  const annotationIds = new Set(src.resultViewSettings.annotations.map((a) => a.id));
+  const annotationIds = new Set([...src.resultViewSettings.annotations, ...(src.offBuiltIns ?? [])].map((a) => a.id));
   const drawingKeys = new Set((src.backgrounds ?? []).map((b) => drawingLayerKey(b.id)));
   const known = (k: string) =>
     isDisplayLayerKey(k) || annotationIds.has(k) || (k.startsWith(DRAWING_LAYER_PREFIX) ? drawingKeys.has(k) : false);

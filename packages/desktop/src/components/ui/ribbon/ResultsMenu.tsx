@@ -80,13 +80,11 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
   // their tooltips say why nothing changes.
   const displayTip = (tip: string) => (hasResult ? tip : `${tip}\n${NO_RESULT_HINT}`);
   const addAnnotation = useAppStore((s) => s.addAnnotation);
-  const removeAnnotation = useAppStore((s) => s.removeAnnotation);
-  // The table and the colour bar are one per paper: their buttons toggle.
-  const toggleAnnotation = (type: "material-table" | "color-bar") => {
-    const present = rvs.annotations.filter((a) => a.type === type);
-    if (present.length > 0) present.forEach((a) => removeAnnotation(a.id));
-    else addAnnotation(type);
-  };
+  const setBuiltInShown = useAppStore((s) => s.setBuiltInAnnotationShown);
+  // The table and the colour bar are built-in layers: their buttons turn
+  // them on and off (where they were), as their eyes in Properties › Layers.
+  const toggleAnnotation = (type: "material-table" | "color-bar") =>
+    setBuiltInShown(type, !rvs.annotations.some((a) => a.type === type));
   const addReferenceAnnotation = useAppStore((s) => s.addReferenceAnnotation);
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
@@ -482,14 +480,14 @@ export function ResultsMenu({ isOpen, onActivate, panelHost }: Props) {
                 <RibbonSmallButton
                   icon={<MaterialTableIcon {...SMALL_ICON} />}
                   label="Material table"
-                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Remove material table" : "Add material table"}
+                  title={rvs.annotations.some((a) => a.type === "material-table") ? "Turn off the material table" : "Turn on the material table"}
                   onClick={() => toggleAnnotation("material-table")}
                   active={rvs.annotations.some((a) => a.type === "material-table")}
                 />
                 <RibbonSmallButton
                   icon={<ColorBarIcon {...SMALL_ICON} />}
                   label="Color bar"
-                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Remove color bar" : "Add color bar"}
+                  title={rvs.annotations.some((a) => a.type === "color-bar") ? "Turn off the color bar" : "Turn on the color bar"}
                   onClick={() => toggleAnnotation("color-bar")}
                   active={rvs.annotations.some((a) => a.type === "color-bar")}
                 />

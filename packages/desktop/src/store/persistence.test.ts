@@ -681,6 +681,22 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect(view.annotations).toEqual([]);
   });
 
+  it("keeps one color bar of an old file with several (the first), and a material table as it was", () => {
+    const view = normalizeResultView({
+      annotations: [
+        { id: "m", type: "material-table", x: 0.7, y: 0.2, tableColumns: ["model"] },
+        { id: "c1", type: "color-bar", x: 0.9, y: 0.3, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 },
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "T" },
+        { id: "c2", type: "color-bar", x: 0.5, y: 0.5 },
+      ],
+      layerOrder: ["c2", "m", "c1", "t"],
+    });
+    expect(view.annotations.map((a) => a.id)).toEqual(["m", "c1", "t"]);
+    expect(view.annotations[0]).toMatchObject({ x: 0.7, y: 0.2, tableColumns: ["model"] });
+    expect(view.annotations[1]).toMatchObject({ scaleMode: "fixed", scaleMin: 1, scaleMax: 2 });
+    expect(view.layerOrder).toEqual(["m", "c1", "t"]);
+  });
+
   it("keeps a valid view lock", () => {
     const view = normalizeResultView({
       viewLock: { bottomLeft: [0, -2], topRight: [10, 5] },

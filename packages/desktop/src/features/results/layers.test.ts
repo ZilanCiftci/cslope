@@ -140,3 +140,28 @@ describe("result layers", () => {
     expect(st.filter((x) => x.kind === "drawings")).toHaveLength(1);
   });
 });
+
+describe("listed layers (Properties › Layers)", () => {
+  it("lists the built-in layers turned off where they stand; the renderers take only those drawn", () => {
+    const s = src({ showSlices: false, surfaceDisplay: "critical", annotations: ANNOS.filter((a) => a.type !== "material-table") });
+    expect(resultLayerKeys(s)).not.toContain("slices");
+    const listed = resultLayers(s, true);
+    expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["surfaces", "slices", "material-table", "color-bar"]);
+    // Off layers of a kind the result has nothing for are not listed.
+    expect(listed.map((l) => l.key)).not.toContain("femMesh");
+    expect(listed.map((l) => l.key)).not.toContain("customSurfaces");
+  });
+
+  it("lists a remembered material table turned off by its own key, kept in a moved order", () => {
+    const table: Annotation = { id: "m", type: "material-table", x: 0.9, y: 0.05 };
+    const s = src(
+      { annotations: ANNOS.filter((a) => a.id !== "m"), layerOrder: ["soilColor", "r", "criticalSurface", "slices", "center", "fosLabel", "m", "t"] },
+      { offBuiltIns: [table] },
+    );
+    const listed = resultLayers(s, true);
+    expect(listed.find((l) => l.key === "m")?.off).toBe(true);
+    const order = movedLayerOrder(s, "t", 0, true);
+    expect(order).toContain("m");
+    expect(order).not.toContain("color-bar");
+  });
+});

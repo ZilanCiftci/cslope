@@ -1,10 +1,12 @@
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../defaults";
 import { customPlanesInResultOrder, nextId } from "../helpers";
 import type { SliceCreator } from "../helpers";
-import type { CustomSearchPlane, ModelEntry, ReferenceAnnotation, ResultViewSlice } from "../types";
+import type { AnalysisResult } from "@cslope/engine";
+import { isBuiltInAnnotationType, type BackgroundImage, type CustomSearchPlane, type ModelEntry, type ReferenceAnnotation, type ResultViewSlice } from "../types";
 import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
 import { NEW_MATERIAL_TABLE_FONT_SIZE } from "../../features/annotations/materialTableLayout";
 import { screenSheetScale } from "../../features/view/screen-paper";
+import { movedLayerOrder, resultLayerKeys } from "../../features/results/layers";
 import {
   colorBarDefaultPosition,
   RIGHT_INSIDE_FRAME,
@@ -15,6 +17,8 @@ type ResultViewState = ResultViewSlice & {
   activeModelId: string;
   models: ModelEntry[];
   customSearchPlanes: CustomSearchPlane[];
+  result: AnalysisResult | null;
+  backgrounds: BackgroundImage[];
 };
 
 const syncActiveModel = (
@@ -71,12 +75,15 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
   selectedResultObject: null,
   selectedResultLayer: null,
   paperPropertiesFocusPending: false,
+  offAnnotations: {},
 
   setResultViewSettings: (patch) =>
     set((s) => syncActiveModel(s, { ...s.resultViewSettings, ...patch })),
 
   addAnnotation: (type, options) => {
     const state = get();
+    // A built-in layer is on or off, never twice on the sheet.
+    if (isBuiltInAnnotationType(type) && state.resultViewSettings.annotations.some((a) => a.type === type)) return;
     // The color bar right below the material table as it is drawn (its
     // height for these materials, columns, text size and paper, and on
     // screen its least text size), at the right edge of the plot frame.
@@ -171,6 +178,44 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       }),
       selectedAnnotationIds: s.selectedAnnotationIds.filter((i) => i !== id),
     })),
+
+  setBuiltInAnnotationShown: (type, shown) => {
+    const s = get();
+    const present = s.resultViewSettings.annotations.filter((a) => a.type === type);
+    const memory = s.offAnnotations[s.activeModelId] ?? [];
+    if (!shown) {
+      if (present.length === 0) return;
+      const ids = new Set(present.map((a) => a.id));
+      // Their place in the layers' order stays, for when they come back:
+      // the order as drawn now is stored (a new annotation would otherwise
+      // come between, or they would come back on top).
+      const src = { resultViewSettings: s.resultViewSettings, result: s.result, backgrounds: s.backgrounds, offBuiltIns: memory };
+      const layerOrder = movedLayerOrder(src, present[0].id, resultLayerKeys(src).indexOf(present[0].id));
+      set((st) => ({
+        ...syncActiveModel(st, {
+          ...st.resultViewSettings,
+          annotations: st.resultViewSettings.annotations.filter((a) => !ids.has(a.id)),
+          layerOrder,
+        }),
+        offAnnotations: { ...st.offAnnotations, [st.activeModelId]: [...memory.filter((a) => a.type !== type), ...present] },
+        selectedAnnotationIds: st.selectedAnnotationIds.filter((i) => !ids.has(i)),
+      }));
+      return;
+    }
+    if (present.length > 0) return;
+    const remembered = memory.filter((a) => a.type === type);
+    if (remembered.length === 0) {
+      s.addAnnotation(type);
+      return;
+    }
+    // (still remembered: an undo of this takes them off again, where they were)
+    set((st) =>
+      syncActiveModel(st, {
+        ...st.resultViewSettings,
+        annotations: [...st.resultViewSettings.annotations, ...remembered],
+      }),
+    );
+  },
 
   setSelectedAnnotations: (ids) =>
     set({ selectedAnnotationIds: ids, selectedResultObject: null, selectedResultLayer: null }),
