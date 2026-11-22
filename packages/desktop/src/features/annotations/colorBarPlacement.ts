@@ -5,8 +5,8 @@ import type {
   PiezometricLineState,
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
-import { buildMaterialTableData, tableScale } from "../canvas/helpers";
-import { ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
+import { buildMaterialTableData } from "../canvas/helpers";
+import { ANNOTATION_SCALE_DIVISOR, SHEET_SANS_FAMILY } from "../rendering/style-spec";
 import { getPaperDimensions } from "../view/paper";
 import { anchoredTopLeft } from "./anchorPosition";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "./materialTableLayout";
@@ -50,7 +50,7 @@ export const measureSansText: TextMeasure = (text, fontPx, bold) => {
     }
   }
   if (canvasContext) {
-    canvasContext.font = `${bold ? "bold " : ""}${fontPx}px sans-serif`;
+    canvasContext.font = `${bold ? "bold " : ""}${fontPx}px ${SHEET_SANS_FAMILY}`;
     const width = canvasContext.measureText(text).width;
     // A stand-in canvas (tests) measures nothing.
     if (width > 0 || text.length === 0) return width;
@@ -69,10 +69,10 @@ function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape
 /**
  * The box of a material table on the paper, in fractions of the paper's
  * width (x, w) and height (y, h): layoutMaterialTable, as the canvas and the
- * PDF lay it out. Without `sheetScale`, at its paper size (the PDF); with
- * the sheet's scale on screen (px per annotation px), as the canvas draws
- * it there: no smaller than MATERIAL_TABLE_MIN_TEXT_PX (tableScale), so
- * larger on the paper when the sheet is small.
+ * PDF lay it out. The canvas draws it at the sheet's scale, as the PDF
+ * does, so it takes the same share of the paper at any `sheetScale` (the
+ * sheet's scale on screen, px per annotation px: its text is measured at
+ * the size it is drawn at).
  */
 export function materialTableBox(
   table: Annotation,
@@ -87,14 +87,13 @@ export function materialTableBox(
   // In sheet px at the scale the table is drawn at, then back to the
   // sheet's own scale (where the paper fractions are measured).
   const sheet = sheetScale !== undefined && sheetScale > 0 ? sheetScale : 1;
-  const scale = sheetScale !== undefined && sheetScale > 0 ? tableScale(sheetScale, fontSize) : 1;
-  const size = fontSize * scale;
+  const size = fontSize * sheet;
   const layout = layoutMaterialTable(
     columnKeys,
     header,
     rows,
     { header: (t) => measure(t, size, true), body: (t) => measure(t, size, false) },
-    scale,
+    sheet,
     fontSize,
   );
   const frac = paperFractions(paper);

@@ -133,17 +133,38 @@ const FOS_LABEL_WIDTH_PX = 10 + 40;
  * triangle) into world units.
  */
 export function paperContentBounds(content: PaperContent, worldPerPx: number): Bounds | null {
+  const shapes = paperContentShapes(content, worldPerPx);
+  if (!shapes) return null;
+  return boundsOf([
+    ...shapes.lines.flat(),
+    ...shapes.boxes.flatMap((b): Pt[] => [
+      [b.xMin, b.yMin],
+      [b.xMax, b.yMax],
+    ]),
+  ]);
+}
+
+/**
+ * What the content draws on the paper, in world units: the lines (the
+ * model's outline, closed; the water lines' fitted parts, reinforcement
+ * and piles) and the boxes of the symbols drawn at a fixed screen size
+ * (each water line's triangle over its top, each load's arrow and label
+ * from the ground up, each mark). paperContentBounds is their extent;
+ * the benchmarks' sheets keep their material table clear of them.
+ */
+export function paperContentShapes(content: PaperContent, worldPerPx: number): { lines: Pt[][]; boxes: Bounds[] } | null {
   const { coordinates } = content;
-  const pts: Pt[] = coordinates.map(([x, y]) => [x, y]);
   const model = boundsOf(coordinates);
   if (!model) return null;
   const px = Math.max(0, worldPerPx);
+  const lines: Pt[][] = [[...coordinates.map(([x, y]): Pt => [x, y]), ...(coordinates.length > 0 ? [coordinates[0]] : [])]];
+  const boxes: Bounds[] = [];
 
   for (const line of content.waterLines ?? []) {
     const wl = waterLineFitPoints(line, coordinates);
-    pts.push(...wl);
+    if (wl.length > 0) lines.push(wl);
     const top = boundsOf(wl);
-    if (top) pts.push([top.xMin, top.yMax + WATER_SYMBOL_HEIGHT_PX * px]);
+    if (top) boxes.push({ xMin: top.xMin, xMax: top.xMax, yMin: top.yMax, yMax: top.yMax + WATER_SYMBOL_HEIGHT_PX * px });
   }
 
   // Labels as layoutLoads places them: one per group of touching UDL
@@ -159,7 +180,7 @@ export function paperContentBounds(content: PaperContent, worldPerPx: number): B
       labelSpans.push([x - halfLabel, x + halfLabel]);
     }
     const top = y + (LOAD_SYMBOL_HEIGHT_PX + raise * LOAD_LABEL_LINE_PX) * px;
-    pts.push([x - halfLabel, top], [x + halfLabel, top]);
+    boxes.push({ xMin: x - halfLabel, xMax: x + halfLabel, yMin: y, yMax: top });
   };
   const onModel = (content.udls ?? []).filter(
     (u) => surfaceYAtX(coordinates, u.x1) !== null && surfaceYAtX(coordinates, u.x2) !== null,
@@ -173,12 +194,15 @@ export function paperContentBounds(content: PaperContent, worldPerPx: number): B
   for (const l of content.lineLoads ?? []) load(l.x, `P = ${formatMagnitude(l.magnitude)} kN/m`);
 
   for (const r of [...(content.reinforcements ?? []), ...(content.piles ?? [])]) {
-    pts.push([r.x1, r.y1], [r.x2, r.y2]);
+    lines.push([
+      [r.x1, r.y1],
+      [r.x2, r.y2],
+    ]);
   }
 
   for (const m of content.marks ?? []) {
-    pts.push(m.at, [m.at[0] + m.rightPx * px, m.at[1] + m.upPx * px]);
+    boxes.push({ xMin: m.at[0], xMax: m.at[0] + m.rightPx * px, yMin: m.at[1], yMax: m.at[1] + m.upPx * px });
   }
 
-  return boundsOf(pts);
+  return { lines, boxes };
 }
