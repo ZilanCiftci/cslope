@@ -16,6 +16,9 @@
  */
 
 import type { Locator, Page } from "playwright";
+import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../src/constants";
+import { computePaperFrame } from "../../src/features/view/paper";
+import type { PaperSize } from "../../src/store/types";
 
 export type Area = "main-edit" | "main-result" | "sidebar" | "menus" | "windows" | "dialogs" | "canvas";
 export type Theme = "light" | "dark";
@@ -1094,6 +1097,45 @@ const canvasScenes: Scene[] = [
       const p = pts[Math.min(2, pts.length - 1)];
       await ctx.page.mouse.move(p.x - 20, p.y - 20);
       await ctx.page.mouse.move(p.x, p.y, { steps: 4 });
+    },
+  },
+  {
+    id: "canvas-result-reference-under-text",
+    title: "Result view: a selected reference circle whose centre lies under a text annotation (the handle on top)",
+    area: "canvas",
+    result: true,
+    open: async (ctx) => {
+      await ctx.tab("Results");
+      await ctx.click("Reference line");
+      await menu(ctx, "Reference line").getByRole("menuitem", { name: "Circle" }).click();
+      const c = await ctx.store<{ id: string; cx: number; cy: number }>(
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "reference" && a.shape === "circle").pop(); return { id: a.id, cx: a.cx, cy: a.cy }; }`,
+      );
+      // The text's top-left corner a little up and left of the centre, so its glyphs cover it.
+      const canvas = await ctx.page.locator("[data-testid='slope-canvas']").boundingBox();
+      if (!canvas) throw new Error("No canvas");
+      const centre = await ctx.at(c.cx, c.cy);
+      const frame = await ctx.store<{ paperSize: PaperSize; landscape: boolean; zoom?: number; offsetX?: number; offsetY?: number }>(
+        `(s) => s.resultViewSettings.paperFrame`,
+      );
+      const pf = computePaperFrame(
+        canvas.width,
+        canvas.height,
+        frame.paperSize,
+        frame.landscape,
+        frame.zoom ?? 1,
+        frame.offsetX ?? 0,
+        frame.offsetY ?? 0,
+        SCREEN_PAPER_BOTTOM_RESERVE_PX,
+      );
+      const x = (centre.x - canvas.x - 14 - pf.x) / pf.w;
+      const y = (centre.y - canvas.y - 18 - pf.y) / pf.h;
+      await ctx.store(
+        `(s, store, p) => { s.addAnnotation("text"); const t = store.getState().resultViewSettings.annotations.filter((a) => a.type === "text").pop(); s.updateAnnotation(t.id, { x: p.x, y: p.y, anchor: "top-left", text: "MMM", fontSize: 32, bold: true }); s.setSelectedAnnotations([p.id]); }`,
+        { x, y, id: c.id },
+      );
+      await ctx.page.mouse.move(canvas.x + 4, canvas.y + 4);
+      await ctx.wait(300);
     },
   },
   {

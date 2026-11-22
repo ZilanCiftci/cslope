@@ -1909,6 +1909,36 @@ describe("drawCanvas — reference annotations", () => {
     expect(drawRefs().fills("#0078d4")).toHaveLength(0);
   });
 
+  it("draws the selection's handles and outlines after every annotation, the objects in their place", () => {
+    const text: Annotation = { id: "t", type: "text", x: 0.5, y: 0.4, text: "Over the centre" };
+    const table: Annotation = { id: "m", type: "material-table", x: 0.9, y: 0.05, anchor: "top-right" };
+    const rec = drawRefs({ selectedAnnotationIds: ["c", "m"] }, [LINE, CIRCLE, text, table]);
+    const lastCall = (name: string, match: (c: (typeof rec.calls)[number]) => boolean) =>
+      rec.calls.reduce((last, c, i) => (c.name === name && match(c) ? i : last), -1);
+    const calls = rec.calls;
+    const centreFill = calls.findIndex((c) => c.name === "fill" && c.state.fillStyle === "#0078d4");
+    const outline = calls.findIndex((c) => c.name === "strokeRect" && c.state.strokeStyle === "#0078d4");
+    const textDrawn = lastCall("fillText", (c) => c.args[0] === "Over the centre");
+    const tableDrawn = lastCall("fillText", (c) => c.args[0] === DEFAULT_MATERIAL.name);
+    const fosDrawn = lastCall("fillText", (c) => c.args[0] === "1.234");
+    expect(Math.min(centreFill, outline, textDrawn, tableDrawn, fosDrawn)).toBeGreaterThanOrEqual(0);
+    // The circle's centre handle and the table's outline after the text, the table and the F label.
+    for (const drawn of [textDrawn, tableDrawn, fosDrawn]) {
+      expect(centreFill).toBeGreaterThan(drawn);
+      expect(outline).toBeGreaterThan(drawn);
+    }
+    // The circle's arc itself stays under the critical surface.
+    const arc = rec.strokes("#ff0000").find((p) => pathPoints(p).length > 8)!;
+    const critical = rec.strokes().find((p) => p !== arc && p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
+    expect(critical).toBeDefined();
+    expect(rec.paths.indexOf(arc)).toBeLessThan(rec.paths.indexOf(critical));
+    expect(rec.depth()).toBe(0);
+    // Nothing selected: no handles, no outline, and the same drawing otherwise.
+    const none = drawRefs({}, [LINE, CIRCLE, text, table]);
+    expect(none.fills("#0078d4")).toHaveLength(0);
+    expect(none.strokes("#0078d4")).toHaveLength(0);
+  });
+
   it("shows a reference annotation in the edit view only when asked, and keeps save/restore balanced", () => {
     const hidden = draw({ resultViewSettings: rvs({ annotations: [LINE] }) });
     expect(hidden.strokes("#a21caf")).toHaveLength(0);

@@ -38,7 +38,15 @@ function RunAllProgress({ status }: { status: RunAllStatus }) {
           className="flex items-center gap-1.5"
           style={{ fontWeight: 600 }}
         >
-          Run all {finished}/{total}
+          Run all{" "}
+          {/* The count has the width of its widest value and digits of equal
+              width, so that the bar after it stands still while it counts. */}
+          <span
+            className="inline-block"
+            style={{ fontVariantNumeric: "tabular-nums", minWidth: `${2 * String(total).length + 1}ch` }}
+          >
+            {finished}/{total}
+          </span>
           <span
             role="progressbar"
             aria-label="Run all progress"

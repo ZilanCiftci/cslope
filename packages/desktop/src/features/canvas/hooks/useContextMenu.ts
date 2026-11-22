@@ -4,12 +4,11 @@ import {
   type RefObject,
   type MouseEvent as RMouseEvent,
 } from "react";
-import { annotationsInLayerOrder } from "../../results/layers";
-import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
 import { useAppStore } from "../../../store/app-store";
 import type { AppMode, CanvasObjectRef } from "../../../store/types";
 import type { ContextMenuItem, ContextMenuState, EdgeHit, MaterialPickerState } from "../types";
-import { findReferenceEdgeAt, findReferenceHitAt, referenceHitId } from "../reference-geometry";
+import { findReferenceEdgeAt, referenceHitId } from "../reference-geometry";
+import { findResultHitAt } from "../result-hits";
 import type { CanvasCandidate } from "../object-hits";
 import { openPlaceDrawing } from "../../drawings/window-sync";
 import { peekSource } from "../../drawings/drawing-cache";
@@ -23,7 +22,6 @@ import {
   isObjectLocked,
   sameObject,
 } from "../../../store/canvas-selection";
-import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../../constants";
 
 interface ContextMenuParams {
   canvasRef: RefObject<HTMLCanvasElement | null>;
@@ -78,68 +76,20 @@ export function useContextMenu(params: ContextMenuParams) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (!canvas) return;
-        const ctx = canvas.getContext("2d");
         const canvasRect = canvas.getBoundingClientRect();
         const cxPx = e.clientX - canvasRect.left;
         const cyPx = e.clientY - canvasRect.top;
-        const pf = computePaperFrame(
-          canvasRect.width,
-          canvasRect.height,
-          useAppStore.getState().resultViewSettings.paperFrame.paperSize,
-          useAppStore.getState().resultViewSettings.paperFrame.landscape,
-          useAppStore.getState().resultViewSettings.paperFrame.zoom ?? 1,
-          useAppStore.getState().resultViewSettings.paperFrame.offsetX ?? 0,
-          useAppStore.getState().resultViewSettings.paperFrame.offsetY ?? 0,
-          SCREEN_PAPER_BOTTOM_RESERVE_PX,
-        );
         const state = useAppStore.getState();
-        // In the order they are drawn (Properties › Layers): the topmost is hit first.
-        const annos = annotationsInLayerOrder(state);
-        const resultForBounds = state.result;
+        const annos = state.resultViewSettings.annotations;
 
-        // A paper annotation under the pointer: drawn over the reference
-        // lines, so it is hit first.
-        let hitAnno: string | null = null;
-        for (let i = annos.length - 1; i >= 0; i--) {
-          const a = annos[i];
-          if (a.type === "reference") continue;
-          const hit =
-            ctx && resultForBounds
-              ? (() => {
-                  const b = getAnnotationBoundsPx(ctx, {
-                    annotation: a,
-                    paperFrame: pf,
-                    result: resultForBounds,
-                    materials: state.materials,
-                    piezometricLine: state.piezometricLine,
-                    projectInfo: state.projectInfo,
-                    parameters: state.parameters,
-                    resultView: state.resultViewSettings,
-                  });
-                  return (
-                    cxPx >= b.x &&
-                    cxPx <= b.x + b.w &&
-                    cyPx >= b.y &&
-                    cyPx <= b.y + b.h
-                  );
-                })()
-              : (() => {
-                  const fx = (cxPx - pf.x) / pf.w;
-                  const fy = (cyPx - pf.y) / pf.h;
-                  const dx = (fx - a.x) * pf.w;
-                  const dy = (fy - a.y) * pf.h;
-                  return Math.hypot(dx, dy) < 15;
-                })();
-
-          if (hit) {
-            hitAnno = a.id;
-            break;
-          }
-        }
-
+        // The object under the pointer as a press takes it (result-hits.ts):
+        // the selected one where it is there, else the topmost (a paper
+        // annotation over the reference lines).
+        const hit = findResultHitAt(canvas.getContext("2d"), state, canvasRect, e.clientX, e.clientY, selectedAnnotationIds);
+        const hitAnno = hit?.kind === "annotation" ? hit.annoId : null;
         // A reference annotation: its points (a polyline's vertex removed,
         // one added on a segment) and the annotation itself.
-        const refHit = hitAnno ? null : findReferenceHitAt(state, canvasRect, e.clientX, e.clientY);
+        const refHit = hitAnno ? null : hit;
         const refId = referenceHitId(refHit);
         if (refHit && refId) {
           setSelectedAnnotations([refId]);

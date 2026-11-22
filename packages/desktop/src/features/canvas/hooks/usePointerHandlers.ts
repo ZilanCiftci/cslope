@@ -7,8 +7,7 @@ import {
   type PointerEvent as RPointerEvent,
   type RefObject,
 } from "react";
-import { annotationsInLayerOrder } from "../../results/layers";
-import { computePaperFrame, getAnnotationBoundsPx } from "../helpers";
+import { computePaperFrame } from "../helpers";
 import { undoableState, useAppStore } from "../../../store/app-store";
 import { VIEW_SCALE_MAX, VIEW_SCALE_MIN } from "../constants";
 import type { CanvasWheelEvent } from "./useNonPassiveWheel";
@@ -28,7 +27,8 @@ import {
   circleRadiusFromPointer,
   isSameCustomPlaneHit,
 } from "../custom-plane-geometry";
-import { findReferenceHitAt, isSameReferenceHit, referenceHitId } from "../reference-geometry";
+import { isSameReferenceHit, referenceHitId } from "../reference-geometry";
+import { findResultHitAt, resultHitId } from "../result-hits";
 import { isPaperAnnotation, MIN_REFERENCE_RADIUS, translateReference } from "../../annotations/reference";
 import type { Annotation, BackgroundImage, ReferenceAnnotation } from "../../../store/types";
 import { translateCalibration } from "../../drawings/placement";
@@ -574,73 +574,25 @@ export function usePointerHandlers(deps: PointerDeps) {
   );
 
   /**
-   * Topmost annotation under the pointer, using its drawn bounding box
-   * (the anchor point within 15 px when there is no result to measure).
+   * The object under the pointer in the result view (result-hits.ts): the
+   * selection first, so that a press on a selected object drags it
+   * whatever lies over it; elsewhere the topmost, as drawn.
    */
-  const findAnnotationAt = useCallback(
-    (clientX: number, clientY: number) => {
+  const findResultAt = useCallback(
+    (clientX: number, clientY: number, preferSelected = true): PointHit | null => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
-      const ctx = canvas.getContext("2d");
-      const rect = canvas.getBoundingClientRect();
-      const state = useAppStore.getState();
-      const frame = state.resultViewSettings.paperFrame;
-      const pf = computePaperFrame(
-        rect.width,
-        rect.height,
-        frame.paperSize,
-        frame.landscape,
-        frame.zoom ?? 1,
-        frame.offsetX ?? 0,
-        frame.offsetY ?? 0,
-        SCREEN_PAPER_BOTTOM_RESERVE_PX,
+      return findResultHitAt(
+        canvas.getContext("2d"),
+        useAppStore.getState(),
+        canvas.getBoundingClientRect(),
+        clientX,
+        clientY,
+        selectedAnnotationIds,
+        preferSelected,
       );
-      const cxPx = clientX - rect.left;
-      const cyPx = clientY - rect.top;
-      // In the order they are drawn (Properties › Layers): the topmost is hit first.
-      const annos = annotationsInLayerOrder(state);
-      for (let i = annos.length - 1; i >= 0; i--) {
-        const a = annos[i];
-        // Reference annotations are hit through findReferenceAt.
-        if (a.type === "reference") continue;
-        if (ctx && state.result) {
-          const b = getAnnotationBoundsPx(ctx, {
-            annotation: a,
-            paperFrame: pf,
-            result: state.result,
-            materials: state.materials,
-            piezometricLine: state.piezometricLine,
-            projectInfo: state.projectInfo,
-            parameters: state.parameters,
-            resultView: state.resultViewSettings,
-          });
-          if (
-            cxPx >= b.x &&
-            cxPx <= b.x + b.w &&
-            cyPx >= b.y &&
-            cyPx <= b.y + b.h
-          ) {
-            return a;
-          }
-        } else {
-          const dx = cxPx - (pf.x + a.x * pf.w);
-          const dy = cyPx - (pf.y + a.y * pf.h);
-          if (Math.hypot(dx, dy) < 15) return a;
-        }
-      }
-      return null;
     },
-    [canvasRef],
-  );
-
-  /** The reference annotation (its handle, line or arc) under the pointer in the result view. */
-  const findReferenceAt = useCallback(
-    (clientX: number, clientY: number): PointHit | null => {
-      const canvas = canvasRef.current;
-      if (!canvas) return null;
-      return findReferenceHitAt(useAppStore.getState(), canvas.getBoundingClientRect(), clientX, clientY);
-    },
-    [canvasRef],
+    [canvasRef, selectedAnnotationIds],
   );
 
   // The animation loop outlives the render it started in; read the latest
@@ -722,58 +674,46 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (mode === "result") {
         const canvas = canvasRef.current;
         if (canvas) {
-          // A paper annotation (colour bar, text, ...) is drawn over the
-          // reference lines, so it takes the pointer first.
-          const a = findAnnotationAt(e.clientX, e.clientY);
-          const refHit = a ? null : findReferenceAt(e.clientX, e.clientY);
-          const refId = referenceHitId(refHit);
-          if (refHit && refId) {
-            // Select first, then drag: a press on a line that is not
+          // The selected object takes the press wherever it is hit (a
+          // press with Ctrl or Shift, which changes the selection, takes
+          // the topmost object); elsewhere a paper annotation (colour bar,
+          // text, ...), drawn over the reference lines, comes first.
+          const modifier = e.ctrlKey || e.shiftKey;
+          const hit = findResultAt(e.clientX, e.clientY, !modifier);
+          const id = resultHitId(hit);
+          if (hit && id) {
+            // Select first, then drag: a press on an object that is not
             // selected selects it and moves nothing.
-            const wasSelected = selectedAnnotationIds.includes(refId);
-            if (e.ctrlKey || e.shiftKey) {
-              toggleAnnotationSelection(refId, true);
+            const wasSelected = selectedAnnotationIds.includes(id);
+            if (modifier) {
+              toggleAnnotationSelection(id, true);
             } else if (!wasSelected) {
-              setSelectedAnnotations([refId]);
+              setSelectedAnnotations([id]);
             }
+            // Only the primary button drags (right-click opens a menu).
             if (e.button !== 0 || !wasSelected) return;
-            const anno = useAppStore.getState().resultViewSettings.annotations.find((an) => an.id === refId);
-            if (!anno || anno.type !== "reference") return;
-            // A handle starts from its own point (it snaps from there); a
-            // line or rim from the pointer itself.
-            const startWorld: [number, number] =
-              refHit.kind === "referenceVertex" && anno.shape === "polyline"
-                ? [anno.points[refHit.pointIndex][0], anno.points[refHit.pointIndex][1]]
-                : refHit.kind === "referenceCircle" && refHit.handle === "centre" && anno.shape === "circle"
-                  ? [anno.cx, anno.cy]
-                  : [wx, wy];
+            const anno = useAppStore.getState().resultViewSettings.annotations.find((an) => an.id === id);
+            if (!anno) return;
+            let startWorld: [number, number];
+            if (anno.type === "reference") {
+              // A handle starts from its own point (it snaps from there); a
+              // line or rim from the pointer itself.
+              startWorld =
+                hit.kind === "referenceVertex" && anno.shape === "polyline"
+                  ? [anno.points[hit.pointIndex][0], anno.points[hit.pointIndex][1]]
+                  : hit.kind === "referenceCircle" && hit.handle === "centre" && anno.shape === "circle"
+                    ? [anno.cx, anno.cy]
+                    : [wx, wy];
+            } else {
+              startWorld = [anno.x, anno.y];
+            }
             dragRef.current = {
-              hit: refHit,
+              hit,
               startWorld,
               startPx: [e.clientX, e.clientY],
               downPx: [e.clientX, e.clientY],
               moved: false,
-              reference: anno,
-            };
-            beginDragHistoryBatch();
-            (e.target as HTMLElement).setPointerCapture(e.pointerId);
-            return;
-          }
-          if (a) {
-            if (e.ctrlKey || e.shiftKey) {
-              toggleAnnotationSelection(a.id, true);
-            } else if (!selectedAnnotationIds.includes(a.id)) {
-              setSelectedAnnotations([a.id]);
-            }
-            // Only the primary button drags (right-click opens a menu).
-            if (e.button !== 0) return;
-            const hit: PointHit = { kind: "annotation", annoId: a.id };
-            dragRef.current = {
-              hit,
-              startWorld: [a.x, a.y],
-              startPx: [e.clientX, e.clientY],
-              downPx: [e.clientX, e.clientY],
-              moved: false,
+              reference: anno.type === "reference" ? anno : undefined,
             };
             beginDragHistoryBatch();
             (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -834,9 +774,8 @@ export function usePointerHandlers(deps: PointerDeps) {
       beginDragHistoryBatch,
       canvasRef,
       editDragAt,
-      findAnnotationAt,
       findObjectsAt,
-      findReferenceAt,
+      findResultAt,
       findRegionAtPoint,
       getEventWorldPos,
       mode,
@@ -909,11 +848,9 @@ export function usePointerHandlers(deps: PointerDeps) {
       if (press) return;
 
       if (mode === "result") {
-        // Same hit area as a click, so the cursor matches what a click does.
-        // Paper annotations first: they are drawn over the reference lines.
-        const a = findAnnotationAt(e.clientX, e.clientY);
-        const ref = a ? null : findReferenceAt(e.clientX, e.clientY);
-        const hit: PointHit | null = a ? { kind: "annotation", annoId: a.id } : ref;
+        // Same hit area as a press, so the cursor matches what a press does
+        // (the selected object first).
+        const hit = findResultAt(e.clientX, e.clientY);
         if (!isSameHit(hoverHitRef.current, hit)) {
           hoverHitRef.current = hit;
           setHoverHit(hit);
@@ -924,9 +861,8 @@ export function usePointerHandlers(deps: PointerDeps) {
     },
     [
       applyEdgePan,
-      findAnnotationAt,
       findObjectsAt,
-      findReferenceAt,
+      findResultAt,
       getEventWorldPos,
       mode,
       setActiveViewOffset,

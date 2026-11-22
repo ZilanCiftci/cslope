@@ -160,15 +160,30 @@ type ClientRect = { left: number; top: number; width: number; height: number };
  * canvas's bounding rectangle and (clientX, clientY) the pointer.
  */
 export function findReferenceHitAt(state: ReferenceHitState, rect: ClientRect, clientX: number, clientY: number): PointHit | null {
-  const refs = state.resultViewSettings.annotations.filter(isReferenceAnnotation);
-  if (refs.length === 0) return null;
+  const { handle, line } = findReferencePartsAt(state, rect, clientX, clientY);
+  return handle ?? line;
+}
+
+/**
+ * The handle (a vertex, a centre) and the line or arc of the reference
+ * annotations under a pointer, each the topmost; with `only`, of those
+ * annotations alone (the selection, which takes a press first).
+ */
+export function findReferencePartsAt(
+  state: ReferenceHitState,
+  rect: ClientRect,
+  clientX: number,
+  clientY: number,
+  only?: readonly string[],
+): { handle: PointHit | null; line: PointHit | null } {
+  const refs = state.resultViewSettings.annotations.filter(isReferenceAnnotation).filter((a) => !only || only.includes(a.id));
+  if (refs.length === 0) return { handle: null, line: null };
   const toPx = resultToPx(state, rect.width, rect.height);
   const mx = clientX - rect.left;
   const my = clientY - rect.top;
-  return (
-    findReferenceHandle(refs, mx, my, toPx, REFERENCE_HANDLE_HIT_PX) ??
-    findReferenceLine(refs, mx, my, toPx, REFERENCE_LINE_HIT_PX, (x) => surfaceYAtX(state.coordinates, x))
-  );
+  const handle = findReferenceHandle(refs, mx, my, toPx, REFERENCE_HANDLE_HIT_PX);
+  const line = handle ? null : findReferenceLine(refs, mx, my, toPx, REFERENCE_LINE_HIT_PX, (x) => surfaceYAtX(state.coordinates, x));
+  return { handle, line };
 }
 
 /** The segment of a reference polyline under the pointer, as an edge hit (its insertion point snapped). */

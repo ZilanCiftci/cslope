@@ -254,13 +254,19 @@ describe("ResultCanvas paper zoom and pan", () => {
     expect(after[1]).toBeCloseTo(before[1], 6);
   });
 
-  it("selects an annotation on click and drags it on the paper", () => {
+  it("selects an annotation on click, then drags it on the paper", () => {
     renderCanvas();
     // The sheet sits above the floating toolbar's band.
     const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
     const [x, y] = [pf.x + 0.6 * pf.w + 3, pf.y + 0.6 * pf.h + 3];
+    // The first press selects and moves nothing.
     fireEvent.pointerDown(canvas(), { button: 0, clientX: x, clientY: y, pointerId: 1 });
     expect(useAppStore.getState().selectedAnnotationIds).toEqual(["b"]);
+    fireEvent.pointerMove(canvas(), { clientX: x + pf.w * 0.1, clientY: y, pointerId: 1 });
+    fireEvent.pointerUp(canvas(), { button: 0, clientX: x + pf.w * 0.1, clientY: y, pointerId: 1 });
+    expect(anno("b")!.x).toBeCloseTo(0.6, 9);
+    // Selected: a drag moves it.
+    fireEvent.pointerDown(canvas(), { button: 0, clientX: x, clientY: y, pointerId: 1 });
     fireEvent.pointerMove(canvas(), { clientX: x + pf.w * 0.1, clientY: y, pointerId: 1 });
     fireEvent.pointerUp(canvas(), { button: 0, clientX: x + pf.w * 0.1, clientY: y, pointerId: 1 });
     expect(anno("b")!.x).toBeCloseTo(0.7, 9);
