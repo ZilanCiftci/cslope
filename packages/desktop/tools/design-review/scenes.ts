@@ -817,6 +817,66 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "anno-plot-styled",
+    title: "Result sidebar, a styled plot selected: its series, axes and plot style",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showSlices: false }); s.addAnnotation("plot"); }`);
+      await ctx.store(
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "plot").pop(); s.updateAnnotation(a.id, { x: 0.12, y: 0.55, width: 0.34, height: 0.3, plotAxisY: "shearStrength", plotStyle: { color: "#0066cc", line: "dashed", marker: "square", markerOpen: true, yMin: 0 } }); s.setSelectedAnnotations([a.id]); }`,
+      );
+      await ctx.page.waitForTimeout(500);
+    },
+  },
+  {
+    id: "anno-plot-style-axes",
+    title: "Result sidebar, a styled plot: the axes and plot groups and Reset to default (scrolled down)",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => s.addAnnotation("plot")`);
+      await ctx.store(
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "plot").pop(); s.updateAnnotation(a.id, { plotStyle: { marker: "plus", xMin: 5, yMax: 40, showGrid: false, showBorder: false, fontSize: 11 } }); s.setSelectedAnnotations([a.id]); }`,
+      );
+      await ctx.page.getByRole("button", { name: "Reset to default" }).scrollIntoViewIfNeeded();
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-plot-default",
+    title: "Result view: a slice plot in its default look",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showSlices: false }); s.addAnnotation("plot"); }`);
+      await ctx.store(
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "plot").pop(); s.updateAnnotation(a.id, { x: 0.12, y: 0.55, width: 0.34, height: 0.3 }); s.setSelectedAnnotations([]); }`,
+      );
+      await ctx.page.waitForTimeout(500);
+    },
+  },
+  {
+    id: "main-result-plot-styles",
+    title: "Result view: three slice plots styled (dashed with plus signs, no line with filled triangles and a fixed range, bare with crosses)",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showSlices: false }); s.addAnnotation("plot"); s.addAnnotation("plot"); s.addAnnotation("plot"); }`);
+      await ctx.store(`(s) => {
+        const plots = s.resultViewSettings.annotations.filter((a) => a.type === "plot");
+        const styles = [
+          { x: 0.1, y: 0.56, plotAxisY: "shearStrength", plotStyle: { color: "#cc0000", line: "dashed", lineWidth: 0.4, marker: "plus", markerSize: 2 } },
+          { x: 0.39, y: 0.56, plotAxisY: "sliceWeight", plotAxisX: "x", plotStyle: { color: "#00cc00", line: "none", marker: "triangle", markerSize: 1.8, yMin: 0, yMax: 400 } },
+          { x: 0.68, y: 0.56, plotAxisY: "resistingForce", plotStyle: { color: "#a21caf", marker: "cross", showGrid: false, showBorder: false, showAxisTitle: false, fontSize: 11 } },
+        ];
+        plots.slice(-3).forEach((a, i) => s.updateAnnotation(a.id, { ...styles[i], width: 0.27, height: 0.3 }));
+        s.setSelectedAnnotations([]);
+      }`);
+      await ctx.page.waitForTimeout(500);
+    },
+  },
+  {
     id: "anno-reference",
     title: "Result sidebar, reference line properties",
     area: "sidebar",

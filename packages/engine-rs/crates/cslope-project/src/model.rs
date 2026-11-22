@@ -522,6 +522,9 @@ pub struct Annotation {
     pub plot_axis_x: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub plot_axis_y: Option<String>,
+    /// A slice plot's style (Properties › Plot).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub plot_style: Option<PlotStyle>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scale_mode: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -559,6 +562,52 @@ pub struct Annotation {
     pub radius: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub clip: Option<String>,
+}
+
+/// The style of a slice plot annotation (`PlotStyle`): each member an
+/// override written only where it differs from the plot's default look.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PlotStyle {
+    /// "#rrggbb".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// "dashed" or "none" (absent: solid).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line: Option<String>,
+    /// mm on the paper.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub line_width: Option<f64>,
+    /// "none", "square", "triangle", "plus" or "cross" (absent: circle).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marker: Option<String>,
+    /// The markers' diameter, mm on the paper.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marker_size: Option<f64>,
+    /// Written only as `true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marker_open: Option<bool>,
+    /// The show switches, written only as `false`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_title: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_axis_title: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_grid: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_border: Option<bool>,
+    /// The tick values' size (annotation px).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub font_size: Option<f64>,
+    /// Fixed ends of the axes.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_max: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_min: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_max: Option<f64>,
 }
 
 /// The styles of the display layers (`ResultLayerStyles`): each member an

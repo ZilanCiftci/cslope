@@ -28,6 +28,7 @@ import {
 import { customSurfaceGeometryText, customSurfaceName, customSurfaceValueText, surfaceCountText } from "../../utils/result-summary";
 import { ResultNotes } from "./ResultNotes";
 import { ColorBarProperties } from "./ColorBarProperties";
+import { PlotProperties } from "./PlotProperties";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { InsertVariableMenu } from "../annotations/InsertVariableMenu";
 import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/reference";
@@ -1474,6 +1475,8 @@ export function ResultSidebar() {
                 ))}
               </select>
             </div>
+
+            <PlotProperties plots={selectedPlotAnnotations} />
           </div>
         )}
       </Section>

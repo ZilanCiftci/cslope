@@ -25,6 +25,7 @@ import { isFosSchemeId, isHexColor } from "../utils/fos-color";
 import { normalizeReferenceAnnotation } from "../features/annotations/reference";
 import { normalizeLayerOrder } from "../features/results/layers";
 import { normalizeLayerStyles } from "../features/results/layer-styles";
+import { normalizePlotStyle } from "../features/annotations/plotStyle";
 import { normalizeLocks } from "./canvas-selection";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
@@ -818,7 +819,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale).map(normalizeHidden));
+  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale).map(normalizeHidden).map(normalizePlotStyleOf));
   const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
   const layerStyles = normalizeLayerStyles((view as { layerStyles?: unknown }).layerStyles);
 
@@ -926,6 +927,17 @@ export function normalizeHidden(anno: Annotation): Annotation {
   if (anno.type === "reference" || !("hidden" in anno)) return anno;
   const { hidden, ...rest } = anno;
   return hidden === true && isBuiltInAnnotationType(anno.type) ? { ...rest, hidden: true } : rest;
+}
+
+/**
+ * A slice plot's style (`plotStyle`), its valid members only and absent
+ * when none is left; other annotations carry none.
+ */
+export function normalizePlotStyleOf(anno: Annotation): Annotation {
+  if (anno.type === "reference" || !("plotStyle" in anno)) return anno;
+  const { plotStyle, ...rest } = anno;
+  const style = anno.type === "plot" ? normalizePlotStyle(plotStyle) : undefined;
+  return style ? { ...rest, plotStyle: style } : rest;
 }
 
 /**

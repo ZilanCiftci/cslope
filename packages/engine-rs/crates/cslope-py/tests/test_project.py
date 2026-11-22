@@ -211,6 +211,32 @@ def test_a_name_that_is_not_unicode_is_named(tmp_path):
 
 
 @needs_fixtures
+def test_keeps_a_plot_style(tmp_path):
+    # (a slice plot styled in Properties › Plot, as the app writes it; a
+    # plot saved before the style stays as it was)
+    style = {"color": "#cc0000", "line": "dashed", "lineWidth": 0.5, "marker": "plus", "markerSize": 3,
+             "showGrid": False, "fontSize": 12, "yMin": 0, "yMax": 100}
+    old = {"id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength"}
+
+    def edit(v):
+        v["resultViewSettings"]["annotations"] = [
+            {"id": "p", "type": "plot", "x": 0.3, "y": 0.3, "plotStyle": style},
+            old,
+        ]
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "plot.cslp", "models/model-1/model.json", edit)
+    target = tmp_path / "saved.cslp"
+    project.open(src).save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["annotations"][0]["plotStyle"] == style
+    assert view["annotations"][1] == old
+    # saved again, the same entry
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
+
+
+@needs_fixtures
 def test_keeps_a_table_and_a_bar_turned_off_and_surfaces_off(tmp_path):
     # (as the app writes them: a material table and a color bar turned off
     # with their place and settings, every surface off)

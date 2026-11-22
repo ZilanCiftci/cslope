@@ -9,7 +9,8 @@
  *     bun packages/desktop/tools/design-review/view-pdf.ts [out dir]
  *
  * Models: V002, V038b and V085 as Help › Benchmarks opens them, and the
- * first example with its material table and a color bar. VIEW_PDF_ONLY=v002,user
+ * first example with its material table and a color bar, and that example with
+ * two styled slice plots ("plot"). VIEW_PDF_ONLY=v002,user
  * picks some; VIEW_PDF_GRID=1 turns the grid on with a fixed spacing and minor
  * lines; DESIGN_REVIEW_SKIP_BUILD=1 reuses the last build. Needs
  * pdftoppm and ImageMagick's convert.
@@ -29,7 +30,8 @@ const ONLY = process.env.VIEW_PDF_ONLY?.split(",").map((s) => s.trim().toLowerCa
 const SIZE = { width: 1440, height: 900 };
 const DPR = 2;
 
-type Case = { id: string; model: unknown | null };
+/** A model (null: the first example) and what is set on its sheet after the run. */
+type Case = { id: string; model: unknown | null; sheet?: string };
 
 async function cases(): Promise<Case[]> {
   await initEngine();
@@ -37,10 +39,10 @@ async function cases(): Promise<Case[]> {
     const c = VERIFICATION_CASES.find((v) => v.id === id)!;
     return { id: id.toLowerCase(), model: verificationModel(c, undefined, `${c.id} ${c.title}`, { titleBlock: true }) };
   };
-  return [bench("V002"), bench("V038b"), bench("V085"), { id: "user", model: null }];
+  return [bench("V002"), bench("V038b"), bench("V085"), { id: "user", model: null }, { id: "plot", model: null, sheet: STYLED_PLOT }];
 }
 
-async function load(page: Page, model: unknown | null) {
+async function load(page: Page, model: unknown | null, sheet?: string) {
   await page.evaluate((model) => {
     const s = (window as any).__CSLOPE_STORE__.getState();
     if (model) {
@@ -54,12 +56,25 @@ async function load(page: Page, model: unknown | null) {
   }, model);
   await runAnalysis(page);
   await store(page, `(s) => { s.setMode("result"); if (!s.resultViewSettings.annotations.some((a) => a.type === "color-bar")) { s.addAnnotation("color-bar"); } s.setSelectedAnnotations([]); }`);
+  if (sheet) await store(page, sheet);
   // VIEW_PDF_GRID=1: the grid on, a fixed spacing of 2 m with minor lines (Layers › Grid).
   if (process.env.VIEW_PDF_GRID) {
     await store(page, `(s) => s.setResultViewSettings({ showGrid: true, gridSpacing: undefined, gridLineSpacing: 2, layerStyles: { ...s.resultViewSettings.layerStyles, grid: { subdivisions: 4 } } })`);
   }
   await page.waitForTimeout(800);
 }
+
+/** Two slice plots with a style: a dashed red line with plus signs over a fixed range, and open blue squares with no line. */
+const STYLED_PLOT = `(s) => {
+  // (s is the state before the plots are added; the store has them)
+  s.setResultViewSettings({ showSlices: false });
+  s.addAnnotation("plot");
+  s.addAnnotation("plot");
+  const [a, b] = window.__CSLOPE_STORE__.getState().resultViewSettings.annotations.filter((a) => a.type === "plot").slice(-2);
+  s.updateAnnotation(a.id, { x: 0.1, y: 0.55, width: 0.34, height: 0.32, plotStyle: { color: "#cc0000", line: "dashed", lineWidth: 0.4, marker: "plus", markerSize: 2.5, yMin: 0, yMax: 60 } });
+  s.updateAnnotation(b.id, { x: 0.5, y: 0.55, width: 0.34, height: 0.32, plotAxisX: "x", plotAxisY: "sliceWeight", plotStyle: { color: "#0066cc", line: "none", marker: "square", markerOpen: true, showGrid: false, fontSize: 11 } });
+  s.setSelectedAnnotations([]);
+}`;
 
 /** Page 1 of "Export as PDF…" as a PNG next to `png`. */
 async function exportPdf(page: Page, pdfPath: string) {
@@ -98,7 +113,7 @@ async function main() {
         await page.waitForFunction(() => (window as any).__CSLOPE_CAPTURE_READY__ === true, undefined, { timeout: 30_000 });
         await page.evaluate((theme) => (window as any).__CSLOPE_STORE__.getState().setTheme(theme), theme);
         await setViewport(page, DPR, SIZE.width, SIZE.height);
-        await load(page, c.model);
+        await load(page, c.model, c.sheet);
         const canvas = page.locator("[data-testid='slope-canvas']");
         const view = join(OUT, `${c.id}-view-${theme}.png`);
         await canvas.screenshot({ path: view });
