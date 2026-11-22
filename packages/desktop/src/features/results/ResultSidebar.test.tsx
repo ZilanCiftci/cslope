@@ -283,6 +283,7 @@ describe("ResultSidebar layers list", () => {
           showCentreMarker: false,
           showSoilColor: false,
           showSurfaces: false,
+          showGrid: false,
         },
       }),
     );
@@ -295,6 +296,7 @@ describe("ResultSidebar layers list", () => {
       "Center (off)",
       "Slices (off)",
       "Surfaces (off)",
+      "Grid (off)",
       "Soil colors (off)",
     ]);
     expect(screen.getByText("Select an object on the canvas to edit its properties.")).toBeInTheDocument();
@@ -307,12 +309,12 @@ describe("ResultSidebar layers list", () => {
     render(<ResultSidebar />);
     expect(screen.getByRole("button", { name: "Layers" })).toBeInTheDocument();
     // One surfaces layer: every surface and the critical one.
-    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "surfaces", "soilColor"]);
+    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "surfaces", "grid", "soilColor"]);
     expect(screen.getByText("Soil colors")).toBeInTheDocument();
     expect(screen.queryByText("Critical surface")).toBeNull();
     // Turned off: still listed where they were, greyed and named off.
     act(() => setRvsNow({ showSlices: false, showSurfaces: false }));
-    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "surfaces", "soilColor"]);
+    expect(rowKeys()).toEqual(["c", "p", "m", "t2", "t1", "fosLabel", "center", "slices", "surfaces", "grid", "soilColor"]);
     const list = within(screen.getByRole("list", { name: "Layers, topmost first" }));
     expect(list.getByRole("listitem", { name: "Slices (off)" })).toBeInTheDocument();
     expect(list.getByRole("listitem", { name: "Surfaces (off)" })).toBeInTheDocument();
@@ -448,8 +450,9 @@ describe("ResultSidebar layers list", () => {
     render(<ResultSidebar />);
     const row = (key: string) => screen.getAllByTestId("layer-row").find((r) => r.getAttribute("data-layer") === key)!;
     fireEvent.keyDown(row("soilColor"), { key: "ArrowUp", altKey: true });
-    expect(rowKeys().slice(-3)).toEqual(["slices", "soilColor", "surfaces"]);
-    expect(rvs().layerOrder).toEqual(["surfaces", "soilColor", "slices", "center", "fosLabel", "t1", "t2", "m", "p", "c"]);
+    // (over the grid, which lies on it by default)
+    expect(rowKeys().slice(-3)).toEqual(["surfaces", "soilColor", "grid"]);
+    expect(rvs().layerOrder).toEqual(["grid", "soilColor", "surfaces", "slices", "center", "fosLabel", "t1", "t2", "m", "p", "c"]);
     expect(document.activeElement).toBe(row("soilColor"));
     fireEvent.keyDown(row("t1"), { key: "ArrowDown", altKey: true });
     expect(rowKeys().slice(4, 6)).toEqual(["fosLabel", "t1"]);
@@ -481,19 +484,19 @@ describe("ResultSidebar layers list", () => {
     fireEvent.drop(target, { clientY: 120, dataTransfer });
     expect(screen.queryByTestId("layer-drop-indicator")).toBeNull();
     // Below the slices: drawn under them, over the surfaces.
-    expect(rowKeys().slice(-4)).toEqual(["slices", "t1", "surfaces", "soilColor"]);
-    expect(rvs().layerOrder).toEqual(["soilColor", "surfaces", "t1", "slices", "center", "fosLabel", "t2", "m", "p", "c"]);
+    expect(rowKeys().slice(-5)).toEqual(["slices", "t1", "surfaces", "grid", "soilColor"]);
+    expect(rvs().layerOrder).toEqual(["soilColor", "grid", "surfaces", "t1", "slices", "center", "fosLabel", "t2", "m", "p", "c"]);
   });
 
   it("keeps the place of a layer turned off and on again; a new annotation goes on top", () => {
     act(() => setRvsNow({ layerOrder: ["soilColor", "slices", "surfaces", "center", "fosLabel", "t1", "t2", "m", "p", "c"] }));
     render(<ResultSidebar />);
-    expect(rowKeys().slice(-3)).toEqual(["surfaces", "slices", "soilColor"]);
+    expect(rowKeys().slice(-4)).toEqual(["surfaces", "slices", "grid", "soilColor"]);
     act(() => setRvsNow({ showSlices: false }));
-    expect(rowKeys().slice(-3)).toEqual(["surfaces", "slices", "soilColor"]);
+    expect(rowKeys().slice(-4)).toEqual(["surfaces", "slices", "grid", "soilColor"]);
     expect(screen.getByRole("listitem", { name: "Slices (off)" })).toBeInTheDocument();
     act(() => setRvsNow({ showSlices: true }));
-    expect(rowKeys().slice(-3)).toEqual(["surfaces", "slices", "soilColor"]);
+    expect(rowKeys().slice(-4)).toEqual(["surfaces", "slices", "grid", "soilColor"]);
     act(() => useAppStore.getState().addAnnotation("text"));
     const added = annotations().at(-1)!.id;
     expect(rowKeys()[0]).toBe(added);
@@ -592,7 +595,7 @@ describe("ResultSidebar paper frame properties", () => {
     expect(s.paperPropertiesFocusPending).toBe(false);
   });
 
-  it("has every paper setting: extents, model bounds, ticks, grid, size and orientation", () => {
+  it("has every paper setting: extents, model bounds, ticks, size and orientation (the grid is a layer)", () => {
     render(<ResultSidebar />);
     for (const label of ["Left x (m)", "Right x (m)", "Bottom y (m)", "Top y (m)", "Tick spacing (m)", "Minor ticks", "Paper size", "Paper orientation"]) {
       expect(field(label), label).toBeInTheDocument();
@@ -600,7 +603,9 @@ describe("ResultSidebar paper frame properties", () => {
       expect(screen.getByLabelText(label), label).toBe(field(label));
     }
     expect(screen.getByRole("button", { name: "Use model bounds" })).toBeInTheDocument();
-    expect(screen.getByLabelText("Grid lines")).toBeInTheDocument();
+    // The grid is turned on and off and set in Layers › Grid, not here.
+    expect(screen.queryByRole("checkbox", { name: /grid/i })).toBeNull();
+    expect(screen.queryByText(/grid spacing/i)).toBeNull();
   });
 
   it("reads a decimal comma in an extent", () => {
@@ -725,17 +730,6 @@ describe("ResultSidebar paper frame properties", () => {
     fireEvent.change(spacing, { target: { value: "5" } });
     fireEvent.blur(spacing);
     expect(rvs().gridSpacing).toBe(5);
-
-    // The grid: on/off, and a spacing of its own while on.
-    const grid = screen.getByRole<HTMLInputElement>("checkbox", { name: "Grid lines" });
-    if (!grid.checked) fireEvent.click(grid);
-    const gridSpacing = field("Grid spacing (m)");
-    fireEvent.change(gridSpacing, { target: { value: "2" } });
-    fireEvent.blur(gridSpacing);
-    expect(rvs().gridLineSpacing).toBe(2);
-    fireEvent.click(grid);
-    expect(rvs().showGrid).toBe(false);
-    expect(screen.queryByText("Grid spacing")).toBeNull();
 
     fireEvent.change(field("Paper size"), { target: { value: "A3" } });
     expect(rvs().paperFrame.paperSize).toBe("A3");

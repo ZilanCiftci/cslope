@@ -425,3 +425,60 @@ fn a_hidden_table_and_bar_and_surfaces_off_read_and_write_back() {
     let (out2, _) = write_project(&mut again, &writer()).unwrap();
     assert_eq!(entries(&out2), entries(&out));
 }
+
+#[test]
+fn a_grid_layer_style_and_order_read_and_write_back() {
+    // (the grid off, its style with minor lines, a fixed spacing and the
+    // grid's key in the layer order, as the app writes them)
+    let rel = FIXTURES[0];
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        let view = &mut v["resultViewSettings"];
+        view["showGrid"] = json!(false);
+        view["gridLineSpacing"] = json!(2.5);
+        view["layerOrder"] = json!(["soilColor", "surfaces", "grid", "slices"]);
+        view["layerStyles"] = json!({
+            "grid": { "color": "#336699", "width": 2.0, "subdivisions": 4.0, "minorWidth": 0.5 }
+        });
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let view = &model["resultViewSettings"];
+    assert_eq!(view["showGrid"], json!(false));
+    assert_eq!(view["gridLineSpacing"], json!(2.5));
+    assert_eq!(
+        view["layerOrder"],
+        json!(["soilColor", "surfaces", "grid", "slices"])
+    );
+    assert_eq!(
+        view["layerStyles"],
+        json!({ "grid": { "color": "#336699", "width": 2, "subdivisions": 4, "minorWidth": 0.5 } })
+    );
+    // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}
+
+#[test]
+fn a_grid_style_out_of_bounds_is_dropped() {
+    let rel = FIXTURES[0];
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["layerStyles"] = json!({
+            "grid": { "subdivisions": 1.0, "minorWidth": 50.0, "color": "red" }
+        });
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    assert!(model["resultViewSettings"].get("layerStyles").is_none());
+}

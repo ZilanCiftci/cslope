@@ -20,6 +20,9 @@ import {
   FEM_PLASTIC_ZONE_OPACITY,
   FOS_LABEL_DECIMALS,
   FOS_LABEL_FONT_PX,
+  GRID_DEFAULT_SUBDIVISIONS,
+  GRID_LINE_WIDTH_PX,
+  GRID_MINOR_LINE_WIDTH_PX,
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
@@ -28,6 +31,8 @@ import { DISPLAY_LAYER_NAMES, type DisplayLayerKey } from "./layers";
 import { LAYER_FONT_FAMILIES, LAYER_STYLE_LIMITS, layerStyleCleared, layerStylePatch } from "./layer-styles";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
+/** The minor grid lines' subdivisions offered (a file may hold another from 2 to 10). */
+const GRID_SUBDIVISIONS = [2, 4, 5, 10];
 const labelStyle = { color: "var(--color-vsc-text-muted)" };
 
 /** A label over its control, tied to it; with `group`, the label names a group of controls. */
@@ -184,7 +189,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
     setRvs(layerStylePatch(rvs, key, patch));
   const W = LAYER_STYLE_LIMITS.width;
 
-  const colorField = <K extends "femMesh" | "femPlasticZone" | "customSurfaces" | "criticalSurface" | "slices" | "center" | "fosLabel">(
+  const colorField = <K extends "femMesh" | "femPlasticZone" | "customSurfaces" | "criticalSurface" | "slices" | "center" | "fosLabel" | "grid">(
     key: K,
     title?: string,
   ) => (
@@ -204,6 +209,73 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
         <OpacityField value={styles.soilColor?.opacity} placeholder={1} onChange={(opacity) => set("soilColor", { opacity })} />
       );
       break;
+    case "grid": {
+      const g = styles.grid;
+      const subdivisions = g?.subdivisions;
+      body = (
+        <>
+          {colorField("grid", "Light grey, as in the PDF (a fainter grey on the dark sheet)")}
+          <div className="flex gap-2">
+            <NumberField
+              label={LINE_WIDTH}
+              value={g?.width}
+              placeholder={GRID_LINE_WIDTH_PX}
+              {...W}
+              onChange={(v) => set("grid", { width: v })}
+            />
+            <Field label="Spacing (m)" className="flex-1 min-w-0">
+              <DraftNumberInput
+                min={0}
+                step="any"
+                placeholder="Auto"
+                value={rvs.gridLineSpacing}
+                title="Distance between the grid lines; empty: at the labelled ticks. Without a tick spacing of your own the labels follow the grid"
+                onValueChange={(v) => setRvs({ gridLineSpacing: v > 0 ? v : undefined })}
+                onClear={() => setRvs({ gridLineSpacing: undefined })}
+                className="w-full tabular-nums"
+              />
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input
+              type="checkbox"
+              checked={subdivisions !== undefined}
+              onChange={(e) => set("grid", e.target.checked ? { subdivisions: GRID_DEFAULT_SUBDIVISIONS } : { subdivisions: undefined, minorWidth: undefined })}
+            />
+            Minor lines
+          </label>
+          {subdivisions !== undefined && (
+            <div className="flex gap-2">
+              <Field label="Subdivisions" className="flex-1 min-w-0">
+                <select
+                  value={subdivisions}
+                  title="Parts each grid interval is divided into"
+                  onChange={(e) => set("grid", { subdivisions: Number(e.target.value) })}
+                  className="w-full"
+                >
+                  {[...new Set([...GRID_SUBDIVISIONS, subdivisions])]
+                    .sort((a, b) => a - b)
+                    .map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                </select>
+              </Field>
+              <NumberField
+                label="Minor width (px)"
+                value={g?.minorWidth}
+                placeholder={GRID_MINOR_LINE_WIDTH_PX}
+                {...W}
+                title={`The minor lines' width, in the grid's color; from ${W.min} to ${W.max}, empty: ${GRID_MINOR_LINE_WIDTH_PX}`}
+                onChange={(v) => set("grid", { minorWidth: v })}
+              />
+            </div>
+          )}
+        </>
+      );
+      break;
+    }
     case "femMesh":
       body = (
         <>
@@ -403,11 +475,13 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
   const name = DISPLAY_LAYER_NAMES[layer];
   // The surfaces layer holds the critical surface's style too.
   const styleKeys: (keyof ResultLayerStyles)[] = layer === "surfaces" ? ["criticalSurface", "surfaces"] : [layer];
-  const styled = styleKeys.some((k) => styles[k] !== undefined);
+  // The grid's spacing is one of its settings too.
+  const styled = styleKeys.some((k) => styles[k] !== undefined) || (layer === "grid" && rvs.gridLineSpacing !== undefined);
   const reset = () => {
     let next: Pick<typeof rvs, "layerStyles"> = rvs;
     for (const k of styleKeys) next = layerStyleCleared(next, k);
-    setRvs(next);
+    // One change: one undo step.
+    setRvs(layer === "grid" ? { ...next, gridLineSpacing: undefined } : next);
   };
   return (
     <div className="space-y-2" role="group" aria-label={`${name} properties`}>

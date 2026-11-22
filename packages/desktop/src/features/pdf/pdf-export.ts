@@ -377,9 +377,17 @@ export function exportVectorPdf(data: PdfExportData): void {
     const layers = resultLayers({ resultViewSettings: rvs, result, backgrounds: underlays.map((u) => u.placement) });
     const baseTotal = baseLayerCount(layers);
     const soilIndex = layers.slice(0, baseTotal).findIndex((l) => l.key === "soilColor");
-    const underlaysOf = (from: number, to: number) =>
-      layers.slice(from, to).flatMap((l) => (l.kind === "drawing" ? underlays.filter((u) => u.placement.id === l.drawing.id) : []));
-    if (soilIndex > 0) drawPdfUnderlays(pdf, underlaysOf(0, soilIndex), tf.worldToPdf, innerFrame);
+    // The sheet's grid (Layers › Grid), as on the canvas.
+    const drawSheetGrid = () =>
+      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing, rvs.gridLineSpacing, rvs.layerStyles?.grid);
+    // The drawings and the grid of the base, each where it stands in the order.
+    const drawBase = (from: number, to: number) => {
+      for (const l of layers.slice(from, to)) {
+        if (l.kind === "drawing") drawPdfUnderlays(pdf, underlays.filter((u) => u.placement.id === l.drawing.id), tf.worldToPdf, innerFrame);
+        else if (l.key === "grid") drawSheetGrid();
+      }
+    };
+    if (soilIndex > 0) drawBase(0, soilIndex);
 
     if (coordinates.length >= 3) {
       drawMaterialRegions(
@@ -395,13 +403,9 @@ export function exportVectorPdf(data: PdfExportData): void {
       );
     }
 
-    // Placed drawings shown in results: over the fills, under the grid and the lines.
-    drawPdfUnderlays(pdf, underlaysOf(soilIndex + 1, baseTotal), tf.worldToPdf, innerFrame);
-
-    // Grid on top of the (opaque) regions, as on the canvas.
-    if (rvs.showGrid) {
-      drawGrid(pdf, tf, viewScale, innerFrame, rvs.gridSpacing, rvs.gridLineSpacing);
-    }
+    // Placed drawings shown in results and the grid: over the fills (by
+    // default the grid over the opaque regions), under the lines, as on the canvas.
+    drawBase(soilIndex + 1, baseTotal);
 
     if (coordinates.length >= 3) {
       drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], RESULT_OUTLINE_MM);
@@ -609,6 +613,8 @@ export function exportVectorPdf(data: PdfExportData): void {
             fosLabel: step.withFosLabel,
           });
           if (step.withFosLabel) drawFosLabels();
+        } else if (step.layer === "grid") {
+          drawSheetGrid();
         } else if (step.layer === "soilColor") {
           if (coordinates.length >= 3) drawMaterialRegions(pdf, tf, coordinates, materials, materialBoundaries, regionMaterials, true, "fills", rvs.layerStyles?.soilColor?.opacity);
         } else if (step.layer === "customSurfaces") {
@@ -641,6 +647,8 @@ export function exportVectorPdf(data: PdfExportData): void {
       rvs.gridSpacing,
 
       clampMinorTicks(rvs.minorTicks ?? 0),
+
+      rvs.gridLineSpacing,
 
     );
 

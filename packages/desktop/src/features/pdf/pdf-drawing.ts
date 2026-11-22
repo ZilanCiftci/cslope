@@ -43,7 +43,8 @@ import { computeRegions, type Region } from "../../utils/regions";
 import {
   computeRulerStep,
   formatRulerLabel,
-  resolveTickStep,
+  sheetGridStep,
+  sheetTickStep,
 } from "../../utils/ruler";
 import {
   ARROW_HEAD_LEN_PX,
@@ -57,6 +58,7 @@ import {
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_DEFAULT_TEXT_COLOR,
   ANNOTATION_LINE_HEIGHT,
+  GRID_COLOR,
   ANNOTATION_SCALE_DIVISOR,
   COLOR_BAR_NUM_TICKS,
   CRACK_WATER_OPACITY,
@@ -118,7 +120,8 @@ import {
   RULER_X_LABEL_BASELINE_MM,
   RULER_Y_LABEL_BASELINE_MM,
 } from "../rendering/style-spec";
-import { fosLabelScale, fosLabelText, pdfScaled } from "../results/layer-styles";
+import { fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
+import { gridLinePositions, sheetGridStyle } from "../rendering/sheet-grid";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
@@ -134,6 +137,7 @@ import type {
   ProjectInfo,
   PiezometricLineState,
   RegionMaterials,
+  ResultLayerStyles,
   ResultViewSettings,
 } from "../../store/types";
 import {
@@ -165,6 +169,12 @@ import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
 
+/**
+ * The sheet's grid (Layers › Grid) in the plot frame `clip`: its lines at
+ * the grid's step (the labelled ticks' unless the user gives one), the
+ * minor lines between them, in the style's color and widths (mm), as the
+ * result view draws them (features/rendering/sheet-grid.ts).
+ */
 export function drawGrid(
   pdf: jsPDF,
   tf: PdfTransform,
@@ -172,9 +182,11 @@ export function drawGrid(
   clip: { x: number; y: number; w: number; h: number },
   gridSpacing?: number,
   gridLineSpacing?: number,
+  style?: ResultLayerStyles["grid"],
 ) {
   const [originPdfX, originPdfY] = tf.worldToPdf(0, 0);
-  const worldPerMm = 1 / (viewScale * tf.mmPerPx);
+  const mmPerUnit = viewScale * tf.mmPerPx;
+  const worldPerMm = 1 / mmPerUnit;
 
   const worldLeft = (clip.x - originPdfX) * worldPerMm;
   const worldRight = (clip.x + clip.w - originPdfX) * worldPerMm;
@@ -184,33 +196,33 @@ export function drawGrid(
   // The ruler's major-tick spacing (drawRulerFrame, same frame), so the
   // grid lines run through the labelled ticks as on the canvas; the
   // separately rounded automatic steps used to differ. The user may give
-  // the grid a spacing of its own.
-  const tickStep = resolveTickStep(
-    gridSpacing,
+  // the grid a spacing of its own (the labelled ticks then follow it).
+  const tickStep = sheetTickStep(
     computeRulerStep(worldRight - worldLeft, clip.w, tf.paperW, [
       worldLeft,
       worldRight,
     ]),
+    gridSpacing,
+    gridLineSpacing,
   );
-  const gridStep = resolveTickStep(gridLineSpacing, tickStep);
+  const gridStep = sheetGridStep(tickStep, gridLineSpacing);
+  const s = sheetGridStyle(style);
+  const xs = gridLinePositions(worldLeft, worldRight, gridStep, s.subdivisions, mmPerUnit);
+  const ys = gridLinePositions(worldBottom, worldTop, gridStep, s.subdivisions, mmPerUnit);
 
-  pdf.setDrawColor(220, 220, 220);
-  pdf.setLineWidth(0.1);
-
-  const startX = Math.floor(worldLeft / gridStep) * gridStep;
-  const startY = Math.floor(worldBottom / gridStep) * gridStep;
-
-  for (let gx = startX; gx <= worldRight; gx += gridStep) {
-    const [px] = tf.worldToPdf(gx, 0);
-    if (px >= clip.x && px <= clip.x + clip.w) {
-      pdf.line(px, clip.y, px, clip.y + clip.h);
+  pdf.setDrawColor(...(s.color ? hexRgb(s.color) : GRID_COLOR.rgb));
+  for (const [x, y, width] of [
+    [xs.minor, ys.minor, s.minorMm],
+    [xs.major, ys.major, s.majorMm],
+  ] as const) {
+    pdf.setLineWidth(width);
+    for (const gx of x) {
+      const [px] = tf.worldToPdf(gx, 0);
+      if (px >= clip.x && px <= clip.x + clip.w) pdf.line(px, clip.y, px, clip.y + clip.h);
     }
-  }
-
-  for (let gy = startY; gy <= worldTop; gy += gridStep) {
-    const [, py] = tf.worldToPdf(0, gy);
-    if (py >= clip.y && py <= clip.y + clip.h) {
-      pdf.line(clip.x, py, clip.x + clip.w, py);
+    for (const gy of y) {
+      const [, py] = tf.worldToPdf(0, gy);
+      if (py >= clip.y && py <= clip.y + clip.h) pdf.line(clip.x, py, clip.x + clip.w, py);
     }
   }
 
@@ -224,6 +236,7 @@ export function drawRulerFrame(
   innerFrame: { x: number; y: number; w: number; h: number },
   gridSpacing?: number,
   minorTicks?: number,
+  gridLineSpacing?: number,
 ) {
   const TICK_LEN = RULER_TICK_MM;
   const MINI_TICK = RULER_MINOR_TICK_MM;
@@ -237,12 +250,13 @@ export function drawRulerFrame(
   const worldBottom = (originPdfY - (innerFrame.y + innerFrame.h)) * worldPerMm;
 
   const worldSpan = worldRight - worldLeft;
-  const rulerStep = resolveTickStep(
-    gridSpacing,
+  const rulerStep = sheetTickStep(
     computeRulerStep(worldSpan, innerFrame.w, tf.paperW, [
       worldLeft,
       worldRight,
     ]),
+    gridSpacing,
+    gridLineSpacing,
   );
   const minorTickCount = minorTicks ?? 0;
 

@@ -584,6 +584,9 @@ pub struct ResultLayerStyles {
     pub center: Option<LayerStyle>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fos_label: Option<LayerStyle>,
+    /// The sheet's grid (color, width, subdivisions, minorWidth).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grid: Option<LayerStyle>,
 }
 
 /// The style of one display layer: the fields a layer may have (the
@@ -609,6 +612,12 @@ pub struct LayerStyle {
     pub size: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub radius_lines: Option<bool>,
+    /// The grid's minor lines: the parts of a grid interval, 2 to 10.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subdivisions: Option<f64>,
+    /// The grid's minor lines' width.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minor_width: Option<f64>,
 }
 
 /// The colors of materials without one (`MATERIAL_COLORS`).
