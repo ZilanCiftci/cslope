@@ -697,6 +697,42 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect(view.layerOrder).toEqual(["m", "c1", "t"]);
   });
 
+  it("reads an old file's critical surface layer as the one surfaces layer, its styles kept; surfaces off only as false", () => {
+    const view = normalizeResultView({
+      surfaceDisplay: "filter",
+      fosFilterMax: 1.3,
+      layerOrder: ["soilColor", "criticalSurface", "slices", "surfaces", "fosLabel"],
+      layerStyles: { criticalSurface: { color: "#0066cc", width: 3 }, surfaces: { opacity: 0.4 } },
+    });
+    expect(view.layerOrder).toEqual(["soilColor", "surfaces", "slices", "fosLabel"]);
+    expect(view.layerStyles).toEqual({ criticalSurface: { color: "#0066cc", width: 3 }, surfaces: { opacity: 0.4 } });
+    expect(view).toMatchObject({ surfaceDisplay: "filter", fosFilterMax: 1.3 });
+    expect("showSurfaces" in view).toBe(false);
+    expect(normalizeResultView({ showSurfaces: false }).showSurfaces).toBe(false);
+    expect("showSurfaces" in normalizeResultView({ showSurfaces: true })).toBe(false);
+    expect("showSurfaces" in normalizeResultView({ showSurfaces: "no" })).toBe(false);
+  });
+
+  it("keeps a material table or color bar turned off (hidden only as true, only on those two); old files open shown", () => {
+    const view = normalizeResultView({
+      annotations: [
+        { id: "m", type: "material-table", x: 0.7, y: 0.2, hidden: true },
+        { id: "c", type: "color-bar", x: 0.9, y: 0.3, hidden: false },
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", hidden: true },
+        { id: "p", type: "plot", x: 0.3, y: 0.6, hidden: "yes" },
+      ],
+    });
+    expect(view.annotations.map((a) => [a.id, "hidden" in a ? a.hidden : "absent"])).toEqual([
+      ["m", true],
+      ["c", "absent"],
+      ["t", "absent"],
+      ["p", "absent"],
+    ]);
+    // A project saved before: its table and bar are shown.
+    const old = normalizeResultView({ annotations: [{ id: "m", type: "material-table", x: 0.7, y: 0.2 }] });
+    expect("hidden" in old.annotations[0]).toBe(false);
+  });
+
   it("keeps a valid view lock", () => {
     const view = normalizeResultView({
       viewLock: { bottomLeft: [0, -2], topRight: [10, 5] },

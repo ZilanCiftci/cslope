@@ -74,7 +74,8 @@ export function colorScaleOfBar(
 
 /** The first colour bar of the view, which sets the scale of the plot. */
 export function firstColorBar(annotations: readonly Annotation[]): Annotation | undefined {
-  return annotations.find((a) => a.type === "color-bar");
+  // (a bar turned off sets nothing: the drawing takes the automatic range)
+  return annotations.find((a) => a.type === "color-bar" && a.hidden !== true);
 }
 
 /** The colour scale of the result view, set by its (first) colour bar. */

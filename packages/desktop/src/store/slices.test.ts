@@ -38,7 +38,6 @@ function resetStoreState() {
     resultViewScale: 0,
     // (a test's annotations do not carry over: one color bar at most)
     resultViewSettings: clone(baseModel.resultViewSettings!),
-    offAnnotations: {},
   });
 }
 

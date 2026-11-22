@@ -134,6 +134,12 @@ A reader validates every member by name as the app does for a JSON project (`par
 
 `options.waterUnitWeight` (optional, since 2026-11-11) is the model's unit weight of water γw in kN/m³; a reader keeps it when it is a number greater than 0 and drops any other value without an error. Absent (every file saved before it, and a model left at the default) is 9.807 kN/m³, so older files open and run unchanged. The app does not write it when the model uses the default.
 
+`resultViewSettings.annotations[].hidden` (optional, since 2026-11-22) marks a material table or a color bar turned off in Layers: it keeps its place in the annotations and the layer order and all its settings, and is not drawn, hit or exported. It is written only as `true`, and only on an annotation of type `"material-table"` or `"color-bar"`; a reader keeps it only there and only as `true`, and drops it elsewhere without an error. Absent: shown, as in every file saved before it. A sheet has one color bar at most: a reader keeps the first annotation of type `"color-bar"` in the list and drops the others (files saved before could hold several).
+
+These two members and the `"criticalSurface"` key below are compatible additions: the format version and the project schema version stay 1 and 3. An older app ignores them (it shows a table or bar that is off, draws the surfaces, and reads `"surfaces"` as the layer of the other surfaces), which is reading the file incompletely, not misreading it (section 3); no model's meaning changes, so no migration is needed. The strict Rust reader of an older Python package refuses a file that has them (an unknown member), as for `options.waterUnitWeight`; the reader of this version accepts them.
+
+`resultViewSettings.showSurfaces` (optional, since 2026-11-22) turns every slip surface of the result sheet off, the critical one too (Layers › Surfaces); it is written only as `false`, and a reader keeps it only when it is `false`. Absent: drawn, as in every file saved before it. In `resultViewSettings.layerOrder` (the order of the sheet's layers, bottom first) the key `"criticalSurface"` of files saved before 2026-11-22 names the same layer as `"surfaces"`: a reader reads it as `"surfaces"` and keeps the first of the two where it stands, so an older file opens with its surfaces where they were; a writer writes `"surfaces"` only.
+
 The user documentation (`packages/website/src/docs/file-format.mdx` and the reference pages it links) describes the meaning of these; the TypeScript types are the exact schema.
 
 ### 4.4 models/\<id\>/result.json

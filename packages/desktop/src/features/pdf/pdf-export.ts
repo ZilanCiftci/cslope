@@ -601,6 +601,8 @@ export function exportVectorPdf(data: PdfExportData): void {
         } else if (step.kind === "drawings") {
           drawPdfUnderlays(pdf, step.drawings.flatMap((d) => underlays.filter((u) => u.placement.id === d.id)), tf.worldToPdf, innerFrame);
         } else if (step.kind === "critical") {
+          // The surfaces layer: the other surfaces, then the critical one.
+          drawSlipSurfaces(pdf, tf, result, rvs);
           drawCriticalSurface(pdf, tf, result, rvs, coordinates, criticalContext, {
             slices: step.withSlices,
             center: step.withCenter,
@@ -609,8 +611,6 @@ export function exportVectorPdf(data: PdfExportData): void {
           if (step.withFosLabel) drawFosLabels();
         } else if (step.layer === "soilColor") {
           if (coordinates.length >= 3) drawMaterialRegions(pdf, tf, coordinates, materials, materialBoundaries, regionMaterials, true, "fills", rvs.layerStyles?.soilColor?.opacity);
-        } else if (step.layer === "surfaces") {
-          drawSlipSurfaces(pdf, tf, result, rvs);
         } else if (step.layer === "customSurfaces") {
           // The custom surfaces' lines under the critical surface (and its
           // FOS label's plate), their labels after it, as on the canvas.

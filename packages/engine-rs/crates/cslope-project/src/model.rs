@@ -439,6 +439,9 @@ pub struct ResultViewSettings {
     /// Written only as `true`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub show_custom_surfaces: Option<bool>,
+    /// Written only as `false` (every surface off; absent: drawn).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub show_surfaces: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid_spacing: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -533,6 +536,10 @@ pub struct Annotation {
     pub scheme_to: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scheme_mid: Option<String>,
+    /// A material table or color bar turned off (Layers): kept with its
+    /// place and settings, not drawn. Written only as `true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
     // reference annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,
@@ -627,6 +634,7 @@ pub fn default_result_view_settings() -> ResultViewSettings {
         show_fem_plastic_zone: None,
         show_fem_mesh: None,
         show_custom_surfaces: None,
+        show_surfaces: None,
         grid_spacing: None,
         grid_line_spacing: None,
         minor_ticks: None,

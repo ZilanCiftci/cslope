@@ -611,6 +611,40 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
       options: { ...APP_DEFAULT_ANALYSIS_OPTIONS, searchMethod: "block" },
     },
   },
+  {
+    name: "result sheet: the critical surface's old layer, every surface off",
+    raw: {
+      id: "sheet-surfaces",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        surfaceDisplay: "filter",
+        fosFilterMax: 1.3,
+        showSurfaces: false,
+        annotations: [{ id: "t", type: "text", x: 0.1, y: 0.1, text: "T" }],
+        layerOrder: ["soilColor", "criticalSurface", "customSurfaces", "surfaces", "slices", "t"],
+        layerStyles: { criticalSurface: { color: "#0066cc", width: 3 }, surfaces: { opacity: 0.4 } },
+      },
+    },
+  },
+  {
+    name: "result sheet: a material table and a color bar turned off, a second color bar",
+    raw: {
+      id: "sheet-hidden",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        annotations: [
+          { id: "m", type: "material-table", x: 0.7, y: 0.2, hidden: true, tableColumns: ["model"] },
+          { id: "c", type: "color-bar", x: 0.9, y: 0.4, hidden: true, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 },
+          { id: "c2", type: "color-bar", x: 0.5, y: 0.5 },
+          { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", hidden: true },
+          { id: "p", type: "plot", x: 0.3, y: 0.6, hidden: false },
+        ],
+        layerOrder: ["m", "c", "c2", "t"],
+      },
+    },
+  },
 ];
 
 // Every value of every option control on the first example, and a model

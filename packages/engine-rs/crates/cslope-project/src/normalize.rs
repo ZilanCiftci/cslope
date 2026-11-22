@@ -2162,17 +2162,19 @@ fn stage_udl(raw: &Value, names: &[&str]) -> Option<Value> {
 const PAPER_SIZES: [&str; 5] = ["A4", "A3", "A2", "A1", "A0"];
 
 /// `DISPLAY_LAYER_KEYS` (features/results/layers.ts).
-const DISPLAY_LAYER_KEYS: [&str; 9] = [
+const DISPLAY_LAYER_KEYS: [&str; 8] = [
     "soilColor",
     "femMesh",
     "femPlasticZone",
-    "surfaces",
     "customSurfaces",
-    "criticalSurface",
+    "surfaces",
     "slices",
     "center",
     "fosLabel",
 ];
+/// `LEGACY_CRITICAL_SURFACE_KEY`: the critical surface's layer before it was
+/// one with the other surfaces; a stored order reads it as "surfaces".
+const LEGACY_CRITICAL_SURFACE_KEY: &str = "criticalSurface";
 const DRAWING_LAYER_PREFIX: &str = "drawing:";
 
 /// `FOS_SCHEME_PRESETS` ids and "custom" (utils/fos-color.ts).
@@ -2192,7 +2194,11 @@ fn is_hex_color(v: Option<&Value>) -> bool {
     })
 }
 
-const PAPER_ANNOTATION_KEYS: [&str; 23] = [
+/// `BUILT_IN_ANNOTATION_TYPES` (store/types.ts): turned on and off, one
+/// color bar at most.
+const BUILT_IN_ANNOTATION_TYPES: [&str; 2] = ["material-table", "color-bar"];
+
+const PAPER_ANNOTATION_KEYS: [&str; 24] = [
     "id",
     "type",
     "x",
@@ -2216,6 +2222,7 @@ const PAPER_ANNOTATION_KEYS: [&str; 23] = [
     "schemeFrom",
     "schemeTo",
     "schemeMid",
+    "hidden",
 ];
 
 /// `normalizeResultView`.
@@ -2238,6 +2245,7 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
             "showFemPlasticZone",
             "showFemMesh",
             "showCustomSurfaces",
+            "showSurfaces",
             "gridSpacing",
             "gridLineSpacing",
             "minorTicks",
@@ -2314,6 +2322,10 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     if view.get("showCustomSurfaces") == Some(&Value::Bool(true)) {
         out.insert("showCustomSurfaces".into(), json!(true));
     }
+    // the surfaces, where they are not drawn (the default: drawn)
+    if view.get("showSurfaces") == Some(&Value::Bool(false)) {
+        out.insert("showSurfaces".into(), json!(false));
+    }
     if let Some(g) = num(view.get("gridSpacing")) {
         out.insert("gridSpacing".into(), json!(g));
     }
@@ -2353,6 +2365,12 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     if let Some(Value::Array(order)) = view.get("layerOrder") {
         let mut kept: Vec<&str> = Vec::new();
         for k in order.iter().filter_map(Value::as_str) {
+            // (the critical surface's old layer is the surfaces layer)
+            let k = if k == LEGACY_CRITICAL_SURFACE_KEY {
+                "surfaces"
+            } else {
+                k
+            };
             if kept.contains(&k) {
                 continue;
             }
@@ -2373,8 +2391,26 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     Value::Object(out)
 }
 
-/// `normalizeAnnotations` with `normalizeColorBarScale`.
+/// `normalizeAnnotations` with `normalizeColorBarScale` and
+/// `normalizeHidden`, then `singleColorBar`: the first color bar is kept,
+/// the others are dropped.
 fn annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
+    let mut bar_seen = false;
+    paper_and_reference_annotations(raw, cx)
+        .into_iter()
+        .filter(|a| {
+            if a["type"].as_str() != Some("color-bar") {
+                return true;
+            }
+            let first = !bar_seen;
+            bar_seen = true;
+            first
+        })
+        .collect()
+}
+
+/// `normalizeAnnotations` with `normalizeColorBarScale` and `normalizeHidden`.
+fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
     let Some(Value::Array(items)) = raw else {
         return Vec::new();
     };
@@ -2424,6 +2460,12 @@ fn annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
                     "tableColumns".into(),
                     Value::Array(cols.iter().filter(|c| c.is_string()).cloned().collect()),
                 );
+            }
+            // `normalizeHidden`: a built-in annotation turned off, only as true
+            if o.get("hidden") == Some(&Value::Bool(true))
+                && BUILT_IN_ANNOTATION_TYPES.contains(&kind)
+            {
+                out.insert("hidden".into(), json!(true));
             }
             if kind == "color-bar" {
                 if let Some(m) =

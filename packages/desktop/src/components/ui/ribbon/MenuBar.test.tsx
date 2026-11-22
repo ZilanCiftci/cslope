@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 vi.mock("../../../utils/is-electron", () => ({ isElectron: true }));
 
 import { MenuBar } from "./MenuBar";
+import { RibbonSmallButton } from "./RibbonParts";
 import { markProjectClean, useAppStore } from "../../../store/app-store";
 import { installFakeBridge, type FakeBridge } from "../../../test/fake-bridge";
 import { readProjectBytes } from "../../../features/project/cslp";
@@ -350,15 +351,17 @@ describe("Compact ribbon", () => {
     expect(screen.getByRole("button", { name: "Sheet settings" })).toHaveAttribute("data-size", "small");
   });
 
-  it("marks a pressed toggle with aria-pressed", async () => {
-    render(<MenuBar />);
-    await userEvent.click(tab("Results"));
-    const slices = screen.getByRole("button", { name: "Slices" });
-    const before = store().resultViewSettings.showSlices;
-    expect(slices).toHaveAttribute("aria-pressed", String(before));
-    await userEvent.click(slices);
-    expect(slices).toHaveAttribute("aria-pressed", String(!before));
-    // A plain command is not a toggle.
-    expect(screen.getByTitle("Add text")).not.toHaveAttribute("aria-pressed");
+  it("marks a pressed toggle with aria-pressed; a plain command is not a toggle", () => {
+    // (the Results tab has no toggles: the sheet's layers are turned on and off in Layers)
+    render(
+      <>
+        <RibbonSmallButton icon={null} label="On" onClick={() => {}} active />
+        <RibbonSmallButton icon={null} label="Off" onClick={() => {}} active={false} />
+        <RibbonSmallButton icon={null} label="Command" onClick={() => {}} />
+      </>,
+    );
+    expect(screen.getByRole("button", { name: "On" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Off" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Command" })).not.toHaveAttribute("aria-pressed");
   });
 });

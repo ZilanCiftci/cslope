@@ -8,6 +8,7 @@
 import { cloneElement, isValidElement, useId, type ReactNode } from "react";
 import { ColorSwatches } from "../../components/ui/ColorSwatches";
 import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
+import { GroupHeading } from "../properties/GroupHeading";
 import { useAppStore } from "../../store/app-store";
 import type { ResultLayerStyles } from "../../store/types";
 import {
@@ -106,9 +107,9 @@ const LINE_WIDTH = "Line width (px)";
 /**
  * The surfaces layer's Show choice (the critical surface only, or all
  * surfaces) and, with all, the filter on F: the model's `surfaceDisplay`
- * ("critical", "all", "filter") and `fosFilterMax`, as Surfaces in the
- * ribbon. The color bar's "Follow the surface filter" range, the view and
- * the PDF read the same values.
+ * ("critical", "all", "filter") and `fosFilterMax`. The color bar's
+ * "Follow the surface filter" range, the view and the PDF read the same
+ * values. The layer's eye (`showSurfaces`) turns every surface off.
  */
 function SurfaceShowFields() {
   const rvs = useAppStore((s) => s.resultViewSettings);
@@ -138,7 +139,7 @@ function SurfaceShowFields() {
     <>
       <Field label="Show" group>
         <div className="flex gap-1">
-          {choice("Critical surface", "critical", "Draw the critical surface only (turns the Surfaces layer off)")}
+          {choice("Critical surface", "critical", "Draw the critical surface only")}
           {choice("All surfaces", "all", "Draw every surface of the search, colored by F")}
         </div>
       </Field>
@@ -233,18 +234,35 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
       );
       break;
     case "surfaces":
+      // One layer: what is shown, then the critical surface's style and
+      // the other surfaces' (their own style keys, as saved before).
       body = (
         <>
           <SurfaceShowFields />
-          <div className="flex gap-2">
+          <div role="group" aria-label="Critical surface" className="space-y-2">
+            <GroupHeading>Critical surface</GroupHeading>
+            {colorField("criticalSurface")}
             <NumberField
               label={LINE_WIDTH}
-              value={styles.surfaces?.width}
-              placeholder={SLIP_SURFACE_LINE_WIDTH_PX}
+              value={styles.criticalSurface?.width}
+              placeholder={CRITICAL_SURFACE_LINE_WIDTH_PX}
               {...W}
-              onChange={(v) => set("surfaces", { width: v })}
+              onChange={(v) => set("criticalSurface", { width: v })}
             />
-            <OpacityField value={styles.surfaces?.opacity} placeholder={SLIP_SURFACE_OPACITY} onChange={(opacity) => set("surfaces", { opacity })} />
+          </div>
+          <div role="group" aria-label="Other surfaces" className="space-y-2">
+            <GroupHeading>Other surfaces</GroupHeading>
+            <div className="flex gap-2">
+              <NumberField
+                label={LINE_WIDTH}
+                value={styles.surfaces?.width}
+                placeholder={SLIP_SURFACE_LINE_WIDTH_PX}
+                {...W}
+                title={`Of the surfaces drawn with All surfaces; from ${W.min} to ${W.max}, empty: ${SLIP_SURFACE_LINE_WIDTH_PX}`}
+                onChange={(v) => set("surfaces", { width: v })}
+              />
+              <OpacityField value={styles.surfaces?.opacity} placeholder={SLIP_SURFACE_OPACITY} onChange={(opacity) => set("surfaces", { opacity })} />
+            </div>
           </div>
         </>
       );
@@ -270,20 +288,6 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
               onChange={(v) => set("customSurfaces", { fontSize: v })}
             />
           </div>
-        </>
-      );
-      break;
-    case "criticalSurface":
-      body = (
-        <>
-          {colorField("criticalSurface")}
-          <NumberField
-            label={LINE_WIDTH}
-            value={styles.criticalSurface?.width}
-            placeholder={CRITICAL_SURFACE_LINE_WIDTH_PX}
-            {...W}
-            onChange={(v) => set("criticalSurface", { width: v })}
-          />
         </>
       );
       break;
@@ -397,11 +401,18 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
   }
 
   const name = DISPLAY_LAYER_NAMES[layer];
-  const styled = styles[layer] !== undefined;
+  // The surfaces layer holds the critical surface's style too.
+  const styleKeys: (keyof ResultLayerStyles)[] = layer === "surfaces" ? ["criticalSurface", "surfaces"] : [layer];
+  const styled = styleKeys.some((k) => styles[k] !== undefined);
+  const reset = () => {
+    let next: Pick<typeof rvs, "layerStyles"> = rvs;
+    for (const k of styleKeys) next = layerStyleCleared(next, k);
+    setRvs(next);
+  };
   return (
     <div className="space-y-2" role="group" aria-label={`${name} properties`}>
       {body}
-      <button type="button" className="btn" disabled={!styled} onClick={() => setRvs(layerStyleCleared(rvs, layer))}>
+      <button type="button" className="btn" disabled={!styled} onClick={reset}>
         Reset to default
       </button>
     </div>

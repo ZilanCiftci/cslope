@@ -53,6 +53,7 @@ import type {
   ResultViewSettings,
   UdlRow,
 } from "./types";
+import { isBuiltInAnnotationType } from "./types";
 /**
  * 2: vertical pore-pressure head is the default, and the S = f(datum) rate
  *    is positive for strength increasing with depth (was: with elevation).
@@ -817,7 +818,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale));
+  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale).map(normalizeHidden));
   const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
   const layerStyles = normalizeLayerStyles((view as { layerStyles?: unknown }).layerStyles);
 
@@ -839,6 +840,8 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
     // the finite element display, where it is not the default
     ...(view.showFemPlasticZone === false ? { showFemPlasticZone: false } : {}),
     ...(view.showFemMesh === true ? { showFemMesh: true } : {}),
+    // the surfaces, where they are not drawn (the default: drawn)
+    ...(view.showSurfaces === false ? { showSurfaces: false } : {}),
     ...(view.showCustomSurfaces === true ? { showCustomSurfaces: true } : {}),
     ...(Number.isFinite(view.gridSpacing)
       ? { gridSpacing: view.gridSpacing }
@@ -913,6 +916,16 @@ export function normalizeColorBarScale(anno: Annotation): Annotation {
     ...(isHexColor(raw.schemeMid) ? { schemeMid: raw.schemeMid } : {}),
   };
   return { ...rest, ...scale } as Annotation;
+}
+
+/**
+ * A built-in annotation's `hidden` (the material table or the color bar
+ * turned off), kept only as `true`; other annotations carry none.
+ */
+export function normalizeHidden(anno: Annotation): Annotation {
+  if (anno.type === "reference" || !("hidden" in anno)) return anno;
+  const { hidden, ...rest } = anno;
+  return hidden === true && isBuiltInAnnotationType(anno.type) ? { ...rest, hidden: true } : rest;
 }
 
 /**

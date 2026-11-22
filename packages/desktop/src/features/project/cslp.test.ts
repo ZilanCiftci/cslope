@@ -214,6 +214,24 @@ describe(".cslp round trip", () => {
     expect(project.results.has(b.id)).toBe(true);
   });
 
+  it("saves a material table turned off and every surface off, and opens them so: off, where they were", async () => {
+    const s = store();
+    s.setResultViewSettings({
+      showSurfaces: false,
+      annotations: [{ id: "m", type: "material-table", x: 0.6, y: 0.5, tableColumns: ["model"] }],
+    });
+    store().setBuiltInAnnotationShown("material-table", false);
+    const bytes = await buildProjectArchive(store());
+    const id = store().activeModelId;
+    const saved = (await entry(bytes, `models/${id}/model.json`)) as { resultViewSettings: { showSurfaces?: boolean; annotations: unknown[] } };
+    expect(saved.resultViewSettings.showSurfaces).toBe(false);
+    expect(saved.resultViewSettings.annotations).toEqual([{ id: "m", type: "material-table", x: 0.6, y: 0.5, tableColumns: ["model"], hidden: true }]);
+    const opened = await readProjectBytes(bytes);
+    const view = opened.models.find((m) => m.id === id)!.resultViewSettings!;
+    expect(view.showSurfaces).toBe(false);
+    expect(view.annotations).toEqual([{ id: "m", type: "material-table", x: 0.6, y: 0.5, tableColumns: ["model"], hidden: true }]);
+  });
+
   it("can leave the results out", async () => {
     const file = projectWithResults();
     const bytes = await writeProjectArchive(file, { results: false });

@@ -60,9 +60,8 @@ describe("result layers", () => {
       "femMesh",
       "femPlasticZone",
       "r",
-      "surfaces",
       "customSurfaces",
-      "criticalSurface",
+      "surfaces",
       "slices",
       "center",
       "fosLabel",
@@ -75,15 +74,17 @@ describe("result layers", () => {
     const keys = resultLayerKeys(
       src({ showSoilColor: false, showSlices: false, showCustomSurfaces: true }, { result: null }),
     );
-    expect(keys).toEqual(["r", "center", "fosLabel", "t", "m"]);
+    expect(keys).toEqual(["r", "surfaces", "center", "fosLabel", "t", "m"]);
+    // The surfaces layer turned off: no surface at all, the critical one neither.
+    expect(resultLayerKeys(src({ showSurfaces: false, surfaceDisplay: "all" }))).not.toContain("surfaces");
   });
 
   it("applies the stored order, putting a new paper annotation on top and a new reference at its default place", () => {
-    const s = src({ layerOrder: ["fosLabel", "soilColor", "m", "slices", "criticalSurface", "center", "gone", "t"] });
+    const s = src({ layerOrder: ["fosLabel", "soilColor", "m", "slices", "surfaces", "center", "gone", "t"] });
     const added: Annotation[] = [...ANNOS, { id: "t2", type: "text", x: 0, y: 0 }, { id: "r2", type: "reference", shape: "polyline", points: [] }];
     const keys = resultLayerKeys({ ...s, resultViewSettings: { ...s.resultViewSettings, annotations: added } });
     // r, r2 after soilColor (their default predecessor), t2 on top
-    expect(keys).toEqual(["fosLabel", "soilColor", "r", "r2", "m", "slices", "criticalSurface", "center", "t", "t2"]);
+    expect(keys).toEqual(["fosLabel", "soilColor", "r", "r2", "m", "slices", "surfaces", "center", "t", "t2"]);
   });
 
   it("is the default order without a stored one, and for an empty one", () => {
@@ -95,9 +96,9 @@ describe("result layers", () => {
     const s = src({ layerOrder: ["slices", "soilColor"], showSlices: false });
     // slices is off: soilColor, r, criticalSurface, center, fosLabel, t, m
     const order = movedLayerOrder(s, "soilColor", 3);
-    expect(order).toEqual(["slices", "r", "criticalSurface", "center", "soilColor", "fosLabel", "t", "m"]);
+    expect(order).toEqual(["slices", "r", "surfaces", "center", "soilColor", "fosLabel", "t", "m"]);
     // turned on again: back where it was, under the reference line
-    expect(resultLayerKeys(src({ layerOrder: order }))).toEqual(["slices", "r", "criticalSurface", "center", "soilColor", "fosLabel", "t", "m"]);
+    expect(resultLayerKeys(src({ layerOrder: order }))).toEqual(["slices", "r", "surfaces", "center", "soilColor", "fosLabel", "t", "m"]);
   });
 
   it("drops the keys of removed annotations and drawings when it stores an order", () => {
@@ -113,6 +114,17 @@ describe("result layers", () => {
     expect(annotationsInLayerOrder(src({ layerOrder: ["m", "t"] })).map((a) => a.id)).toEqual(["m", "r", "t"]);
   });
 
+  it("reads the critical surface's old layer as the surfaces layer, in the place of the first of the two", () => {
+    expect(normalizeLayerOrder(["soilColor", "surfaces", "customSurfaces", "criticalSurface", "slices"], ANNOS)).toEqual([
+      "soilColor",
+      "surfaces",
+      "customSurfaces",
+      "slices",
+    ]);
+    expect(normalizeLayerOrder(["criticalSurface", "slices", "surfaces", "t"], ANNOS)).toEqual(["surfaces", "slices", "t"]);
+    expect(normalizeLayerOrder(["criticalSurface"], ANNOS)).toEqual(["surfaces"]);
+  });
+
   it("normalizes a stored order read from a file", () => {
     expect(normalizeLayerOrder(["soilColor", 3, "soilColor", "t", "nope", "drawing:", "drawing:x", "r"], ANNOS)).toEqual(["soilColor", "t", "drawing:x", "r"]);
     expect(normalizeLayerOrder("soilColor", ANNOS)).toBeUndefined();
@@ -123,11 +135,11 @@ describe("result layers", () => {
     const steps = (order?: string[]) => layerSteps(resultLayers(src({ layerOrder: order })));
     expect(steps()).toContainEqual({ kind: "critical", withSlices: true, withCenter: true, withFosLabel: true });
     // the FOS label on top: drawn on its own, after the annotations
-    const top = steps(["soilColor", "r", "criticalSurface", "slices", "center", "t", "m", "fosLabel"]);
+    const top = steps(["soilColor", "r", "surfaces", "slices", "center", "t", "m", "fosLabel"]);
     expect(top).toContainEqual({ kind: "critical", withSlices: true, withCenter: true, withFosLabel: false });
     expect(top.at(-1)).toEqual({ kind: "display", layer: "fosLabel" });
     // the center under the slices: the slices on their own
-    const swapped = steps(["soilColor", "r", "criticalSurface", "center", "slices", "fosLabel", "t", "m"]);
+    const swapped = steps(["soilColor", "r", "surfaces", "center", "slices", "fosLabel", "t", "m"]);
     expect(swapped).toContainEqual({ kind: "critical", withSlices: false, withCenter: true, withFosLabel: false });
     expect(swapped.filter((s) => s.kind === "display").map((s) => (s.kind === "display" ? s.layer : ""))).toEqual(["soilColor", "slices", "fosLabel"]);
   });
@@ -143,23 +155,30 @@ describe("result layers", () => {
 
 describe("listed layers (Properties › Layers)", () => {
   it("lists the built-in layers turned off where they stand; the renderers take only those drawn", () => {
-    const s = src({ showSlices: false, surfaceDisplay: "critical", annotations: ANNOS.filter((a) => a.type !== "material-table") });
+    const s = src({ showSlices: false, showSurfaces: false, annotations: ANNOS.filter((a) => a.type !== "material-table") });
     expect(resultLayerKeys(s)).not.toContain("slices");
     const listed = resultLayers(s, true);
     expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["surfaces", "slices", "material-table", "color-bar"]);
     // Off layers of a kind the result has nothing for are not listed.
     expect(listed.map((l) => l.key)).not.toContain("femMesh");
     expect(listed.map((l) => l.key)).not.toContain("customSurfaces");
+    // The custom surfaces are listed with custom planes in the model, before a run too.
+    const planes = resultLayers({ ...s, result: null, hasCustomPlanes: true }, true);
+    expect(planes.find((l) => l.key === "customSurfaces")?.off).toBe(true);
+    const on = resultLayers({ ...src({ showCustomSurfaces: true }), result: null, hasCustomPlanes: true }, true);
+    expect(on.find((l) => l.key === "customSurfaces")?.off).toBeUndefined();
+    expect(resultLayerKeys({ ...src({ showCustomSurfaces: true }), result: null, hasCustomPlanes: true })).not.toContain("customSurfaces");
   });
 
-  it("lists a remembered material table turned off by its own key, kept in a moved order", () => {
-    const table: Annotation = { id: "m", type: "material-table", x: 0.9, y: 0.05 };
-    const s = src(
-      { annotations: ANNOS.filter((a) => a.id !== "m"), layerOrder: ["soilColor", "r", "criticalSurface", "slices", "center", "fosLabel", "m", "t"] },
-      { offBuiltIns: [table] },
-    );
+  it("lists a hidden material table off where it stands; the renderers and the hit test leave it out", () => {
+    const annos = ANNOS.map((a): Annotation => (a.id === "m" && a.type !== "reference" ? { ...a, hidden: true } : a));
+    const s = src({ annotations: annos, layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "m", "t"] });
+    expect(resultLayerKeys(s)).not.toContain("m");
+    expect(annotationsInLayerOrder(s).map((a) => a.id)).not.toContain("m");
     const listed = resultLayers(s, true);
     expect(listed.find((l) => l.key === "m")?.off).toBe(true);
+    // in its place: under the text, as stored
+    expect(listed.map((l) => l.key).slice(-3)).toEqual(["m", "t", "color-bar"]);
     const order = movedLayerOrder(s, "t", 0, true);
     expect(order).toContain("m");
     expect(order).not.toContain("color-bar");

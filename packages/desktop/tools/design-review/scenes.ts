@@ -621,7 +621,7 @@ const sidebarScenes: Scene[] = [
           center: { color: "#0066cc", size: 5 },
           soilColor: { opacity: 0.5 },
         } });
-        s.setSelectedResultLayer("criticalSurface");
+        s.setSelectedResultLayer("surfaces");
       }`);
     },
   },
@@ -668,7 +668,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "result-surfaces-critical",
-    title: "Result sidebar, the Surfaces layer (off) selected: Show Critical surface",
+    title: "Result sidebar, the Surfaces layer selected: Show Critical surface, the critical surface's style",
     area: "sidebar",
     result: true,
     open: async (ctx) => {
@@ -690,6 +690,30 @@ const sidebarScenes: Scene[] = [
         if (bar) s.updateAnnotation(bar.id, { scaleMode: "filter" });
         s.setResultViewSettings({ surfaceDisplay: "filter", fosFilterMax: limit });
         s.setSelectedResultLayer("surfaces");
+      }`);
+    },
+  },
+  {
+    id: "result-surfaces-off",
+    title: "Result view with the Surfaces layer turned off (no surface, not the critical one either), its properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showSurfaces: false, surfaceDisplay: "all" }); s.setSelectedResultLayer("surfaces"); }`);
+    },
+  },
+  {
+    id: "main-result-table-off-reopened",
+    title: "Result view after the material table was turned off and the project saved and opened again: the table listed off, not drawn",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      // The saved form of the models (JSON, as the project file holds them) loaded again.
+      await ctx.store(`(s, store) => {
+        s.setBuiltInAnnotationShown("material-table", false);
+        const st = store.getState();
+        st.loadProject({ models: JSON.parse(JSON.stringify(st.models)), activeModelId: st.activeModelId });
+        store.getState().setMode("result");
       }`);
     },
   },
@@ -730,13 +754,12 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "main-result-color-bar",
-    title: "Result view: Results › Color bar added below the material table (at the window's zoom)",
+    title: "Result view: the color bar turned on in Layers, below the material table (at the window's zoom)",
     area: "main-result",
     result: true,
     open: async (ctx) => {
       await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "all", showSlices: false })`);
-      await ctx.tab("Results");
-      await ctx.click("Color bar");
+      await ctx.click("Turn on: Color bar");
       await ctx.store(`(s) => s.setSelectedAnnotations([])`);
       await ctx.page.waitForTimeout(500);
     },
@@ -822,19 +845,6 @@ const menus: Scene[] = [
       await ctx.tab("Model");
       await ctx.click("More drawing commands");
       return { focus: menu(ctx, "More drawing commands") };
-    },
-  },
-  { id: "menu-results-surfaces", title: "Results › Surfaces ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Surfaces"); return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) }; } },
-  {
-    id: "menu-results-surfaces-filter",
-    title: "Results › Surfaces ▾ menu, Filter by F (with the F field)",
-    area: "menus",
-    result: true,
-    open: async (ctx) => {
-      await ctx.store(`(s) => s.setResultViewSettings({ surfaceDisplay: "filter" })`);
-      await ctx.tab("Results");
-      await ctx.click("Surfaces");
-      return { focus: ctx.page.getByRole("group", { name: "Surfaces", exact: true }) };
     },
   },
   { id: "menu-results-reference-line", title: "Results › Reference line ▾ menu", area: "menus", result: true, open: async (ctx) => { await ctx.tab("Results"); await ctx.click("Reference line"); return { focus: menu(ctx, "Reference line") }; } },

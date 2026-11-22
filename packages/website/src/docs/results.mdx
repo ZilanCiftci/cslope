@@ -32,21 +32,21 @@ The notes are folded into one line under the summary (*3 notes*); click it to sh
 
 ## Display options
 
-**Results › Display** controls what the sheet shows. The options can be set before a run; they take effect when there is a result.
+What the sheet shows is set in the **Layers** list of the result sidebar: each option is a row there, turned on and off with the eye at the end of the row (greyed while it is off), and its properties open when you click the row ([Layers](/docs/reporting#layers)). The options can be set before a run; they take effect when there is a result.
 
-| Option | Effect |
+| Layer | Effect |
 | --- | --- |
-| **Critical only** / **All surfaces** / **Filter by F** | Show the critical surface, every analyzed surface, or only surfaces up to a factor of safety (*F ≤*, default 1.5) |
-| **Custom surfaces** | In the *Surfaces* menu, with custom surfaces: each one dashed, with its own factor of safety label (off by default) |
+| **Surfaces** | The critical surface and, with **Show › All surfaces** in its properties, every analyzed surface, or with **Filter on F** only those up to a factor of safety (*F ≤*, default 1.5). Its eye turns every surface off, the critical one too |
+| **Custom surfaces** | Listed when the model has custom surfaces: each one dashed, with its own factor of safety label (off by default) |
 | **Slices** | The slices of the critical surface |
 | **F label** | The factor of safety next to the surface |
 | **Center** | The center of the critical circle |
 | **Soil colors** | The material colors |
 | **Plastic zone** / **FE mesh** | With a finite element result: the plastic zone (on by default) and the final mesh (off by default) |
 
-Each option is a row in the sidebar's **Layers** list, greyed while it is off, where it is turned on and off with its eye and its order among the other layers and the annotations is set ([Layers](/docs/reporting#layers)). The *Surfaces* row's properties hold the same choice as the **Surfaces** menu: *Critical surface* or *All surfaces*, and with all surfaces a filter on F with a count of the surfaces drawn. The grid is set in the sidebar's **Sheet** section (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analyzed.
+The grid is set in the sidebar's **Sheet** section (see [Reporting](/docs/reporting#paper-and-extents)). The search limits are drawn under the result as in the edit view, unless only custom surfaces were analyzed.
 
-With **All surfaces**, each surface is colored by its factor of safety, from red (lowest) through yellow and green to blue. Turn on the **color bar** to show the scale (see [Reporting](/docs/reporting)).
+With **All surfaces**, each surface is colored by its factor of safety, from red (lowest) through yellow and green to blue. Turn on the **Color bar** in Layers to show the scale (see [Reporting](/docs/reporting)).
 
 <Figure media="allSurfaces" caption="All surfaces, colored by factor of safety." />
 

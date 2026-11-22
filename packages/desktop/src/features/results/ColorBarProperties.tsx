@@ -79,7 +79,7 @@ export function ColorBarProperties({
   /** The selected colour bars. */
   annotations: Annotation[];
   result: AnalysisResult | null;
-  /** The limit of Surfaces ▸ Filter by FOS, which the "filter" range follows. */
+  /** The limit of the surface filter (Layers › Surfaces), which the "filter" range follows. */
   fosFilterMax: number;
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
 }) {
@@ -182,10 +182,10 @@ export function ColorBarProperties({
         {modeValue === "filter" && (
           <p className="text-[10px] mt-0.5" style={MUTED}>
             {result && filterSpan
-              ? `F ${result.minFOS.toFixed(2)} to ${fosFilterMax.toFixed(2)}, the span of Surfaces › Filter by F.`
+              ? `F ${result.minFOS.toFixed(2)} to ${fosFilterMax.toFixed(2)}, the span of the surface filter (Layers › Surfaces).`
               : result
                 ? `The filter limit (${fosFilterMax.toFixed(2)}) is not above the minimum F; the automatic range is used.`
-                : "The span of Surfaces › Filter by F."}
+                : "The span of the surface filter (Layers › Surfaces)."}
           </p>
         )}
       </div>

@@ -2910,7 +2910,10 @@ export function drawCanvas(
     // crack, the line and the reinforcement forces, with the slices, the
     // center and the FOS label between them when they follow it directly
     // (layerSteps), as they always were.
+    // The surfaces layer: the other surfaces (all, or those the filter on
+    // F keeps), then the critical surface with its mass and forces.
     const drawCriticalLayer = (step: { withSlices: boolean; withCenter: boolean; withFosLabel: boolean }) => {
+      drawSurfacesLayer();
       if (!cs) return;
       const arcPts = getArcPoints(cs);
 
@@ -3635,7 +3638,6 @@ export function drawCanvas(
         else if (step.layer === "soilColor") paintSoilFills();
         else if (step.layer === "femMesh") drawFemMeshLayer();
         else if (step.layer === "femPlasticZone") drawPlasticZoneLayer();
-        else if (step.layer === "surfaces") drawSurfacesLayer();
         else if (step.layer === "customSurfaces") drawCustomSurfacesLayer();
         else if (step.layer === "slices") drawSlicesLayer();
         else if (step.layer === "center") drawCentreLayer();

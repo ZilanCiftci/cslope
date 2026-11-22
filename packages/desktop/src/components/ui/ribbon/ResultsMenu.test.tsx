@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { AnalysisResult } from "@cslope/engine";
 
@@ -101,24 +101,26 @@ describe("ResultsMenu", () => {
     expect(screen.getByTitle("More export options")).toBeDisabled();
   });
 
-  it("keeps the display commands enabled before a run, with a hint in their tooltips", async () => {
-    renderMenu({ withResult: false });
-    const display = ["Surfaces", "Slices", "F label", "Center", "Soil colors", "Sheet settings"];
-    for (const name of display) {
-      const button = screen.getByRole("button", { name });
-      expect(button, name).toBeEnabled();
-      expect(button.getAttribute("title"), name).toMatch(/\nRun the analysis to see the results\.$/);
+  it("has no display toggles: the sheet's layers are turned on and off in Layers", () => {
+    renderMenu();
+    for (const name of ["Surfaces", "Slices", "F label", "Center", "Soil colors", "Plastic zone", "FE mesh", "Material table", "Color bar"]) {
+      expect(screen.queryByRole("button", { name }), name).toBeNull();
     }
-    // They still set the view.
-    const slices = screen.getByRole("button", { name: "Slices" });
-    const before = useAppStore.getState().resultViewSettings.showSlices;
-    await userEvent.click(slices);
-    expect(useAppStore.getState().resultViewSettings.showSlices).toBe(!before);
+    const sheet = screen.getByRole("toolbar", { name: "Results" });
+    for (const name of ["Sheet settings", "Text", "Plot", "Reference line"]) {
+      expect(within(sheet).getByRole("button", { name }), name).toBeEnabled();
+    }
+    expect(within(sheet).queryAllByRole("button", { pressed: true })).toHaveLength(0);
+  });
+
+  it("keeps Sheet settings enabled before a run, with a hint in its tooltip", () => {
+    renderMenu({ withResult: false });
+    const button = screen.getByRole("button", { name: "Sheet settings" });
+    expect(button).toBeEnabled();
+    expect(button.getAttribute("title")).toMatch(/\nRun the analysis to see the results\.$/);
     cleanup();
     renderMenu();
-    for (const name of display) {
-      expect(screen.getByRole("button", { name }).getAttribute("title"), name).not.toMatch(/Run the analysis/);
-    }
+    expect(screen.getByRole("button", { name: "Sheet settings" }).getAttribute("title")).not.toMatch(/Run the analysis/);
   });
 
   it("explains that the results plot needs the desktop app in a browser", async () => {
@@ -150,139 +152,21 @@ describe("ResultsMenu", () => {
     expect(alert.mock.calls[1][0]).toMatch(/desktop app/);
   });
 
-  it("toggles the display options", async () => {
-    renderMenu();
-    const before = rvs();
-    await userEvent.click(screen.getByTitle("Show slices"));
-    await userEvent.click(screen.getByTitle("Show F label"));
-    await userEvent.click(screen.getByTitle("Show center mark"));
-    await userEvent.click(screen.getByTitle("Soil colors"));
-    const after = rvs();
-    expect(after.showSlices).toBe(!before.showSlices);
-    expect(after.showFosLabel).toBe(!before.showFosLabel);
-    expect(after.showCentreMarker).toBe(!before.showCentreMarker);
-    expect(screen.queryByTitle("Grid lines")).toBeNull(); // in Properties
-    expect(after.showSoilColor).toBe(!(before.showSoilColor ?? true));
-  });
-
-  it("marks the plastic zone of the finite element analysis as experimental", async () => {
-    const fem = {
-      factorOfSafety: 1.4,
-      failedF: 1.45,
-      flowRule: "associated" as const,
-      levels: [{ elements: 500, fos: 1.4 }],
-      warnings: [],
-      elapsedMs: 3000,
-      x: [],
-      y: [],
-      triangles: [],
-      plasticShear: [],
-      displacement: [],
-    };
-    act(() => useAppStore.setState({ result: { ...fakeResult(), fem }, runState: "done" }));
-    renderMenu({ withResult: false });
-    const button = screen.getByTitle(/Shade the plastic zone/);
-    expect(button).toHaveAttribute(
-      "title",
-      expect.stringMatching(/finite element analysis, which is experimental/),
-    );
-    await userEvent.click(button);
-    expect(rvs().showFemPlasticZone).toBe(false);
-    // the mesh: off by default, on with its button
-    const mesh = screen.getByTitle(/Draw the last mesh of the finite element analysis/);
-    expect(rvs().showFemMesh ?? false).toBe(false);
-    await userEvent.click(mesh);
-    expect(rvs().showFemMesh).toBe(true);
-    await userEvent.click(mesh);
-    expect(rvs().showFemMesh).toBe(false);
-  });
-
-  it("offers no finite element display without a finite element result", () => {
-    renderMenu();
-    expect(screen.queryByTitle(/Draw the mesh of the finite element analysis/)).toBeNull();
-    expect(screen.queryByTitle(/Shade the plastic zone/)).toBeNull();
-  });
-
-  it("chooses which surfaces to show and filters by FOS", async () => {
-    renderMenu();
-    await userEvent.click(screen.getByTitle(/^Surfaces:/));
-    await userEvent.click(screen.getByRole("button", { name: "All surfaces" }));
-    expect(rvs().surfaceDisplay).toBe("all");
-    expect(screen.getByTitle("Surfaces: All")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "All surfaces" })).toBeNull();
-
-    const surfaces = screen.getByTitle("Surfaces: All");
-    await userEvent.click(surfaces);
-    expect(surfaces).toHaveAttribute("aria-expanded", "true");
-    // The current mode is the pressed one.
-    expect(screen.getByRole("button", { name: "All surfaces" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Critical only" })).toHaveAttribute("aria-pressed", "false");
-    await userEvent.click(screen.getByRole("button", { name: "Filter by F" }));
-    await userEvent.click(screen.getByTitle("Surfaces: Filter"));
-    const max = screen.getByLabelText("Maximum F shown");
-    await userEvent.clear(max);
-    await userEvent.type(max, "1.5");
-    expect(rvs().fosFilterMax).toBe(1.5);
-    // Zero is not a valid maximum.
-    fireEvent.change(max, { target: { value: "0" } });
-    expect(rvs().fosFilterMax).toBe(1.5);
-    // An outside click closes the menu.
-    fireEvent.mouseDown(document.body);
-    expect(screen.queryByLabelText("Maximum F shown")).toBeNull();
-  });
-
-  it("offers the custom surfaces toggle in the Surfaces menu only with custom surfaces in the result, off by default", async () => {
-    renderMenu();
-    await userEvent.click(screen.getByTitle(/^Surfaces:/));
-    expect(screen.queryByLabelText("Show custom surfaces")).toBeNull();
-    fireEvent.mouseDown(document.body);
-
-    const base = fakeResult();
-    const custom = { ...base.criticalSurface!, cy: 25, fos: 1.5, customPlane: { kind: "circle" as const, index: 0 } };
-    act(() =>
-      useAppStore.setState({
-        result: { ...base, allSurfaces: [base.criticalSurface!, custom], customSurfaces: [{ kind: "circle", index: 0, surface: custom }] },
-        runState: "done",
-      }),
-    );
-    await userEvent.click(screen.getByTitle(/^Surfaces:/));
-    const toggle = screen.getByLabelText("Show custom surfaces");
-    expect(toggle).not.toBeChecked();
-    expect(rvs().showCustomSurfaces ?? false).toBe(false);
-    await userEvent.click(toggle);
-    expect(rvs().showCustomSurfaces).toBe(true);
-    await userEvent.click(screen.getByLabelText("Show custom surfaces"));
-    expect(rvs().showCustomSurfaces).toBe(false);
-  });
-
-  it("adds annotations; the table and the colour bar toggle and start at the right edge", async () => {
+  it("adds text and plots; the color bar turned on goes right below the material table", async () => {
     renderMenu();
     store().setResultViewSettings({ annotations: [] });
     await userEvent.click(screen.getByTitle("Add text"));
     await userEvent.click(screen.getByTitle("Add plot"));
-    await userEvent.click(screen.getByTitle("Turn on the material table"));
-    await userEvent.click(screen.getByTitle("Turn on the color bar"));
+    act(() => store().setBuiltInAnnotationShown("material-table", true));
+    act(() => store().setBuiltInAnnotationShown("color-bar", true));
     const annotations = store().resultViewSettings.annotations;
     expect(annotations.map((a) => a.type)).toEqual(["text", "plot", "material-table", "color-bar"]);
     const bar = annotations.find((a) => a.type === "color-bar")!;
-    // Right below the material table.
     const table = annotations.find((a) => a.type === "material-table")!;
     const box = materialTableBox(table, store().materials, store().piezometricLine, store().resultViewSettings.paperFrame);
     expect([bar.x, bar.anchor]).toEqual([0.94, "top-right"]);
     expect(bar.y).toBeGreaterThan(box.y + box.h);
     expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
-    expect(screen.getByTitle("Turn off the color bar")).toHaveAttribute("aria-pressed", "true");
-    // A second click turns the one there off instead of adding another.
-    act(() => store().updateAnnotation(bar.id, { x: 0.5, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 }));
-    await userEvent.click(screen.getByTitle("Turn off the color bar"));
-    await userEvent.click(screen.getByTitle("Turn off the material table"));
-    expect(store().resultViewSettings.annotations.map((a) => a.type)).toEqual(["text", "plot"]);
-    expect(screen.getByTitle("Turn on the color bar")).toHaveAttribute("aria-pressed", "false");
-    // On again: where it was, with its settings, and still one.
-    await userEvent.click(screen.getByTitle("Turn on the color bar"));
-    const back = store().resultViewSettings.annotations.filter((a) => a.type === "color-bar");
-    expect(back).toHaveLength(1);
-    expect(back[0]).toMatchObject({ id: bar.id, x: 0.5, scaleMode: "fixed", scaleMin: 1, scaleMax: 2 });
   });
 
   it("exports the view settings as a template", async () => {

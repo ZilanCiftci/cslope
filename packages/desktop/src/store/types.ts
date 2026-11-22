@@ -357,11 +357,17 @@ export interface PaperAnnotation {
    * Colour bar: the FOS range of the scale, which also colours the
    * surfaces of the plot. "auto" (absent): from the critical FOS to a cap
    * near it; "fixed": scaleMin to scaleMax; "filter": the span of
-   * Surfaces ▸ Filter by FOS (critical FOS to fosFilterMax).
+   * the surface filter, Layers › Surfaces (critical FOS to fosFilterMax).
    */
   scaleMode?: ColorScaleMode;
   scaleMin?: number;
   scaleMax?: number;
+  /**
+   * Material table and color bar (the built-in annotations): turned off
+   * in Properties › Layers; kept with its position and settings, not
+   * drawn, not hit, not in the PDF. Absent: shown. Only `true` is saved.
+   */
+  hidden?: boolean;
   /** Colour bar: a preset scheme id, or "custom" (absent: the default). */
   scheme?: FosSchemeId;
   /** Colour bar, custom scheme: hex colours at the low and high end. */
@@ -454,6 +460,12 @@ export type Annotation = PaperAnnotation | ReferenceAnnotation;
 export interface ResultViewSettings {
   surfaceDisplay: SurfaceDisplayMode;
   fosFilterMax: number;
+  /**
+   * Draw the surfaces (Layers › Surfaces): the critical surface and, with
+   * `surfaceDisplay` "all" or "filter", the others (default: drawn; only
+   * `false` is saved).
+   */
+  showSurfaces?: boolean;
   showSlices: boolean;
   showFosLabel: boolean;
   showCentreMarker: boolean;
@@ -1000,18 +1012,11 @@ export interface ResultViewSlice {
   updateAnnotation: (id: string, patch: Partial<Annotation>) => void;
   removeAnnotation: (id: string) => void;
   /**
-   * The built-in annotations (material table, color bar) turned off this
-   * session, by model id: turned on again where they were, with their
-   * settings. UI state: not saved, not undone (one turned off when the
-   * project is saved opens off, and comes back at its default place).
-   */
-  offAnnotations: Record<string, Annotation[]>;
-  /**
    * Turns a built-in annotation (the material table, the color bar) on or
-   * off (Properties › Layers, the ribbon): off takes the model's ones of
-   * that type off the sheet and remembers them; on puts the remembered
-   * ones back, or adds one at its default place. One undo step; their
-   * place in the layer order is kept.
+   * off (Properties › Layers): off marks the model's ones of that type
+   * `hidden` (kept with their place, settings and layer order, and saved);
+   * on clears it, or adds one at its default place when there is none.
+   * One undo step.
    */
   setBuiltInAnnotationShown: (type: BuiltInAnnotationType, shown: boolean) => void;
   setSelectedAnnotations: (ids: string[]) => void;
