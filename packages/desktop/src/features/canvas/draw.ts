@@ -42,6 +42,9 @@ import {
   measureTable,
 } from "./helpers";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
+import { getPaperDimensions, sheetPxScale } from "../view/paper";
+import type { PageTitleLine } from "../export/page-title";
+import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { axisTicks, tickLabel } from "../annotations/plotAxis";
@@ -68,7 +71,7 @@ import {
   FAILURE_MASS_FILL_OPACITY,
   REFERENCE_ANNOTATION_COLOR,
   MARKER_COLOR,
-  RESULT_OUTLINE_WIDTH_PX,
+  RESULT_OUTLINE_MM,
   MIN_SLIP_MASS_BAND_OPACITY,
   MIN_SLIP_MASS_PX,
   PIEZO_BAR_GAP1_PX,
@@ -94,11 +97,35 @@ import {
   FEM_MESH_OPACITY,
   FEM_PLASTIC_ZONE_COLOR,
   FEM_PLASTIC_ZONE_OPACITY,
-  FOS_LABEL_FONT_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
-  COLOR_BAR_MIN_TEXT_PX,
+  MM_PER_PT,
+  PLOT_FRAME_LINE_MM,
+  RULER_FONT_PT,
+  RULER_LABEL_GAP_MM,
+  RULER_MINOR_TICK_LINE_MM,
+  RULER_MINOR_TICK_MM,
+  RULER_TICK_LINE_MM,
+  RULER_TICK_MM,
+  RULER_X_LABEL_BASELINE_MM,
+  RULER_Y_LABEL_BASELINE_MM,
+  SHEET_SANS_FAMILY,
+  sheetCanvasFamily,
+  COLOR_BAR_LINE_MM,
+  SLIP_SURFACE_LINE_MM,
+  PAGE_TITLE_GAP_MM,
+  PAGE_TITLE_MIN_ROOM_MM,
+  PAGE_TITLE_PT,
+  PAGE_TITLE_RAISE_MM,
+  FOS_LABEL_FONT_PT,
+  FOS_LABEL_OFFSET_MM,
+  FOS_LABEL_PLATE_BOTTOM_MM,
+  FOS_LABEL_PLATE_SIDE_MM,
+  FOS_LABEL_PLATE_TOP_MM,
+  FOS_LABEL_RAISE_MM,
+  FOS_LABEL_STACK_GAP_MM,
+  FOS_LABEL_UNDERLINE_MM,
 } from "../rendering/style-spec";
-import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb } from "../results/layer-styles";
+import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import {
   canvasForceLayout,
@@ -628,6 +655,12 @@ export interface DrawCanvasParams {
   /** Device pixels per canvas unit (the drawings' raster resolution follows it). */
   pixelRatio?: number;
   /**
+   * Page 1's title line and out-of-date note as the PDF writes them in the
+   * top margin (features/export/page-title.ts): the result view previews
+   * the whole page. None in the PNG export, which has no title line.
+   */
+  pageTitle?: PageTitleLine | null;
+  /**
    * The band at the bottom of the canvas the sheet is fitted above (px,
    * computePaperFrame): the floating toolbar's on screen; none (0) in the
    * exports.
@@ -689,6 +722,7 @@ export function drawCanvas(
     backgrounds = NO_BACKGROUNDS,
     pixelRatio = 1,
     paperBottomReserve = 0,
+    pageTitle = null,
     worldToCanvas,
     canvasToWorld,
     surfaceYAtX,
@@ -1060,12 +1094,27 @@ export function drawCanvas(
     }
   }
 
-  // Zoom scale factor: in result mode, scale pixel-based sizes with paper zoom
-  // so that ticks, markers, labels etc. maintain their visual proportion to the model.
+  // The sheet's scale: in result mode the pixel-based sizes (ticks, markers,
+  // labels, line widths) are logical px of the PDF's page (sheetPxScale),
+  // so they take the same share of the sheet as in the PDF at any window
+  // size and zoom; the sheet on screen is the PDF page at the screen's zoom.
+  const sheetFrameW = computePaperFrame(
+    w,
+    h,
+    resultViewSettings.paperFrame.paperSize,
+    resultViewSettings.paperFrame.landscape,
+    resultViewSettings.paperFrame.zoom ?? 1,
+    0,
+    0,
+    paperBottomReserve,
+  ).w;
   const paperZoom =
     mode === "result" && result
-      ? Math.max(0.25, resultViewSettings.paperFrame.zoom ?? 1)
+      ? sheetPxScale(sheetFrameW, resultViewSettings.paperFrame.paperSize, resultViewSettings.paperFrame.landscape)
       : 1;
+  // Screen px per mm of the paper in the result view: the PDF's sizes in mm.
+  const sheetPxPerMm =
+    sheetFrameW / getPaperDimensions(resultViewSettings.paperFrame.paperSize, resultViewSettings.paperFrame.landscape).width;
   // Lines over a result are drawn thinner than in the edit view.
   const thin = mode === "result" ? 0.7 : 1;
   // The view as numbers (worldToCanvas is a new function every frame):
@@ -1360,7 +1409,7 @@ export function drawCanvas(
     ctx.closePath();
     ctx.strokeStyle = POLY_STROKE;
     // Thinner over a result, where the slip surface is the heavy line.
-    ctx.lineWidth = (mode === "result" ? RESULT_OUTLINE_WIDTH_PX : 1) * paperZoom;
+    ctx.lineWidth = mode === "result" && result ? RESULT_OUTLINE_MM * sheetPxPerMm : 1;
     // Round joins: a mitre at a sharp toe sticks out far past the corner.
     ctx.lineJoin = "round";
     ctx.stroke();
@@ -2525,6 +2574,11 @@ export function drawCanvas(
     );
     // Scale factor for annotations based on paper frame size
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
+    // Millimetres of the paper per annotation px (the PDF's annotation scale).
+    const paperMm = getPaperDimensions(paperFrame.paperSize, paperFrame.landscape);
+    const mmPerAnnoPx = Math.min(paperMm.width, paperMm.height) / ANNOTATION_SCALE_DIVISOR;
+    // Screen px per mm of the paper: the PDF's mm sizes on the sheet.
+    const pxPerMmSheet = pf.w / paperMm.width;
 
     // The layers, each drawn by a step below, in the model's order
     // (Properties › Layers; features/results/layers.ts).
@@ -2584,7 +2638,8 @@ export function drawCanvas(
 
           const arcPts = getArcPoints(surf);
           ctx.strokeStyle = fosScale.colorOf(surf.fos);
-          ctx.lineWidth = (LS.surfaces?.width ?? SLIP_SURFACE_LINE_WIDTH_PX) * paperZoom;
+          // As wide on the sheet as in the PDF (mm).
+          ctx.lineWidth = pdfScaled(SLIP_SURFACE_LINE_MM, LS.surfaces?.width, SLIP_SURFACE_LINE_WIDTH_PX) * pxPerMmSheet;
           ctx.globalAlpha = LS.surfaces?.opacity ?? SLIP_SURFACE_OPACITY;
           ctx.beginPath();
           for (let i = 0; i < arcPts.length; i++) {
@@ -2611,12 +2666,36 @@ export function drawCanvas(
         : [];
     // A FOS label's box: the text above its underline, as drawn below.
     // (k: the label's size relative to the default)
+    // The F labels as the PDF places them (fosLabelLayoutPdf), in mm on the
+    // paper: the anchor's underline at `cy`, the text above it, on a plate.
     const fosLabelBox = (labelX: number, cy: number, tw: number, k = fosLabelScale(LS.fosLabel)): Box => ({
-      left: labelX - 1 * paperZoom,
-      top: cy - 11 * k * paperZoom,
-      right: labelX + tw + 1 * paperZoom,
-      bottom: cy + 3 * k * paperZoom,
+      left: labelX - FOS_LABEL_PLATE_SIDE_MM * pxPerMmSheet,
+      top: cy - FOS_LABEL_PLATE_TOP_MM * k * pxPerMmSheet,
+      right: labelX + tw + FOS_LABEL_PLATE_SIDE_MM * pxPerMmSheet,
+      bottom: cy + FOS_LABEL_PLATE_BOTTOM_MM * k * pxPerMmSheet,
     });
+    /** The label's font at size factor `k`, in the sheet's sans-serif (Arial metrics, as the PDF's font). */
+    const fosLabelFont = (k: number) =>
+      fosLabelCanvasFont(
+        LS.fosLabel?.fontFamily && LS.fosLabel.fontFamily !== "sans-serif" ? LS.fosLabel : { ...LS.fosLabel, fontFamily: SHEET_SANS_FAMILY },
+        FOS_LABEL_FONT_PT * MM_PER_PT * k * pxPerMmSheet,
+      );
+    /** A label on its plate, underlined, at `cy` (its underline). */
+    const drawFosLabelAt = (text: string, labelX: number, cy: number, tw: number, k: number, color: string) => {
+      const box = fosLabelBox(labelX, cy, tw, k);
+      ctx.fillStyle = PAPER_FILL_COLOR || BG_COLOR;
+      ctx.fillRect(box.left, box.top, box.right - box.left, box.bottom - box.top);
+      ctx.fillStyle = color;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(text, labelX, cy - FOS_LABEL_RAISE_MM * k * pxPerMmSheet);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = FOS_LABEL_UNDERLINE_MM * pxPerMmSheet;
+      ctx.beginPath();
+      ctx.moveTo(labelX - FOS_LABEL_UNDERLINE_MM * pxPerMmSheet, cy);
+      ctx.lineTo(labelX + tw + FOS_LABEL_UNDERLINE_MM * pxPerMmSheet, cy);
+      ctx.stroke();
+    };
     let criticalLabelBox: Box | null = null;
     // The custom surfaces' FOS labels' boxes, kept clear by the reference labels.
     const customLabelBoxes: Box[] = [];
@@ -2787,25 +2866,11 @@ export function drawCanvas(
           const [ccx2, ccy2] = worldToCanvas(ax, ay, w, h);
           const fosText = fosLabelText(cs.fos, LS.fosLabel);
           const k = fosLabelScale(LS.fosLabel);
-          ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * k * paperZoom);
+          ctx.font = fosLabelFont(k);
           const tw = ctx.measureText(fosText).width;
-          const labelX = ccx2 + 10 * paperZoom;
+          const labelX = ccx2 + FOS_LABEL_OFFSET_MM * pxPerMmSheet;
           criticalLabelBox = fosLabelBox(labelX, ccy2, tw);
-          const fosColor = LS.fosLabel?.color ?? INK.critical;
-
-          // Text
-          ctx.fillStyle = fosColor;
-          ctx.textAlign = "left";
-          ctx.textBaseline = "middle";
-          ctx.fillText(fosText, labelX, ccy2 - 4 * k * paperZoom);
-
-          // Underline
-          ctx.strokeStyle = fosColor;
-          ctx.lineWidth = 1 * paperZoom;
-          ctx.beginPath();
-          ctx.moveTo(labelX - 1 * paperZoom, ccy2 + 2 * paperZoom);
-          ctx.lineTo(labelX + tw + 1 * paperZoom, ccy2 + 2 * paperZoom);
-          ctx.stroke();
+          drawFosLabelAt(fosText, labelX, ccy2, tw, k, LS.fosLabel?.color ?? INK.critical);
         }
       }
 
@@ -2818,32 +2883,24 @@ export function drawCanvas(
         // In the FOS label's font, at the custom surfaces' label size.
         const ck = fosLabelScale({ fontSize: LS.customSurfaces?.fontSize ?? LS.fosLabel?.fontSize });
         const customColor = LS.customSurfaces?.color ?? CUSTOM_SURFACE;
-        ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * ck * paperZoom);
-        ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
+        ctx.font = fosLabelFont(ck);
         ctx.setLineDash([]);
         for (const surf of customSurfaces) {
           const [ax, ay] = fosLabelAnchor(surf);
           const [lx, ly] = worldToCanvas(ax, ay, w, h);
           const fosText = fosLabelText(surf.fos, LS.fosLabel);
           const tw = ctx.measureText(fosText).width;
-          const labelX = lx + 10 * paperZoom;
+          const labelX = lx + FOS_LABEL_OFFSET_MM * pxPerMmSheet;
           let cy = ly;
           let box = fosLabelBox(labelX, cy, tw, ck);
-          for (let n = 0; n < 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
-            cy += box.bottom - box.top + 2 * paperZoom;
+          const step = box.bottom - box.top + FOS_LABEL_STACK_GAP_MM * pxPerMmSheet;
+          for (let n = 1; n <= 20 && placed.some((b) => boxesOverlap(box, b, 0)); n++) {
+            cy = ly + n * step;
             box = fosLabelBox(labelX, cy, tw, ck);
           }
           placed.push(box);
           customLabelBoxes.push(box);
-          ctx.fillStyle = customColor;
-          ctx.fillText(fosText, labelX, cy - 4 * ck * paperZoom);
-          ctx.strokeStyle = customColor;
-          ctx.lineWidth = 1 * paperZoom;
-          ctx.beginPath();
-          ctx.moveTo(labelX - 1 * paperZoom, cy + 2 * paperZoom);
-          ctx.lineTo(labelX + tw + 1 * paperZoom, cy + 2 * paperZoom);
-          ctx.stroke();
+          drawFosLabelAt(fosText, labelX, cy, tw, ck, customColor);
         }
         ctx.restore();
       }
@@ -3050,9 +3107,9 @@ export function drawCanvas(
             // The FOS label's box, as drawn above.
             const [lx, ly] = toC(...fosLabelAnchor(cs));
             const k = fosLabelScale(LS.fosLabel);
-            ctx.font = fosLabelCanvasFont(LS.fosLabel, FOS_LABEL_FONT_PX * k * paperZoom);
+            ctx.font = fosLabelFont(k);
             const tw = ctx.measureText(fosLabelText(cs.fos, LS.fosLabel)).width;
-            refLayout.reserve({ left: lx + 9 * paperZoom, top: ly - 12 * k * paperZoom, right: lx + 11 * paperZoom + tw, bottom: ly + 3 * k * paperZoom });
+            refLayout.reserve(fosLabelBox(lx + FOS_LABEL_OFFSET_MM * pxPerMmSheet, ly, tw, k));
           }
         }
         // The custom surfaces' dashed lines and FOS labels, as drawn above.
@@ -3078,9 +3135,12 @@ export function drawCanvas(
       const ifh = pf.h - PLOT_PAD_T - PLOT_PAD_B;
 
       // ── Ticks + labels between paper edge and inner frame ──
-      const TICK_LEN = 6 * paperZoom;
-      const MINI_TICK = 3 * paperZoom;
-      const rulerFont = `${10 * paperZoom}px 'Segoe UI', sans-serif`;
+      // In mm on the paper, as the PDF draws them (drawRulerFrame).
+      const { w: dimW0, h: dimH0 } = PAPER_DIMENSIONS[paperFrame.paperSize];
+      const pxPerMm = pf.w / (paperFrame.landscape ? Math.max(dimW0, dimH0) : Math.min(dimW0, dimH0));
+      const TICK_LEN = RULER_TICK_MM * pxPerMm;
+      const MINI_TICK = RULER_MINOR_TICK_MM * pxPerMm;
+      const rulerFont = `${RULER_FONT_PT * MM_PER_PT * pxPerMm}px ${SHEET_SANS_FAMILY}`;
 
       // World coords at inner frame edges
       const [worldLeftTick] = canvasToWorld(ifx, ify, w, h);
@@ -3108,13 +3168,13 @@ export function drawCanvas(
       ctx.save();
       ctx.fillStyle = PAPER_TICK_COLOR;
       ctx.strokeStyle = PAPER_TICK_COLOR;
-      ctx.lineWidth = 1 * paperZoom;
+      ctx.lineWidth = RULER_TICK_LINE_MM * pxPerMm;
       ctx.font = rulerFont;
 
       // ── Bottom ticks (X axis) — below inner frame ──
       const btmY = ify + ifh;
       ctx.textAlign = "center";
-      ctx.textBaseline = "top";
+      ctx.textBaseline = "alphabetic";
       const xStart = Math.ceil(worldLeftTick / rulerStep) * rulerStep;
       for (let gx = xStart; gx <= worldRightTick; gx += rulerStep) {
         const [px] = worldToCanvas(gx, 0, w, h);
@@ -3124,7 +3184,7 @@ export function drawCanvas(
         ctx.lineTo(px, btmY + TICK_LEN);
         ctx.stroke();
         const label = formatRulerLabel(gx, rulerStep);
-        ctx.fillText(label, px, btmY + TICK_LEN + 2 * paperZoom);
+        ctx.fillText(label, px, btmY + TICK_LEN + RULER_X_LABEL_BASELINE_MM * pxPerMm);
       }
       // Minor ticks (X axis)
       if (minorTickCount > 0) {
@@ -3135,16 +3195,18 @@ export function drawCanvas(
           if (px < ifx || px > ifx + ifw) continue;
           if (Math.abs(gx / rulerStep - Math.round(gx / rulerStep)) < 0.001)
             continue;
+          ctx.lineWidth = RULER_MINOR_TICK_LINE_MM * pxPerMm;
           ctx.beginPath();
           ctx.moveTo(px, btmY);
           ctx.lineTo(px, btmY + MINI_TICK);
           ctx.stroke();
         }
+        ctx.lineWidth = RULER_TICK_LINE_MM * pxPerMm;
       }
 
       // ── Left ticks (Y axis) — left of inner frame ──
       ctx.textAlign = "right";
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = "alphabetic";
       const yStart = Math.ceil(worldBottomTick / rulerStep) * rulerStep;
       for (let gy = yStart; gy <= worldTopTick; gy += rulerStep) {
         const [, py] = worldToCanvas(0, gy, w, h);
@@ -3154,7 +3216,7 @@ export function drawCanvas(
         ctx.lineTo(ifx - TICK_LEN, py);
         ctx.stroke();
         const label = formatRulerLabel(gy, rulerStep);
-        ctx.fillText(label, ifx - TICK_LEN - 3 * paperZoom, py);
+        ctx.fillText(label, ifx - TICK_LEN - RULER_LABEL_GAP_MM * pxPerMm, py + RULER_Y_LABEL_BASELINE_MM * pxPerMm);
       }
       // Minor ticks (Y axis)
       if (minorTickCount > 0) {
@@ -3166,6 +3228,7 @@ export function drawCanvas(
           if (py < ify || py > ify + ifh) continue;
           if (Math.abs(gy / rulerStep - Math.round(gy / rulerStep)) < 0.001)
             continue;
+          ctx.lineWidth = RULER_MINOR_TICK_LINE_MM * pxPerMm;
           ctx.beginPath();
           ctx.moveTo(ifx, py);
           ctx.lineTo(ifx - MINI_TICK, py);
@@ -3176,8 +3239,44 @@ export function drawCanvas(
 
       // Inner frame border (plot area)
       ctx.strokeStyle = PAPER_BORDER_COLOR;
-      ctx.lineWidth = 1.5 * paperZoom;
+      ctx.lineWidth = PLOT_FRAME_LINE_MM * pxPerMm;
       ctx.strokeRect(ifx, ify, ifw, ifh);
+    };
+
+    // ── Page 1's title line (drawDrawingTitle, drawOutOfDateNote) ──
+    const drawPageTitle = () => {
+      const title = pageTitle;
+      if (!title) return;
+      const mm = pxPerMmSheet;
+      const left = pf.x + pf.w * PLOT_MARGINS.L;
+      const width = pf.w * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+      const y = pf.y + pf.h * PLOT_MARGINS.T - PAGE_TITLE_RAISE_MM * mm;
+      const size = PAGE_TITLE_PT * MM_PER_PT * mm;
+      ctx.save();
+      ctx.fillStyle = INK.annotationText;
+      ctx.textBaseline = "alphabetic";
+      let end = left + width;
+      if (title.outOfDate) {
+        ctx.font = `bold ${size}px ${SHEET_SANS_FAMILY}`;
+        ctx.textAlign = "right";
+        ctx.fillText(RESULT_OUT_OF_DATE_NOTE, end, y);
+        end -= ctx.measureText(RESULT_OUT_OF_DATE_NOTE).width + PAGE_TITLE_GAP_MM * mm;
+      }
+      ctx.textAlign = "left";
+      let x = left;
+      if (title.name) {
+        ctx.font = `bold ${size}px ${SHEET_SANS_FAMILY}`;
+        ctx.fillText(title.name, x, y);
+        x += ctx.measureText(title.name).width + PAGE_TITLE_GAP_MM * mm;
+      }
+      if (title.result && end - x >= PAGE_TITLE_MIN_ROOM_MM * mm) {
+        ctx.font = `${size}px ${SHEET_SANS_FAMILY}`;
+        // Cut at a word to the room left, as the PDF's first line of it.
+        let line = title.result;
+        while (ctx.measureText(line).width > end - x && line.includes(" ")) line = line.slice(0, line.lastIndexOf(" "));
+        ctx.fillText(line, x, y);
+      }
+      ctx.restore();
     };
 
     // ── Annotations ──────────────────────────────────────
@@ -3192,7 +3291,7 @@ export function drawCanvas(
         (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * annoScale;
 
       if (anno.type === "text") {
-        const family = anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY;
+        const family = sheetCanvasFamily(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
         const weight = anno.bold ? "bold" : "normal";
         const style = anno.italic ? "italic" : "normal";
         const resolvedText = resolveAnnotationText({
@@ -3226,11 +3325,11 @@ export function drawCanvas(
       } else if (anno.type === "color-bar") {
         const barW = 20 * annoScale;
         const barH = 200 * annoScale;
-        const labelFontSize = Math.max(COLOR_BAR_MIN_TEXT_PX, 11 * annoScale);
+        const labelFontSize = 11 * annoScale;
         const titleExtraTop = labelFontSize + 4 * annoScale;
 
         // Measure label width for total content size
-        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+        ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         let maxLabelW = 0;
         const numTicks = COLOR_BAR_NUM_TICKS;
         const colorScale = colorScaleOfBar(anno, result, rvs);
@@ -3275,21 +3374,21 @@ export function drawCanvas(
 
         // Border
         ctx.strokeStyle = INK.colorBar;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = COLOR_BAR_LINE_MM * pxPerMmSheet;
         ctx.strokeRect(barX, barY, barW, barH);
 
         // Labels
         ctx.fillStyle = INK.colorBar;
-        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+        ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
         const labelX2 = barX + barW + 5 * annoScale;
 
         // Title
-        ctx.font = `bold ${labelFontSize}px 'Segoe UI', sans-serif`;
+        ctx.font = `bold ${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textBaseline = "bottom";
         ctx.fillText("F", barX, barY - 4 * annoScale);
-        ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+        ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textBaseline = "middle";
 
         // Tick marks and labels
@@ -3299,10 +3398,10 @@ export function drawCanvas(
 
           // Tick
           ctx.strokeStyle = INK.colorBar;
-          ctx.lineWidth = 1;
+          ctx.lineWidth = COLOR_BAR_LINE_MM * pxPerMmSheet;
           ctx.beginPath();
           ctx.moveTo(barX + barW, y);
-          ctx.lineTo(barX + barW + 3, y);
+          ctx.lineTo(barX + barW + 3 * annoScale, y);
           ctx.stroke();
 
           // Label
@@ -3342,6 +3441,7 @@ export function drawCanvas(
           annoScale,
           tableFontSize,
           INK,
+          mmPerAnnoPx,
         );
       } else if (anno.type === "plot") {
         const plotW = pf.w * (anno.width ?? 0.24);
@@ -3355,10 +3455,14 @@ export function drawCanvas(
         );
 
         ctx.save();
+        // The PDF's slice plot (drawPlotAnnotationPdf) at the sheet's scale:
+        // sizes in annotation px (annoScale), lines in mm (pxPerMmSheet).
+        const s = annoScale;
+        const mm = pxPerMmSheet;
         // Opaque, as in the PDF: the surfaces behind it do not show through.
         ctx.fillStyle = INK.plotBg;
         ctx.strokeStyle = INK.plotFrame;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.2 * mm;
         ctx.fillRect(drawX, drawY, plotW, plotH);
         ctx.strokeRect(drawX, drawY, plotW, plotH);
 
@@ -3369,17 +3473,17 @@ export function drawCanvas(
         );
         const { points, title } = plot;
 
-        const titleSize = Math.max(8, 10 * annoScale);
-        const axisSize = Math.max(7, 9 * annoScale);
-        const titlePad = titleSize + 6;
+        const titleSize = 10 * s;
+        const axisSize = 9 * s;
+        const pad = 4 * s;
 
+        ctx.font = `${titleSize}px ${SHEET_SANS_FAMILY}`;
+        ctx.fillStyle = INK.plotTitle;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.fillText(title, drawX + 6 * s, drawY + pad);
         if (!plot.range) {
-          ctx.font = `${titleSize}px sans-serif`;
-          ctx.fillStyle = INK.plotTitle;
-          ctx.textAlign = "left";
-          ctx.textBaseline = "top";
-          ctx.fillText(title, drawX + 6, drawY + 4);
-          ctx.font = `${axisSize}px sans-serif`;
+          ctx.font = `${axisSize}px ${SHEET_SANS_FAMILY}`;
           ctx.fillStyle = INK.plotMuted;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -3388,16 +3492,16 @@ export function drawCanvas(
           return;
         }
 
-        const padLeft = Math.max(26, 32 * annoScale);
-        const padRight = Math.max(10, 12 * annoScale);
+        const padLeft = 32 * s;
+        const padRight = 12 * s;
         // Room below the tick values for the x axis title, and above the
         // top tick value so it stays clear of the plot title.
-        const padBottom = Math.max(18, 22 * annoScale) + axisSize + 2;
-        const padTop = titlePad + axisSize / 2 + 3;
+        const padBottom = 22 * s + axisSize + 2 * s;
+        const padTop = titleSize + 6 * s + axisSize / 2 + 3 * s;
         const chartX = drawX + padLeft;
         const chartY = drawY + padTop;
-        const chartW = Math.max(8, plotW - padLeft - padRight);
-        const chartH = Math.max(8, plotH - padTop - padBottom);
+        const chartW = Math.max(2 * mm, plotW - padLeft - padRight);
+        const chartH = Math.max(2 * mm, plotH - padTop - padBottom);
         const { xMin, xMax, yMin, yMax } = plot.range;
         // Round ticks on both axes; the axes run to the outer ticks.
         const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
@@ -3408,16 +3512,11 @@ export function drawCanvas(
         const mapY = (v: number) =>
           chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
-        ctx.font = `${titleSize}px sans-serif`;
-        ctx.fillStyle = INK.plotTitle;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(title, drawX + 6, drawY + 4);
-
         ctx.strokeStyle = INK.plotGridMajor;
-        ctx.lineWidth = 0.8;
+        ctx.lineWidth = 0.15 * mm;
         for (const v of yTicks.values) {
           const gy = mapY(v);
+          if (!(gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6)) continue;
           ctx.beginPath();
           ctx.moveTo(chartX, gy);
           ctx.lineTo(chartX + chartW, gy);
@@ -3426,6 +3525,7 @@ export function drawCanvas(
         ctx.strokeStyle = INK.plotGridMinor;
         for (const v of xTicks.values) {
           const gx = mapX(v);
+          if (!(gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6)) continue;
           ctx.beginPath();
           ctx.moveTo(gx, chartY);
           ctx.lineTo(gx, chartY + chartH);
@@ -3433,11 +3533,11 @@ export function drawCanvas(
         }
 
         ctx.strokeStyle = INK.plotFrame;
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 0.2 * mm;
         ctx.strokeRect(chartX, chartY, chartW, chartH);
 
         ctx.strokeStyle = INK.plotLine;
-        ctx.lineWidth = Math.max(1.1, 1.3 * annoScale);
+        ctx.lineWidth = Math.max(0.25, 0.35 * mmPerAnnoPx) * mm;
         ctx.beginPath();
         points.forEach((point, index) => {
           const px = mapX(point.x);
@@ -3452,15 +3552,15 @@ export function drawCanvas(
           const px = mapX(point.x);
           const py = mapY(point.y);
           ctx.beginPath();
-          ctx.arc(px, py, Math.max(1.4, 1.8 * annoScale), 0, Math.PI * 2);
+          ctx.arc(px, py, Math.max(0.35 * mm, 1.8 * s), 0, Math.PI * 2);
           ctx.fill();
         });
 
         // Tick marks and values on both axes.
-        const tick = Math.max(2, 3 * annoScale);
+        const tick = 1.2 * s;
         ctx.strokeStyle = INK.plotFrame;
-        ctx.lineWidth = 1;
-        ctx.font = `${axisSize}px sans-serif`;
+        ctx.lineWidth = 0.2 * mm;
+        ctx.font = `${axisSize}px ${SHEET_SANS_FAMILY}`;
         ctx.fillStyle = INK.plotText;
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
@@ -3470,7 +3570,7 @@ export function drawCanvas(
           ctx.moveTo(chartX - tick, gy);
           ctx.lineTo(chartX, gy);
           ctx.stroke();
-          ctx.fillText(tickLabel(v, yTicks), chartX - tick - 2, gy);
+          ctx.fillText(tickLabel(v, yTicks), chartX - tick - pad / 2, gy);
         }
         ctx.textBaseline = "top";
         ctx.textAlign = "center";
@@ -3480,9 +3580,9 @@ export function drawCanvas(
           ctx.moveTo(gx, chartY + chartH);
           ctx.lineTo(gx, chartY + chartH + tick);
           ctx.stroke();
-          ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + 2);
+          ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2);
         }
-        ctx.fillText(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + 4 + axisSize);
+        ctx.fillText(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + pad / 2 + axisSize + 2 * s);
         ctx.restore();
       }
 
@@ -3523,6 +3623,7 @@ export function drawCanvas(
       drawReferenceLabelsStep();
       unclip();
       drawFrame();
+      drawPageTitle();
     };
     if (lastModelStep < 0) finishModel();
     steps.forEach((step, i) => {

@@ -13,7 +13,6 @@ import {
 } from "./colorBarPlacement";
 import { buildMaterialTableData, measureTable } from "../canvas/helpers";
 import { getPaperDimensions } from "../view/paper";
-import { MATERIAL_TABLE_MIN_TEXT_PX } from "../rendering/style-spec";
 
 /** A fixed text measure (the tests' canvas measures nothing): 0.55 em a glyph, bold 0.6. */
 const measure: TextMeasure = (text, px, bold) => text.length * px * (bold ? 0.6 : 0.55);
@@ -132,14 +131,12 @@ describe("color bar default position on screen (#70)", () => {
     return table.y! + h / sheetH;
   };
 
-  it("is below the table as drawn where its text is raised to the least size", () => {
+  it("is below the table as drawn, which a small sheet draws at its paper size (as the PDF)", () => {
     const mats = materials(1);
-    // The table's text is below the least size at this scale: drawn larger than on paper.
-    expect(6 * TUTORIAL_SHEET_SCALE).toBeLessThan(MATERIAL_TABLE_MIN_TEXT_PX);
     const paper = materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure);
     const bottom = drawnBottom(EXAMPLE_TABLE, mats, TUTORIAL_SHEET_SCALE);
-    expect(bottom).toBeGreaterThan(paper.y + paper.h + 0.03);
-    // The box on screen is the drawn table.
+    // No screen-only least size: the drawn table takes the paper's share of the sheet.
+    expect(bottom).toBeCloseTo(paper.y + paper.h, 9);
     const screen = materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure, TUTORIAL_SHEET_SCALE);
     expect(screen.y + screen.h).toBeCloseTo(bottom, 9);
     const pos = colorBarDefaultPosition([EXAMPLE_TABLE], mats, undefined, A4, measure, TUTORIAL_SHEET_SCALE);
@@ -151,7 +148,6 @@ describe("color bar default position on screen (#70)", () => {
   it("is where the paper puts it on a sheet large enough for the table's own size", () => {
     const mats = materials(3);
     const scale = 2;
-    expect(6 * scale).toBeGreaterThanOrEqual(MATERIAL_TABLE_MIN_TEXT_PX);
     expect(materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure, scale).h).toBeCloseTo(
       materialTableBox(EXAMPLE_TABLE, mats, undefined, A4, measure).h,
       9,
@@ -180,17 +176,17 @@ describe("Color bar button", () => {
     expect(bar.y).toBeLessThan(box.y + box.h + 0.03);
   });
 
-  it("puts the bar below the table as drawn on a small sheet on screen", () => {
+  it("puts the bar below the table on a small sheet on screen, where the table has its paper size (as in the PDF)", () => {
     useAppStore.setState({ materials: materials(4) });
     const s = useAppStore.getState();
     const table = s.resultViewSettings.annotations.find((a) => a.type === "material-table")!;
-    // The new table's 8 px text at 7.2 px on screen: drawn at the least size.
+    // The new table's 8 px text at 7.2 px on screen: drawn at that size, its share of the paper unchanged.
     const sheetScale = 0.9;
     s.addAnnotation("color-bar", { sheetScale });
     const bar = useAppStore.getState().resultViewSettings.annotations.find((a) => a.type === "color-bar")!;
     const paper = materialTableBox(table, materials(4), undefined, s.resultViewSettings.paperFrame);
     const screen = materialTableBox(table, materials(4), undefined, s.resultViewSettings.paperFrame, undefined, sheetScale);
-    expect(screen.h).toBeGreaterThan(paper.h);
+    expect(screen.h).toBeCloseTo(paper.h, 9);
     expect(bar.y).toBeGreaterThan(screen.y + screen.h);
   });
 });

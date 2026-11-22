@@ -116,3 +116,28 @@ export function getPlotAspectRatio(
   const plotH = height * (1 - margins.T - margins.B);
   return plotW / plotH;
 }
+
+/**
+ * Width (px) of the virtual canvas the PDF export lays a page out on: the
+ * sizes the sheet gives in logical px (style-spec.ts `_PX`) are px of the
+ * paper frame on this canvas, so the PDF converts them to mm with
+ * paper width / that frame's width (PdfTransform.mmPerPx).
+ */
+export const SHEET_VIRTUAL_CANVAS_W = 1200;
+
+/** The paper frame on the PDF's virtual canvas (SHEET_VIRTUAL_CANVAS_W wide). */
+export function virtualPaperFrame(paperSize: PaperSize, landscape = true): Rect {
+  const { width, height } = getPaperDimensions(paperSize, landscape);
+  return computePaperFrame(SHEET_VIRTUAL_CANVAS_W, (SHEET_VIRTUAL_CANVAS_W * height) / width, paperSize, landscape);
+}
+
+/**
+ * Screen px per logical px of the sheet, for a paper frame `frameW` px
+ * wide: what the result view scales the sheet's fixed sizes by (symbols,
+ * line widths, labels, ticks), so that they take the same share of the
+ * sheet as in the PDF. The sheet on screen is the PDF page at the screen's
+ * zoom.
+ */
+export function sheetPxScale(frameW: number, paperSize: PaperSize, landscape = true): number {
+  return frameW / virtualPaperFrame(paperSize, landscape).w;
+}

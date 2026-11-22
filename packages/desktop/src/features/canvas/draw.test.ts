@@ -28,6 +28,10 @@ import {
   CUSTOM_SURFACE_COLOR,
   CRITICAL_SURFACE_COLOR,
   UDL_LOAD_COLOR,
+  FOS_LABEL_FONT_PT,
+  MM_PER_PT,
+  RULER_Y_LABEL_BASELINE_MM,
+  SHEET_SANS_FAMILY,
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { INK_TOKENS, PRINT_INK, themeInk, type CanvasInk } from "./ink";
@@ -36,6 +40,7 @@ import { fosColor, fosColorIn } from "../../utils/fos-color";
 import { colorScaleOfBar } from "../annotations/colorScale";
 import type { Annotation, ResultViewSettings } from "../../store/types";
 import { computeRegions } from "../../utils/regions";
+import { computePaperFrame, virtualPaperFrame } from "../view/paper";
 
 const W = 800;
 const H = 600;
@@ -169,9 +174,19 @@ function result(over: Partial<AnalysisResult> = {}): AnalysisResult {
   };
 }
 
+/**
+ * The paper zoom at which the sheet on this canvas is as wide as the PDF's
+ * virtual page (sheetPxScale 1): the sizes the sheet gives in logical px
+ * are drawn at those px.
+ */
+const UNIT_SHEET_ZOOM = virtualPaperFrame("A4", true).w / computePaperFrame(W, H, "A4", true).w;
+/** Screen px per mm of the A4 paper at that zoom: the PDF's sizes in mm on this sheet. */
+const PX_PER_MM = virtualPaperFrame("A4", true).w / 297;
+
 function rvs(over: Partial<ResultViewSettings> = {}): ResultViewSettings {
   return {
     ...DEFAULT_RESULT_VIEW_SETTINGS,
+    paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, zoom: UNIT_SHEET_ZOOM },
     annotations: [],
     showSlices: false,
     showFosLabel: false,
@@ -1261,10 +1276,13 @@ describe("drawCanvas — result mode", () => {
     const rec = drawResult({ resultViewSettings: rvs({ showFosLabel: true }) });
     const label = rec.findText("1.234")!;
     const [ccx, ccy] = toC(CIRCLE.cx, CIRCLE.cy);
-    expect(label.x).toBe(ccx + 10);
-    expect(label.y).toBe(ccy - 4);
+    // As the PDF places it (mm on the paper): 3 mm right of the centre, 1 mm over its underline at the centre.
+    expect(label.x).toBeCloseTo(ccx + 3 * PX_PER_MM, 9);
+    expect(label.y).toBeCloseTo(ccy - 1 * PX_PER_MM, 9);
     expect(label.state.textAlign).toBe("left");
-    const underline = rec.strokes().find((p) => p.state.lineWidth === 1 && close(pathPoints(p)[0], [ccx + 9, ccy + 2]));
+    const underline = rec
+      .strokes()
+      .find((p) => Math.abs(p.state.lineWidth - 0.2 * PX_PER_MM) < 1e-9 && close(pathPoints(p)[0], [ccx + 2.8 * PX_PER_MM, ccy]));
     expect(underline).toBeDefined();
   });
 
@@ -1285,8 +1303,8 @@ describe("drawCanvas — result mode", () => {
     });
     const label = rec.findText("1.234")!;
     const [ax, ay] = toC((ENTRY_X + 22) / 2, 10);
-    expect(label.x).toBe(ax + 10);
-    expect(label.y).toBe(ay - 4);
+    expect(label.x).toBeCloseTo(ax + 3 * PX_PER_MM, 9);
+    expect(label.y).toBeCloseTo(ay - 1 * PX_PER_MM, 9);
     expect(rec.fills().some((p) => p.segments[0].op === "arc" && close(pathPoints(p)[0], toC(14, 20)))).toBe(false);
   });
 
@@ -1434,7 +1452,7 @@ describe("drawCanvas — result mode", () => {
     // At paper zoom 2 (the model drawn twice as large, 4 px apart) the same lines: thinning goes by the paper.
     const zoomed = drawResult({
       result: result({ criticalSlices: dense }),
-      resultViewSettings: rvs({ showSlices: true, paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, zoom: 2 } }),
+      resultViewSettings: rvs({ showSlices: true, paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, zoom: 2 * UNIT_SHEET_ZOOM } }),
       worldToCanvas: (x, y, w, h) => [w / 2 + (x - CX) * 2 * SCALE, h / 2 - (y - CY) * 2 * SCALE],
     });
     const zoomedLines = zoomed.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
@@ -1506,12 +1524,13 @@ describe("drawCanvas — result mode", () => {
     // Labels in the custom colour: the first at its centre, the second moved below the critical label.
     const label = on.findText("1.500")!;
     expect(label.state.fillStyle).toBe(CUSTOM_SURFACE_COLOR.hex);
-    expect(label.x).toBe(ccx + 10);
-    expect(label.y).toBe(ccy - 4);
+    expect(label.x).toBeCloseTo(ccx + 3 * PX_PER_MM, 9);
+    expect(label.y).toBeCloseTo(ccy - 1 * PX_PER_MM, 9);
     const critical = on.findText("1.234")!;
     const moved = on.findText("1.750")!;
-    expect(moved.x).toBe(critical.x);
-    expect(moved.y).toBe(critical.y + 16);
+    expect(moved.x).toBeCloseTo(critical.x, 9);
+    // One label's plate (4.5 + 1 mm) and 0.5 mm lower, as the PDF stacks them.
+    expect(moved.y).toBeCloseTo(critical.y + 6 * PX_PER_MM, 9);
     expect(on.depth()).toBe(0);
     // Without the FOS label, the surfaces but no labels.
     const noLabel = drawResult({ result: res, resultViewSettings: rvs({ showCustomSurfaces: true }) });
@@ -1533,24 +1552,26 @@ describe("drawCanvas — result mode", () => {
 
   it("puts axis tick labels at round values inside the plot frame, with minor ticks", () => {
     const rec = drawResult({ resultViewSettings: rvs({ gridSpacing: 5, minorTicks: 4 }) });
-    const xLabels = rec.texts.filter((t) => t.state.textBaseline === "top" && /^-?\d+$/.test(t.text));
+    const xLabels = rec.texts.filter((t) => t.state.textAlign === "center" && /^-?\d+$/.test(t.text));
     expect(xLabels.length).toBeGreaterThan(2);
     for (const t of xLabels) {
       const wx = canvasToWorld(t.x, 0, W, H)[0];
       expect(wx).toBeCloseTo(Number(t.text), 6);
-      expect(Number(t.text) % 5).toBe(0);
+      expect(Math.abs(Number(t.text)) % 5).toBe(0);
     }
     const yLabels = rec.texts.filter((t) => t.state.textAlign === "right" && /^-?\d+$/.test(t.text));
     for (const t of yLabels) {
-      expect(canvasToWorld(0, t.y, W, H)[1]).toBeCloseTo(Number(t.text), 6);
+      // On its baseline, as the PDF writes it: RULER_Y_LABEL_BASELINE_MM below its tick.
+      expect(canvasToWorld(0, t.y - RULER_Y_LABEL_BASELINE_MM * PX_PER_MM, W, H)[1]).toBeCloseTo(Number(t.text), 6);
     }
-    // Minor ticks are 3 px long, majors 6 px.
+    // Minor ticks are 1 mm long, majors 2 mm (the PDF's).
     const tickLens = rec
       .strokes()
       .map(pathPoints)
       .filter((p) => p.length === 2 && p[0][0] === p[1][0])
       .map(([a, b]) => Math.abs(b[1] - a[1]));
-    expect(tickLens.filter((l) => l === 3).length).toBeGreaterThanOrEqual(xLabels.length * 3);
+    expect(tickLens.filter((l) => Math.abs(l - PX_PER_MM) < 1e-9).length).toBeGreaterThanOrEqual(xLabels.length * 3);
+    expect(tickLens.filter((l) => Math.abs(l - 2 * PX_PER_MM) < 1e-9).length).toBeGreaterThanOrEqual(xLabels.length);
   });
 
   it("draws a grid line at every labelled tick (one spacing for grid and ticks)", () => {
@@ -1569,7 +1590,7 @@ describe("drawCanvas — result mode", () => {
         .map(pathPoints)
         .filter(([a, b]) => a[0] === b[0])
         .map(([a]) => a[0]);
-      const tickX = rec.texts.filter((t) => t.state.textBaseline === "top" && /^-?\d+(\.\d+)?$/.test(t.text)).map((t) => t.x);
+      const tickX = rec.texts.filter((t) => t.state.textAlign === "center" && /^-?\d+(\.\d+)?$/.test(t.text)).map((t) => t.x);
       expect(tickX.length, `scale ${scale}`).toBeGreaterThan(1);
       for (const x of tickX) {
         expect(gridX.some((g) => Math.abs(g - x) < 1e-6), `tick at ${x}px, scale ${scale}`).toBe(true);
@@ -2155,13 +2176,16 @@ describe("drawCanvas — display layer styles", () => {
     const rec = styled({ fosLabel: { fontSize: 18, fontFamily: "serif", bold: false, color: "#0066cc", decimals: 2 } }, { showFosLabel: true });
     expect(rec.findText("1.234")).toBeUndefined();
     const label = rec.findText("1.23")!;
-    expect(label.state.font).toBe("18px serif");
+    // 18 px is 1.5 times the default size: 15 pt on the paper, as the PDF prints it.
+    expect(label.state.font).toBe(`${FOS_LABEL_FONT_PT * 1.5 * MM_PER_PT * PX_PER_MM}px serif`);
     expect(label.state.fillStyle).toBe("#0066cc");
     // offsets scale with the size
-    expect(label.y).toBe(c[1] - 4 * 1.5);
-    expect(rec.strokes("#0066cc").some((p) => close(pathPoints(p)[0], [c[0] + 9, c[1] + 2]))).toBe(true);
-    // absent: bold 12 px sans-serif, three decimals
-    expect(styled(undefined, { showFosLabel: true }).findText("1.234")!.state.font).toBe("bold 12px sans-serif");
+    expect(label.y).toBeCloseTo(c[1] - 1 * 1.5 * PX_PER_MM, 9);
+    expect(rec.strokes("#0066cc").some((p) => close(pathPoints(p)[0], [c[0] + 2.8 * PX_PER_MM, c[1]]))).toBe(true);
+    // absent: bold 10 pt in the sheet's sans-serif (Arial metrics, the PDF's font), three decimals
+    expect(styled(undefined, { showFosLabel: true }).findText("1.234")!.state.font).toBe(
+      `bold ${FOS_LABEL_FONT_PT * MM_PER_PT * PX_PER_MM}px ${SHEET_SANS_FAMILY}`,
+    );
   });
 
   it("draws the critical surface, the center and the slices in their colors and widths, over the soil and the sheet alike", () => {
@@ -2193,7 +2217,8 @@ describe("drawCanvas — display layer styles", () => {
       { surfaceDisplay: "all" },
       result({ allSurfaces: [surface(), two] }),
     );
-    const other = rec.strokes().filter((p) => pathPoints(p).length > 20 && p.state.lineWidth === 2.5);
+    // 2.5 times the default width, the PDF's 0.15 mm times 2.5 on this sheet.
+    const other = rec.strokes().filter((p) => pathPoints(p).length > 20 && Math.abs(p.state.lineWidth - 0.15 * 2.5 * PX_PER_MM) < 1e-9);
     expect(other).toHaveLength(1);
     expect(other[0].state.globalAlpha).toBe(0.3);
     const soil = rec.fills(DEFAULT_MATERIAL.color);
@@ -2211,6 +2236,7 @@ describe("drawCanvas — display layer styles", () => {
     expect(rec.strokes("#6600cc").some((p) => p.state.lineWidth === 2.5 && p.state.lineDash.length > 0)).toBe(true);
     const label = rec.findText("1.500")!;
     expect(label.state.fillStyle).toBe("#6600cc");
-    expect(label.state.font).toBe("bold 16px sans-serif");
+    // 16 px: 4/3 of the default size, as the PDF prints it.
+    expect(label.state.font).toBe(`bold ${FOS_LABEL_FONT_PT * (16 / 12) * MM_PER_PT * PX_PER_MM}px ${SHEET_SANS_FAMILY}`);
   });
 });

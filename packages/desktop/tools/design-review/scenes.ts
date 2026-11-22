@@ -12,7 +12,11 @@
  * verification problems V017b (water, distributed load, reinforcement),
  * V085 (S = f(datum)) and V015 (piles), the design-capture review model
  * (every material kind, waternet, rapid drawdown, seismic, loads), the
- * project fixture with PDF drawings, and many models with long names.
+ * project fixture with PDF drawings, and many models with long names; and
+ * benchmarks as Help › Benchmarks opens them (with their title block):
+ * V038b, V105b (wide and flat, the longest title), V101 (tall and narrow),
+ * V085 and V011a (eight and seven materials, long tables) and V021a (a long
+ * title).
  */
 
 import type { Locator, Page } from "playwright";
@@ -22,7 +26,11 @@ import type { PaperSize } from "../../src/store/types";
 
 export type Area = "main-edit" | "main-result" | "sidebar" | "menus" | "windows" | "dialogs" | "canvas";
 export type Theme = "light" | "dark";
-export type DataSet = "example" | "example1" | "nonhomog" | "dam" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty";
+export type DataSet = "example" | "example1" | "nonhomog" | "dam" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty" | BenchmarkData;
+
+/** The benchmarks the review opens as Help › Benchmarks does (run.ts). */
+export const BENCHMARK_SCENE_IDS = ["V038b", "V105b", "V101", "V085", "V011a", "V021a"] as const;
+type BenchmarkData = `bench-${(typeof BENCHMARK_SCENE_IDS)[number]}`;
 
 export interface Box {
   x: number;
@@ -291,7 +299,17 @@ const mainEdit: Scene[] = [
   },
 ];
 
+const benchmarkSheets: Scene[] = BENCHMARK_SCENE_IDS.map((id) => ({
+  id: `main-result-benchmark-${id.toLowerCase()}`,
+  title: `Result view of benchmark ${id} as Help › Benchmarks opens it (title block, material table, model low on the sheet)`,
+  area: "main-result" as const,
+  data: `bench-${id}` as const,
+  result: true,
+  open: async () => {},
+}));
+
 const mainResult: Scene[] = [
+  ...benchmarkSheets,
   { id: "main-result", title: "Main window, result view (example model)", area: "main-result", result: true, also150: true, open: async () => {} },
   { id: "main-result-review", title: "Result view of the review model (water, loads, seismic)", area: "main-result", data: "review", result: true, open: async () => {} },
   {

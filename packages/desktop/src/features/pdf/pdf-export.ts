@@ -52,6 +52,7 @@ import {
 } from "../canvas/reinforcement-draw";
 import { ARROW_HEIGHT_PX } from "../canvas/constants";
 import type { Box } from "../rendering/overlay-layout";
+import { RESULT_OUTLINE_MM } from "../rendering/style-spec";
 import { surfacePoints } from "../../utils/arc";
 import { drawReferenceLabelsPdf, drawReferenceLinesPdf } from "./pdf-reference";
 import { drawDrawingTitle, drawOutOfDateNote, drawSummaryPages, type SummaryHeader } from "./pdf-summary";
@@ -403,7 +404,7 @@ export function exportVectorPdf(data: PdfExportData): void {
     }
 
     if (coordinates.length >= 3) {
-      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], 0.3);
+      drawClosedPolyline(pdf, tf, coordinates, [0, 0, 0], RESULT_OUTLINE_MM);
     }
 
     // Clipped to the outline, as on the canvas.

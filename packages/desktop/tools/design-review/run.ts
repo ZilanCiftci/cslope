@@ -51,7 +51,7 @@ import { VERIFICATION_CASES, presentedAnalyses } from "@cslope/engine/verificati
 import { verificationModel } from "../../src/store/verification-models";
 import { readZip } from "../../src/utils/zip";
 import { designReviewModel } from "../design-capture/models";
-import { SCENES, type Ctx, type DataSet, type Scene, type Target, type Theme, type Box } from "./scenes";
+import { BENCHMARK_SCENE_IDS, SCENES, type Ctx, type DataSet, type Scene, type Target, type Theme, type Box } from "./scenes";
 import {
   DESKTOP_DIR,
   DPR,
@@ -128,6 +128,14 @@ async function prepareData(): Promise<{ data: Data; files: Ctx["files"] }> {
     v085: vm("V085", "Morgenstern-Price"),
     v015: vm("V015"),
     review: designReviewModel(),
+    // As Help › Benchmarks opens them: with the title block and material table.
+    ...Object.fromEntries(
+      BENCHMARK_SCENE_IDS.map((id) => {
+        const c = VERIFICATION_CASES.find((v) => v.id === id);
+        if (!c) throw new Error(`No verification problem ${id}`);
+        return [`bench-${id}`, verificationModel(c, undefined, `${c.id} ${c.title}`, { titleBlock: true })];
+      }),
+    ),
   };
   const fixtures = join(DESKTOP_DIR, "src/features/project/fixtures");
   const drawingsCslp = readFileSync(join(fixtures, "cslp-v1-drawings.cslp"));

@@ -117,8 +117,10 @@ export function paperPngDataUrl(options: { scale?: number; theme?: "light" | "da
     ...args,
     w: layoutW,
     h: layoutH,
-    // The export lays the sheet out without the screen's toolbar band.
+    // The export lays the sheet out without the screen's toolbar band, and
+    // has no page title line (the PDF's).
     paperBottomReserve: 0,
+    pageTitle: null,
     viewScale: s,
     worldToCanvas,
     canvasToWorld,

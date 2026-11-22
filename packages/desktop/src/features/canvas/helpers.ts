@@ -15,7 +15,14 @@ import {
 } from "../../utils/arc";
 import { computePaperFrame } from "../view/paper";
 import { waterLineFitPoints } from "../view/extents";
-import { COLOR_BAR_MIN_TEXT_PX, MATERIAL_TABLE_MIN_TEXT_PX, MODEL_SHORT_LABELS } from "../rendering/style-spec";
+import {
+  ANNOTATION_SCALE_DIVISOR,
+  MATERIAL_TABLE_RULE_MM,
+  MATERIAL_TABLE_SWATCH_BORDER_MM,
+  MODEL_SHORT_LABELS,
+  SHEET_SANS_FAMILY,
+  sheetCanvasFamily,
+} from "../rendering/style-spec";
 import { PRINT_INK, type CanvasInk } from "./ink";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
@@ -201,16 +208,6 @@ export function buildMaterialTableData(
   return { columnKeys, header, rows };
 }
 
-/** The rules of the material table (thin, as on paper). */
-const TABLE_RULE_PX = 0.6;
-
-/**
- * The scale a material table is drawn at on the canvas: the sheet's, or
- * larger where its text would be smaller than MATERIAL_TABLE_MIN_TEXT_PX.
- */
-export function tableScale(sheetScale: number, fontSize: number): number {
-  return fontSize > 0 && fontSize * sheetScale < MATERIAL_TABLE_MIN_TEXT_PX ? MATERIAL_TABLE_MIN_TEXT_PX / fontSize : sheetScale;
-}
 
 /** The layout of a material table on the canvas (see layoutMaterialTable). */
 function layoutTable(
@@ -221,12 +218,11 @@ function layoutTable(
   sheetScale: number,
   fontSize: number,
 ) {
-  // Never smaller on the canvas than MATERIAL_TABLE_MIN_TEXT_PX: the whole
-  // table is drawn larger then (its rows, columns and swatches with it).
-  const scale = tableScale(sheetScale, fontSize);
+  // At the sheet's scale, as the PDF draws it (no screen-only minimum).
+  const scale = sheetScale;
   const size = fontSize * scale;
-  const headerFont = `bold ${size}px sans-serif`;
-  const bodyFont = `${size}px sans-serif`;
+  const headerFont = `bold ${size}px ${SHEET_SANS_FAMILY}`;
+  const bodyFont = `${size}px ${SHEET_SANS_FAMILY}`;
   const measureIn = (font: string) => (text: string) => {
     ctx.font = font;
     return ctx.measureText(text).width;
@@ -261,14 +257,19 @@ export function drawTable(
   fontSize = MATERIAL_TABLE_FONT_SIZE,
   /** Its colours: the print colours (white paper) unless the theme's are passed. */
   ink: TableInk = PRINT_INK,
+  /** Millimetres of the paper per annotation px (min(paper width, height) / ANNOTATION_SCALE_DIVISOR; A4 by default). */
+  mmPerAnnoPx = 210 / ANNOTATION_SCALE_DIVISOR,
 ) {
+  // The rules and swatch borders as wide as in the PDF (mm on the paper).
+  const rule = (MATERIAL_TABLE_RULE_MM / mmPerAnnoPx) * scale;
+  const swatchBorder = (MATERIAL_TABLE_SWATCH_BORDER_MM / mmPerAnnoPx) * scale;
   const { padding, swatchW, headerLineH, bodyLineH, headerLines, cellLines, colW, headerH, rowHeights, totalW, totalH, headerFont, bodyFont } =
     layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
 
   // Background
   ctx.fillStyle = ink.tableBg;
   ctx.strokeStyle = ink.tableRule;
-  ctx.lineWidth = TABLE_RULE_PX;
+  ctx.lineWidth = rule;
   ctx.fillRect(x, y, totalW, totalH);
   ctx.strokeRect(x, y, totalW, totalH);
 
@@ -307,7 +308,7 @@ export function drawTable(
     }
     // Row border
     ctx.strokeStyle = ink.tableRule;
-    ctx.lineWidth = TABLE_RULE_PX;
+    ctx.lineWidth = rule;
     ctx.beginPath();
     ctx.moveTo(x, ry + rowH);
     ctx.lineTo(x + totalW, ry + rowH);
@@ -322,7 +323,9 @@ export function drawTable(
         const swatchY = ry + (rowH - swatchW) / 2;
         ctx.fillRect(swatchX, swatchY, swatchW, swatchW);
         ctx.strokeStyle = ink.tableSwatchBorder;
+        ctx.lineWidth = swatchBorder;
         ctx.strokeRect(swatchX, swatchY, swatchW, swatchW);
+        ctx.lineWidth = rule;
       }
       if (c === 0) {
         cx += colW[c];
@@ -345,7 +348,7 @@ export function drawTable(
   for (let c = 0; c < colW.length - 1; c++) {
     separatorX += colW[c];
     ctx.strokeStyle = ink.tableRule;
-    ctx.lineWidth = TABLE_RULE_PX;
+    ctx.lineWidth = rule;
     ctx.beginPath();
     ctx.moveTo(separatorX, y);
     ctx.lineTo(separatorX, y + totalH);
@@ -400,7 +403,7 @@ export function getAnnotationBoundsPx(
   const hitPad = 4;
 
   if (anno.type === "text") {
-    const family = anno.fontFamily ?? "sans-serif";
+    const family = sheetCanvasFamily(anno.fontFamily ?? "sans-serif");
     const weight = anno.bold ? "bold" : "normal";
     const style = anno.italic ? "italic" : "normal";
     const fontSize = (anno.fontSize ?? 12) * annoScale;
@@ -442,9 +445,9 @@ export function getAnnotationBoundsPx(
     const barH = 200 * annoScale;
     const numTicks = 5;
     const labelPad = 5 * annoScale;
-    const labelFontSize = Math.max(COLOR_BAR_MIN_TEXT_PX, 11 * annoScale);
+    const labelFontSize = 11 * annoScale;
 
-    ctx.font = `${labelFontSize}px 'Segoe UI', sans-serif`;
+    ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
     let maxLabelW = 0;
     const fosScale = colorBarRange(anno, result, resultView);
     for (let t = 0; t <= numTicks; t++) {

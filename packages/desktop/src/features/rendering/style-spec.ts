@@ -135,8 +135,8 @@ export const FAILURE_MASS_FILL_OPACITY = 0.12;
 export const SLICE_LINE_OPACITY = 0.6;
 /** Slice wall line width (logical px; PDF scales by mmPerPx). */
 export const SLICE_LINE_WIDTH_PX = 0.55;
-/** The model outline over a result (canvas px; 1 in the edit view). */
-export const RESULT_OUTLINE_WIDTH_PX = 0.7;
+/** The model outline over a result (mm on the paper, the PDF's; 1 px in the edit view). */
+export const RESULT_OUTLINE_MM = 0.3;
 /** Slice wall colour over a dark material fill (white). */
 export const SLICE_LINE_ON_DARK_COLOR: DualColor = { hex: "#ffffff", rgb: [255, 255, 255] };
 /** A sliding mass thinner than this on screen gets a band of this width along it. */
@@ -151,6 +151,8 @@ export const CRACK_WATER_OPACITY = 0.85;
 export const CRITICAL_SURFACE_LINE_WIDTH_PX = 1.5;
 /** The other slip surfaces' lines (Surfaces: all, filter). */
 export const SLIP_SURFACE_LINE_WIDTH_PX = 1;
+/** Their width on the paper (mm; the PDF's, and the result view's at its sheet's px per mm), scaled by a style's width over SLIP_SURFACE_LINE_WIDTH_PX. */
+export const SLIP_SURFACE_LINE_MM = 0.15;
 /** The center's radius lines to the entry and exit. */
 export const CENTER_LINE_WIDTH_PX = 1;
 /** The radius of the center's dot. */
@@ -183,20 +185,72 @@ export const ANNOTATION_DEFAULT_TEXT_COLOR = "#000000";
 /** Number of tick/label positions on the FOS colour bar. */
 export const COLOR_BAR_NUM_TICKS = 5;
 
+// ── The sheet's frame: ticks, their labels and the plot frame (mm on the paper) ──
+// The PDF draws these sizes; the result view draws them at its sheet's px per mm.
+
+/** Millimetres per typographic point. */
+export const MM_PER_PT = 0.3528;
+/** A labelled tick and a minor tick. */
+export const RULER_TICK_MM = 2;
+export const RULER_MINOR_TICK_MM = 1;
+/** Their lines. */
+export const RULER_TICK_LINE_MM = 0.2;
+export const RULER_MINOR_TICK_LINE_MM = 0.15;
+/** The tick labels (pt), between the tick and the label, and the label's baseline below its tick (x axis, mm) or beside it (y axis, mm). */
+export const RULER_FONT_PT = 9;
+export const RULER_LABEL_GAP_MM = 1;
+export const RULER_X_LABEL_BASELINE_MM = RULER_FONT_PT * 0.35 + RULER_LABEL_GAP_MM;
+export const RULER_Y_LABEL_BASELINE_MM = RULER_FONT_PT * 0.12;
+/** The ticks and their labels: dark grey on white paper. */
+export const RULER_COLOR: DualColor = { hex: "#323232", rgb: [50, 50, 50] };
+/** The plot frame's line. */
+export const PLOT_FRAME_LINE_MM = 0.4;
+/**
+ * The canvas's family for the sheet's sans-serif text: Arial's metrics, as
+ * the PDF's embedded Liberation Sans has, so that text takes the same room.
+ */
+export const SHEET_SANS_FAMILY = "Arial, 'Liberation Sans', sans-serif";
+
+/** The canvas family of a family the sheet's text names: sans-serif as SHEET_SANS_FAMILY, others as named. */
+export function sheetCanvasFamily(family: string): string {
+  return family === "sans-serif" ? SHEET_SANS_FAMILY : family;
+}
+
+// ── The F label at the critical surface (mm on the paper; the PDF's) ──
+
+/** Its text (pt at the default size, bold sans-serif). */
+export const FOS_LABEL_FONT_PT = 10;
+/** From the anchor (the circle's centre) to the text. */
+export const FOS_LABEL_OFFSET_MM = 3;
+/** The text's baseline above the underline, at the default size. */
+export const FOS_LABEL_RAISE_MM = 1;
+/** The underline: its width and how far it runs past the text. */
+export const FOS_LABEL_UNDERLINE_MM = 0.2;
+/** The plate under the label: past the text at the sides, above and below the underline (at the default size). */
+export const FOS_LABEL_PLATE_SIDE_MM = 0.5;
+export const FOS_LABEL_PLATE_TOP_MM = 4.5;
+export const FOS_LABEL_PLATE_BOTTOM_MM = 1;
+/** Between two stacked labels (custom surfaces). */
+export const FOS_LABEL_STACK_GAP_MM = 0.5;
+
+// ── Page 1's title line in the top margin (the PDF's; previewed by the result view) ──
+
+/** Its text (pt). */
+export const PAGE_TITLE_PT = 9;
+/** Its baseline above the plot frame (mm). */
+export const PAGE_TITLE_RAISE_MM = 2.5;
+/** Between the model's name and the result (mm), and kept before the out-of-date note. */
+export const PAGE_TITLE_GAP_MM = 4;
+/** Less than this left for the result (mm): it is left out. */
+export const PAGE_TITLE_MIN_ROOM_MM = 10;
+
+/** The colour bar's border and tick lines (mm on the paper). */
+export const COLOR_BAR_LINE_MM = 0.2;
+/** The material table's rules and its swatches' borders (mm on the paper, the canvas and the PDF alike). */
+export const MATERIAL_TABLE_RULE_MM = 0.2;
+export const MATERIAL_TABLE_SWATCH_BORDER_MM = 0.1;
 /** Space between the colour bar (its title, bar and values) and the edge of its plate, at annotation scale 1. */
 export const COLOR_BAR_PLATE_PAD = 4;
-/**
- * The smallest text of the colour bar on the canvas (px): its title and
- * values stay readable on a small sheet (at 100 % in a small window). The
- * PDF sizes it with the paper.
- */
-export const COLOR_BAR_MIN_TEXT_PX = 10;
-/**
- * The smallest text of the material table on the canvas (px): a smaller
- * table (its size follows the sheet and its text size) is drawn larger as
- * a whole, so it stays readable at 100 %. The PDF sizes it with the paper.
- */
-export const MATERIAL_TABLE_MIN_TEXT_PX = 9;
 
 // ── Material model hatch patterns ──────────────────────────────
 

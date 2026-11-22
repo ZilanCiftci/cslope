@@ -229,8 +229,8 @@
   --color-canvas-paper-outside: #d9d9d9;
   --color-canvas-paper: #ffffff;
   --color-canvas-paper-shadow: rgba(0,0,0,0.35);
-  --color-canvas-paper-ticks: #2e2e2e;
-  --color-canvas-paper-border: #111111;
+  --color-canvas-paper-ticks: #323232; /* RULER_COLOR, as the PDF */
+  --color-canvas-paper-border: #000000; /* the plot frame, as the PDF */
   --color-canvas-marker: #000000;
   --color-canvas-custom-surface: #7e22ce;
   --color-canvas-reference: #a21caf;

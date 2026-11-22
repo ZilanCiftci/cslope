@@ -24,6 +24,7 @@ import {
   type VerificationCase,
 } from "@cslope/engine/verification";
 import { createExampleResultViewSettings, exampleMaterialTable } from "./benchmarks";
+import { benchmarkSheetOf, layoutBenchmarkSheet } from "./benchmark-sheet";
 import { createDefaultProjectInfo } from "./defaults";
 import { modelFromDefinition } from "./definition-model";
 import type { Annotation, ModelEntry } from "./types";
@@ -144,11 +145,13 @@ function splitInTwo(s: string): string[] {
 function withTitleBlock(model: ModelEntry, c: VerificationCase, a: PresentedAnalysis | undefined): ModelEntry {
   const title = `${c.id} ${c.title}`;
   const annotations = titleBlockAnnotations(title, referenceLines(c, a));
-  return {
-    ...model,
-    projectInfo: { ...createDefaultProjectInfo(), ...model.projectInfo, title, subtitle: shortReference(c.reference) },
-    resultViewSettings: createExampleResultViewSettings(paperContentOf(model), { annotations, showFosLabel: true }),
-  };
+  const projectInfo = { ...createDefaultProjectInfo(), ...model.projectInfo, title, subtitle: shortReference(c.reference) };
+  const content = paperContentOf(model);
+  const settings = createExampleResultViewSettings(content, { annotations, showFosLabel: true })!;
+  // The table clear of the block, the model low on the sheet under both (benchmark-sheet.ts).
+  const sheet = benchmarkSheetOf({ ...model, projectInfo, result: null, resultViewSettings: settings });
+  const { annotations: placed, viewLock } = layoutBenchmarkSheet(sheet, content, settings.annotations, settings.paperFrame);
+  return { ...model, projectInfo, resultViewSettings: { ...settings, annotations: placed, viewLock: viewLock ?? settings.viewLock } };
 }
 
 /**
