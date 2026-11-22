@@ -705,6 +705,8 @@ export function extendBoundsWithResultFitExtras(params: {
   // annotation's anchor corner (the previous measurement here always
   // extended right/down from the anchor point).
   for (const anno of rvs.annotations) {
+    // (a material table or color bar turned off takes no room)
+    if (anno.type !== "reference" && anno.hidden === true) continue;
     if (anno.type === "reference") {
       // In model coordinates: a polyline's points, a whole circle; a circle
       // clipped to the ground lies within the model and adds nothing.

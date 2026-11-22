@@ -70,4 +70,10 @@ describe("colorScaleOf", () => {
       capped: true,
     });
   });
+
+  it("takes no scale from a color bar turned off: the drawing uses the automatic range", () => {
+    const off = bar({ id: "a", scaleMode: "fixed", scaleMin: 1, scaleMax: 3, scheme: "viridis", hidden: true });
+    expect(firstColorBar([off])).toBeUndefined();
+    expect(colorScaleOf({ annotations: [off], fosFilterMax: 1.5 }, res).range).toEqual({ min: 1.234, max: 2.468, capped: true });
+  });
 });

@@ -170,14 +170,15 @@ describe("listed layers (Properties › Layers)", () => {
     expect(resultLayerKeys({ ...src({ showCustomSurfaces: true }), result: null, hasCustomPlanes: true })).not.toContain("customSurfaces");
   });
 
-  it("lists a remembered material table turned off by its own key, kept in a moved order", () => {
-    const table: Annotation = { id: "m", type: "material-table", x: 0.9, y: 0.05 };
-    const s = src(
-      { annotations: ANNOS.filter((a) => a.id !== "m"), layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "m", "t"] },
-      { offBuiltIns: [table] },
-    );
+  it("lists a hidden material table off where it stands; the renderers and the hit test leave it out", () => {
+    const annos = ANNOS.map((a): Annotation => (a.id === "m" && a.type !== "reference" ? { ...a, hidden: true } : a));
+    const s = src({ annotations: annos, layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "m", "t"] });
+    expect(resultLayerKeys(s)).not.toContain("m");
+    expect(annotationsInLayerOrder(s).map((a) => a.id)).not.toContain("m");
     const listed = resultLayers(s, true);
     expect(listed.find((l) => l.key === "m")?.off).toBe(true);
+    // in its place: under the text, as stored
+    expect(listed.map((l) => l.key).slice(-3)).toEqual(["m", "t", "color-bar"]);
     const order = movedLayerOrder(s, "t", 0, true);
     expect(order).toContain("m");
     expect(order).not.toContain("color-bar");

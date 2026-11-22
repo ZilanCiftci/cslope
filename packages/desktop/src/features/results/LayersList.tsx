@@ -114,7 +114,6 @@ const muted = { color: "var(--color-vsc-text-muted)" };
 
 export function LayersList({ resolveText }: { resolveText: (text: string) => string }) {
   const rvs = useAppStore((s) => s.resultViewSettings);
-  const offAnnotations = useAppStore((s) => s.offAnnotations[s.activeModelId]);
   const setBuiltInShown = useAppStore((s) => s.setBuiltInAnnotationShown);
   const result = useAppStore((s) => s.result);
   // The custom surfaces' layer is listed before a run when the model has custom planes.
@@ -129,7 +128,7 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
   const selectedLayer = useAppStore((s) => s.selectedResultLayer);
   const setSelectedLayer = useAppStore((s) => s.setSelectedResultLayer);
 
-  const src: LayerSource = { resultViewSettings: rvs, result, backgrounds, offBuiltIns: offAnnotations, hasCustomPlanes };
+  const src: LayerSource = { resultViewSettings: rvs, result, backgrounds, hasCustomPlanes };
   // Topmost first, with the built-in layers turned off.
   const layers = resultLayers(src, true).reverse();
 

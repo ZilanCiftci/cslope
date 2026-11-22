@@ -518,7 +518,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       projectCreated: created ?? null,
       ...mapModelToState(target),
       runAll: null,
-      offAnnotations: {},
       _pendingFitToScreen: !hasSavedViewport,
     });
     clearUndoHistory(api);
@@ -537,7 +536,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       projectCreated: null,
       ...mapModelToState(entry),
       runAll: null,
-      offAnnotations: {},
     });
     clearUndoHistory(api);
     markProjectClean(get());
@@ -556,7 +554,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
-      offAnnotations: {},
       _pendingFitToScreen: true,
     });
     clearUndoHistory(api);
@@ -575,7 +572,6 @@ export const createModelsSlice: SliceCreator<ModelsSlice> = (
       projectCreated: null,
       ...mapModelToState(first),
       runAll: null,
-      offAnnotations: {},
       _pendingFitToScreen: true,
     });
     clearUndoHistory(api);

@@ -347,7 +347,8 @@ describe("ResultSidebar layers list", () => {
     render(<ResultSidebar />);
     act(() => useAppStore.getState().updateAnnotation("m", { x: 0.7, y: 0.4, tableColumns: ["model"] }));
     fireEvent.click(screen.getByRole("button", { name: "Turn off: Material table" }));
-    expect(annotations().some((a) => a.type === "material-table")).toBe(false);
+    // Kept in the model, hidden: saved with the project, its place and settings with it.
+    expect(anno("m")).toMatchObject({ hidden: true, x: 0.7, y: 0.4, tableColumns: ["model"] });
     const off = screen.getByRole("listitem", { name: "Material table (off)" });
     // The Delete key does nothing on it.
     fireEvent.keyDown(off, { key: "Delete" });
@@ -355,14 +356,47 @@ describe("ResultSidebar layers list", () => {
     expect(rowKeys().indexOf("m")).toBe(2);
     fireEvent.click(screen.getByRole("button", { name: "Turn on: Material table" }));
     expect(anno("m")).toMatchObject({ x: 0.7, y: 0.4, tableColumns: ["model"] });
+    expect(anno("m").hidden).toBeUndefined();
     expect(rowKeys().indexOf("m")).toBe(2);
     // On, the Delete key does nothing either.
     fireEvent.keyDown(screen.getByRole("listitem", { name: "Material table" }), { key: "Delete" });
     expect(anno("m")).toBeDefined();
 
-    // A second color bar cannot be added.
+    // A second color bar cannot be added, also while the one there is off.
     act(() => useAppStore.getState().addAnnotation("color-bar"));
     expect(annotations().filter((a) => a.type === "color-bar")).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Turn off: Color bar" }));
+    act(() => useAppStore.getState().addAnnotation("color-bar"));
+    expect(annotations().filter((a) => a.type === "color-bar")).toHaveLength(1);
+  });
+
+  it("opens a saved table turned off as off, where it was, and turns it on there", () => {
+    act(() =>
+      useAppStore.setState({
+        resultViewSettings: normalizeResultView({
+          ...DEFAULT_RESULT_VIEW_SETTINGS,
+          annotations: [
+            { id: "t", type: "text", x: 0.1, y: 0.1, text: "T" },
+            { id: "m", type: "material-table", x: 0.6, y: 0.5, hidden: true, tableColumns: ["model"] },
+            { id: "c", type: "color-bar", x: 0.9, y: 0.3, hidden: "yes" },
+          ],
+          layerOrder: ["m", "t", "c"],
+        }),
+      }),
+    );
+    render(<ResultSidebar />);
+    expect(screen.getByRole("listitem", { name: "Material table (off)" })).toBeInTheDocument();
+    // (only true turns one off)
+    expect(screen.getByRole("listitem", { name: "Color bar" })).toBeInTheDocument();
+    expect(rowKeys().indexOf("c")).toBeLessThan(rowKeys().indexOf("t"));
+    expect(rowKeys().indexOf("t")).toBeLessThan(rowKeys().indexOf("m"));
+    fireEvent.click(screen.getByRole("button", { name: "Turn on: Material table" }));
+    expect(anno("m")).toMatchObject({ x: 0.6, y: 0.5, tableColumns: ["model"] });
+    expect(rowKeys().indexOf("c")).toBeLessThan(rowKeys().indexOf("t"));
+    expect(rowKeys().indexOf("t")).toBeLessThan(rowKeys().indexOf("m"));
+    // One undo step: off again.
+    act(() => useAppStore.temporal.getState().undo());
+    expect(anno("m").hidden).toBe(true);
   });
 
   it("opens an old file's material table on, where it was; a file without one has it off", () => {
@@ -381,7 +415,7 @@ describe("ResultSidebar layers list", () => {
     expect(annotations().filter((a) => a.type === "material-table")).toHaveLength(1);
   });
 
-  it("turns on a color bar remembered while off, with its settings, not a new one", () => {
+  it("turns on a color bar turned off, with its settings, not a new one", () => {
     render(<ResultSidebar />);
     act(() => useAppStore.getState().updateAnnotation("c", { scaleMode: "fixed", scaleMin: 1, scaleMax: 3, x: 0.3 }));
     fireEvent.click(screen.getByRole("button", { name: "Turn off: Color bar" }));

@@ -370,3 +370,58 @@ fn the_document_form_round_trips() {
         assert_eq!(back, project, "{rel}");
     }
 }
+
+#[test]
+fn a_hidden_table_and_bar_and_surfaces_off_read_and_write_back() {
+    // (a material table and a color bar turned off, every surface off and
+    // an order that names the critical surface's old layer, as the app
+    // writes them; a second color bar of an older file is dropped)
+    let rel = FIXTURES[0];
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        let view = &mut v["resultViewSettings"];
+        view["showSurfaces"] = json!(false);
+        view["annotations"] = json!([
+            { "id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T" },
+            { "id": "m", "type": "material-table", "x": 0.7, "y": 0.2, "hidden": true, "tableColumns": ["model"] },
+            { "id": "c", "type": "color-bar", "x": 0.9, "y": 0.4, "hidden": true, "scaleMode": "fixed", "scaleMin": 1.0, "scaleMax": 2.0 },
+            { "id": "c2", "type": "color-bar", "x": 0.5, "y": 0.5 },
+            { "id": "t2", "type": "text", "x": 0.1, "y": 0.2, "text": "U", "hidden": true }
+        ]);
+        view["layerOrder"] = json!([
+            "soilColor",
+            "criticalSurface",
+            "slices",
+            "surfaces",
+            "m",
+            "c",
+            "t"
+        ]);
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let view = &model["resultViewSettings"];
+    assert_eq!(view["showSurfaces"], json!(false));
+    assert_eq!(
+        view["layerOrder"],
+        json!(["soilColor", "surfaces", "slices", "m", "c", "t"])
+    );
+    let annos = view["annotations"].as_array().unwrap();
+    let ids: Vec<&str> = annos.iter().map(|a| a["id"].as_str().unwrap()).collect();
+    assert_eq!(ids, ["t", "m", "c", "t2"]);
+    assert_eq!(annos[1]["hidden"], json!(true));
+    assert_eq!(annos[1]["tableColumns"], json!(["model"]));
+    assert_eq!(annos[2]["hidden"], json!(true));
+    assert_eq!(annos[2]["scaleMax"], json!(2));
+    // only a table or a bar is turned off
+    assert!(annos[3].get("hidden").is_none());
+    // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}

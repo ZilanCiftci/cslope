@@ -536,6 +536,10 @@ pub struct Annotation {
     pub scheme_to: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scheme_mid: Option<String>,
+    /// A material table or color bar turned off (Layers): kept with its
+    /// place and settings, not drawn. Written only as `true`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hidden: Option<bool>,
     // reference annotations
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label: Option<String>,

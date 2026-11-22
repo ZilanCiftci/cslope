@@ -208,3 +208,31 @@ def test_a_name_that_is_not_unicode_is_named(tmp_path):
     p.models[0].data["name"] = "a\ud800b"
     with pytest.raises(ValueError, match=r"models\[0\]\.model\.name holds a lone surrogate"):
         p.save(tmp_path / "x.cslp")
+
+
+@needs_fixtures
+def test_keeps_a_table_and_a_bar_turned_off_and_surfaces_off(tmp_path):
+    # (as the app writes them: a material table and a color bar turned off
+    # with their place and settings, every surface off)
+    def edit(v):
+        view = v["resultViewSettings"]
+        view["showSurfaces"] = False
+        view["annotations"] = [
+            {"id": "m", "type": "material-table", "x": 0.7, "y": 0.2, "hidden": True, "tableColumns": ["model"]},
+            {"id": "c", "type": "color-bar", "x": 0.9, "y": 0.4, "hidden": True, "scaleMode": "fixed", "scaleMin": 1, "scaleMax": 2},
+        ]
+        view["layerOrder"] = ["soilColor", "surfaces", "m", "c"]
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "hidden.cslp", "models/model-1/model.json", edit)
+    p = project.open(src)
+    target = tmp_path / "saved.cslp"
+    p.save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["showSurfaces"] is False
+    assert [(a["id"], a.get("hidden")) for a in view["annotations"]] == [("m", True), ("c", True)]
+    assert view["annotations"][1]["scaleMax"] == 2
+    assert view["layerOrder"] == ["soilColor", "surfaces", "m", "c"]
+    # saved again, the same entry
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]

@@ -2194,7 +2194,11 @@ fn is_hex_color(v: Option<&Value>) -> bool {
     })
 }
 
-const PAPER_ANNOTATION_KEYS: [&str; 23] = [
+/// `BUILT_IN_ANNOTATION_TYPES` (store/types.ts): turned on and off, one
+/// color bar at most.
+const BUILT_IN_ANNOTATION_TYPES: [&str; 2] = ["material-table", "color-bar"];
+
+const PAPER_ANNOTATION_KEYS: [&str; 24] = [
     "id",
     "type",
     "x",
@@ -2218,6 +2222,7 @@ const PAPER_ANNOTATION_KEYS: [&str; 23] = [
     "schemeFrom",
     "schemeTo",
     "schemeMid",
+    "hidden",
 ];
 
 /// `normalizeResultView`.
@@ -2386,8 +2391,26 @@ fn result_view(raw: Option<&Value>, cx: &Ctx) -> Value {
     Value::Object(out)
 }
 
-/// `normalizeAnnotations` with `normalizeColorBarScale`.
+/// `normalizeAnnotations` with `normalizeColorBarScale` and
+/// `normalizeHidden`, then `singleColorBar`: the first color bar is kept,
+/// the others are dropped.
 fn annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
+    let mut bar_seen = false;
+    paper_and_reference_annotations(raw, cx)
+        .into_iter()
+        .filter(|a| {
+            if a["type"].as_str() != Some("color-bar") {
+                return true;
+            }
+            let first = !bar_seen;
+            bar_seen = true;
+            first
+        })
+        .collect()
+}
+
+/// `normalizeAnnotations` with `normalizeColorBarScale` and `normalizeHidden`.
+fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
     let Some(Value::Array(items)) = raw else {
         return Vec::new();
     };
@@ -2437,6 +2460,12 @@ fn annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
                     "tableColumns".into(),
                     Value::Array(cols.iter().filter(|c| c.is_string()).cloned().collect()),
                 );
+            }
+            // `normalizeHidden`: a built-in annotation turned off, only as true
+            if o.get("hidden") == Some(&Value::Bool(true))
+                && BUILT_IN_ANNOTATION_TYPES.contains(&kind)
+            {
+                out.insert("hidden".into(), json!(true));
             }
             if kind == "color-bar" {
                 if let Some(m) =

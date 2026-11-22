@@ -650,7 +650,7 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "result-surfaces-critical",
-    title: "Result sidebar, the Surfaces layer (off) selected: Show Critical surface",
+    title: "Result sidebar, the Surfaces layer selected: Show Critical surface, the critical surface's style",
     area: "sidebar",
     result: true,
     open: async (ctx) => {
@@ -672,6 +672,30 @@ const sidebarScenes: Scene[] = [
         if (bar) s.updateAnnotation(bar.id, { scaleMode: "filter" });
         s.setResultViewSettings({ surfaceDisplay: "filter", fosFilterMax: limit });
         s.setSelectedResultLayer("surfaces");
+      }`);
+    },
+  },
+  {
+    id: "result-surfaces-off",
+    title: "Result view with the Surfaces layer turned off (no surface, not the critical one either), its properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ showSurfaces: false, surfaceDisplay: "all" }); s.setSelectedResultLayer("surfaces"); }`);
+    },
+  },
+  {
+    id: "main-result-table-off-reopened",
+    title: "Result view after the material table was turned off and the project saved and opened again: the table listed off, not drawn",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      // The saved form of the models (JSON, as the project file holds them) loaded again.
+      await ctx.store(`(s, store) => {
+        s.setBuiltInAnnotationShown("material-table", false);
+        const st = store.getState();
+        st.loadProject({ models: JSON.parse(JSON.stringify(st.models)), activeModelId: st.activeModelId });
+        store.getState().setMode("result");
       }`);
     },
   },

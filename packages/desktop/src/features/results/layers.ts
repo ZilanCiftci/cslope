@@ -85,13 +85,6 @@ export interface LayerSource {
   backgrounds?: readonly BackgroundImage[];
   /** Whether the model has custom search planes (their layer is listed before a run). */
   hasCustomPlanes?: boolean;
-  /**
-   * The built-in annotations (material table, color bar) of the model
-   * turned off this session (the store's `offAnnotations`), listed greyed
-   * where they stood. A built-in type with none on the sheet and none here
-   * is listed as one row on top (`builtInLayerKey`).
-   */
-  offBuiltIns?: readonly Annotation[];
 }
 
 /**
@@ -186,21 +179,21 @@ export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
     // Listed by its setting: on (drawn once there is something to draw) or off.
     return displayLayerOn(key, src.resultViewSettings) ? [{ key, kind: "display", layer: key }] : [{ key, kind: "display", layer: key, off: true }];
   };
-  // The built-in annotations turned off: those remembered, else one row of the type.
-  const offBuiltIn = (): ResultLayer[] => {
+  // A built-in type the model has none of: one row of the type, off.
+  const missingBuiltIn = (): ResultLayer[] => {
     if (!listed) return [];
-    return BUILT_IN_ANNOTATION_TYPES.flatMap((type): ResultLayer[] => {
-      if (annotations.some((a) => a.type === type)) return [];
-      const off = (src.offBuiltIns ?? []).filter((a) => a.type === type);
-      const shown = off.length > 0 ? off : [{ id: builtInLayerKey(type), type, x: 0, y: 0 } as Annotation];
-      return shown.map((a) => ({ key: a.id, kind: "annotation", annotation: a, off: true }));
-    });
+    return BUILT_IN_ANNOTATION_TYPES.flatMap((type): ResultLayer[] =>
+      annotations.some((a) => a.type === type)
+        ? []
+        : [{ key: builtInLayerKey(type), kind: "annotation", annotation: { id: builtInLayerKey(type), type, x: 0, y: 0 } as Annotation, off: true }],
+    );
   };
+  // A table or bar turned off (`hidden`): listed off, not drawn.
   const annos = (reference: boolean): ResultLayer[] => [
     ...annotations
-      .filter((a) => (a.type === "reference") === reference)
-      .map((a): ResultLayer => ({ key: a.id, kind: "annotation", annotation: a })),
-    ...(reference ? [] : offBuiltIn()),
+      .filter((a) => (a.type === "reference") === reference && (listed || a.hidden !== true))
+      .map((a): ResultLayer => (a.hidden === true ? { key: a.id, kind: "annotation", annotation: a, off: true } : { key: a.id, kind: "annotation", annotation: a })),
+    ...(reference ? [] : missingBuiltIn()),
   ];
   return [
     ...display("soilColor"),
@@ -297,8 +290,7 @@ export function annotationsInLayerOrder(src: LayerSource): Annotation[] {
  * of the layers drawn (with `listed`: of the layers listed), bottom
  * first, after the move. The keys of layers not drawn now keep their
  * place after the key they followed; those of annotations and drawings
- * that no longer exist are dropped (a built-in annotation turned off this
- * session keeps its place).
+ * that no longer exist are dropped.
  */
 export function movedLayerOrder(src: LayerSource, key: string, index: number, listed = false): string[] {
   const keys = resultLayerKeys(src, listed).filter((k) => !isBuiltInPlaceholderKey(k));
@@ -311,7 +303,7 @@ export function movedLayerOrder(src: LayerSource, key: string, index: number, li
 
 /** `visible` (the layers drawn, bottom first) with the remembered keys of the others put back. */
 function storedLayerOrder(src: LayerSource, visible: readonly string[]): string[] {
-  const annotationIds = new Set([...src.resultViewSettings.annotations, ...(src.offBuiltIns ?? [])].map((a) => a.id));
+  const annotationIds = new Set(src.resultViewSettings.annotations.map((a) => a.id));
   const drawingKeys = new Set((src.backgrounds ?? []).map((b) => drawingLayerKey(b.id)));
   const known = (k: string) =>
     isDisplayLayerKey(k) || annotationIds.has(k) || (k.startsWith(DRAWING_LAYER_PREFIX) ? drawingKeys.has(k) : false);
