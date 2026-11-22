@@ -372,6 +372,61 @@ fn the_document_form_round_trips() {
 }
 
 #[test]
+fn a_plot_style_reads_and_writes_back() {
+    // (a slice plot styled in Properties › Plot, as the app writes it; bad
+    // members, defaults and a style on another annotation are dropped)
+    let rel = FIXTURES[0];
+    let style = json!({
+        "color": "#cc0000", "line": "dashed", "lineWidth": 0.5, "marker": "plus",
+        "markerSize": 3, "markerOpen": true, "showTitle": false, "showAxisTitle": false,
+        "showGrid": false, "showBorder": false, "fontSize": 12,
+        "xMin": 1, "xMax": 9.5, "yMin": -5, "yMax": 100
+    });
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["annotations"] = json!([
+            { "id": "p", "type": "plot", "x": 0.3, "y": 0.3, "fontSize": 12.0, "plotAxisX": "x", "plotAxisY": "porePressure", "plotStyle": style.clone() },
+            { "id": "q", "type": "plot", "x": 0.6, "y": 0.3, "plotStyle": { "color": "red", "line": "solid", "marker": "circle", "lineWidth": 9.0, "showGrid": true } },
+            { "id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "plotStyle": { "color": "#cc0000" } },
+            { "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12.0, "plotAxisX": "slice", "plotAxisY": "shearStrength" }
+        ]);
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let annos = model["resultViewSettings"]["annotations"]
+        .as_array()
+        .unwrap();
+    assert_eq!(annos[0]["plotStyle"], style);
+    assert!(annos[1].get("plotStyle").is_none());
+    assert!(annos[2].get("plotStyle").is_none());
+    // a plot saved before the style is written as it was
+    assert_eq!(
+        annos[3],
+        json!({ "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength" })
+    );
+    // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}
+
+#[test]
+fn an_unknown_member_of_a_plot_style_is_refused_with_its_path() {
+    let bytes = edited(FIXTURES[0], "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["annotations"] = json!([
+            { "id": "p", "type": "plot", "x": 0.3, "y": 0.3, "plotStyle": { "legend": true } }
+        ]);
+    });
+    let e = read_project(bytes, &options()).unwrap_err();
+    assert!(e.contains("annotations[0].plotStyle.legend"), "{e}");
+}
+
+#[test]
 fn a_hidden_table_and_bar_and_surfaces_off_read_and_write_back() {
     // (a material table and a color bar turned off, every surface off and
     // an order that names the critical surface's old layer, as the app

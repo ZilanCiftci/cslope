@@ -180,6 +180,25 @@ export const ANNOTATION_SCALE_DIVISOR = 600;
 /** Default annotation text colour. */
 export const ANNOTATION_DEFAULT_TEXT_COLOR = "#000000";
 
+// ── Slice plot annotation ──────────────────────────────────────
+// Sizes in annotation px (scale = min(paperW, paperH) / divisor) or mm on
+// the paper; the canvas and the PDF draw the plot from these
+// (features/annotations/plotStyle.ts).
+
+/** The plot's title and its tick values and axis title (annotation px). */
+export const PLOT_TITLE_FONT_PX = 10;
+export const PLOT_AXIS_FONT_PX = 9;
+/** The series' line: PLOT_LINE_PX annotation px, at least PLOT_LINE_MIN_MM. */
+export const PLOT_LINE_PX = 0.35;
+export const PLOT_LINE_MIN_MM = 0.25;
+/** The markers' radius: PLOT_MARKER_PX annotation px, at least PLOT_MARKER_MIN_MM. */
+export const PLOT_MARKER_PX = 1.8;
+export const PLOT_MARKER_MIN_MM = 0.35;
+/** The dash of a dashed series, in line widths. */
+export const PLOT_SERIES_DASH: readonly [number, number] = [6, 3];
+/** The PDF's plot series color (the light theme's --color-canvas-plot-line). */
+export const PLOT_LINE_COLOR: DualColor = { hex: "#26a69a", rgb: [38, 166, 154] };
+
 // ── Colour bar ─────────────────────────────────────────────────
 
 /** Number of tick/label positions on the FOS colour bar. */

@@ -2198,7 +2198,7 @@ fn is_hex_color(v: Option<&Value>) -> bool {
 /// color bar at most.
 const BUILT_IN_ANNOTATION_TYPES: [&str; 2] = ["material-table", "color-bar"];
 
-const PAPER_ANNOTATION_KEYS: [&str; 24] = [
+const PAPER_ANNOTATION_KEYS: [&str; 25] = [
     "id",
     "type",
     "x",
@@ -2215,6 +2215,7 @@ const PAPER_ANNOTATION_KEYS: [&str; 24] = [
     "tableColumns",
     "plotAxisX",
     "plotAxisY",
+    "plotStyle",
     "scaleMode",
     "scaleMin",
     "scaleMax",
@@ -2467,6 +2468,12 @@ fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> 
             {
                 out.insert("hidden".into(), json!(true));
             }
+            // `normalizePlotStyleOf`: a slice plot's style, on a plot only
+            if kind == "plot" {
+                if let Some(style) = plot_style(o.get("plotStyle"), &path, cx) {
+                    out.insert("plotStyle".into(), style);
+                }
+            }
             if kind == "color-bar" {
                 if let Some(m) =
                     str_of(o.get("scaleMode")).filter(|m| matches!(*m, "auto" | "fixed" | "filter"))
@@ -2490,6 +2497,72 @@ fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> 
             Some(Value::Object(out))
         })
         .collect()
+}
+
+/// The members of a slice plot's style (`PlotStyle`, store/types.ts).
+const PLOT_STYLE_KEYS: [&str; 15] = [
+    "color",
+    "line",
+    "lineWidth",
+    "marker",
+    "markerSize",
+    "markerOpen",
+    "showTitle",
+    "showAxisTitle",
+    "showGrid",
+    "showBorder",
+    "fontSize",
+    "xMin",
+    "xMax",
+    "yMin",
+    "yMax",
+];
+
+/// `normalizePlotStyle` (features/annotations/plotStyle.ts): the valid
+/// members that differ from the default, in the app's order; none left,
+/// no style.
+fn plot_style(raw: Option<&Value>, path: &str, cx: &Ctx) -> Option<Value> {
+    let r = obj(raw)?;
+    cx.keys(&format!("{path}.plotStyle"), r, &PLOT_STYLE_KEYS);
+    let in_range = |k: &str, lo: f64, hi: f64| num(r.get(k)).filter(|v| (lo..=hi).contains(v));
+    let mut out = Obj::new();
+    if is_hex_color(r.get("color")) {
+        out.insert(
+            "color".into(),
+            json!(str_of(r.get("color")).unwrap().to_lowercase()),
+        );
+    }
+    if let Some(l) = str_of(r.get("line")).filter(|l| matches!(*l, "dashed" | "none")) {
+        out.insert("line".into(), json!(l));
+    }
+    if let Some(v) = in_range("lineWidth", 0.05, 3.0) {
+        out.insert("lineWidth".into(), json!(v));
+    }
+    if let Some(m) = str_of(r.get("marker"))
+        .filter(|m| matches!(*m, "none" | "square" | "triangle" | "plus" | "cross"))
+    {
+        out.insert("marker".into(), json!(m));
+    }
+    if let Some(v) = in_range("markerSize", 0.2, 10.0) {
+        out.insert("markerSize".into(), json!(v));
+    }
+    if bool_of(r.get("markerOpen")) == Some(true) {
+        out.insert("markerOpen".into(), json!(true));
+    }
+    for k in ["showTitle", "showAxisTitle", "showGrid", "showBorder"] {
+        if bool_of(r.get(k)) == Some(false) {
+            out.insert(k.into(), json!(false));
+        }
+    }
+    if let Some(v) = in_range("fontSize", 4.0, 36.0) {
+        out.insert("fontSize".into(), json!(v));
+    }
+    for k in ["xMin", "xMax", "yMin", "yMax"] {
+        if let Some(v) = num(r.get(k)) {
+            out.insert(k.into(), json!(v));
+        }
+    }
+    (!out.is_empty()).then_some(Value::Object(out))
 }
 
 /// `normalizeReferenceAnnotation` (features/annotations/reference.ts).

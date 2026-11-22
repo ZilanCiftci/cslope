@@ -628,6 +628,29 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
     },
   },
   {
+    name: "result sheet: a styled slice plot, bad style members and a style on a text",
+    raw: {
+      id: "sheet-plot-style",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        annotations: [
+          {
+            id: "p",
+            type: "plot",
+            x: 0.3,
+            y: 0.6,
+            plotAxisX: "x",
+            plotAxisY: "porePressure",
+            plotStyle: { color: "#CC0000", line: "dashed", lineWidth: 0.5, marker: "plus", markerSize: 3, showGrid: false, fontSize: 12, yMin: 0, yMax: 100 },
+          },
+          { id: "q", type: "plot", x: 0.6, y: 0.6, plotStyle: { color: "red", line: "solid", marker: "circle", markerOpen: false, lineWidth: 9, showTitle: true, xMin: "1" } },
+          { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", plotStyle: { color: "#cc0000" } },
+        ],
+      },
+    },
+  },
+  {
     name: "result sheet: a material table and a color bar turned off, a second color bar",
     raw: {
       id: "sheet-hidden",

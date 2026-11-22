@@ -326,6 +326,46 @@ export type PlotMetricKey =
   | "resistingForce"
   | "pullingForce";
 
+/** The line of a slice plot's series; absent: solid. */
+export type PlotLineStyle = "solid" | "dashed" | "none";
+
+/** The markers at a slice plot's data points; absent: circle. */
+export type PlotMarker = "none" | "circle" | "square" | "triangle" | "plus" | "cross";
+
+/**
+ * The style of a slice plot annotation. Only what differs from the
+ * default is saved: a color, a line other than solid, a marker other
+ * than a circle, `markerOpen` as true, the show switches as false, sizes
+ * and fixed axis ends as numbers.
+ */
+export interface PlotStyle {
+  /** The series' color, "#rrggbb"; absent: the theme's plot color. */
+  color?: string;
+  line?: PlotLineStyle;
+  /** The series' line width in mm on the paper. */
+  lineWidth?: number;
+  marker?: PlotMarker;
+  /** The markers' size (diameter) in mm on the paper. */
+  markerSize?: number;
+  /** Circles, squares and triangles drawn as outlines. */
+  markerOpen?: boolean;
+  /** The plot's title (the quantity and its unit). */
+  showTitle?: boolean;
+  /** The x axis's title ("Slice" or "x (m)"). */
+  showAxisTitle?: boolean;
+  /** The gridlines inside the chart. */
+  showGrid?: boolean;
+  /** The outer border of the plot. */
+  showBorder?: boolean;
+  /** The size of the tick values and the axis title (annotation px; the title is 10/9 of it). */
+  fontSize?: number;
+  /** Fixed ends of the axes; absent: from the data. */
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
+}
+
 export type AnchorPosition =
   | "top-left"
   | "top-right"
@@ -353,6 +393,12 @@ export interface PaperAnnotation {
   tableColumns?: MaterialTableColumnKey[];
   plotAxisX?: PlotAxisMode;
   plotAxisY?: PlotMetricKey;
+  /**
+   * Slice plot: how its series, axes and frame are drawn (Properties ›
+   * Plot). Every member is an override; absent, the plot is drawn as it
+   * always was (features/annotations/plotStyle.ts).
+   */
+  plotStyle?: PlotStyle;
   /**
    * Colour bar: the FOS range of the scale, which also colours the
    * surfaces of the plot. "auto" (absent): from the critical FOS to a cap

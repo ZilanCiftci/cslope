@@ -733,6 +733,31 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect("hidden" in old.annotations[0]).toBe(false);
   });
 
+  it("keeps a slice plot's style (also in a template), its valid members only", () => {
+    const style = { color: "#cc0000", line: "dashed", marker: "plus", lineWidth: 0.5, yMin: 0, yMax: 100, showGrid: false };
+    const view = normalizeResultView({
+      annotations: [
+        { id: "p", type: "plot", x: 0.3, y: 0.3, plotStyle: { ...style, line: "dotted", legend: true, markerSize: "big" } },
+        { id: "q", type: "plot", x: 0.6, y: 0.3, plotStyle: { color: "red", line: "solid" } },
+        { id: "t", type: "text", x: 0.1, y: 0.1, plotStyle: style },
+      ],
+    });
+    const [p, q, t] = view.annotations;
+    expect(p).toEqual({ id: "p", type: "plot", x: 0.3, y: 0.3, plotStyle: { ...style, line: undefined } });
+    expect(Object.keys((p as { plotStyle: object }).plotStyle)).not.toContain("line");
+    // Nothing valid or nothing but defaults: no style.
+    expect("plotStyle" in q).toBe(false);
+    // On another annotation: dropped.
+    expect("plotStyle" in t).toBe(false);
+    // Read again, the same.
+    expect(normalizeResultView(JSON.parse(JSON.stringify(view))).annotations).toEqual(JSON.parse(JSON.stringify(view.annotations)));
+  });
+
+  it("opens a plot saved before the style unchanged", () => {
+    const old = { id: "p", type: "plot", x: 0.3, y: 0.3, fontSize: 12, width: 0.24, height: 0.18, plotAxisX: "x", plotAxisY: "porePressure" };
+    expect(normalizeResultView({ annotations: [old] }).annotations).toEqual([old]);
+  });
+
   it("keeps a valid view lock", () => {
     const view = normalizeResultView({
       viewLock: { bottomLeft: [0, -2], topRight: [10, 5] },

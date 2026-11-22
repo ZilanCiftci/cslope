@@ -108,6 +108,7 @@ import {
   FOS_LABEL_STACK_GAP_MM,
   FOS_LABEL_UNDERLINE_MM,
   PLOT_FRAME_LINE_MM,
+  PLOT_LINE_COLOR,
   RULER_COLOR,
   RULER_FONT_PT,
   RULER_LABEL_GAP_MM,
@@ -118,7 +119,7 @@ import {
   RULER_X_LABEL_BASELINE_MM,
   RULER_Y_LABEL_BASELINE_MM,
 } from "../rendering/style-spec";
-import { fosLabelScale, fosLabelText, pdfScaled } from "../results/layer-styles";
+import { fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
@@ -163,7 +164,8 @@ import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { layoutMaterialTable } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
-import { axisTicks, tickLabel } from "../annotations/plotAxis";
+import { tickLabel } from "../annotations/plotAxis";
+import { hasFixedRange, markerShape, markerStroked, plotAxisTicks, plotLayout, resolvePlotStyle } from "../annotations/plotStyle";
 
 export function drawGrid(
   pdf: jsPDF,
@@ -1590,7 +1592,7 @@ export function drawAnnotations(
   }
 }
 
-/** Mirrors the canvas slice plot (draw.ts) in paper millimetres. */
+/** Mirrors the canvas slice plot (draw.ts) in paper millimetres, from the same layout and style (plotStyle.ts). */
 function drawPlotAnnotationPdf(
   pdf: jsPDF,
   x: number,
@@ -1602,21 +1604,22 @@ function drawPlotAnnotationPdf(
   scale: number,
 ) {
   const plot = computeSlicePlotData(result, anno.plotAxisX, anno.plotAxisY);
-  const titleMm = 10 * scale;
-  const axisMm = 9 * scale;
-  const pad = 4 * scale;
+  const style = resolvePlotStyle(anno.plotStyle, scale);
+  const L = plotLayout(x, y, w, h, scale, 1, style);
 
   pdf.setFillColor(255, 255, 255);
   pdf.setDrawColor(120, 144, 156);
   pdf.setLineWidth(0.2);
-  pdf.rect(x, y, w, h, "FD");
+  pdf.rect(x, y, w, h, style.showBorder ? "FD" : "F");
 
   setSansFont(pdf, "normal");
-  pdf.setFontSize(titleMm / 0.3528);
-  pdf.setTextColor(120, 144, 156);
-  pdf.text(plot.title, x + 6 * scale, y + pad, { baseline: "top" });
+  if (style.showTitle) {
+    pdf.setFontSize(L.titleSize / 0.3528);
+    pdf.setTextColor(120, 144, 156);
+    pdf.text(plot.title, L.titleX, L.titleY, { baseline: "top" });
+  }
 
-  pdf.setFontSize(axisMm / 0.3528);
+  pdf.setFontSize(L.axisSize / 0.3528);
   if (!plot.range) {
     pdf.setTextColor(102, 102, 102);
     pdf.text("No slice data", x + w / 2, y + h / 2, {
@@ -1626,51 +1629,82 @@ function drawPlotAnnotationPdf(
     return;
   }
 
-  const padLeft = 32 * scale;
-  const padRight = 12 * scale;
-  // Room for the x axis title, and the top tick value clear of the title (as on the canvas).
-  const padBottom = 22 * scale + axisMm + 2 * scale;
-  const padTop = titleMm + 6 * scale + axisMm / 2 + 3 * scale;
-  const chartX = x + padLeft;
-  const chartY = y + padTop;
-  const chartW = Math.max(2, w - padLeft - padRight);
-  const chartH = Math.max(2, h - padTop - padBottom);
+  const { chartX, chartY, chartW, chartH, pad, tick } = L;
   const { xMin, xMax, yMin, yMax } = plot.range;
-  // Round ticks on both axes; the axes run to the outer ticks (as on the canvas).
-  const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
-  const yTicks = axisTicks(yMin, yMax, 4);
+  // Round ticks on both axes; the axes run to the outer ticks or the style's fixed ends (as on the canvas).
+  const xTicks = plotAxisTicks(xMin, xMax, style.xMin, style.xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+  const yTicks = plotAxisTicks(yMin, yMax, style.yMin, style.yMax, 4, false);
   const mapX = (v: number) => chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
   const mapY = (v: number) =>
     chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
-  pdf.setDrawColor(207, 216, 220);
-  pdf.setLineWidth(0.15);
-  for (const v of yTicks.values) {
-    const gy = mapY(v);
-    if (gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6) pdf.line(chartX, gy, chartX + chartW, gy);
-  }
-  pdf.setDrawColor(228, 234, 237);
-  for (const v of xTicks.values) {
-    const gx = mapX(v);
-    if (gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6) pdf.line(gx, chartY, gx, chartY + chartH);
+  if (style.showGrid) {
+    pdf.setDrawColor(207, 216, 220);
+    pdf.setLineWidth(0.15);
+    for (const v of yTicks.values) {
+      const gy = mapY(v);
+      if (gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6) pdf.line(chartX, gy, chartX + chartW, gy);
+    }
+    pdf.setDrawColor(228, 234, 237);
+    for (const v of xTicks.values) {
+      const gx = mapX(v);
+      if (gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6) pdf.line(gx, chartY, gx, chartY + chartH);
+    }
   }
   pdf.setDrawColor(120, 144, 156);
   pdf.setLineWidth(0.2);
   pdf.rect(chartX, chartY, chartW, chartH, "S");
 
-  pdf.setDrawColor(38, 166, 154);
-  pdf.setFillColor(38, 166, 154);
-  pdf.setLineWidth(Math.max(0.25, 0.35 * scale));
-  for (let i = 1; i < plot.points.length; i++) {
-    const a = plot.points[i - 1];
-    const b = plot.points[i];
-    pdf.line(mapX(a.x), mapY(a.y), mapX(b.x), mapY(b.y));
+  // The series, clipped to the chart where an axis has a fixed end.
+  const [cr, cg, cb] = style.color ? hexRgb(style.color) : PLOT_LINE_COLOR.rgb;
+  const clipSeries = hasFixedRange(style);
+  if (clipSeries) {
+    pdf.saveGraphicsState();
+    pdf.rect(chartX, chartY, chartW, chartH, null);
+    pdf.clip();
+    (pdf as unknown as { discardPath?: () => void }).discardPath?.();
   }
-  const r = Math.max(0.35, 1.8 * scale);
-  for (const p of plot.points) pdf.circle(mapX(p.x), mapY(p.y), r, "F");
+  pdf.setDrawColor(cr, cg, cb);
+  pdf.setFillColor(cr, cg, cb);
+  pdf.setLineWidth(style.lineWidthMm);
+  const pts = plot.points.map((p) => [mapX(p.x), mapY(p.y)] as [number, number]);
+  if (style.line === "dashed" && pts.length > 1) {
+    // One path, so the dash runs on over the points as on the canvas.
+    pdf.setLineDashPattern(style.dashMm, 0);
+    pdf.lines(
+      pts.slice(1).map((p, i) => [p[0] - pts[i][0], p[1] - pts[i][1]]),
+      pts[0][0],
+      pts[0][1],
+      [1, 1],
+      "S",
+      false,
+    );
+    pdf.setLineDashPattern([], 0);
+  } else if (style.line === "solid") {
+    for (let i = 1; i < pts.length; i++) pdf.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+  }
+  const stroked = markerStroked(style.marker, style.markerOpen);
+  for (const [px, py] of pts) {
+    const shape = markerShape(style.marker, px, py, style.markerRadiusMm);
+    if (!shape) continue;
+    if (shape.kind === "circle") pdf.circle(shape.x, shape.y, shape.r, stroked ? "S" : "F");
+    else if (shape.kind === "polygon") {
+      const [p0, ...rest] = shape.points;
+      pdf.lines(
+        rest.map((p, i) => [p[0] - (i === 0 ? p0 : rest[i - 1])[0], p[1] - (i === 0 ? p0 : rest[i - 1])[1]]),
+        p0[0],
+        p0[1],
+        [1, 1],
+        stroked ? "S" : "F",
+        true,
+      );
+    } else {
+      for (const [x1, y1, x2, y2] of shape.segments) pdf.line(x1, y1, x2, y2);
+    }
+  }
+  if (clipSeries) pdf.restoreGraphicsState();
 
   // Tick marks and values on both axes.
-  const tick = 1.2 * scale;
   pdf.setDrawColor(120, 144, 156);
   pdf.setLineWidth(0.2);
   pdf.setTextColor(95, 107, 115);
@@ -1684,10 +1718,12 @@ function drawPlotAnnotationPdf(
     pdf.line(gx, chartY + chartH, gx, chartY + chartH + tick);
     pdf.text(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2, { align: "center", baseline: "top" });
   }
-  pdf.text(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + pad / 2 + axisMm + 2 * scale, {
-    align: "center",
-    baseline: "top",
-  });
+  if (style.showAxisTitle) {
+    pdf.text(plot.xLabel, chartX + chartW / 2, L.xTitleY, {
+      align: "center",
+      baseline: "top",
+    });
+  }
 }
 
 function drawTextAnnotation(

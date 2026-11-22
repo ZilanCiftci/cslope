@@ -47,7 +47,8 @@ import type { PageTitleLine } from "../export/page-title";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
-import { axisTicks, tickLabel } from "../annotations/plotAxis";
+import { tickLabel } from "../annotations/plotAxis";
+import { hasFixedRange, markerShape, markerStroked, plotAxisTicks, plotLayout, resolvePlotStyle } from "../annotations/plotStyle";
 import type { PointHit } from "./types";
 import { drawUnderlays, placementCanvasCorners } from "../drawings/draw-underlays";
 import { drawReferenceLabels, drawReferenceLines, drawReferenceSelections, referenceSegments, type DrawnReference } from "./reference-draw";
@@ -3456,15 +3457,18 @@ export function drawCanvas(
 
         ctx.save();
         // The PDF's slice plot (drawPlotAnnotationPdf) at the sheet's scale:
-        // sizes in annotation px (annoScale), lines in mm (pxPerMmSheet).
+        // sizes in annotation px (annoScale), lines in mm (pxPerMmSheet),
+        // laid out and styled as the PDF from the plot's style (plotStyle.ts).
         const s = annoScale;
         const mm = pxPerMmSheet;
+        const style = resolvePlotStyle(anno.plotStyle, mmPerAnnoPx);
+        const L = plotLayout(drawX, drawY, plotW, plotH, s, mm, style);
         // Opaque, as in the PDF: the surfaces behind it do not show through.
         ctx.fillStyle = INK.plotBg;
         ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 0.2 * mm;
         ctx.fillRect(drawX, drawY, plotW, plotH);
-        ctx.strokeRect(drawX, drawY, plotW, plotH);
+        if (style.showBorder) ctx.strokeRect(drawX, drawY, plotW, plotH);
 
         const plot = computeSlicePlotData(
           result,
@@ -3473,17 +3477,15 @@ export function drawCanvas(
         );
         const { points, title } = plot;
 
-        const titleSize = 10 * s;
-        const axisSize = 9 * s;
-        const pad = 4 * s;
-
-        ctx.font = `${titleSize}px ${SHEET_SANS_FAMILY}`;
-        ctx.fillStyle = INK.plotTitle;
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillText(title, drawX + 6 * s, drawY + pad);
+        if (style.showTitle) {
+          ctx.font = `${L.titleSize}px ${SHEET_SANS_FAMILY}`;
+          ctx.fillStyle = INK.plotTitle;
+          ctx.textAlign = "left";
+          ctx.textBaseline = "top";
+          ctx.fillText(title, L.titleX, L.titleY);
+        }
         if (!plot.range) {
-          ctx.font = `${axisSize}px ${SHEET_SANS_FAMILY}`;
+          ctx.font = `${L.axisSize}px ${SHEET_SANS_FAMILY}`;
           ctx.fillStyle = INK.plotMuted;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -3492,75 +3494,96 @@ export function drawCanvas(
           return;
         }
 
-        const padLeft = 32 * s;
-        const padRight = 12 * s;
-        // Room below the tick values for the x axis title, and above the
-        // top tick value so it stays clear of the plot title.
-        const padBottom = 22 * s + axisSize + 2 * s;
-        const padTop = titleSize + 6 * s + axisSize / 2 + 3 * s;
-        const chartX = drawX + padLeft;
-        const chartY = drawY + padTop;
-        const chartW = Math.max(2 * mm, plotW - padLeft - padRight);
-        const chartH = Math.max(2 * mm, plotH - padTop - padBottom);
+        const { chartX, chartY, chartW, chartH, pad, tick } = L;
         const { xMin, xMax, yMin, yMax } = plot.range;
-        // Round ticks on both axes; the axes run to the outer ticks.
-        const xTicks = axisTicks(xMin, xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
-        const yTicks = axisTicks(yMin, yMax, 4);
+        // Round ticks on both axes; the axes run to the outer ticks or the
+        // style's fixed ends.
+        const xTicks = plotAxisTicks(xMin, xMax, style.xMin, style.xMax, 5, (anno.plotAxisX ?? "slice") === "slice");
+        const yTicks = plotAxisTicks(yMin, yMax, style.yMin, style.yMax, 4, false);
 
         const mapX = (v: number) =>
           chartX + ((v - xTicks.min) / (xTicks.max - xTicks.min)) * chartW;
         const mapY = (v: number) =>
           chartY + chartH - ((v - yTicks.min) / (yTicks.max - yTicks.min)) * chartH;
 
-        ctx.strokeStyle = INK.plotGridMajor;
-        ctx.lineWidth = 0.15 * mm;
-        for (const v of yTicks.values) {
-          const gy = mapY(v);
-          if (!(gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6)) continue;
-          ctx.beginPath();
-          ctx.moveTo(chartX, gy);
-          ctx.lineTo(chartX + chartW, gy);
-          ctx.stroke();
-        }
-        ctx.strokeStyle = INK.plotGridMinor;
-        for (const v of xTicks.values) {
-          const gx = mapX(v);
-          if (!(gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6)) continue;
-          ctx.beginPath();
-          ctx.moveTo(gx, chartY);
-          ctx.lineTo(gx, chartY + chartH);
-          ctx.stroke();
+        if (style.showGrid) {
+          ctx.strokeStyle = INK.plotGridMajor;
+          ctx.lineWidth = 0.15 * mm;
+          for (const v of yTicks.values) {
+            const gy = mapY(v);
+            if (!(gy > chartY + 1e-6 && gy < chartY + chartH - 1e-6)) continue;
+            ctx.beginPath();
+            ctx.moveTo(chartX, gy);
+            ctx.lineTo(chartX + chartW, gy);
+            ctx.stroke();
+          }
+          ctx.strokeStyle = INK.plotGridMinor;
+          for (const v of xTicks.values) {
+            const gx = mapX(v);
+            if (!(gx > chartX + 1e-6 && gx < chartX + chartW - 1e-6)) continue;
+            ctx.beginPath();
+            ctx.moveTo(gx, chartY);
+            ctx.lineTo(gx, chartY + chartH);
+            ctx.stroke();
+          }
         }
 
         ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 0.2 * mm;
         ctx.strokeRect(chartX, chartY, chartW, chartH);
 
-        ctx.strokeStyle = INK.plotLine;
-        ctx.lineWidth = Math.max(0.25, 0.35 * mmPerAnnoPx) * mm;
-        ctx.beginPath();
-        points.forEach((point, index) => {
-          const px = mapX(point.x);
-          const py = mapY(point.y);
-          if (index === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.stroke();
-
-        ctx.fillStyle = INK.plotLine;
-        points.forEach((point) => {
-          const px = mapX(point.x);
-          const py = mapY(point.y);
+        // The series: a chosen color as chosen in both themes; clipped to
+        // the chart where an axis has a fixed end.
+        const seriesColor = style.color ?? INK.plotLine;
+        const clipSeries = hasFixedRange(style);
+        if (clipSeries) {
+          ctx.save();
           ctx.beginPath();
-          ctx.arc(px, py, Math.max(0.35 * mm, 1.8 * s), 0, Math.PI * 2);
-          ctx.fill();
+          ctx.rect(chartX, chartY, chartW, chartH);
+          ctx.clip();
+        }
+        if (style.line !== "none") {
+          ctx.strokeStyle = seriesColor;
+          ctx.lineWidth = style.lineWidthMm * mm;
+          if (style.dashMm.length > 0) ctx.setLineDash(style.dashMm.map((d) => d * mm));
+          ctx.beginPath();
+          points.forEach((point, index) => {
+            const px = mapX(point.x);
+            const py = mapY(point.y);
+            if (index === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          });
+          ctx.stroke();
+          if (style.dashMm.length > 0) ctx.setLineDash([]);
+        }
+
+        const stroked = markerStroked(style.marker, style.markerOpen);
+        ctx.fillStyle = seriesColor;
+        ctx.strokeStyle = seriesColor;
+        ctx.lineWidth = style.lineWidthMm * mm;
+        points.forEach((point) => {
+          const shape = markerShape(style.marker, mapX(point.x), mapY(point.y), style.markerRadiusMm * mm);
+          if (!shape) return;
+          ctx.beginPath();
+          if (shape.kind === "circle") ctx.arc(shape.x, shape.y, shape.r, 0, Math.PI * 2);
+          else if (shape.kind === "polygon") {
+            shape.points.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
+            ctx.closePath();
+          } else {
+            for (const [x1, y1, x2, y2] of shape.segments) {
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+            }
+          }
+          if (stroked) ctx.stroke();
+          else ctx.fill();
         });
+        if (clipSeries) ctx.restore();
 
         // Tick marks and values on both axes.
-        const tick = 1.2 * s;
         ctx.strokeStyle = INK.plotFrame;
         ctx.lineWidth = 0.2 * mm;
-        ctx.font = `${axisSize}px ${SHEET_SANS_FAMILY}`;
+        ctx.font = `${L.axisSize}px ${SHEET_SANS_FAMILY}`;
         ctx.fillStyle = INK.plotText;
         ctx.textBaseline = "middle";
         ctx.textAlign = "right";
@@ -3582,7 +3605,7 @@ export function drawCanvas(
           ctx.stroke();
           ctx.fillText(tickLabel(v, xTicks), gx, chartY + chartH + tick + pad / 2);
         }
-        ctx.fillText(plot.xLabel, chartX + chartW / 2, chartY + chartH + tick + pad / 2 + axisSize + 2 * s);
+        if (style.showAxisTitle) ctx.fillText(plot.xLabel, chartX + chartW / 2, L.xTitleY);
         ctx.restore();
       }
 
