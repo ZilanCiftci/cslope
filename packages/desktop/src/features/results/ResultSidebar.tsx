@@ -34,7 +34,7 @@ import { isPaperAnnotation, isReferenceAnnotation } from "../annotations/referen
 import { ReferenceProperties } from "./ReferenceProperties";
 import { LayersList } from "./LayersList";
 import { LayerProperties } from "./LayerProperties";
-import { DISPLAY_LAYER_NAMES, displayLayerShown } from "./layers";
+import { DISPLAY_LAYER_NAMES, displayLayerAvailable } from "./layers";
 import { openSearchLimits } from "../analysis/open-search-limits";
 import { isNoSlipSurfaceError } from "../analysis/analysis-error";
 import { modelViewLock } from "../view/viewLock";
@@ -501,9 +501,9 @@ export function ResultSidebar() {
   }, [selectedMaterialTableAnnotations]);
 
   const paperFrameSelected = selectedResultObject === "paper-frame";
-  // A display layer selected in Layers, while it is drawn: its properties.
+  // A display layer selected in Layers, on or off (set up before it is turned on): its properties.
   const selectedLayer =
-    selectedResultLayer && displayLayerShown(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds })
+    selectedResultLayer && displayLayerAvailable(selectedResultLayer, { resultViewSettings: rvs, result, backgrounds })
       ? selectedResultLayer
       : null;
 

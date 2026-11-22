@@ -3,6 +3,7 @@
  */
 
 import { AssignMaterialHint } from "./AssignMaterialHint";
+import { isBuiltInAnnotationType } from "../store/types";
 import type React from "react";
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import {
@@ -476,10 +477,15 @@ export function ResultCanvas() {
         selectedAnnotationIds.length > 0
       ) {
         e.preventDefault();
+        // The material table and the color bar are turned off, never removed.
+        const annos = useAppStore.getState().resultViewSettings.annotations;
+        const kept: string[] = [];
         for (const id of selectedAnnotationIds) {
-          removeAnnotation(id);
+          const a = annos.find((an) => an.id === id);
+          if (a && isBuiltInAnnotationType(a.type)) kept.push(id);
+          else removeAnnotation(id);
         }
-        setSelectedAnnotations([]);
+        setSelectedAnnotations(kept);
         return;
       }
 

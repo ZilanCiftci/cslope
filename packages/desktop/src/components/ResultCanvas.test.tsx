@@ -106,6 +106,21 @@ describe("ResultCanvas keyboard", () => {
     expect(useAppStore.getState().selectedAnnotationIds).toEqual([]);
   });
 
+  it("never deletes the material table or the color bar (they are turned off in Layers)", () => {
+    act(() =>
+      useAppStore.getState().setResultViewSettings({
+        annotations: [...ANNOS, { id: "m", type: "material-table", x: 0.9, y: 0.1 }, { id: "c", type: "color-bar", x: 0.9, y: 0.5 }],
+      }),
+    );
+    renderCanvas();
+    act(() => useAppStore.getState().setSelectedAnnotations(["a", "m", "c"]));
+    fireEvent.keyDown(document, { key: "Delete" });
+    expect(anno("a")).toBeUndefined();
+    expect(anno("m")).toBeDefined();
+    expect(anno("c")).toBeDefined();
+    expect(useAppStore.getState().selectedAnnotationIds).toEqual(["m", "c"]);
+  });
+
   it("does nothing on arrow keys without a selection", () => {
     renderCanvas();
     fireEvent.keyDown(document, { key: "ArrowRight" });

@@ -620,6 +620,62 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-layers-off",
+    title: "Result sidebar, Layers list with built-in layers turned off (greyed, eye shown): soil colors, slices, material table",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => {
+        s.setBuiltInAnnotationShown("color-bar", true);
+        s.setBuiltInAnnotationShown("material-table", false);
+        s.setResultViewSettings({ showSoilColor: false, showSlices: false });
+        s.setSelectedAnnotations([]);
+      }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-layers-off",
+    title: "Result view with soil colors, slices and the material table turned off in Layers, the color bar on",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => {
+        s.setBuiltInAnnotationShown("color-bar", true);
+        s.setBuiltInAnnotationShown("material-table", false);
+        s.setResultViewSettings({ showSoilColor: false, showSlices: false });
+        s.setSelectedAnnotations([]);
+      }`);
+    },
+  },
+  {
+    id: "result-surfaces-critical",
+    title: "Result sidebar, the Surfaces layer (off) selected: Show Critical surface",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ surfaceDisplay: "critical" }); s.setSelectedResultLayer("surfaces"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-surfaces-filter",
+    title: "Result view, all surfaces filtered on F with the Surfaces properties and the color bar following the filter",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s, store) => {
+        const r = s.result;
+        const limit = r ? Math.round((r.minFOS + (r.maxFOS - r.minFOS) * 0.15) * 100) / 100 : 1.5;
+        s.setBuiltInAnnotationShown("color-bar", true);
+        const bar = store.getState().resultViewSettings.annotations.find((a) => a.type === "color-bar");
+        if (bar) s.updateAnnotation(bar.id, { scaleMode: "filter" });
+        s.setResultViewSettings({ surfaceDisplay: "filter", fosFilterMax: limit });
+        s.setSelectedResultLayer("surfaces");
+      }`);
+    },
+  },
+  {
     id: "result-sheet",
     title: "Result sidebar, Sheet section (Results › Sheet settings)",
     area: "sidebar",

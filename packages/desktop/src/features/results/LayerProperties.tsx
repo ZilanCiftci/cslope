@@ -103,6 +103,78 @@ function OpacityField({ value, placeholder, onChange }: { value: number | undefi
 
 const LINE_WIDTH = "Line width (px)";
 
+/**
+ * The surfaces layer's Show choice (the critical surface only, or all
+ * surfaces) and, with all, the filter on F: the model's `surfaceDisplay`
+ * ("critical", "all", "filter") and `fosFilterMax`, as Surfaces in the
+ * ribbon. The color bar's "Follow the surface filter" range, the view and
+ * the PDF read the same values.
+ */
+function SurfaceShowFields() {
+  const rvs = useAppStore((s) => s.resultViewSettings);
+  const setRvs = useAppStore((s) => s.setResultViewSettings);
+  const surfaces = useAppStore((s) => s.result?.allSurfaces);
+  const mode = rvs.surfaceDisplay;
+  const all = mode !== "critical";
+  const total = surfaces?.length ?? 0;
+  const shown = mode === "filter" ? (surfaces ?? []).filter((x) => x.fos <= rvs.fosFilterMax).length : total;
+  const choice = (label: string, value: "critical" | "all", title: string) => {
+    const pressed = value === "critical" ? !all : all;
+    return (
+      <button
+        type="button"
+        className="btn flex-1"
+        aria-pressed={pressed}
+        title={title}
+        onClick={() => {
+          if (!pressed) setRvs({ surfaceDisplay: value });
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <>
+      <Field label="Show" group>
+        <div className="flex gap-1">
+          {choice("Critical surface", "critical", "Draw the critical surface only (turns the Surfaces layer off)")}
+          {choice("All surfaces", "all", "Draw every surface of the search, colored by F")}
+        </div>
+      </Field>
+      {all && (
+        <>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input
+              type="checkbox"
+              checked={mode === "filter"}
+              onChange={(e) => setRvs({ surfaceDisplay: e.target.checked ? "filter" : "all" })}
+            />
+            Filter on F
+          </label>
+          {mode === "filter" && (
+            <Field label="Show surfaces with F ≤" className="w-32">
+              <DraftNumberInput
+                value={rvs.fosFilterMax}
+                title="The largest F drawn; a color bar can follow this range"
+                onValueChange={(v) => {
+                  if (v > 0) setRvs({ fosFilterMax: v });
+                }}
+                className="w-full tabular-nums"
+              />
+            </Field>
+          )}
+          {total > 0 && (
+            <p className="text-[10px]" style={labelStyle} role="status" aria-label="Surfaces drawn">
+              {shown} of {total} surfaces
+            </p>
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
 export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
   const rvs = useAppStore((s) => s.resultViewSettings);
   const setRvs = useAppStore((s) => s.setResultViewSettings);
@@ -162,16 +234,19 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
       break;
     case "surfaces":
       body = (
-        <div className="flex gap-2">
-          <NumberField
-            label={LINE_WIDTH}
-            value={styles.surfaces?.width}
-            placeholder={SLIP_SURFACE_LINE_WIDTH_PX}
-            {...W}
-            onChange={(v) => set("surfaces", { width: v })}
-          />
-          <OpacityField value={styles.surfaces?.opacity} placeholder={SLIP_SURFACE_OPACITY} onChange={(opacity) => set("surfaces", { opacity })} />
-        </div>
+        <>
+          <SurfaceShowFields />
+          <div className="flex gap-2">
+            <NumberField
+              label={LINE_WIDTH}
+              value={styles.surfaces?.width}
+              placeholder={SLIP_SURFACE_LINE_WIDTH_PX}
+              {...W}
+              onChange={(v) => set("surfaces", { width: v })}
+            />
+            <OpacityField value={styles.surfaces?.opacity} placeholder={SLIP_SURFACE_OPACITY} onChange={(opacity) => set("surfaces", { opacity })} />
+          </div>
+        </>
       );
       break;
     case "customSurfaces":

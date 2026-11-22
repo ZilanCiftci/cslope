@@ -36,6 +36,9 @@ function resetStoreState() {
     editViewScale: 0,
     resultViewOffset: [0, 0],
     resultViewScale: 0,
+    // (a test's annotations do not carry over: one color bar at most)
+    resultViewSettings: clone(baseModel.resultViewSettings!),
+    offAnnotations: {},
   });
 }
 
@@ -1130,6 +1133,8 @@ describe("store slices", () => {
   });
 
   it("resultViewSlice addAnnotation pins a new colour bar and table at the right edge, inside the plot frame", () => {
+    // (a new one: the starter model's table is its own)
+    useAppStore.getState().setResultViewSettings({ annotations: [] });
     useAppStore.getState().addAnnotation("color-bar");
     useAppStore.getState().addAnnotation("material-table");
     const annos = useAppStore.getState().resultViewSettings.annotations;
