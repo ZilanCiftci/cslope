@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { temporal } from "zundo";
-import type { AppState, ViewLock } from "./types";
+import type { Annotation, AppState, ViewLock } from "./types";
 import { isProjectDirty, markProjectClean, withoutPaperViewport } from "./unsaved";
 import { marksClearOfTitleBlock, modelViewLock, sameViewLock, viewLockContains } from "../features/view/viewLock";
 import { paperContentOf } from "../features/view/extents";
-import { benchmarkSheetViewLock, isBenchmarkSheet } from "./benchmark-sheet";
+import { benchmarkSheetOf, isBenchmarkSheet, layoutBenchmarkSheet } from "./benchmark-sheet";
 import { createAnalysisSlice } from "./slices/analysisSlice";
 import { createCanvasToolbarSlice } from "./slices/canvasToolbarSlice";
 import { createCanvasSelectionSlice, selectionMirror } from "./slices/canvasSelectionSlice";
@@ -187,15 +187,31 @@ useAppStore.subscribe((state, prev) => {
       sameViewLock(l, modelViewLock(prevContent, prev.resultViewSettings)) ||
       sameViewLock(l, modelViewLock({ ...prevContent, marks: [] }, prev.resultViewSettings));
     let refit: ViewLock | null = null;
+    let refitAnnotations: Annotation[] | null = null;
     if (isBenchmarkSheet(state.resultViewSettings.annotations)) {
-      // A benchmark's sheet (Help › Benchmarks) has its own frame, the model
-      // low under the title block and the material table: refit it the same
-      // way, with the marks clear of both.
-      const fit = (s: AppState, c: typeof content) => benchmarkSheetViewLock(s, c, s.resultViewSettings);
-      const next = fit(state, content);
-      const wasFitted = (l: ViewLock) =>
-        [fit(prev, prevContent), fit(prev, { ...prevContent, marks: [] })].some((f) => f !== null && sameViewLock(l, f));
-      if (lock && next && !sameViewLock(lock, next) && wasFitted(lock)) refit = next;
+      // A benchmark's sheet (Help › Benchmarks) has its own layout: the model
+      // low under the title block, the material table clear of what it
+      // draws. Laid out again with the result's marks, the table moves
+      // (not the F label), and the frame where the table fits nowhere else.
+      // Only a layout the app made before the change (with the marks shown
+      // then, or without any), not one the user changed.
+      const lay = (s: AppState, c: typeof content) =>
+        layoutBenchmarkSheet(benchmarkSheetOf(s), c, s.resultViewSettings.annotations, s.resultViewSettings.paperFrame);
+      const tableAt = (anns: readonly Annotation[]) => {
+        const t = anns.find((a) => a.type === "material-table");
+        return t ? `${t.x},${t.y},${t.anchor ?? ""}` : "";
+      };
+      const now = state.resultViewSettings.annotations;
+      const wasLaidOut = [lay(prev, prevContent), lay(prev, { ...prevContent, marks: [] })].some(
+        (f) => lock && f.viewLock && sameViewLock(lock, f.viewLock) && tableAt(f.annotations) === tableAt(now),
+      );
+      if (lock && wasLaidOut) {
+        const next = lay(state, content);
+        if (next.viewLock && (!sameViewLock(lock, next.viewLock) || tableAt(next.annotations) !== tableAt(now))) {
+          refit = next.viewLock;
+          refitAnnotations = next.annotations;
+        }
+      }
     } else if (lock && marks.length > 0 && !marksClearOfTitleBlock(lock, state.resultViewSettings.annotations, marks) && automatic(lock)) {
       refit = modelViewLock(content, state.resultViewSettings);
     }
@@ -207,7 +223,7 @@ useAppStore.subscribe((state, prev) => {
       const wasClean = !isProjectDirty(prev);
       history.pause();
       try {
-        state.setResultViewSettings({ viewLock: refit });
+        state.setResultViewSettings(refitAnnotations ? { viewLock: refit, annotations: refitAnnotations } : { viewLock: refit });
       } finally {
         if (tracking) history.resume();
       }

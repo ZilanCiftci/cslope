@@ -24,7 +24,7 @@ import {
   type VerificationCase,
 } from "@cslope/engine/verification";
 import { createExampleResultViewSettings, exampleMaterialTable } from "./benchmarks";
-import { layoutBenchmarkSheet } from "./benchmark-sheet";
+import { benchmarkSheetOf, layoutBenchmarkSheet } from "./benchmark-sheet";
 import { createDefaultProjectInfo } from "./defaults";
 import { modelFromDefinition } from "./definition-model";
 import type { Annotation, ModelEntry } from "./types";
@@ -149,7 +149,7 @@ function withTitleBlock(model: ModelEntry, c: VerificationCase, a: PresentedAnal
   const content = paperContentOf(model);
   const settings = createExampleResultViewSettings(content, { annotations, showFosLabel: true })!;
   // The table clear of the block, the model low on the sheet under both (benchmark-sheet.ts).
-  const sheet = { projectInfo, materials: model.materials, piezometricLine: model.piezometricLine };
+  const sheet = benchmarkSheetOf({ ...model, projectInfo, result: null, resultViewSettings: settings });
   const { annotations: placed, viewLock } = layoutBenchmarkSheet(sheet, content, settings.annotations, settings.paperFrame);
   return { ...model, projectInfo, resultViewSettings: { ...settings, annotations: placed, viewLock: viewLock ?? settings.viewLock } };
 }

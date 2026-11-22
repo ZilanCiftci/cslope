@@ -15,7 +15,8 @@
  * project fixture with PDF drawings, and many models with long names; and
  * benchmarks as Help › Benchmarks opens them (with their title block):
  * V038b, V105b (wide and flat, the longest title), V101 (tall and narrow),
- * V085 (eight materials, a long table) and V021a (a long title).
+ * V085 and V011a (eight and seven materials, long tables) and V021a (a long
+ * title).
  */
 
 import type { Locator, Page } from "playwright";
@@ -28,7 +29,7 @@ export type Theme = "light" | "dark";
 export type DataSet = "example" | "example1" | "nonhomog" | "dam" | "v017b" | "v085" | "v015" | "review" | "drawings" | "many" | "empty" | BenchmarkData;
 
 /** The benchmarks the review opens as Help › Benchmarks does (run.ts). */
-export const BENCHMARK_SCENE_IDS = ["V038b", "V105b", "V101", "V085", "V021a"] as const;
+export const BENCHMARK_SCENE_IDS = ["V038b", "V105b", "V101", "V085", "V011a", "V021a"] as const;
 type BenchmarkData = `bench-${(typeof BENCHMARK_SCENE_IDS)[number]}`;
 
 export interface Box {
