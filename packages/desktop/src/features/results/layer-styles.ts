@@ -32,7 +32,7 @@ const FIELDS: { [K in keyof ResultLayerStyles]-?: Record<string, FieldKind> } = 
   frame: { color: "color", width: "width", fontSize: "fontSize", labels: "bool" },
 };
 
-/** The bounds of the numbers (line widths and sizes in px, 1 px = 0.1 mm on the paper; font sizes in their own px or pt). */
+/** The bounds of the numbers (line widths and sizes in px, 1 px = 0.1 mm on the paper; font sizes in px of the F label's unit, 12 px = 10 pt). */
 export const LAYER_STYLE_LIMITS = {
   width: { min: 0.1, max: 30 },
   size: { min: 0.5, max: 50 },

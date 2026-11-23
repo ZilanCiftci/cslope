@@ -64,7 +64,7 @@ async function load(page: Page, model: unknown | null, sheet?: string) {
   }
   // VIEW_PDF_FRAME=1: a styled frame (Layers › Frame): blue, 8 px, 11 pt labels, ticks every 5 m with 4 minor ticks.
   if (process.env.VIEW_PDF_FRAME) {
-    await store(page, `(s) => s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { ...s.resultViewSettings.layerStyles, frame: { color: "#0066cc", width: 8, fontSize: 11 } } })`);
+    await store(page, `(s) => s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { ...s.resultViewSettings.layerStyles, frame: { color: "#0066cc", width: 8, fontSize: 14 } } })`);
   }
   await page.waitForTimeout(800);
 }

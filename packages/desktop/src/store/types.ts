@@ -604,7 +604,8 @@ export interface ResultLayerStyles {
   /**
    * The sheet's frame (Layers › Frame): the color of the frame, the ticks
    * and their labels; the plot frame's width (px, 1 px = 0.1 mm on the
-   * paper, as the grid's); the tick labels' size (pt) and, with `labels`
+   * paper, as the grid's); the tick labels' size (px of the F label's
+   * unit, 12 px = 10 pt, whatever the paper size) and, with `labels`
    * false, no tick labels.
    */
   frame?: { color?: string; width?: number; fontSize?: number; labels?: boolean };

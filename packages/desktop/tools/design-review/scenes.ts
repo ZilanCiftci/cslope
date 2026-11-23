@@ -742,11 +742,11 @@ const sidebarScenes: Scene[] = [
   },
   {
     id: "main-result-frame-styled",
-    title: "Result view with a styled frame (blue, 6 px, 11 pt labels, ticks every 5 m with 4 minor ticks), the Frame properties shown",
+    title: "Result view with a styled frame (blue, 6 px, 14 px labels, ticks every 5 m with 4 minor ticks), the Frame properties shown",
     area: "main-result",
     result: true,
     open: async (ctx) => {
-      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6, fontSize: 11 } } }); s.setSelectedResultLayer("frame"); }`);
+      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6, fontSize: 14 } } }); s.setSelectedResultLayer("frame"); }`);
     },
   },
   {

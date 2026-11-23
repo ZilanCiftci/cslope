@@ -126,14 +126,14 @@ describe("the frame layer", () => {
     fireEvent.change(minor, { target: { value: "4" } });
     expect(rvs().minorTicks).toBe(4);
 
-    // The labels' size (pt), 9 by default; off, the size is kept and not offered.
-    const size = within(group).getByLabelText("Label size (pt)");
-    expect(size).toHaveValue("9");
-    fireEvent.change(size, { target: { value: "11" } });
-    expect(rvs().layerStyles?.frame?.fontSize).toBe(11);
+    // The labels' size (px of the F label's unit), 11 by default; off, the size is kept and not offered.
+    const size = within(group).getByLabelText("Label size (px)");
+    expect(size).toHaveValue("11");
+    fireEvent.change(size, { target: { value: "14" } });
+    expect(rvs().layerStyles?.frame?.fontSize).toBe(14);
     fireEvent.click(within(group).getByRole("checkbox", { name: "Tick labels" }));
-    expect(rvs().layerStyles?.frame).toEqual({ color: "#cc0000", width: 6, fontSize: 11, labels: false });
-    expect(within(group).getByLabelText("Label size (pt)")).toBeDisabled();
+    expect(rvs().layerStyles?.frame).toEqual({ color: "#cc0000", width: 6, fontSize: 14, labels: false });
+    expect(within(group).getByLabelText("Label size (px)")).toBeDisabled();
     expect(temporal().pastStates).toHaveLength(7);
 
     // Reset clears the style, the tick spacing and the minor ticks in one undo step; the frame stays off.
@@ -145,7 +145,7 @@ describe("the frame layer", () => {
     act(() => temporal().undo());
     expect(rvs().gridSpacing).toBe(2.5);
     expect(rvs().minorTicks).toBe(4);
-    expect(rvs().layerStyles?.frame).toEqual({ color: "#cc0000", width: 6, fontSize: 11, labels: false });
+    expect(rvs().layerStyles?.frame).toEqual({ color: "#cc0000", width: 6, fontSize: 14, labels: false });
   });
 
   it("the grid's properties say that the tick spacing is set under Frame", () => {

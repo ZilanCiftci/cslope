@@ -1600,7 +1600,7 @@ describe("drawCanvas — result mode", () => {
     expect(numbers(off)).toHaveLength(0);
     expect(frameRects(off, 0.4)).toHaveLength(0);
     expect(ticks(off)).toHaveLength(0);
-    // Styled: 8 px = 0.8 mm, red, 12 pt labels.
+    // Styled: 8 px = 0.8 mm, red, 12 px labels (the F label's unit: 12 px = 10 pt).
     const styled = drawResult({ resultViewSettings: rvs({ layerStyles: { frame: { color: "#cc0000", width: 8, fontSize: 12 } } }) });
     const rect = frameRects(styled, 0.8);
     expect(rect).toHaveLength(1);
@@ -1608,7 +1608,7 @@ describe("drawCanvas — result mode", () => {
     expect(numbers(styled).length).toBe(numbers(on).length);
     for (const t of numbers(styled)) {
       expect(t.state.fillStyle).toBe("#cc0000");
-      expect(t.state.font).toBe(`${12 * MM_PER_PT * PX_PER_MM}px ${SHEET_SANS_FAMILY}`);
+      expect(t.state.font).toBe(`${10 * MM_PER_PT * PX_PER_MM}px ${SHEET_SANS_FAMILY}`);
     }
     // Without labels: the ticks and the frame stay.
     const bare = drawResult({ resultViewSettings: rvs({ layerStyles: { frame: { labels: false } } }) });

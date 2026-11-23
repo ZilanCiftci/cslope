@@ -636,7 +636,7 @@ pub struct ResultLayerStyles {
     /// The sheet's grid (color, width, subdivisions, minorWidth).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<LayerStyle>,
-    /// The sheet's frame (color, width, fontSize in pt, labels).
+    /// The sheet's frame (color, width, fontSize in px of the F label's unit, labels).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame: Option<LayerStyle>,
 }
