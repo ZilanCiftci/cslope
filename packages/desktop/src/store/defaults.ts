@@ -124,7 +124,9 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
       x: 0.11,
       y: 0.08,
       text: "#Title",
-      fontSize: 24,
+      // px of the F label's unit (12 px = 10 pt): about the 24, 14 and 8
+      // annotation px they were on A4.
+      fontSizePx: 29,
     },
     {
       id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
@@ -132,7 +134,7 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
       x: 0.11,
       y: 0.13,
       text: "#Subtitle",
-      fontSize: 14,
+      fontSizePx: 17,
     },
     {
       id: "anno-default-material-table",
@@ -141,7 +143,7 @@ export const DEFAULT_RESULT_VIEW_SETTINGS: ResultViewSettings = {
       x: 0.94,
       y: 0.06,
       anchor: "top-right",
-      fontSize: 8,
+      fontSizePx: 10,
       tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
     },
   ],

@@ -13,15 +13,20 @@ import {
   surfacePoints,
   type DrawableSurface,
 } from "../../utils/arc";
-import { computePaperFrame } from "../view/paper";
+import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import { waterLineFitPoints } from "../view/extents";
 import {
+  ANNOTATION_DEFAULT_FONT_FAMILY,
+  ANNOTATION_DEFAULT_FONT_SIZE,
+  ANNOTATION_LINE_HEIGHT,
   ANNOTATION_SCALE_DIVISOR,
   MATERIAL_TABLE_RULE_MM,
   MATERIAL_TABLE_SWATCH_BORDER_MM,
   MODEL_SHORT_LABELS,
+  SHEET_LAYOUT_MM_PER_PX,
   SHEET_SANS_FAMILY,
   sheetCanvasFamily,
+  textLayoutPx,
 } from "../rendering/style-spec";
 import { PRINT_INK, type CanvasInk } from "./ink";
 import { flatFieldsFromModel } from "../properties/sections/material-forms/model-defaults";
@@ -209,7 +214,7 @@ export function buildMaterialTableData(
 }
 
 
-/** The layout of a material table on the canvas (see layoutMaterialTable). */
+/** The layout of a material table on the canvas (see layoutMaterialTable): `sheetScale` px per layout px, `fontSize` in layout px. */
 function layoutTable(
   ctx: CanvasRenderingContext2D,
   columnKeys: MaterialTableRenderColumnKey[],
@@ -253,16 +258,18 @@ export function drawTable(
   header: string[],
   rows: string[][],
   materials: { color: string }[],
+  /** Px per layout px (SHEET_LAYOUT_MM_PER_PX). */
   scale = 1,
-  fontSize = MATERIAL_TABLE_FONT_SIZE,
+  /** The text size in layout px (textLayoutPx of the table's px). */
+  fontSize = textLayoutPx(MATERIAL_TABLE_FONT_SIZE),
   /** Its colours: the print colours (white paper) unless the theme's are passed. */
   ink: TableInk = PRINT_INK,
-  /** Millimetres of the paper per annotation px (min(paper width, height) / ANNOTATION_SCALE_DIVISOR; A4 by default). */
-  mmPerAnnoPx = 210 / ANNOTATION_SCALE_DIVISOR,
+  /** Millimetres of the paper per layout px (SHEET_LAYOUT_MM_PER_PX, the same on every paper size). */
+  mmPerLayoutPx = SHEET_LAYOUT_MM_PER_PX,
 ) {
   // The rules and swatch borders as wide as in the PDF (mm on the paper).
-  const rule = (MATERIAL_TABLE_RULE_MM / mmPerAnnoPx) * scale;
-  const swatchBorder = (MATERIAL_TABLE_SWATCH_BORDER_MM / mmPerAnnoPx) * scale;
+  const rule = (MATERIAL_TABLE_RULE_MM / mmPerLayoutPx) * scale;
+  const swatchBorder = (MATERIAL_TABLE_SWATCH_BORDER_MM / mmPerLayoutPx) * scale;
   const { padding, swatchW, headerLineH, bodyLineH, headerLines, cellLines, colW, headerH, rowHeights, totalW, totalH, headerFont, bodyFont } =
     layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
 
@@ -361,8 +368,10 @@ export function measureTable(
   columnKeys: MaterialTableRenderColumnKey[],
   header: string[],
   rows: string[][],
+  /** Px per layout px. */
   scale = 1,
-  fontSize = MATERIAL_TABLE_FONT_SIZE,
+  /** The text size in layout px. */
+  fontSize = textLayoutPx(MATERIAL_TABLE_FONT_SIZE),
 ) {
   const { totalW, totalH } = layoutTable(ctx, columnKeys, header, rows, scale, fontSize);
   return { w: totalW, h: totalH };
@@ -373,6 +382,8 @@ export function getAnnotationBoundsPx(
   params: {
     annotation: Annotation;
     paperFrame: { x: number; y: number; w: number; h: number };
+    /** The paper: its size in mm gives the text's and the table's px on screen. */
+    paper: Pick<ResultViewSettings["paperFrame"], "paperSize" | "landscape">;
     result: AnalysisResult;
     materials: MaterialRow[];
     piezometricLine?: PiezometricLineState;
@@ -385,6 +396,7 @@ export function getAnnotationBoundsPx(
   const {
     annotation: anno,
     paperFrame: pf,
+    paper,
     result,
     materials,
     piezometricLine,
@@ -397,16 +409,19 @@ export function getAnnotationBoundsPx(
   // (it is hit-tested through canvas/reference-geometry.ts).
   if (anno.type === "reference") return { x: 0, y: 0, w: 0, h: 0 };
 
-  const annoScale = Math.min(pf.w, pf.h) / 600;
+  // The color bar's px grow with the paper; the text's and the table's
+  // layout px (and their text) are the same in mm on every paper size.
+  const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
+  const layoutScale = (SHEET_LAYOUT_MM_PER_PX * pf.w) / getPaperDimensions(paper.paperSize, paper.landscape).width;
   const ax = pf.x + anno.x * pf.w;
   const ay = pf.y + anno.y * pf.h;
   const hitPad = 4;
 
   if (anno.type === "text") {
-    const family = sheetCanvasFamily(anno.fontFamily ?? "sans-serif");
+    const family = sheetCanvasFamily(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
     const weight = anno.bold ? "bold" : "normal";
     const style = anno.italic ? "italic" : "normal";
-    const fontSize = (anno.fontSize ?? 12) * annoScale;
+    const fontSize = textLayoutPx(anno.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE) * layoutScale;
     const resolved = resolveAnnotationText({
       text: anno.text ?? "",
       projectInfo,
@@ -414,7 +429,7 @@ export function getAnnotationBoundsPx(
       parameters,
     });
     const lines = resolved.split("\n");
-    const lineHeight = fontSize * 1.2;
+    const lineHeight = fontSize * ANNOTATION_LINE_HEIGHT;
 
     ctx.font = `${style} ${weight} ${fontSize}px ${family}`;
     let maxW = 0;
@@ -484,8 +499,8 @@ export function getAnnotationBoundsPx(
       columnKeys,
       header,
       rows,
-      annoScale,
-      anno.fontSize ?? 6,
+      layoutScale,
+      textLayoutPx(anno.fontSizePx ?? MATERIAL_TABLE_FONT_SIZE),
     );
     const { x: tlx, y: tly } = anchoredTopLeft(
       ax,
@@ -719,6 +734,7 @@ export function extendBoundsWithResultFitExtras(params: {
     const b = getAnnotationBoundsPx(ctx, {
       annotation: anno,
       paperFrame: pf,
+      paper: rvs.paperFrame,
       result,
       materials,
       piezometricLine,

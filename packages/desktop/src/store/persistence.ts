@@ -26,6 +26,7 @@ import { normalizeReferenceAnnotation } from "../features/annotations/reference"
 import { normalizeLayerOrder } from "../features/results/layers";
 import { normalizeLayerStyles } from "../features/results/layer-styles";
 import { normalizePlotStyle } from "../features/annotations/plotStyle";
+import { annotationPxToTextPx } from "../features/rendering/style-spec";
 import { normalizeLocks } from "./canvas-selection";
 import {
   APP_DEFAULT_ANALYSIS_OPTIONS,
@@ -819,7 +820,7 @@ export function normalizeResultView(raw: unknown): ResultViewSettings {
         ? rawPaperFrame.offsetY
         : (DEFAULT_RESULT_VIEW_SETTINGS.paperFrame.offsetY ?? 0),
   };
-  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeColorBarScale).map(normalizeHidden).map(normalizePlotStyleOf));
+  const annotations = singleColorBar(normalizeAnnotations(view.annotations).map(normalizeFontSizePx).map(normalizeColorBarScale).map(normalizeHidden).map(normalizePlotStyleOf));
   const layerOrder = normalizeLayerOrder((view as { layerOrder?: unknown }).layerOrder, annotations);
   const layerStyles = normalizeLayerStyles((view as { layerStyles?: unknown }).layerStyles);
 
@@ -917,6 +918,24 @@ export function normalizeColorBarScale(anno: Annotation): Annotation {
     ...(isHexColor(raw.schemeMid) ? { schemeMid: raw.schemeMid } : {}),
   };
   return { ...rest, ...scale } as Annotation;
+}
+
+/**
+ * A paper annotation's text size, `fontSizePx` (px of the F label's unit,
+ * 12 px = 10 pt), kept when it is a finite number. Without it, a
+ * `fontSize` of a file saved before (annotation px, the paper's shorter
+ * side / 600) is taken as px × about 1.19 (annotationPxToTextPx), the same
+ * size on A4; only `fontSizePx` is written, so a file saved again is not
+ * converted twice.
+ */
+export function normalizeFontSizePx(anno: Annotation): Annotation {
+  if (anno.type === "reference") return anno;
+  const raw = anno as unknown as Record<string, unknown>;
+  if (!("fontSize" in raw) && !("fontSizePx" in raw)) return anno;
+  const { fontSize, fontSizePx, ...rest } = raw;
+  const finite = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+  const px = finite(fontSizePx) ? fontSizePx : fontSizePx === undefined && finite(fontSize) ? annotationPxToTextPx(fontSize) : undefined;
+  return (px === undefined ? rest : { ...rest, fontSizePx: px }) as unknown as Annotation;
 }
 
 /**

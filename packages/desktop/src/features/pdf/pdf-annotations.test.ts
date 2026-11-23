@@ -3,6 +3,7 @@ import { jsPDF } from "jspdf";
 import type { AnalysisResult } from "@cslope/engine";
 import { drawAnnotations, drawMaterialRegions } from "./pdf-drawing";
 import type { Annotation, MaterialRow } from "../../store/types";
+import { annotationPxToTextPx, styleFontPt } from "../rendering/style-spec";
 
 const PAPER = { paperW: 297, paperH: 210 };
 const FRAME = { x: 0, y: 0, w: 297, h: 210 };
@@ -77,7 +78,8 @@ function record(anno: Annotation, result: AnalysisResult = RESULT, filter?: { fo
 
 describe("PDF annotations match the canvas proportions", () => {
   it("draws the material table at the canvas size (364 units wide)", () => {
-    const { rects } = record({ id: "t", type: "material-table", x: 0.1, y: 0.1 });
+    // (its text at the 6 annotation px it had by default, as px of the F label's unit)
+    const { rects } = record({ id: "t", type: "material-table", x: 0.1, y: 0.1, fontSizePx: annotationPxToTextPx(6) });
     // The outline is stroked last, after the fills and the rules.
     const outline = rects.filter((r) => r.style === "S").at(-1)!;
     expect(outline.w).toBeCloseTo(364 * SCALE, 1); // ≈ 127 mm, was ≈ 35 mm
@@ -111,16 +113,17 @@ describe("PDF annotations match the canvas proportions", () => {
     expect(follow.fills.at(-1)).toEqual([255, 0, 0]);
   });
 
-  it("uses the annotation font size without an 8 pt floor", () => {
+  it("uses the annotation font size without an 8 pt floor, in px of the F label's unit (12 px = 10 pt)", () => {
     const { fontSizes } = record({
       id: "x",
       type: "text",
       x: 0.5,
       y: 0.5,
       text: "small\nlines",
-      fontSize: 6,
+      fontSizePx: 6,
     });
-    expect(fontSizes.at(-1)).toBeCloseTo((6 * SCALE) / 0.3528, 6);
+    expect(fontSizes.at(-1)).toBeCloseTo(styleFontPt(6), 6);
+    expect(fontSizes.at(-1)).toBeCloseTo(5, 6);
   });
 
   it("draws a slice plot annotation like the canvas does", () => {

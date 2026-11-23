@@ -129,7 +129,24 @@ def test_open_change_one_material_run_save(tmp_path):
             continue
         for entry in ("model.json", "result.json"):
             name = "models/{}/{}".format(model.id, entry)
-            assert new[name] == old[name], name
+            # (the text sizes the app saved in annotation px are written in px)
+            assert new[name] == (_with_text_px(old[name]) if entry == "model.json" else old[name]), name
+
+
+def _with_text_px(model):
+    """A model.json (parsed) as the app saved it, with its text sizes of the
+    first form (`fontSize`, annotation px) as px of the F label's unit
+    (`fontSizePx`), as it is saved now: x (210 / 600) / (10 / 12 x 0.3528),
+    to 6 decimals (docs/file-format.md)."""
+    factor = (210 / 600) / ((10 / 12) * 0.3528)
+    v = json.loads(json.dumps(model))
+    for a in v.get("resultViewSettings", {}).get("annotations", []):
+        if a.get("type") == "reference":
+            continue
+        for o in (a, a.get("plotStyle") or {}):
+            if "fontSize" in o and "fontSizePx" not in o:
+                o["fontSizePx"] = round(o.pop("fontSize") * factor * 1e6) / 1e6
+    return v
 
 
 def _entries(path):

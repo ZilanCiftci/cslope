@@ -172,25 +172,39 @@ export const FEM_PLASTIC_ZONE_OPACITY = 0.85;
 
 // ── Annotations ────────────────────────────────────────────────
 
-/** Default annotation font size (px). */
-export const ANNOTATION_DEFAULT_FONT_SIZE = 12;
+/**
+ * Default text annotation size (px of the F label's unit, `styleFontPt`:
+ * 12 px = 10 pt; about the 12 annotation px it was on A4).
+ */
+export const ANNOTATION_DEFAULT_FONT_SIZE = 14;
 /** Default annotation font family. */
 export const ANNOTATION_DEFAULT_FONT_FAMILY = "sans-serif";
 /** Line-height multiplier for multi-line annotation text. */
 export const ANNOTATION_LINE_HEIGHT = 1.2;
-/** Divisor for annotation scale (`scale = min(paperW, paperH) / divisor`). */
+/**
+ * Divisor for annotation scale (`scale = min(paperW, paperH) / divisor`):
+ * the color bar's sizes, which grow with the paper. (The text sizes of
+ * text annotations, the material table and the slice plot were in these
+ * px before they were fixed; see SHEET_LAYOUT_MM_PER_PX.)
+ */
 export const ANNOTATION_SCALE_DIVISOR = 600;
 /** Default annotation text colour. */
 export const ANNOTATION_DEFAULT_TEXT_COLOR = "#000000";
 
 // ── Slice plot annotation ──────────────────────────────────────
-// Sizes in annotation px (scale = min(paperW, paperH) / divisor) or mm on
-// the paper; the canvas and the PDF draw the plot from these
-// (features/annotations/plotStyle.ts).
+// Its layout in layout px (SHEET_LAYOUT_MM_PER_PX, fixed), its series'
+// default line and markers in annotation px (scale = min(paperW, paperH) /
+// divisor) or mm on the paper; the canvas and the PDF draw the plot from
+// these (features/annotations/plotStyle.ts).
 
-/** The plot's title and its tick values and axis title (annotation px). */
+/** The plot's title and its tick values and axis title at text scale 1 (layout px). */
 export const PLOT_TITLE_FONT_PX = 10;
 export const PLOT_AXIS_FONT_PX = 9;
+/**
+ * The tick values' size by default (Properties › Plot › Text size; px of
+ * the F label's unit; about the 9 annotation px it was on A4).
+ */
+export const PLOT_TEXT_DEFAULT_PX = 11;
 /** The series' line: PLOT_LINE_PX annotation px, at least PLOT_LINE_MIN_MM. */
 export const PLOT_LINE_PX = 0.35;
 export const PLOT_LINE_MIN_MM = 0.25;
@@ -279,6 +293,38 @@ export const FOS_LABEL_FONT_PT = 10;
 export function styleFontPt(px: number): number {
   return (px * FOS_LABEL_FONT_PT) / FOS_LABEL_FONT_PX;
 }
+/** A px of the F label's unit in mm on the paper (about 0.294 mm): the text sizes in the properties. */
+export const STYLE_FONT_MM_PER_PX = styleFontPt(1) * MM_PER_PT;
+
+/**
+ * mm on the paper of a layout px, the fixed unit of the text annotations',
+ * the material table's and the slice plot's layouts (the table's cells
+ * and column widths, the plot's margins and ticks): an annotation px of
+ * an A4 sheet (its shorter side, 210 mm, / ANNOTATION_SCALE_DIVISOR; 0.35
+ * mm), whatever the paper size. Their text sizes are px of the F label's
+ * unit (STYLE_FONT_MM_PER_PX), in layout px by `textLayoutPx`.
+ */
+export const SHEET_LAYOUT_MM_PER_PX = 210 / ANNOTATION_SCALE_DIVISOR;
+
+/** A text size in px of the F label's unit in layout px (× about 0.84). */
+export function textLayoutPx(px: number): number {
+  return (px * STYLE_FONT_MM_PER_PX) / SHEET_LAYOUT_MM_PER_PX;
+}
+
+/**
+ * The px of the F label's unit per annotation px of an A4 sheet (about
+ * 1.19): a text annotation's, a material table's or a slice plot's text
+ * size stored in annotation px (`fontSize`, files saved before the sizes
+ * were fixed) is that size in px (`fontSizePx`), so it shows as before on
+ * A4 (on a larger paper smaller than before, no longer growing with it).
+ */
+export const ANNOTATION_PX_TO_TEXT_PX = SHEET_LAYOUT_MM_PER_PX / STYLE_FONT_MM_PER_PX;
+
+/** A text size in annotation px (the first form) in px of the F label's unit, to 6 decimals (as the Rust reader). */
+export function annotationPxToTextPx(px: number): number {
+  return Math.round(px * ANNOTATION_PX_TO_TEXT_PX * 1e6) / 1e6;
+}
+
 /** The frame's tick labels at the default size: their baseline below their tick (x axis, mm) or beside it (y axis, mm). */
 export const RULER_X_LABEL_BASELINE_MM = styleFontPt(RULER_FONT_PX) * 0.35 + RULER_LABEL_GAP_MM;
 export const RULER_Y_LABEL_BASELINE_MM = styleFontPt(RULER_FONT_PX) * 0.12;

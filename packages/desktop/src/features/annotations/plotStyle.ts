@@ -14,8 +14,11 @@ import {
   PLOT_MARKER_MIN_MM,
   PLOT_MARKER_PX,
   PLOT_SERIES_DASH,
+  PLOT_TEXT_DEFAULT_PX,
   PLOT_TITLE_FONT_PX,
   STYLE_PX_PER_MM,
+  annotationPxToTextPx,
+  textLayoutPx,
 } from "../rendering/style-spec";
 
 export const PLOT_LINE_STYLES: readonly { value: PlotLineStyle; label: string }[] = [
@@ -33,11 +36,14 @@ export const PLOT_MARKERS: readonly { value: PlotMarker; label: string }[] = [
   { value: "none", label: "None" },
 ];
 
-/** The bounds of the sizes: line width and marker size in px (1 px = 0.1 mm on the paper), text in annotation px. */
+/**
+ * The bounds of the sizes: line width and marker size in px (1 px = 0.1 mm
+ * on the paper), text in px of the F label's unit (12 px = 10 pt).
+ */
 export const PLOT_STYLE_LIMITS = {
   lineWidthPx: { min: 0.5, max: 30 },
   markerSizePx: { min: 2, max: 100 },
-  fontSize: { min: 4, max: 36 },
+  fontSizePx: { min: 4, max: 48 },
 } as const;
 
 /**
@@ -50,11 +56,19 @@ const LEGACY_MM_LIMITS = {
   markerSize: { min: 0.2, max: 10 },
 } as const;
 
+/**
+ * The bounds of the text size's first form, `fontSize` in annotation px
+ * (the paper's shorter side / 600), written before the size was fixed;
+ * read as px of the F label's unit (annotationPxToTextPx, × about 1.19)
+ * when `fontSizePx` is absent, the same size on A4.
+ */
+const LEGACY_FONT_SIZE_LIMITS = { min: 4, max: 36 } as const;
+
 /** A size in mm as px (1 px = 0.1 mm), without the binary fraction's noise (0.35 mm: 3.5 px). */
 const mmToStylePx = (mm: number) => Math.round(mm * STYLE_PX_PER_MM * 1e6) / 1e6;
 
-/** The text sizes offered (annotation px). */
-export const PLOT_FONT_SIZES = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
+/** The text sizes offered (px of the F label's unit). */
+export const PLOT_FONT_SIZES = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28];
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const SWITCHES = ["showTitle", "showAxisTitle", "showGrid", "showBorder"] as const;
@@ -81,7 +95,8 @@ export function normalizePlotStyle(raw: unknown): PlotStyle | undefined {
   else if (r.markerSizePx === undefined && inRange(r.markerSize, LEGACY_MM_LIMITS.markerSize)) out.markerSizePx = mmToStylePx(r.markerSize);
   if (r.markerOpen === true) out.markerOpen = true;
   for (const k of SWITCHES) if (r[k] === false) out[k] = false;
-  if (inRange(r.fontSize, PLOT_STYLE_LIMITS.fontSize)) out.fontSize = r.fontSize;
+  if (inRange(r.fontSizePx, PLOT_STYLE_LIMITS.fontSizePx)) out.fontSizePx = r.fontSizePx;
+  else if (r.fontSizePx === undefined && inRange(r.fontSize, LEGACY_FONT_SIZE_LIMITS)) out.fontSizePx = annotationPxToTextPx(r.fontSize);
   for (const k of ENDS) {
     const v = r[k];
     if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
@@ -118,7 +133,7 @@ export interface ResolvedPlotStyle {
   showAxisTitle: boolean;
   showGrid: boolean;
   showBorder: boolean;
-  /** The text's size against the default. */
+  /** The text's size against the layout's (PLOT_AXIS_FONT_PX layout px). */
   textScale: number;
   xMin?: number;
   xMax?: number;
@@ -153,7 +168,7 @@ export function resolvePlotStyle(style: PlotStyle | undefined, mmPerAnnoPx: numb
     showAxisTitle: s.showAxisTitle !== false,
     showGrid: s.showGrid !== false,
     showBorder: s.showBorder !== false,
-    textScale: (s.fontSize ?? PLOT_AXIS_FONT_PX) / PLOT_AXIS_FONT_PX,
+    textScale: textLayoutPx(s.fontSizePx ?? PLOT_TEXT_DEFAULT_PX) / PLOT_AXIS_FONT_PX,
     xMin: s.xMin,
     xMax: s.xMax,
     yMin: s.yMin,
@@ -180,7 +195,8 @@ export interface PlotLayout {
 
 /**
  * The layout of a plot at (x, y), w × h: `s` is the renderer's units per
- * annotation px and `mm` per mm. The chart leaves room on the left for the
+ * layout px (SHEET_LAYOUT_MM_PER_PX, the same on every paper size) and
+ * `mm` per mm. The chart leaves room on the left for the
  * y values, below for the x values and the axis title, above for the
  * title; with the default style as the plot has always been laid out.
  */

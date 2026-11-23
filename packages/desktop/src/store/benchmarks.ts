@@ -14,6 +14,7 @@ import {
 import { APP_DEFAULT_ANALYSIS_OPTIONS, DEFAULT_RESULT_VIEW_SETTINGS, PAPER_DIMENSIONS } from "./defaults";
 import type { Annotation } from "./types";
 import { cloneAnnotation } from "../features/annotations/reference";
+import { annotationPxToTextPx } from "../features/rendering/style-spec";
 import { modelViewLock } from "../features/view/viewLock";
 import type { PaperContent } from "../features/view/extents";
 
@@ -29,6 +30,9 @@ type ExamplePaperOptions = {
   showFosLabel?: boolean;
 };
 
+// The examples' sheets (and the benchmarks' title blocks, which take
+// their table) keep the text sizes they always had, in annotation px of an
+// A4 sheet, as px of the F label's unit: they look as before on A4.
 const EXAMPLE_ANNOTATIONS: Annotation[] = [
   {
     id: "anno-8d2aabaf-31cb-43b5-b9a5-980aa7354464",
@@ -36,7 +40,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
     x: 0.11,
     y: 0.08,
     text: "#Title",
-    fontSize: 24,
+    fontSizePx: annotationPxToTextPx(24),
   },
   {
     id: "anno-89ddb1d9-0f29-4483-849a-bf5c09ea5076",
@@ -44,7 +48,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
     x: 0.11,
     y: 0.14,
     text: "#Subtitle",
-    fontSize: 14,
+    fontSizePx: annotationPxToTextPx(14),
   },
   {
     id: "anno-c4e72f10-8a61-4d2b-9c3e-5f1a0b7d8e92",
@@ -52,7 +56,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
     x: 0.11,
     y: 0.18,
     text: "Calculated F: #FOS",
-    fontSize: 14,
+    fontSizePx: annotationPxToTextPx(14),
   },
   {
     id: "anno-benchmark-material-table",
@@ -60,7 +64,7 @@ const EXAMPLE_ANNOTATIONS: Annotation[] = [
     x: 0.94,
     y: 0.065,
     anchor: "top-right",
-    fontSize: 6,
+    fontSizePx: annotationPxToTextPx(6),
     tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
   },
 ];

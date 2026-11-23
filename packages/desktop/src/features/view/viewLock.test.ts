@@ -16,6 +16,7 @@ import { getPlotAspectRatio } from "./paper";
 import { DEFAULT_RESULT_VIEW_SETTINGS, PLOT_MARGINS } from "../../store/defaults";
 import { createExampleResultViewSettings } from "../../store/benchmarks";
 import type { ViewLock } from "../../store/types";
+import { textLayoutPx } from "../rendering/style-spec";
 
 describe("view lock follows a growing model", () => {
   it("refits a lock that showed the whole model, keeps a deliberate zoom", () => {
@@ -97,10 +98,10 @@ describe("paperTopBand", () => {
 
   it("reaches down to the last line of a longer title block", () => {
     const base = paperTopBand(DEFAULT_RESULT_VIEW_SETTINGS.annotations);
-    // Three lines of 11 pt below 0.2: down to about 0.27 of the paper.
-    const block = [{ y: 0.08, type: "text" as const, text: "#Title", fontSize: 24 }, { y: 0.2, type: "text" as const, text: "a\nb\nc", fontSize: 11 }];
+    // Three lines of 13 px (11 layout px, 600 of them the height of A4 landscape) below 0.2: down to about 0.27 of the paper.
+    const block = [{ y: 0.08, type: "text" as const, text: "#Title", fontSizePx: 29 }, { y: 0.2, type: "text" as const, text: "a\nb\nc", fontSizePx: 13 }];
     expect(paperTopBand(block)).toBeGreaterThan(base);
-    expect(paperTopBand(block)).toBeCloseTo((0.2 + (3 * 11 * 1.2) / 600 + 0.01 - 0.05) / 0.9, 9);
+    expect(paperTopBand(block)).toBeCloseTo((0.2 + (3 * textLayoutPx(13) * 1.2) / 600 + 0.01 - 0.05) / 0.9, 9);
   });
 });
 

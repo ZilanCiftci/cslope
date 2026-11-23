@@ -15,7 +15,7 @@ const RESULT = {
   method: "Spencer",
   elapsedMs: 1,
 } as unknown as AnalysisResult;
-const PLOT: Annotation = { id: "p1", type: "plot", x: 0.3, y: 0.3, width: 0.24, height: 0.18, fontSize: 12, plotAxisX: "slice", plotAxisY: "shearStrength" };
+const PLOT: Annotation = { id: "p1", type: "plot", x: 0.3, y: 0.3, width: 0.24, height: 0.18, plotAxisX: "slice", plotAxisY: "shearStrength" };
 
 const plotOf = (id = "p1") => useAppStore.getState().resultViewSettings.annotations.find((a) => a.id === id) as PaperAnnotation;
 const history = () => useAppStore.temporal.getState();
@@ -49,7 +49,8 @@ describe("the plot's style properties", () => {
     expect(within(p).getByLabelText("Y max")).toHaveAttribute("placeholder", "Auto");
     expect(within(p).getByRole("checkbox", { name: "Gridlines" })).toBeChecked();
     expect(within(p).getByRole("checkbox", { name: "Title" })).toBeChecked();
-    expect(within(p).getByLabelText("Text size (px)")).toHaveValue("9");
+    // px of the F label's unit (12 px = 10 pt): about the 9 annotation px it was on A4
+    expect(within(p).getByLabelText("Text size (px)")).toHaveValue("11");
     expect(within(p).getByRole("button", { name: "Reset to default" })).toBeDisabled();
   });
 
@@ -71,7 +72,7 @@ describe("the plot's style properties", () => {
       ["axis title", () => fireEvent.click(within(p).getByRole("checkbox", { name: "Axis title" })), { showAxisTitle: false }],
       ["title", () => fireEvent.click(within(p).getByRole("checkbox", { name: "Title" })), { showTitle: false }],
       ["border", () => fireEvent.click(within(p).getByRole("checkbox", { name: "Border" })), { showBorder: false }],
-      ["text", () => fireEvent.change(within(p).getByLabelText("Text size (px)"), { target: { value: "12" } }), { fontSize: 12 }],
+      ["text", () => fireEvent.change(within(p).getByLabelText("Text size (px)"), { target: { value: "12" } }), { fontSizePx: 12 }],
     ];
     let expected = {};
     steps.forEach(([name, act], i) => {
@@ -82,7 +83,20 @@ describe("the plot's style properties", () => {
     });
     expect(plotOf("p2").plotStyle).toBeUndefined();
     // The plot's other fields are kept.
-    expect(plotOf()).toMatchObject({ width: 0.24, plotAxisY: "shearStrength", fontSize: 12 });
+    expect(plotOf()).toMatchObject({ width: 0.24, plotAxisY: "shearStrength" });
+  });
+
+  it("shows a text size read from an older file (annotation px, converted) to two decimals", () => {
+    act(() =>
+      useAppStore.getState().setResultViewSettings({
+        annotations: [{ ...PLOT, plotStyle: { fontSizePx: 10.714286 } }, { ...PLOT, id: "p2", x: 0.6 }],
+      }),
+    );
+    render(<ResultSidebar />);
+    const size = within(panel()).getByLabelText("Text size (px)");
+    expect(size).toHaveValue("10.714286");
+    expect(within(size).getByRole("option", { name: "10.71" })).toBeInTheDocument();
+    expect(within(size).getByRole("option", { name: "11" })).toBeInTheDocument();
   });
 
   it("hides the line width with no line, the marker size with no markers and Open markers for plus", () => {

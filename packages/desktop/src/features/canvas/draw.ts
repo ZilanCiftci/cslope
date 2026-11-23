@@ -49,6 +49,7 @@ import { getPaperDimensions, sheetMmPerPx, sheetPxScale } from "../view/paper";
 import type { PageTitleLine } from "../export/page-title";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
 import { hasFixedRange, markerShape, markerStroked, plotAxisTicks, plotLayout, resolvePlotStyle } from "../annotations/plotStyle";
@@ -61,6 +62,8 @@ import {
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_LINE_HEIGHT,
   ANNOTATION_SCALE_DIVISOR,
+  SHEET_LAYOUT_MM_PER_PX,
+  textLayoutPx,
   COLOR_BAR_NUM_TICKS,
   CRACK_WATER_OPACITY,
   CRACK_WATER_WIDTH_PX,
@@ -2610,13 +2613,16 @@ export function drawCanvas(
       paperFrame.offsetY ?? 0,
       paperBottomReserve,
     );
-    // Scale factor for annotations based on paper frame size
+    // Scale factor for annotations based on paper frame size (the color bar's).
     const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
     // Millimetres of the paper per annotation px (the PDF's annotation scale).
     const paperMm = getPaperDimensions(paperFrame.paperSize, paperFrame.landscape);
     const mmPerAnnoPx = Math.min(paperMm.width, paperMm.height) / ANNOTATION_SCALE_DIVISOR;
     // Screen px per mm of the paper: the PDF's mm sizes on the sheet.
     const pxPerMmSheet = pf.w / paperMm.width;
+    // Screen px per layout px: the text annotations', the material table's
+    // and the slice plot's layouts, the same in mm on every paper size.
+    const layoutScale = SHEET_LAYOUT_MM_PER_PX * pxPerMmSheet;
 
     // The layers, each drawn by a step below, in the model's order
     // (Properties › Layers; features/results/layers.ts).
@@ -3327,10 +3333,9 @@ export function drawCanvas(
       // Convert fractional paper-frame coordinates to canvas pixels (anchor point)
       const ax = pf.x + anno.x * pf.w;
       const ay = pf.y + anno.y * pf.h;
-      const fontSize =
-        (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * annoScale;
-
       if (anno.type === "text") {
+        // px of the F label's unit, fixed on every paper size (styleFontPt).
+        const fontSize = textLayoutPx(anno.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE) * layoutScale;
         const family = sheetCanvasFamily(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
         const weight = anno.bold ? "bold" : "normal";
         const style = anno.italic ? "italic" : "normal";
@@ -3454,13 +3459,13 @@ export function drawCanvas(
           materials,
           piezometricLine,
         );
-        const tableFontSize = anno.fontSize ?? 6;
+        const tableFontSize = textLayoutPx(anno.fontSizePx ?? MATERIAL_TABLE_FONT_SIZE);
         const tableSize = measureTable(
           ctx,
           columnKeys,
           header,
           rows,
-          annoScale,
+          layoutScale,
           tableFontSize,
         );
         const { x: drawX, y: drawY } = anchoredTopLeft(
@@ -3478,10 +3483,10 @@ export function drawCanvas(
           header,
           rows,
           materials,
-          annoScale,
+          layoutScale,
           tableFontSize,
           INK,
-          mmPerAnnoPx,
+          SHEET_LAYOUT_MM_PER_PX,
         );
       } else if (anno.type === "plot") {
         const plotW = pf.w * (anno.width ?? 0.24);
@@ -3496,9 +3501,9 @@ export function drawCanvas(
 
         ctx.save();
         // The PDF's slice plot (drawPlotAnnotationPdf) at the sheet's scale:
-        // sizes in annotation px (annoScale), lines in mm (pxPerMmSheet),
+        // sizes in layout px (layoutScale), lines in mm (pxPerMmSheet),
         // laid out and styled as the PDF from the plot's style (plotStyle.ts).
-        const s = annoScale;
+        const s = layoutScale;
         const mm = pxPerMmSheet;
         const style = resolvePlotStyle(anno.plotStyle, mmPerAnnoPx);
         const L = plotLayout(drawX, drawY, plotW, plotH, s, mm, style);
@@ -3728,6 +3733,7 @@ export function drawCanvas(
       const bounds = getAnnotationBoundsPx(ctx, {
         annotation: anno,
         paperFrame: pf,
+        paper: paperFrame,
         result,
         materials,
         piezometricLine,

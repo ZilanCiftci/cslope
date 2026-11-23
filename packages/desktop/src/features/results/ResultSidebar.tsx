@@ -53,8 +53,24 @@ import type {
   ResultViewSettings,
 } from "../../store/types";
 import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../constants";
+import { ANNOTATION_DEFAULT_FONT_SIZE } from "../rendering/style-spec";
+import { MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 
-const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
+/** The text sizes offered (px of the F label's unit, 12 px = 10 pt, whatever the paper size). */
+const FONT_SIZES = [6, 7, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32, 36];
+
+/**
+ * The sizes offered with `current` among them, in order: a size read
+ * from an older file may have decimals (shown to two).
+ */
+function fontSizeOptions(current: number | undefined) {
+  const sizes = current === undefined || FONT_SIZES.includes(current) ? FONT_SIZES : [...FONT_SIZES, current].sort((a, b) => a - b);
+  return sizes.map((s) => (
+    <option key={s} value={s}>
+      {Math.round(s * 100) / 100}
+    </option>
+  ));
+}
 const FONT_FAMILIES = [
   { label: "Sans-serif", value: "sans-serif" },
   { label: "Serif", value: "serif" },
@@ -349,7 +365,7 @@ export function ResultSidebar() {
     selectedTextAnnotations.map((a) => a.fontFamily ?? "sans-serif"),
   );
   const fontSizeValue = commonValue(
-    selectedTextAnnotations.map((a) => a.fontSize ?? 12),
+    selectedTextAnnotations.map((a) => a.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE),
   );
   const boldValue = commonValue(selectedTextAnnotations.map((a) => !!a.bold));
   const italicValue = commonValue(
@@ -406,6 +422,7 @@ export function ResultSidebar() {
         const bounds = getAnnotationBoundsPx(ctx, {
           annotation: anno,
           paperFrame: pf,
+          paper: pfSettings,
           result: s.result,
           materials: s.materials,
           piezometricLine: s.piezometricLine,
@@ -435,7 +452,7 @@ export function ResultSidebar() {
   );
 
   const mtFontSize = commonValue(
-    selectedMaterialTableAnnotations.map((a) => a.fontSize ?? 6),
+    selectedMaterialTableAnnotations.map((a) => a.fontSizePx ?? MATERIAL_TABLE_FONT_SIZE),
   );
 
   const plotWidthValue = commonValue(
@@ -455,7 +472,7 @@ export function ResultSidebar() {
     (patch: {
       text?: string;
       fontFamily?: string;
-      fontSize?: number;
+      fontSizePx?: number;
       bold?: boolean;
       italic?: boolean;
       color?: string;
@@ -468,7 +485,7 @@ export function ResultSidebar() {
   );
 
   const applyToSelectedMaterialTables = useCallback(
-    (patch: { tableColumns?: MaterialTableColumnKey[]; fontSize?: number }) => {
+    (patch: { tableColumns?: MaterialTableColumnKey[]; fontSizePx?: number }) => {
       for (const anno of selectedMaterialTableAnnotations) {
         updateAnnotation(anno.id, patch);
       }
@@ -1180,18 +1197,14 @@ export function ResultSidebar() {
                 value={fontSizeValue ?? "__mixed__"}
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
-                  applyToSelectedText({ fontSize: Number(e.target.value) });
+                  applyToSelectedText({ fontSizePx: Number(e.target.value) });
                 }}
                 className="w-full"
               >
                 {fontSizeValue === undefined && (
                   <option value="__mixed__">Mixed values</option>
                 )}
-                {FONT_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {fontSizeOptions(fontSizeValue)}
               </select>
             </div>
 
@@ -1272,7 +1285,7 @@ export function ResultSidebar() {
                 onChange={(e) => {
                   if (e.target.value === "__mixed__") return;
                   applyToSelectedMaterialTables({
-                    fontSize: Number(e.target.value),
+                    fontSizePx: Number(e.target.value),
                   });
                 }}
                 className="w-full"
@@ -1280,11 +1293,7 @@ export function ResultSidebar() {
                 {mtFontSize === undefined && (
                   <option value="__mixed__">Mixed values</option>
                 )}
-                {FONT_SIZES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
+                {fontSizeOptions(mtFontSize)}
               </select>
             </div>
 

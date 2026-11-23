@@ -6,7 +6,7 @@ import type {
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
 import { buildMaterialTableData } from "../canvas/helpers";
-import { ANNOTATION_SCALE_DIVISOR, SHEET_SANS_FAMILY } from "../rendering/style-spec";
+import { ANNOTATION_SCALE_DIVISOR, SHEET_LAYOUT_MM_PER_PX, SHEET_SANS_FAMILY, textLayoutPx } from "../rendering/style-spec";
 import { getPaperDimensions } from "../view/paper";
 import { anchoredTopLeft } from "./anchorPosition";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "./materialTableLayout";
@@ -58,11 +58,15 @@ export const measureSansText: TextMeasure = (text, fontPx, bold) => {
   return estimateWidth(text, fontPx, bold);
 };
 
-/** Size of an annotation drawn at `px` sheet pixels, as fractions of the paper. */
-function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape">) {
+/**
+ * Size of an annotation drawn at `px` sheet pixels, as fractions of the
+ * paper: annotation px (the color bar's, min(paper width, height) /
+ * divisor) or, with `layout`, layout px (the table's, the same mm on every
+ * paper size).
+ */
+function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape">, layout = false) {
   const { width, height } = getPaperDimensions(paper.paperSize, paper.landscape);
-  // The sheet scales annotations by min(paper width, height) / divisor.
-  const unit = Math.min(width, height) / ANNOTATION_SCALE_DIVISOR;
+  const unit = layout ? SHEET_LAYOUT_MM_PER_PX : Math.min(width, height) / ANNOTATION_SCALE_DIVISOR;
   return { w: (px: number) => (px * unit) / width, h: (px: number) => (px * unit) / height };
 }
 
@@ -71,8 +75,9 @@ function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape
  * width (x, w) and height (y, h): layoutMaterialTable, as the canvas and the
  * PDF lay it out. The canvas draws it at the sheet's scale, as the PDF
  * does, so it takes the same share of the paper at any `sheetScale` (the
- * sheet's scale on screen, px per annotation px: its text is measured at
- * the size it is drawn at).
+ * sheet's scale on screen, px per layout px: its text is measured at the
+ * size it is drawn at). Its text and layout are the same in mm on every
+ * paper size, so it takes a smaller share of a larger paper.
  */
 export function materialTableBox(
   table: Annotation,
@@ -82,7 +87,7 @@ export function materialTableBox(
   measure: TextMeasure = measureSansText,
   sheetScale?: number,
 ): { x: number; y: number; w: number; h: number } {
-  const fontSize = table.fontSize ?? MATERIAL_TABLE_FONT_SIZE;
+  const fontSize = textLayoutPx(table.fontSizePx ?? MATERIAL_TABLE_FONT_SIZE);
   const { columnKeys, header, rows } = buildMaterialTableData(table, materials, piezometricLine);
   // In sheet px at the scale the table is drawn at, then back to the
   // sheet's own scale (where the paper fractions are measured).
@@ -96,7 +101,7 @@ export function materialTableBox(
     sheet,
     fontSize,
   );
-  const frac = paperFractions(paper);
+  const frac = paperFractions(paper, true);
   const w = frac.w(layout.totalW / sheet);
   const h = frac.h(layout.totalH / sheet);
   const { x, y } = anchoredTopLeft(table.x ?? 0, table.y ?? 0, w, h, table.anchor);

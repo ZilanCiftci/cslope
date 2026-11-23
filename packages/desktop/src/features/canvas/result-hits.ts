@@ -54,6 +54,7 @@ export function findPaperAnnotationAt(
       const b = getAnnotationBoundsPx(ctx, {
         annotation: a,
         paperFrame: pf,
+        paper: frame,
         result: state.result,
         materials: state.materials,
         piezometricLine: state.piezometricLine,

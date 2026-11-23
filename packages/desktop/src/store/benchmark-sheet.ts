@@ -40,11 +40,12 @@ import { resolveAnnotationText } from "../features/annotations/resolveAnnotation
 import {
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_LINE_HEIGHT,
-  ANNOTATION_SCALE_DIVISOR,
   CENTER_DOT_RADIUS_PX,
   MARKER_BAR_H_PX,
   MARKER_SZ_PX,
+  SHEET_LAYOUT_MM_PER_PX,
   styleMm,
+  textLayoutPx,
 } from "../features/rendering/style-spec";
 import { boundsOf, paperContentBounds, paperContentShapes, type Bounds, type PaperContent } from "../features/view/extents";
 import { getPaperDimensions, sheetMmPerPx, virtualPaperFrame } from "../features/view/paper";
@@ -97,11 +98,11 @@ const SCALE_ROUNDS = 14;
 /** Average glyph width of the sheet's sans-serif as a share of its size, a little wide (as colorBarPlacement estimates). */
 const estimate: TextMeasure = (text, fontPx, bold) => text.length * fontPx * (bold ? 0.6 : 0.55);
 
-/** The box of a text annotation hanging from its point (top left), its tags filled in. */
+/** The box of a text annotation hanging from its point (top left), its tags filled in (layout px, the same mm on every paper). */
 function textBox(a: Annotation, projectInfo: BenchmarkSheetModel["projectInfo"], paper: Paper): SheetBox {
   const { width, height } = getPaperDimensions(paper.paperSize, paper.landscape);
-  const unit = Math.min(width, height) / ANNOTATION_SCALE_DIVISOR;
-  const size = a.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE;
+  const unit = SHEET_LAYOUT_MM_PER_PX;
+  const size = textLayoutPx(a.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE);
   const text = resolveAnnotationText({ text: (a.text ?? "").replace(/#FOS\b/gi, FOS_TEXT), projectInfo });
   const lines = text.split("\n");
   const w = Math.max(...lines.map((l) => estimate(l, size, a.type === "text" && !!a.bold)));

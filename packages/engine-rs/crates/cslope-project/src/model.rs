@@ -506,8 +506,11 @@ pub struct Annotation {
     pub height: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
+    /// Text and material table: the text's size in px of the F label's
+    /// unit (12 px = 10 pt), whatever the paper size. (`fontSize`, in
+    /// annotation px, is read as px × about 1.19.)
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub font_size: Option<f64>,
+    pub font_size_px: Option<f64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -596,9 +599,10 @@ pub struct PlotStyle {
     pub show_grid: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub show_border: Option<bool>,
-    /// The tick values' size (annotation px).
+    /// The tick values' size in px of the F label's unit (`fontSize`, in
+    /// annotation px, read as px × about 1.19).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub font_size: Option<f64>,
+    pub font_size_px: Option<f64>,
     /// Fixed ends of the axes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x_min: Option<f64>,
@@ -709,7 +713,7 @@ pub fn default_result_view_settings() -> ResultViewSettings {
                 x: Some(0.11),
                 y: Some(0.08),
                 text: Some("#Title".into()),
-                font_size: Some(24.0),
+                font_size_px: Some(29.0),
                 ..Annotation::default()
             },
             Annotation {
@@ -718,7 +722,7 @@ pub fn default_result_view_settings() -> ResultViewSettings {
                 x: Some(0.11),
                 y: Some(0.13),
                 text: Some("#Subtitle".into()),
-                font_size: Some(14.0),
+                font_size_px: Some(17.0),
                 ..Annotation::default()
             },
             Annotation {
@@ -727,7 +731,7 @@ pub fn default_result_view_settings() -> ResultViewSettings {
                 x: Some(0.94),
                 y: Some(0.06),
                 anchor: Some("top-right".into()),
-                font_size: Some(8.0),
+                font_size_px: Some(10.0),
                 table_columns: Some(
                     ["model", "unitWeight", "cohesion", "frictionAngle"]
                         .iter()

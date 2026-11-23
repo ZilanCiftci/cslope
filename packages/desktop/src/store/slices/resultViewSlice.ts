@@ -4,6 +4,7 @@ import type { SliceCreator } from "../helpers";
 import { isBuiltInAnnotationType, type CustomSearchPlane, type ModelEntry, type ReferenceAnnotation, type ResultViewSlice } from "../types";
 import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/annotations/reference";
 import { NEW_MATERIAL_TABLE_FONT_SIZE } from "../../features/annotations/materialTableLayout";
+import { ANNOTATION_DEFAULT_FONT_SIZE } from "../../features/rendering/style-spec";
 import { screenSheetScale } from "../../features/view/screen-paper";
 import {
   colorBarDefaultPosition,
@@ -107,7 +108,8 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
       y: bar ? bar.y : type === "material-table" ? TOP_INSIDE_FRAME : free.y,
       anchor: type === "material-table" || type === "color-bar" ? "top-right" : undefined,
       text: type === "text" ? "Annotation" : undefined,
-      fontSize: type === "material-table" ? NEW_MATERIAL_TABLE_FONT_SIZE : 12,
+      // px of the F label's unit, the same size on every paper.
+      fontSizePx: type === "material-table" ? NEW_MATERIAL_TABLE_FONT_SIZE : type === "text" ? ANNOTATION_DEFAULT_FONT_SIZE : undefined,
       width: type === "plot" ? 0.24 : undefined,
       height: type === "plot" ? 0.18 : undefined,
       plotAxisX: type === "plot" ? "slice" : undefined,

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { Annotation } from "../../store/types";
 import { PopupPanel } from "../../components/ui/PopupPanel";
+import { ANNOTATION_DEFAULT_FONT_SIZE } from "../rendering/style-spec";
 
 interface AnnotationStyleMenuState {
   screenX: number;
@@ -19,7 +20,7 @@ interface AnnotationStyleMenuProps {
 
 export type AnnotationDraft = Pick<
   Annotation,
-  "text" | "fontSize" | "fontFamily" | "bold" | "italic" | "color"
+  "text" | "fontSizePx" | "fontFamily" | "bold" | "italic" | "color"
 >;
 
 const FONT_SIZES = [8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
@@ -69,7 +70,7 @@ export function AnnotationStyleMenu({
         setTimeout(() => {
           setDraft({
             text: anno.text,
-            fontSize: anno.fontSize,
+            fontSizePx: anno.fontSizePx,
             fontFamily: anno.fontFamily,
             bold: anno.bold,
             italic: anno.italic,
@@ -102,7 +103,7 @@ export function AnnotationStyleMenu({
     if (menu && draft) {
       updateAnnotation(menu.annoId, {
         text: draft.text,
-        fontSize: draft.fontSize,
+        fontSizePx: draft.fontSizePx,
         fontFamily: draft.fontFamily,
         bold: draft.bold,
         italic: draft.italic,
@@ -212,24 +213,26 @@ export function AnnotationStyleMenu({
           Size
         </label>
         <select
-          value={draft.fontSize ?? 12}
+          value={draft.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE}
           onChange={(e) =>
             setDraft((prev) =>
               prev
                 ? {
                     ...prev,
-                    fontSize: Number(e.target.value),
+                    fontSizePx: Number(e.target.value),
                   }
                 : prev,
             )
           }
           className="w-full"
         >
-          {FONT_SIZES.map((s) => (
-            <option key={s} value={s}>
-              {s}px
-            </option>
-          ))}
+          {[...new Set([...FONT_SIZES, draft.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE])]
+            .sort((a, b) => a - b)
+            .map((s) => (
+              <option key={s} value={s}>
+                {Math.round(s * 100) / 100}px
+              </option>
+            ))}
         </select>
       </div>
 

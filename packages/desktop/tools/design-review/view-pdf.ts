@@ -13,6 +13,7 @@
  * two styled slice plots ("plot"). VIEW_PDF_ONLY=v002,user
  * picks some; VIEW_PDF_GRID=1 turns the grid on with a fixed spacing and minor
  * lines; VIEW_PDF_FRAME=1 styles the frame (color, width, label size, ticks);
+ * VIEW_PDF_PAPER=A1 (or A3, …) puts the sheet on that paper size;
  * DESIGN_REVIEW_SKIP_BUILD=1 reuses the last build. Needs
  * pdftoppm and ImageMagick's convert.
  */
@@ -66,6 +67,10 @@ async function load(page: Page, model: unknown | null, sheet?: string) {
   if (process.env.VIEW_PDF_FRAME) {
     await store(page, `(s) => s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { ...s.resultViewSettings.layerStyles, frame: { color: "#0066cc", width: 8, fontSize: 14 } } })`);
   }
+  // VIEW_PDF_PAPER=A1: the same sheet on another paper size (its text keeps its size in mm).
+  if (process.env.VIEW_PDF_PAPER) {
+    await store(page, `(s) => s.setResultViewSettings({ paperFrame: { ...s.resultViewSettings.paperFrame, paperSize: ${JSON.stringify(process.env.VIEW_PDF_PAPER)} } })`);
+  }
   await page.waitForTimeout(800);
 }
 
@@ -77,7 +82,7 @@ const STYLED_PLOT = `(s) => {
   s.addAnnotation("plot");
   const [a, b] = window.__CSLOPE_STORE__.getState().resultViewSettings.annotations.filter((a) => a.type === "plot").slice(-2);
   s.updateAnnotation(a.id, { x: 0.1, y: 0.55, width: 0.34, height: 0.32, plotStyle: { color: "#cc0000", line: "dashed", lineWidthPx: 4, marker: "plus", markerSizePx: 25, yMin: 0, yMax: 60 } });
-  s.updateAnnotation(b.id, { x: 0.5, y: 0.55, width: 0.34, height: 0.32, plotAxisX: "x", plotAxisY: "sliceWeight", plotStyle: { color: "#0066cc", line: "none", marker: "square", markerOpen: true, showGrid: false, fontSize: 11 } });
+  s.updateAnnotation(b.id, { x: 0.5, y: 0.55, width: 0.34, height: 0.32, plotAxisX: "x", plotAxisY: "sliceWeight", plotStyle: { color: "#0066cc", line: "none", marker: "square", markerOpen: true, showGrid: false, fontSizePx: 13 } });
   s.setSelectedAnnotations([]);
 }`;
 

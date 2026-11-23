@@ -10,6 +10,7 @@ import {
   resolvePlotStyle,
 } from "./plotStyle";
 import { axisTicks } from "./plotAxis";
+import { annotationPxToTextPx, PLOT_TEXT_DEFAULT_PX, textLayoutPx } from "../rendering/style-spec";
 
 describe("normalizePlotStyle", () => {
   it("keeps valid members that differ from the default", () => {
@@ -25,7 +26,7 @@ describe("normalizePlotStyle", () => {
         showAxisTitle: false,
         showGrid: false,
         showBorder: false,
-        fontSize: 12,
+        fontSizePx: 14,
         xMin: 1,
         xMax: 9,
         yMin: -5,
@@ -42,7 +43,7 @@ describe("normalizePlotStyle", () => {
       showAxisTitle: false,
       showGrid: false,
       showBorder: false,
-      fontSize: 12,
+      fontSizePx: 14,
       xMin: 1,
       xMax: 9,
       yMin: -5,
@@ -80,6 +81,20 @@ describe("normalizePlotStyle", () => {
     // a bad px member is dropped, not replaced by the mm one
     expect(normalizePlotStyle({ lineWidthPx: 99, lineWidth: 0.5 })).toBeUndefined();
   });
+
+  it("reads a text size in annotation px (fontSize, files saved before) as px of the F label's unit, the px member first", () => {
+    // 12 annotation px of A4 (4.2 mm) is 14.285714 px of 0.294 mm: the same size on A4.
+    expect(normalizePlotStyle({ fontSize: 12 })).toEqual({ fontSizePx: 14.285714 });
+    expect(annotationPxToTextPx(12)).toBe(14.285714);
+    expect(textLayoutPx(14.285714)).toBeCloseTo(12, 5);
+    expect(normalizePlotStyle({ fontSize: 9 })).toEqual({ fontSizePx: 10.714286 });
+    expect(normalizePlotStyle({ fontSizePx: 11, fontSize: 30 })).toEqual({ fontSizePx: 11 });
+    // a bad px member is dropped, not replaced by the old one; an old one out of its bounds is dropped
+    expect(normalizePlotStyle({ fontSizePx: 99, fontSize: 12 })).toBeUndefined();
+    expect(normalizePlotStyle({ fontSize: 40 })).toBeUndefined();
+    // read again, it stays as it is (not converted twice)
+    expect(normalizePlotStyle(normalizePlotStyle({ fontSize: 12 }))).toEqual({ fontSizePx: 14.285714 });
+  });
 });
 
 describe("plotStylePatched", () => {
@@ -106,7 +121,8 @@ describe("resolvePlotStyle", () => {
         showAxisTitle: true,
         showGrid: true,
         showBorder: true,
-        textScale: 1,
+        // the default 11 px (about the 9 annotation px it was on A4) against the layout's 9 layout px
+        textScale: textLayoutPx(PLOT_TEXT_DEFAULT_PX) / 9,
       });
       // As the canvas and the PDF drew it before the style.
       expect(s.lineWidthMm).toBe(Math.max(0.25, 0.35 * mmPerAnnoPx));
@@ -117,29 +133,31 @@ describe("resolvePlotStyle", () => {
   });
 
   it("takes the style's sizes in px (1 px = 0.1 mm) and a dash in line widths", () => {
-    const s = resolvePlotStyle({ line: "dashed", lineWidthPx: 4, markerSizePx: 30, fontSize: 18 }, 0.35);
+    const s = resolvePlotStyle({ line: "dashed", lineWidthPx: 4, markerSizePx: 30, fontSizePx: annotationPxToTextPx(18) }, 0.35);
     expect(s.lineWidthMm).toBe(0.4);
     expect(s.dashMm.map((d) => Math.round(d * 1000) / 1000)).toEqual([2.4, 1.2]);
     expect(s.markerRadiusMm).toBe(1.5);
-    expect(s.textScale).toBe(2);
+    expect(s.textScale).toBeCloseTo(2, 6);
   });
 });
 
 describe("plotLayout", () => {
-  it("lays out an unstyled plot as before", () => {
+  it("lays out an unstyled plot as before, its text at the default 11 px", () => {
     const [x, y, w, h, s, mm] = [10, 20, 300, 200, 1.7, 4];
     const L = plotLayout(x, y, w, h, s, mm, resolvePlotStyle(undefined, s / mm));
-    const titleSize = 10 * s;
-    const axisSize = 9 * s;
+    // 11 px of the F label's unit, 9.24 layout px against the 9 it was (12 px = 10 pt)
+    const k = textLayoutPx(11) / 9;
+    const titleSize = 10 * s * k;
+    const axisSize = 9 * s * k;
     const padTop = titleSize + 6 * s + axisSize / 2 + 3 * s;
-    const padBottom = 22 * s + axisSize + 2 * s;
-    expect(L.titleSize).toBe(titleSize);
-    expect(L.axisSize).toBe(axisSize);
+    const padBottom = 22 * s * k + axisSize + 2 * s;
+    expect(L.titleSize).toBeCloseTo(titleSize, 12);
+    expect(L.axisSize).toBeCloseTo(axisSize, 12);
     expect(L.titleX).toBe(x + 6 * s);
     expect(L.titleY).toBe(y + 4 * s);
-    expect(L.chartX).toBe(x + 32 * s);
+    expect(L.chartX).toBeCloseTo(x + 32 * s * k, 12);
     expect(L.chartY).toBe(y + padTop);
-    expect(L.chartW).toBeCloseTo(w - 32 * s - 12 * s, 12);
+    expect(L.chartW).toBeCloseTo(w - 32 * s * k - 12 * s, 12);
     expect(L.chartH).toBeCloseTo(h - padTop - padBottom, 12);
     expect(L.xTitleY).toBeCloseTo(L.chartY + L.chartH + 1.2 * s + 2 * s + axisSize + 2 * s, 12);
   });

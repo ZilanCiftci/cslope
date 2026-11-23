@@ -17,7 +17,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "../../store/defaults";
 import { computePaperFrame } from "../view/paper";
-import type { AnchorPosition, Annotation, MaterialRow, PaperAnnotation } from "../../store/types";
+import type { AnchorPosition, Annotation, MaterialRow, PaperAnnotation, PaperSize } from "../../store/types";
 
 const row = (id: string, model: MaterialModel, extra: Partial<MaterialRow> = {}): MaterialRow => ({
   id,
@@ -220,7 +220,7 @@ const RESULT = {
   elapsedMs: 1,
 } as unknown as AnalysisResult;
 
-function drawTexts(annotations: Annotation[]): TextCall[] {
+function drawTexts(annotations: Annotation[], paperSize: PaperSize = "A4"): TextCall[] {
   const rec = createRecordingContext(W, H);
   const params: DrawCanvasParams = {
     w: W,
@@ -232,6 +232,7 @@ function drawTexts(annotations: Annotation[]): TextCall[] {
       annotations,
       showFosLabel: false,
       showGrid: false,
+      paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, paperSize },
     },
     orientation: "ltr",
     coordinates: COORDS,
@@ -259,38 +260,42 @@ function drawTexts(annotations: Annotation[]): TextCall[] {
 }
 
 describe("annotation hit boxes enclose what is drawn", () => {
-  const pf = computePaperFrame(W, H, "A4", true, 1, 0, 0);
   const anchors: (AnchorPosition | undefined)[] = [undefined, "top-right", "bottom-left", "bottom-right"];
   const kinds: PaperAnnotation[] = [
-    { id: "x", type: "text", x: 0.5, y: 0.5, text: "#Title\nsecond line", fontSize: 18, bold: true },
+    { id: "x", type: "text", x: 0.5, y: 0.5, text: "#Title\nsecond line", fontSizePx: 21, bold: true },
     { id: "x", type: "color-bar", x: 0.5, y: 0.5 },
-    { id: "x", type: "material-table", x: 0.5, y: 0.5, fontSize: 8 },
+    { id: "x", type: "material-table", x: 0.5, y: 0.5, fontSizePx: 10 },
     { id: "x", type: "plot", x: 0.5, y: 0.5 },
   ];
 
-  for (const kind of kinds) {
-    for (const anchor of anchors) {
-      it(`${kind.type} anchored ${anchor ?? "top-left"}`, () => {
-        const anno = { ...kind, anchor };
-        const before = new Set(drawTexts([]).map((t) => `${t.text}@${t.x},${t.y}`));
-        const own = drawTexts([anno]).filter((t) => !before.has(`${t.text}@${t.x},${t.y}`));
-        expect(own.length).toBeGreaterThan(0);
-        const rec = createRecordingContext(W, H);
-        const b = getAnnotationBoundsPx(rec.ctx, {
-          annotation: anno,
-          paperFrame: pf,
-          result: RESULT,
-          materials: [{ ...DEFAULT_MATERIAL }],
-          projectInfo: { ...DEFAULT_PROJECT_INFO, title: "A fairly long project title" },
-          parameters: [],
+  // (A1: the text and the table the same size in mm as on A4, a smaller part of the sheet)
+  for (const paperSize of ["A4", "A1"] as const) {
+    const pf = computePaperFrame(W, H, paperSize, true, 1, 0, 0);
+    for (const kind of kinds) {
+      for (const anchor of anchors) {
+        it(`${kind.type} anchored ${anchor ?? "top-left"} on ${paperSize}`, () => {
+          const anno = { ...kind, anchor };
+          const before = new Set(drawTexts([], paperSize).map((t) => `${t.text}@${t.x},${t.y}`));
+          const own = drawTexts([anno], paperSize).filter((t) => !before.has(`${t.text}@${t.x},${t.y}`));
+          expect(own.length).toBeGreaterThan(0);
+          const rec = createRecordingContext(W, H);
+          const b = getAnnotationBoundsPx(rec.ctx, {
+            annotation: anno,
+            paperFrame: pf,
+            paper: { paperSize, landscape: true },
+            result: RESULT,
+            materials: [{ ...DEFAULT_MATERIAL }],
+            projectInfo: { ...DEFAULT_PROJECT_INFO, title: "A fairly long project title" },
+            parameters: [],
+          });
+          for (const t of own) {
+            expect(t.x, t.text).toBeGreaterThanOrEqual(b.x - 1e-6);
+            expect(t.x, t.text).toBeLessThanOrEqual(b.x + b.w + 1e-6);
+            expect(t.y, t.text).toBeGreaterThanOrEqual(b.y - 1e-6);
+            expect(t.y, t.text).toBeLessThanOrEqual(b.y + b.h + 1e-6);
+          }
         });
-        for (const t of own) {
-          expect(t.x, t.text).toBeGreaterThanOrEqual(b.x - 1e-6);
-          expect(t.x, t.text).toBeLessThanOrEqual(b.x + b.w + 1e-6);
-          expect(t.y, t.text).toBeGreaterThanOrEqual(b.y - 1e-6);
-          expect(t.y, t.text).toBeLessThanOrEqual(b.y + b.h + 1e-6);
-        }
-      });
+      }
     }
   }
   it("adds the datum, value and rate columns when a material's strength varies with depth", () => {

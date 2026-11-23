@@ -8,6 +8,7 @@ import {
   DEFAULT_RESULT_VIEW_SETTINGS,
 } from "./defaults";
 import type { AppState, ModelEntry } from "./types";
+import { SHEET_LAYOUT_MM_PER_PX, textLayoutPx } from "../features/rendering/style-spec";
 import {
   normalizeColorBarScale,
   normalizeResultView,
@@ -753,9 +754,33 @@ describe("normalizeResultView (also used for view templates)", () => {
     expect(normalizeResultView(JSON.parse(JSON.stringify(view))).annotations).toEqual(JSON.parse(JSON.stringify(view.annotations)));
   });
 
-  it("opens a plot saved before the style unchanged", () => {
+  it("opens a plot saved before the style unchanged (its unused text size in px)", () => {
     const old = { id: "p", type: "plot", x: 0.3, y: 0.3, fontSize: 12, width: 0.24, height: 0.18, plotAxisX: "x", plotAxisY: "porePressure" };
-    expect(normalizeResultView({ annotations: [old] }).annotations).toEqual([old]);
+    const rest = Object.fromEntries(Object.entries(old).filter(([k]) => k !== "fontSize"));
+    expect(normalizeResultView({ annotations: [old] }).annotations).toEqual([{ ...rest, fontSizePx: 14.285714 }]);
+  });
+
+  it("reads a text size in annotation px (fontSize) as px of the F label's unit, the same size on A4, and writes only fontSizePx", () => {
+    const view = normalizeResultView({
+      annotations: [
+        { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", fontSize: 24 },
+        { id: "m", type: "material-table", x: 0.9, y: 0.1, fontSize: 6 },
+        // a px member comes first; a bad one is dropped, not replaced by the old member
+        { id: "u", type: "text", x: 0.1, y: 0.2, text: "U", fontSizePx: 17, fontSize: 40 },
+        { id: "v", type: "text", x: 0.1, y: 0.3, text: "V", fontSizePx: "big", fontSize: 12 },
+        { id: "w", type: "text", x: 0.1, y: 0.4, text: "W", fontSize: "12" },
+      ],
+    });
+    const [t, m, u, v, w] = view.annotations;
+    // x (210 / 600 mm) / (10 / 12 pt x 0.3528 mm), about 1.19, to 6 decimals
+    expect(t).toEqual({ id: "t", type: "text", x: 0.1, y: 0.1, text: "T", fontSizePx: 28.571429 });
+    expect(m).toEqual({ id: "m", type: "material-table", x: 0.9, y: 0.1, fontSizePx: 7.142857 });
+    expect(textLayoutPx(28.571429) * SHEET_LAYOUT_MM_PER_PX).toBeCloseTo(24 * (210 / 600), 6);
+    expect(u).toEqual({ id: "u", type: "text", x: 0.1, y: 0.2, text: "U", fontSizePx: 17 });
+    expect("fontSizePx" in v || "fontSize" in v).toBe(false);
+    expect("fontSizePx" in w || "fontSize" in w).toBe(false);
+    // saved and read again: not converted twice
+    expect(normalizeResultView(JSON.parse(JSON.stringify(view))).annotations).toEqual(view.annotations);
   });
 
   it("keeps a valid view lock", () => {

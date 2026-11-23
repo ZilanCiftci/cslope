@@ -13,6 +13,7 @@ import {
 } from "./colorBarPlacement";
 import { buildMaterialTableData, measureTable } from "../canvas/helpers";
 import { getPaperDimensions } from "../view/paper";
+import { annotationPxToTextPx, SHEET_LAYOUT_MM_PER_PX, textLayoutPx } from "../rendering/style-spec";
 
 /** A fixed text measure (the tests' canvas measures nothing): 0.55 em a glyph, bold 0.6. */
 const measure: TextMeasure = (text, px, bold) => text.length * px * (bold ? 0.6 : 0.55);
@@ -53,14 +54,14 @@ describe("color bar default position", () => {
     expect(ys).toEqual([...ys].sort((a, b) => a - b));
     expect(ys[0]).toBeLessThan(ys[1]);
     expect(ys[1]).toBeLessThan(ys[2]);
-    // One body row at 8 px text: 20 px of 600 per min(paper) side.
-    const row = 20 / 600;
+    // One body row at the default table's 10 px text (8.4 layout px): 15 layout px × 8.4 / 6, of 600 per min(paper) side on A4.
+    const row = (15 * textLayoutPx(10)) / 6 / 600;
     expect(ys[2] - ys[1]).toBeCloseTo(4 * row, 2);
   });
 
   it("follows the table's text size and the paper's orientation", () => {
     const mats = materials(6);
-    const small = colorBarDefaultPosition([{ ...TABLE, fontSize: 6 }], mats, undefined, A4, measure).y;
+    const small = colorBarDefaultPosition([{ ...TABLE, fontSizePx: 7 }], mats, undefined, A4, measure).y;
     const large = colorBarDefaultPosition([TABLE], mats, undefined, A4, measure).y;
     expect(small).toBeLessThan(large);
     // Portrait: the same table is a smaller part of the taller paper.
@@ -93,14 +94,14 @@ describe("color bar default position", () => {
 });
 
 describe("color bar default position on screen (#70)", () => {
-  // The examples' table: 6 px text at the top right of the sheet.
+  // The examples' table: 6 annotation px text (as px of the F label's unit) at the top right of the sheet.
   const EXAMPLE_TABLE: Annotation = {
     id: "t",
     type: "material-table",
     x: 0.94,
     y: 0.065,
     anchor: "top-right",
-    fontSize: 6,
+    fontSizePx: annotationPxToTextPx(6),
     tableColumns: ["model", "unitWeight", "cohesion", "frictionAngle"],
   };
   // The reporting tutorial's capture: the sheet 615 px high on screen.
@@ -124,10 +125,10 @@ describe("color bar default position on screen (#70)", () => {
   /** The bottom of the table as the canvas draws it at `sheetScale`, as a fraction of the paper height. */
   const drawnBottom = (table: Annotation, mats: MaterialRow[], sheetScale: number) => {
     const { columnKeys, header, rows } = buildMaterialTableData(table, mats, undefined);
-    const { h } = measureTable(measuringCtx(), columnKeys, header, rows, sheetScale, table.fontSize);
-    const { width, height } = getPaperDimensions(A4.paperSize, A4.landscape);
-    // Sheet px per paper height: the annotations scale with min(w, h) / 600.
-    const sheetH = (600 * sheetScale * height) / Math.min(width, height);
+    const { h } = measureTable(measuringCtx(), columnKeys, header, rows, sheetScale, textLayoutPx(table.fontSizePx!));
+    const { height } = getPaperDimensions(A4.paperSize, A4.landscape);
+    // Sheet px per paper height: the table's layout px are SHEET_LAYOUT_MM_PER_PX mm on every paper.
+    const sheetH = (sheetScale * height) / SHEET_LAYOUT_MM_PER_PX;
     return table.y! + h / sheetH;
   };
 
@@ -180,7 +181,7 @@ describe("Color bar button", () => {
     useAppStore.setState({ materials: materials(4) });
     const s = useAppStore.getState();
     const table = s.resultViewSettings.annotations.find((a) => a.type === "material-table")!;
-    // The new table's 8 px text at 7.2 px on screen: drawn at that size, its share of the paper unchanged.
+    // The new table's 10 px text (8.4 layout px) at 7.56 px on screen: drawn at that size, its share of the paper unchanged.
     const sheetScale = 0.9;
     s.addAnnotation("color-bar", { sheetScale });
     const bar = useAppStore.getState().resultViewSettings.annotations.find((a) => a.type === "color-bar")!;
