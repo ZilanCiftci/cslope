@@ -183,9 +183,10 @@ export const ANNOTATION_DEFAULT_FONT_FAMILY = "sans-serif";
 export const ANNOTATION_LINE_HEIGHT = 1.2;
 /**
  * Divisor for annotation scale (`scale = min(paperW, paperH) / divisor`):
- * the color bar's sizes, which grow with the paper. (The text sizes of
- * text annotations, the material table and the slice plot were in these
- * px before they were fixed; see SHEET_LAYOUT_MM_PER_PX.)
+ * a slice plot series' default line and markers, which grow with the
+ * paper. (The text sizes of text annotations, the material table and the
+ * slice plot, and the color bar, were in these px before they were fixed;
+ * see SHEET_LAYOUT_MM_PER_PX.)
  */
 export const ANNOTATION_SCALE_DIVISOR = 600;
 /** Default annotation text colour. */
@@ -220,6 +221,18 @@ export const PLOT_LINE_COLOR: DualColor = { hex: "#26a69a", rgb: [38, 166, 154] 
 
 /** Number of tick/label positions on the FOS colour bar. */
 export const COLOR_BAR_NUM_TICKS = 5;
+// The colour bar's sizes, the same in mm on every paper size: its geometry
+// in layout px (SHEET_LAYOUT_MM_PER_PX, 0.35 mm), its text in px of the F
+// label's unit (styleFontPt). On A4 they are the annotation px it had when
+// it grew with the paper, so an A4 sheet looks as before.
+/** The bar's width and height (layout px). */
+export const COLOR_BAR_W = 20;
+export const COLOR_BAR_H = 200;
+/** Space from the bar to its values, and a tick's length (layout px). */
+export const COLOR_BAR_LABEL_GAP = 5;
+export const COLOR_BAR_TICK = 3;
+/** Space between the title ("F") and the top of the bar (layout px). */
+export const COLOR_BAR_TITLE_GAP = 4;
 
 // ── The sheet's frame: ticks, their labels and the plot frame (mm on the paper) ──
 // The PDF draws these sizes; the result view draws them at its sheet's px per mm.
@@ -299,7 +312,8 @@ export const STYLE_FONT_MM_PER_PX = styleFontPt(1) * MM_PER_PT;
 /**
  * mm on the paper of a layout px, the fixed unit of the text annotations',
  * the material table's and the slice plot's layouts (the table's cells
- * and column widths, the plot's margins and ticks): an annotation px of
+ * and column widths, the plot's margins and ticks) and of the color bar
+ * (its bar, ticks and plate): an annotation px of
  * an A4 sheet (its shorter side, 210 mm, / ANNOTATION_SCALE_DIVISOR; 0.35
  * mm), whatever the paper size. Their text sizes are px of the F label's
  * unit (STYLE_FONT_MM_PER_PX), in layout px by `textLayoutPx`.
@@ -319,6 +333,12 @@ export function textLayoutPx(px: number): number {
  * A4 (on a larger paper smaller than before, no longer growing with it).
  */
 export const ANNOTATION_PX_TO_TEXT_PX = SHEET_LAYOUT_MM_PER_PX / STYLE_FONT_MM_PER_PX;
+
+/**
+ * The colour bar's title and values (px of the F label's unit, about 13.1
+ * px or 10.9 pt): the 11 annotation px they were on A4, 11 layout px.
+ */
+export const COLOR_BAR_FONT_PX = 11 * ANNOTATION_PX_TO_TEXT_PX;
 
 /** A text size in annotation px (the first form) in px of the F label's unit, to 6 decimals (as the Rust reader). */
 export function annotationPxToTextPx(px: number): number {
@@ -357,7 +377,7 @@ export const COLOR_BAR_LINE_MM = 0.2;
 /** The material table's rules and its swatches' borders (mm on the paper, the canvas and the PDF alike). */
 export const MATERIAL_TABLE_RULE_MM = 0.2;
 export const MATERIAL_TABLE_SWATCH_BORDER_MM = 0.1;
-/** Space between the colour bar (its title, bar and values) and the edge of its plate, at annotation scale 1. */
+/** Space between the colour bar (its title, bar and values) and the edge of its plate (layout px). */
 export const COLOR_BAR_PLATE_PAD = 4;
 
 // ── Material model hatch patterns ──────────────────────────────
