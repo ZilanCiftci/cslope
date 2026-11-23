@@ -22,7 +22,7 @@ import {
   REFERENCE_LABEL_LINE_HEIGHT,
   REFERENCE_LABEL_PAD_PX,
 } from "../canvas/reference-draw";
-import { REFERENCE_ANNOTATION_COLOR } from "../rendering/style-spec";
+import { REFERENCE_ANNOTATION_COLOR, styleMm } from "../rendering/style-spec";
 import { surfaceYAtX } from "../view/surface";
 import { surfacePoints, type DrawableSurface } from "../../utils/arc";
 import { setSansFont } from "./pdf-fonts";
@@ -52,11 +52,11 @@ export function drawReferenceLinesPdf(
     if (pts.length >= 2) {
       const width = referenceWidth(anno);
       pdf.setDrawColor(...color);
-      pdf.setLineWidth(width * tf.mmPerPx);
+      pdf.setLineWidth(styleMm(width));
       pdf.setLineJoin("round");
       pdf.setLineCap(anno.dash === "dotted" ? "round" : "butt");
       pdf.setLineDashPattern(
-        referenceDashPattern(anno.dash, width).map((d) => d * tf.mmPerPx),
+        referenceDashPattern(anno.dash, width).map(styleMm),
         0,
       );
       pdfPath(pdf, buildPolylinePath(pts, false), "S");

@@ -16,8 +16,8 @@ import type {
   ReferenceSpec,
 } from "../../store/types";
 
-/** Line width (paper px) when none is set. */
-export const REFERENCE_DEFAULT_WIDTH = 1.5;
+/** Line width (style px, 1 px = 0.1 mm on the paper; STYLE_PX_PER_MM) when none is set. */
+export const REFERENCE_DEFAULT_WIDTH = 4;
 /** The smallest radius a reference circle is dragged or edited to (m). */
 export const MIN_REFERENCE_RADIUS = 0.1;
 
@@ -45,18 +45,19 @@ export function referenceAnnotations(list: readonly Annotation[]): ReferenceAnno
   return list.filter(isReferenceAnnotation);
 }
 
-/** The line width of a reference annotation (paper px). */
+/** The line width of a reference annotation (style px, 1 px = 0.1 mm on the paper). */
 export function referenceWidth(a: ReferenceAnnotation): number {
   return a.width !== undefined && Number.isFinite(a.width) && a.width > 0 ? a.width : REFERENCE_DEFAULT_WIDTH;
 }
 
 /**
- * The dash pattern of a line of `width` px, in px (scaled by the caller
- * for the paper zoom or to mm): empty for a solid line.
+ * The dash pattern of a line of `width` style px, in style px (1 px = 0.1
+ * mm on the paper; the caller converts to mm or to the screen): empty for
+ * a solid line.
  */
 export function referenceDashPattern(dash: ReferenceDash | undefined, width: number): number[] {
-  if (dash === "dashed") return [4 * width + 2, 2 * width + 2];
-  if (dash === "dotted") return [width, 2 * width + 1];
+  if (dash === "dashed") return [4 * width + 5, 2 * width + 5];
+  if (dash === "dotted") return [width, 2 * width + 2.5];
   return [];
 }
 

@@ -44,9 +44,10 @@ import {
   CENTER_DOT_RADIUS_PX,
   MARKER_BAR_H_PX,
   MARKER_SZ_PX,
+  styleMm,
 } from "../features/rendering/style-spec";
 import { boundsOf, paperContentBounds, paperContentShapes, type Bounds, type PaperContent } from "../features/view/extents";
-import { getPaperDimensions, virtualPaperFrame } from "../features/view/paper";
+import { getPaperDimensions, sheetMmPerPx, virtualPaperFrame } from "../features/view/paper";
 import { surfaceYAtX } from "../features/view/surface";
 import { PAPER_MARGIN_FRACTION } from "../features/view/viewLock";
 
@@ -172,7 +173,8 @@ export function sheetShapes(model: BenchmarkSheetModel, content: PaperContent, l
   }
   const cs = model.result?.criticalSurface;
   if (cs && model.resultViewSettings?.showCentreMarker && !cs.points) {
-    const r = CENTER_DOT_RADIUS_PX * px;
+    // The dot's radius in style px (0.1 mm), in logical px of this sheet.
+    const r = (styleMm(CENTER_DOT_RADIUS_PX) / sheetMmPerPx(paper.paperSize, paper.landscape)) * px;
     boxes.push({ xMin: cs.cx - r, xMax: cs.cx + r, yMin: cs.cy - r, yMax: cs.cy + r });
     lines.push([[cs.cx, cs.cy], cs.entryPoint], [[cs.cx, cs.cy], cs.exitPoint]);
   }

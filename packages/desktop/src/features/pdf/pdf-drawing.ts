@@ -100,7 +100,7 @@ import {
   MATERIAL_TABLE_RULE_MM,
   MATERIAL_TABLE_SWATCH_BORDER_MM,
   COLOR_BAR_LINE_MM,
-  SLIP_SURFACE_LINE_MM,
+  styleMm,
   FOS_LABEL_FONT_PT,
   FOS_LABEL_OFFSET_MM,
   FOS_LABEL_PLATE_BOTTOM_MM,
@@ -117,7 +117,7 @@ import {
   RULER_TICK_LINE_MM,
   RULER_TICK_MM,
 } from "../rendering/style-spec";
-import { fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
+import { fosLabelScale, fosLabelText, hexRgb } from "../results/layer-styles";
 import { gridLinePositions, sheetGridStyle } from "../rendering/sheet-grid";
 import { sheetFrameStyle } from "../rendering/sheet-frame";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
@@ -1039,7 +1039,7 @@ export function drawSlipSurfaces(
 
     const style = rvs.layerStyles?.surfaces;
     pdf.setDrawColor(...color);
-    pdf.setLineWidth(pdfScaled(SLIP_SURFACE_LINE_MM, style?.width, SLIP_SURFACE_LINE_WIDTH_PX));
+    pdf.setLineWidth(styleMm(style?.width ?? SLIP_SURFACE_LINE_WIDTH_PX));
     setOpacity(pdf, 1, style?.opacity ?? SLIP_SURFACE_OPACITY);
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
@@ -1154,7 +1154,7 @@ export function drawCriticalSurface(
     const pdfPts = pts.map(([wx, wy]) => tf.worldToPdf(wx, wy));
     const style = rvs.layerStyles?.criticalSurface;
     pdf.setDrawColor(...(style?.color ? parseColor(style.color) : CRITICAL_SURFACE_COLOR.rgb));
-    pdf.setLineWidth(pdfScaled(0.38, style?.width, CRITICAL_SURFACE_LINE_WIDTH_PX));
+    pdf.setLineWidth(styleMm(style?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX));
     const ops = buildPolylinePath(pdfPts, false);
     pdfPath(pdf, ops, "S");
   }
@@ -1197,7 +1197,7 @@ export function drawCriticalSlicesPdf(
 
     const style = rvs.layerStyles?.slices;
     const chosen = style?.color ? parseColor(style.color) : null;
-    pdf.setLineWidth((style?.width ?? SLICE_LINE_WIDTH_PX) * tf.mmPerPx * Math.max(0.6, density));
+    pdf.setLineWidth(styleMm(style?.width ?? SLICE_LINE_WIDTH_PX) * Math.max(0.6, density));
     setOpacity(pdf, 1, SLICE_LINE_OPACITY * density);
     for (const x of xBounds) {
       const topY = surfaceYAtX(coordinates, x);
@@ -1235,7 +1235,7 @@ export function drawCentreMarkerPdf(pdf: jsPDF, tf: PdfTransform, result: Analys
     }
 
     pdf.setFillColor(...color);
-    pdf.circle(ccx, ccy, pdfScaled(0.8, style?.size, CENTER_DOT_RADIUS_PX), "F");
+    pdf.circle(ccx, ccy, styleMm(style?.size ?? CENTER_DOT_RADIUS_PX), "F");
   }
 }
 
@@ -1339,7 +1339,7 @@ export function drawCustomSurfaceLines(pdf: jsPDF, tf: PdfTransform, result: Ana
 
   const style = rvs.layerStyles?.customSurfaces;
   pdf.setDrawColor(...(style?.color ? parseColor(style.color) : CUSTOM_SURFACE_COLOR.rgb));
-  pdf.setLineWidth((style?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX) * tf.mmPerPx);
+  pdf.setLineWidth(styleMm(style?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX));
   pdf.setLineDashPattern(
     CUSTOM_SURFACE_DASH_PX.map((d) => d * tf.mmPerPx),
     0,

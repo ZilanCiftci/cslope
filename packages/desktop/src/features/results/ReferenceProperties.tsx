@@ -11,6 +11,10 @@ import { DraftNumberInput } from "../../components/ui/DraftNumberInput";
 import { formatPolyline, parsePolyline } from "../../utils/polyline";
 import type { Annotation, ReferenceAnnotation, ReferenceDash } from "../../store/types";
 import { MIN_REFERENCE_RADIUS, REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
+import { LAYER_STYLE_LIMITS } from "./layer-styles";
+
+/** The width field's bounds (px, 1 px = 0.1 mm on the paper), as the layers' widths. */
+const REFERENCE_WIDTH_LIMITS = LAYER_STYLE_LIMITS.width;
 
 const DASHES: { value: ReferenceDash; label: string }[] = [
   { value: "solid", label: "Solid" },
@@ -171,11 +175,13 @@ export function ReferenceProperties({
         <Field label="Width (px)" className="flex-1 min-w-0">
           <DraftNumberInput
             step="0.5"
-            min={0.25}
+            min={REFERENCE_WIDTH_LIMITS.min}
+            max={REFERENCE_WIDTH_LIMITS.max}
             value={widthValue}
             placeholder={widthValue === undefined ? "Mixed" : ""}
+            title={`1 px = 0.1 mm on the paper; from ${REFERENCE_WIDTH_LIMITS.min} to ${REFERENCE_WIDTH_LIMITS.max}`}
             onValueChange={(v) => {
-              if (v > 0) apply({ width: v });
+              if (v >= REFERENCE_WIDTH_LIMITS.min && v <= REFERENCE_WIDTH_LIMITS.max) apply({ width: v });
             }}
             className="w-full tabular-nums"
             aria-label="Reference line width"

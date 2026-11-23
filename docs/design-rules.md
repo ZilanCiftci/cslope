@@ -66,7 +66,7 @@ Short rules for a uniform look and feel in packages/desktop. Follow them for eve
 
 - The model is drawn in the ink color of the theme; the paper is white in the light theme and dark grey (not black) in the dark theme. Result lines are thin (the widths are constants in `features/rendering/style-spec.ts`, shared with the PDF; change them there, never per call; a display layer's style in Results › Layers may override them); the critical surface is the thickest line, slices the thinnest.
 - In the dark theme, lines over the soil (critical surface, slices, water, head and reference lines) are drawn in the theme ink everywhere, on a thin halo in the sheet's color (2 px wider; 1 px for slices). The light theme and the PDF have no halo.
-- Line widths and symbol sizes in the result view's properties are in px, 1 px = 0.1 mm on the paper.
+- Line widths and symbol sizes in the result view's properties are in px, 1 px = 0.1 mm on the paper, whatever its size (`STYLE_PX_PER_MM`).
 - Placed images and PDFs are drawn inverted (with `lighten`) in the dark theme, with an "Invert in dark theme" switch per drawing, on by default. DWG and DXF drawings use the theme's drawing ink.
 - Selection on the canvas: the accent color, handles as round accent dots with a ring (8–10 px); locked objects show a padlock on hover. Click selects, then drag moves; nothing moves on the first click.
 - Highlights from a window (a slice hovered in the Results plot, a region picked in Assign materials) are an accent fill at 35 % with a 1.5 px accent outline, and vanish when the window closes.

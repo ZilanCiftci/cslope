@@ -2729,10 +2729,10 @@ fn layer_style_field(kind: &str, v: Option<&Value>) -> Option<Value> {
             .filter(|x| x.fract() == 0.0 && (2.0..=10.0).contains(x))
             .map(|x| json!(x)),
         "width" => num(v)
-            .filter(|x| (0.1..=10.0).contains(x))
+            .filter(|x| (0.1..=30.0).contains(x))
             .map(|x| json!(x)),
         "size" => num(v)
-            .filter(|x| (0.5..=20.0).contains(x))
+            .filter(|x| (0.5..=50.0).contains(x))
             .map(|x| json!(x)),
         "fontSize" => num(v)
             .filter(|x| (4.0..=72.0).contains(x))

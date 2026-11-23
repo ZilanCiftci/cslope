@@ -131,6 +131,11 @@ export function virtualPaperFrame(paperSize: PaperSize, landscape = true): Rect 
   return computePaperFrame(SHEET_VIRTUAL_CANVAS_W, (SHEET_VIRTUAL_CANVAS_W * height) / width, paperSize, landscape);
 }
 
+/** Millimetres of the paper per logical px of the sheet (the PDF's PdfTransform.mmPerPx). */
+export function sheetMmPerPx(paperSize: PaperSize, landscape = true): number {
+  return getPaperDimensions(paperSize, landscape).width / virtualPaperFrame(paperSize, landscape).w;
+}
+
 /**
  * Screen px per logical px of the sheet, for a paper frame `frameW` px
  * wide: what the result view scales the sheet's fixed sizes by (symbols,

@@ -10,7 +10,9 @@
  *
  * Geometric values suffixed `_PX` are in *logical pixels*.  The canvas
  * renderer uses them directly; the PDF renderer multiplies by
- * `tf.mmPerPx` to convert to millimetres.
+ * `tf.mmPerPx` to convert to millimetres. The exceptions are the widths
+ * and sizes a layer's style overrides (the result view's properties):
+ * those are style px, 1 px = 0.1 mm on the paper (STYLE_PX_PER_MM).
  */
 
 // ── Dual-format colour type ────────────────────────────────────
@@ -78,8 +80,8 @@ export const CUSTOM_SURFACE_COLOR: DualColor = {
 };
 /** Dash pattern of a custom surface in the result (logical px). */
 export const CUSTOM_SURFACE_DASH_PX: readonly [number, number] = [8, 5];
-/** Line width of a custom surface in the result (logical px). */
-export const CUSTOM_SURFACE_LINE_WIDTH_PX = 1.5;
+/** Line width of a custom surface in the result (style px, 1 px = 0.1 mm on the paper; STYLE_PX_PER_MM). */
+export const CUSTOM_SURFACE_LINE_WIDTH_PX = 4;
 
 // ── Entry / exit marker geometry (logical px) ──────────────────
 
@@ -133,8 +135,8 @@ export const SLIP_SURFACE_OPACITY = 0.6;
 export const FAILURE_MASS_FILL_OPACITY = 0.12;
 /** Opacity for slice wall lines. */
 export const SLICE_LINE_OPACITY = 0.6;
-/** Slice wall line width (logical px; PDF scales by mmPerPx). */
-export const SLICE_LINE_WIDTH_PX = 0.55;
+/** Slice wall line width (style px, 1 px = 0.1 mm on the paper; thinner where the slices lie close). */
+export const SLICE_LINE_WIDTH_PX = 1.5;
 /** The model outline over a result (mm on the paper, the PDF's; 1 px in the edit view). */
 export const RESULT_OUTLINE_MM = 0.3;
 /** Slice wall colour over a dark material fill (white). */
@@ -147,21 +149,22 @@ export const MIN_SLIP_MASS_BAND_OPACITY = 0.3;
 export const CRACK_WATER_WIDTH_PX = 5;
 /** Opacity of that band (POND_COLOR). */
 export const CRACK_WATER_OPACITY = 0.85;
-/** The critical surface's line (logical px; the thickest result line). */
-export const CRITICAL_SURFACE_LINE_WIDTH_PX = 1.5;
-/** The other slip surfaces' lines (Surfaces: all, filter). */
-export const SLIP_SURFACE_LINE_WIDTH_PX = 1;
-/** Their width on the paper (mm; the PDF's, and the result view's at its sheet's px per mm), scaled by a style's width over SLIP_SURFACE_LINE_WIDTH_PX. */
-export const SLIP_SURFACE_LINE_MM = 0.15;
-/** The center's radius lines to the entry and exit. */
+// The result layers' widths and sizes that a layer's style overrides
+// (Results › Layers) are in style px: 1 px = 0.1 mm on the paper
+// (STYLE_PX_PER_MM), whatever the paper size, in the view and the PDF alike.
+/** The critical surface's line (style px; the thickest result line). */
+export const CRITICAL_SURFACE_LINE_WIDTH_PX = 4;
+/** The other slip surfaces' lines (Surfaces: all, filter; style px). */
+export const SLIP_SURFACE_LINE_WIDTH_PX = 1.5;
+/** The center's radius lines to the entry and exit (logical px). */
 export const CENTER_LINE_WIDTH_PX = 1;
-/** The radius of the center's dot. */
-export const CENTER_DOT_RADIUS_PX = 3;
+/** The radius of the center's dot (style px). */
+export const CENTER_DOT_RADIUS_PX = 8;
 /** The FOS label's text (px at paper zoom 1, bold sans-serif) and its decimals. */
 export const FOS_LABEL_FONT_PX = 12;
 export const FOS_LABEL_DECIMALS = 3;
-/** The finite element mesh's lines and their opacity (in the theme's line color). */
-export const FEM_MESH_LINE_WIDTH_PX = 0.4;
+/** The finite element mesh's lines (style px) and their opacity (in the theme's line color). */
+export const FEM_MESH_LINE_WIDTH_PX = 1;
 export const FEM_MESH_OPACITY = 0.35;
 /** The plastic zone's shade: its color and the opacity of the most strained elements. */
 export const FEM_PLASTIC_ZONE_COLOR: DualColor = { hex: "#d62828", rgb: [214, 40, 40] };
@@ -225,11 +228,18 @@ export const RULER_COLOR: DualColor = { hex: "#323232", rgb: [50, 50, 50] };
 /** The plot frame's line. */
 export const PLOT_FRAME_LINE_MM = 0.4;
 /**
- * Px per millimetre on the paper of a width in the result view's
- * properties (the frame's width, the plot's line width and marker size):
- * 1 px = 0.1 mm. (Divide by it: 4 / 10 is 0.4 exactly, 4 * 0.1 is not.)
+ * Px per millimetre on the paper of a width or size in the result view's
+ * properties (the layers' line widths and the center's dot, the reference
+ * lines' width, the plot's line width and marker size): 1 px = 0.1 mm,
+ * whatever the paper size. (Divide by it: 4 / 10 is 0.4 exactly, 4 * 0.1
+ * is not.)
  */
 export const STYLE_PX_PER_MM = 10;
+
+/** A width or size in style px (STYLE_PX_PER_MM) in mm on the paper. */
+export function styleMm(px: number): number {
+  return px / STYLE_PX_PER_MM;
+}
 /** The frame's width in those px (Layers › Frame; the default PLOT_FRAME_LINE_MM). */
 export const FRAME_LINE_WIDTH_PX = PLOT_FRAME_LINE_MM * STYLE_PX_PER_MM;
 /**
