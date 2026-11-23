@@ -365,8 +365,12 @@ export interface PlotStyle {
   showGrid?: boolean;
   /** The outer border of the plot. */
   showBorder?: boolean;
-  /** The size of the tick values and the axis title (annotation px; the title is 10/9 of it). */
-  fontSize?: number;
+  /**
+   * The size of the tick values and the axis title in px of the F label's
+   * unit (12 px = 10 pt, whatever the paper size; the title is 10/9 of
+   * it). (`fontSize`, in annotation px, is read as px × about 1.19.)
+   */
+  fontSizePx?: number;
   /** Fixed ends of the axes; absent: from the data. */
   xMin?: number;
   xMax?: number;
@@ -393,7 +397,13 @@ export interface PaperAnnotation {
   width?: number;
   height?: number;
   text?: string;
-  fontSize?: number;
+  /**
+   * Text and material table: the text's size in px of the F label's unit
+   * (12 px = 10 pt, whatever the paper size; `styleFontPt`). A file's
+   * `fontSize`, in annotation px (the paper's shorter side / 600), is read
+   * as px × about 1.19, the same size on A4 (store/persistence.ts).
+   */
+  fontSizePx?: number;
   fontFamily?: string;
   bold?: boolean;
   italic?: boolean;

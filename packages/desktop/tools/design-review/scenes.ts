@@ -797,6 +797,19 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "anno-text-older-file",
+    title: "Result sidebar, text annotation properties: a size read from an older file (12 annotation px as 14.29 px)",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.tab("Results");
+      await ctx.click("Text");
+      await ctx.store(`(s) => { const t = s.resultViewSettings.annotations.filter((a) => a.type === "text").pop(); s.updateAnnotation(t.id, { fontSizePx: 14.285714 }); }`);
+      await selectAnnotation(ctx, "text");
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
     id: "anno-material-table",
     title: "Result sidebar, material table properties (V085, S = f(datum))",
     area: "sidebar",
@@ -865,7 +878,7 @@ const sidebarScenes: Scene[] = [
     open: async (ctx) => {
       await ctx.store(`(s) => s.addAnnotation("plot")`);
       await ctx.store(
-        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "plot").pop(); s.updateAnnotation(a.id, { plotStyle: { marker: "plus", xMin: 5, yMax: 40, showGrid: false, showBorder: false, fontSize: 11 } }); s.setSelectedAnnotations([a.id]); }`,
+        `(s) => { const a = s.resultViewSettings.annotations.filter((a) => a.type === "plot").pop(); s.updateAnnotation(a.id, { plotStyle: { marker: "plus", xMin: 5, yMax: 40, showGrid: false, showBorder: false, fontSizePx: 13 } }); s.setSelectedAnnotations([a.id]); }`,
       );
       await ctx.page.getByRole("button", { name: "Reset to default" }).scrollIntoViewIfNeeded();
       return { focus: sidebar(ctx) };
@@ -896,7 +909,7 @@ const sidebarScenes: Scene[] = [
         const styles = [
           { x: 0.1, y: 0.56, plotAxisY: "shearStrength", plotStyle: { color: "#cc0000", line: "dashed", lineWidthPx: 4, marker: "plus", markerSizePx: 20 } },
           { x: 0.39, y: 0.56, plotAxisY: "sliceWeight", plotAxisX: "x", plotStyle: { color: "#00cc00", line: "none", marker: "triangle", markerSizePx: 18, yMin: 0, yMax: 400 } },
-          { x: 0.68, y: 0.56, plotAxisY: "resistingForce", plotStyle: { color: "#a21caf", marker: "cross", showGrid: false, showBorder: false, showAxisTitle: false, fontSize: 11 } },
+          { x: 0.68, y: 0.56, plotAxisY: "resistingForce", plotStyle: { color: "#a21caf", marker: "cross", showGrid: false, showBorder: false, showAxisTitle: false, fontSizePx: 13 } },
         ];
         plots.slice(-3).forEach((a, i) => s.updateAnnotation(a.id, { ...styles[i], width: 0.27, height: 0.3 }));
         s.setSelectedAnnotations([]);
@@ -1275,7 +1288,7 @@ const canvasScenes: Scene[] = [
       const x = (centre.x - canvas.x - 14 - pf.x) / pf.w;
       const y = (centre.y - canvas.y - 18 - pf.y) / pf.h;
       await ctx.store(
-        `(s, store, p) => { s.addAnnotation("text"); const t = store.getState().resultViewSettings.annotations.filter((a) => a.type === "text").pop(); s.updateAnnotation(t.id, { x: p.x, y: p.y, anchor: "top-left", text: "MMM", fontSize: 32, bold: true }); s.setSelectedAnnotations([p.id]); }`,
+        `(s, store, p) => { s.addAnnotation("text"); const t = store.getState().resultViewSettings.annotations.filter((a) => a.type === "text").pop(); s.updateAnnotation(t.id, { x: p.x, y: p.y, anchor: "top-left", text: "MMM", fontSizePx: 38, bold: true }); s.setSelectedAnnotations([p.id]); }`,
         { x, y, id: c.id },
       );
       await ctx.page.mouse.move(canvas.x + 4, canvas.y + 4);

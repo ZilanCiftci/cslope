@@ -654,6 +654,33 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
     },
   },
   {
+    name: "result sheet: text sizes in annotation px (fontSize, read as px of the F label's unit), in px, both and bad",
+    raw: {
+      id: "sheet-text-px",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        paperFrame: { paperSize: "A1", landscape: true, showFrame: true },
+        annotations: [
+          // files saved before: annotation px of A4, as px x about 1.19
+          { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", fontSize: 24 },
+          { id: "m", type: "material-table", x: 0.9, y: 0.1, anchor: "top-right", fontSize: 6 },
+          { id: "c", type: "color-bar", x: 0.9, y: 0.4, fontSize: 12 },
+          { id: "p", type: "plot", x: 0.3, y: 0.6, fontSize: 12, plotStyle: { fontSize: 9 } },
+          // px as the app writes them; px first where both are
+          { id: "u", type: "text", x: 0.1, y: 0.2, text: "U", fontSizePx: 17 },
+          { id: "v", type: "text", x: 0.1, y: 0.3, text: "V", fontSizePx: 14.285714, fontSize: 40 },
+          { id: "q", type: "plot", x: 0.6, y: 0.6, plotStyle: { fontSizePx: 11, fontSize: 30 } },
+          // bad values: dropped, a bad px member not replaced by the old one
+          { id: "w", type: "text", x: 0.1, y: 0.4, text: "W", fontSizePx: "big", fontSize: 12 },
+          { id: "x", type: "text", x: 0.1, y: 0.5, text: "X", fontSize: "12" },
+          { id: "r", type: "plot", x: 0.6, y: 0.3, plotStyle: { fontSizePx: 60, fontSize: 12 } },
+          { id: "s", type: "plot", x: 0.1, y: 0.3, plotStyle: { fontSize: 40 } },
+        ],
+      },
+    },
+  },
+  {
     name: "result sheet: a material table and a color bar turned off, a second color bar",
     raw: {
       id: "sheet-hidden",

@@ -40,6 +40,22 @@ def entries(path):
         return {n: z.read(n) for n in z.namelist()}
 
 
+def with_text_px(model):
+    """A model.json (parsed) as the app saved it, with its text sizes of the
+    first form (`fontSize`, annotation px) as px of the F label's unit
+    (`fontSizePx`), as it is saved now: x (210 / 600) / (10 / 12 x 0.3528),
+    to 6 decimals (docs/file-format.md)."""
+    factor = (210 / 600) / ((10 / 12) * 0.3528)
+    v = json.loads(json.dumps(model))
+    for a in v.get("resultViewSettings", {}).get("annotations", []):
+        if a.get("type") == "reference":
+            continue
+        for o in (a, a.get("plotStyle") or {}):
+            if "fontSize" in o and "fontSizePx" not in o:
+                o["fontSizePx"] = round(o.pop("fontSize") * factor * 1e6) / 1e6
+    return v
+
+
 def rewritten(src, target, name, edit):
     """A copy of the archive ``src`` with the JSON entry ``name`` edited."""
     with zipfile.ZipFile(src) as zin, zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zout:
@@ -125,6 +141,10 @@ def test_saves_the_same_json_entries(tmp_path):
                 assert a["created"] == b["created"] and a["generator"].startswith("cslope ")
             elif n.endswith("backgrounds.json") and b"originX" in before[n]:
                 continue  # the first form is written in the current one
+            elif n.endswith("model.json") and b'"fontSize"' in before[n]:
+                # text sizes of the first form are written in px, the rest as it was
+                assert json.loads(after[n]) == with_text_px(json.loads(before[n])), (name, n)
+                assert b'"fontSize"' not in after[n] and b'"fontSizePx"' in after[n], (name, n)
             else:
                 assert after[n] == before[n], (name, n)
         assert p.manifest["generator"] == json.loads(after["manifest.json"])["generator"]
@@ -213,9 +233,9 @@ def test_a_name_that_is_not_unicode_is_named(tmp_path):
 @needs_fixtures
 def test_keeps_a_plot_style(tmp_path):
     # (a slice plot styled in Properties › Plot, as the app writes it; a
-    # plot saved before the style stays as it was)
+    # plot saved before the style stays as it was, its unused text size in px)
     style = {"color": "#cc0000", "line": "dashed", "lineWidthPx": 5, "marker": "plus", "markerSizePx": 30,
-             "showGrid": False, "fontSize": 12, "yMin": 0, "yMax": 100}
+             "showGrid": False, "fontSizePx": 14, "yMin": 0, "yMax": 100}
     old = {"id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength"}
 
     def edit(v):
@@ -229,7 +249,7 @@ def test_keeps_a_plot_style(tmp_path):
     project.open(src).save(target)
     view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
     assert view["annotations"][0]["plotStyle"] == style
-    assert view["annotations"][1] == old
+    assert view["annotations"][1] == {**{k: v for k, v in old.items() if k != "fontSize"}, "fontSizePx": 14.285714}
     # saved again, the same entry
     again = tmp_path / "again.cslp"
     project.open(target).save(again)
@@ -249,6 +269,32 @@ def test_reads_a_plot_style_in_mm_of_a_development_build_as_px(tmp_path):
     project.open(src).save(target)
     view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
     assert view["annotations"][0]["plotStyle"] == {"lineWidthPx": 3.5, "markerSizePx": 12.6}
+
+
+@needs_fixtures
+def test_reads_text_sizes_in_annotation_px_as_px_and_writes_them_once(tmp_path):
+    # (`fontSize` in annotation px, files saved before the text sizes were
+    # fixed: written back as `fontSizePx`, px of the F label's unit, the
+    # same size on A4; a px member comes first; saved again, unchanged)
+    def edit(v):
+        v["resultViewSettings"]["annotations"] = [
+            {"id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "fontSize": 24},
+            {"id": "m", "type": "material-table", "x": 0.9, "y": 0.1, "fontSize": 6},
+            {"id": "u", "type": "text", "x": 0.1, "y": 0.2, "text": "U", "fontSizePx": 17, "fontSize": 40},
+            {"id": "p", "type": "plot", "x": 0.3, "y": 0.6, "plotStyle": {"fontSize": 9}},
+        ]
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "text-px.cslp", "models/model-1/model.json", edit)
+    target = tmp_path / "saved.cslp"
+    project.open(src).save(target)
+    annos = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]["annotations"]
+    assert annos[0] == {"id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "fontSizePx": 28.571429}
+    assert annos[1] == {"id": "m", "type": "material-table", "x": 0.9, "y": 0.1, "fontSizePx": 7.142857}
+    assert annos[2]["fontSizePx"] == 17 and "fontSize" not in annos[2]
+    assert annos[3]["plotStyle"] == {"fontSizePx": 10.714286}
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
 
 
 @needs_fixtures

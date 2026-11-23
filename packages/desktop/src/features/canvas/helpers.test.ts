@@ -304,7 +304,7 @@ describe("extendBoundsWithResultFitExtras annotation anchors", () => {
             y: 0.5,
             anchor: "bottom-right",
             text: "LONG LABEL",
-            fontSize: 20,
+            fontSizePx: 24,
           } as never,
         ],
       },

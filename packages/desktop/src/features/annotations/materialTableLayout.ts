@@ -7,7 +7,11 @@ export type MaterialTableRenderColumnKey =
 
 const MM_PER_CSS_PX = 25.4 / 96;
 
-/** Base column widths calibrated for a 6 px font size. */
+// The layout is in layout px (SHEET_LAYOUT_MM_PER_PX, 0.35 mm on every
+// paper size) at `scale`, its font size too; a table's text size is px of
+// the F label's unit (fontSizePx), in layout px by textLayoutPx.
+
+/** Base column widths calibrated for a 6 px (layout px) font size. */
 const BASE_COLUMN_WIDTH_PX: Record<MaterialTableRenderColumnKey, number> = {
   color: 21,
   name: 52,
@@ -23,10 +27,13 @@ const BASE_COLUMN_WIDTH_PX: Record<MaterialTableRenderColumnKey, number> = {
 
 const BASE_FONT_SIZE = 6;
 
-/** Font size of a material table that has none of its own. */
-export const MATERIAL_TABLE_FONT_SIZE = BASE_FONT_SIZE;
-/** Font size of a new material table: readable at 100 % and on an A4 sheet. */
-export const NEW_MATERIAL_TABLE_FONT_SIZE = 8;
+/**
+ * Text size of a material table that has none of its own (px of the F
+ * label's unit, 12 px = 10 pt; about the 6 annotation px it was on A4).
+ */
+export const MATERIAL_TABLE_FONT_SIZE = 7;
+/** Text size of a new material table: readable at 100 % and on an A4 sheet (px; about the 8 annotation px it was on A4). */
+export const NEW_MATERIAL_TABLE_FONT_SIZE = 10;
 
 export function getMaterialTableColumnWidthPx(
   key: MaterialTableRenderColumnKey,

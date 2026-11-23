@@ -2200,7 +2200,7 @@ fn is_hex_color(v: Option<&Value>) -> bool {
 /// color bar at most.
 const BUILT_IN_ANNOTATION_TYPES: [&str; 2] = ["material-table", "color-bar"];
 
-const PAPER_ANNOTATION_KEYS: [&str; 25] = [
+const PAPER_ANNOTATION_KEYS: [&str; 26] = [
     "id",
     "type",
     "x",
@@ -2209,6 +2209,7 @@ const PAPER_ANNOTATION_KEYS: [&str; 25] = [
     "width",
     "height",
     "text",
+    "fontSizePx",
     "fontSize",
     "fontFamily",
     "bold",
@@ -2412,7 +2413,7 @@ fn annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
         .collect()
 }
 
-/// `normalizeAnnotations` with `normalizeColorBarScale` and `normalizeHidden`.
+/// `normalizeAnnotations` with `normalizeFontSizePx`, `normalizeColorBarScale` and `normalizeHidden`.
 fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> {
     let Some(Value::Array(items)) = raw else {
         return Vec::new();
@@ -2436,9 +2437,18 @@ fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> 
             out.insert("type".into(), json!(kind));
             out.insert("x".into(), json!(x));
             out.insert("y".into(), json!(y));
-            for key in ["width", "height", "fontSize"] {
+            for key in ["width", "height"] {
                 if let Some(v) = num(o.get(key)) {
                     out.insert(key.into(), json!(v));
+                }
+            }
+            // the text's size in px of the F label's unit; else the first
+            // form's annotation px as px (`normalizeFontSizePx`)
+            if let Some(v) = num(o.get("fontSizePx")) {
+                out.insert("fontSizePx".into(), json!(v));
+            } else if o.get("fontSizePx").is_none() {
+                if let Some(v) = num(o.get("fontSize")) {
+                    out.insert("fontSizePx".into(), json!(annotation_px_to_text_px(v)));
                 }
             }
             for key in [
@@ -2501,10 +2511,22 @@ fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> 
         .collect()
 }
 
+/// A text size in annotation px (the paper's shorter side / 600; the
+/// first form of the text annotations', the material table's and the
+/// slice plot's sizes) as px of the F label's unit (12 px = 10 pt), the
+/// same size on A4: × (210 / 600 mm) / (10 / 12 pt × 0.3528 mm), about
+/// 1.19, to 6 decimals (`annotationPxToTextPx`, style-spec.ts).
+fn annotation_px_to_text_px(px: f64) -> f64 {
+    let a4_annotation_mm = 210.0 / 600.0;
+    let text_mm = (10.0 / 12.0) * 0.3528;
+    cslope_engine::js::math::round(px * (a4_annotation_mm / text_mm) * 1e6) / 1e6
+}
+
 /// The members of a slice plot's style (`PlotStyle`, store/types.ts);
 /// `lineWidth` and `markerSize` (mm) are the sizes' first form, written by
-/// development builds before they were in px, read as px.
-const PLOT_STYLE_KEYS: [&str; 17] = [
+/// development builds before they were in px, read as px; `fontSize`
+/// (annotation px) is the text size's, read as px of the F label's unit.
+const PLOT_STYLE_KEYS: [&str; 18] = [
     "color",
     "line",
     "lineWidthPx",
@@ -2517,6 +2539,7 @@ const PLOT_STYLE_KEYS: [&str; 17] = [
     "showAxisTitle",
     "showGrid",
     "showBorder",
+    "fontSizePx",
     "fontSize",
     "xMin",
     "xMax",
@@ -2570,8 +2593,13 @@ fn plot_style(raw: Option<&Value>, path: &str, cx: &Ctx) -> Option<Value> {
             out.insert(k.into(), json!(false));
         }
     }
-    if let Some(v) = in_range("fontSize", 4.0, 36.0) {
-        out.insert("fontSize".into(), json!(v));
+    // px of the F label's unit; else the first form's annotation px as px
+    if let Some(v) = in_range("fontSizePx", 4.0, 48.0) {
+        out.insert("fontSizePx".into(), json!(v));
+    } else if r.get("fontSizePx").is_none() {
+        if let Some(v) = in_range("fontSize", 4.0, 36.0) {
+            out.insert("fontSizePx".into(), json!(annotation_px_to_text_px(v)));
+        }
     }
     for k in ["xMin", "xMax", "yMin", "yMax"] {
         if let Some(v) = num(r.get(k)) {

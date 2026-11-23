@@ -19,7 +19,7 @@ import { DEFAULT_PIEZO_LINE } from "../../store/defaults";
 import type { PaperAnnotation, PlotStyle } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
 import { normalizePlotStyle } from "../annotations/plotStyle";
-import { MM_PER_PT, PLOT_LINE_COLOR } from "../rendering/style-spec";
+import { MM_PER_PT, PLOT_LINE_COLOR, styleFontPt } from "../rendering/style-spec";
 
 const W = 1200;
 const H = (1200 * 210) / 297;
@@ -321,7 +321,7 @@ describe("a styled slice plot in the view and the PDF", () => {
   });
 
   it("leaves out the title, the axis title and the gridlines alike, with larger text", () => {
-    const anno = plot({ showTitle: false, showAxisTitle: false, showGrid: false, showBorder: false, fontSize: 12 });
+    const anno = plot({ showTitle: false, showAxisTitle: false, showGrid: false, showBorder: false, fontSizePx: 14 });
     const view = viewOf(anno);
     const pdf = pdfOf(anno);
     for (const r of [view, pdf]) {
@@ -329,7 +329,8 @@ describe("a styled slice plot in the view and the PDF", () => {
       expect(r.texts.some((t) => t.text === "Slice")).toBe(false);
     }
     const tick = pdf.texts.find((t) => t.text === "2")!;
-    expect(close(tick.sizeMm, (12 * 210) / 600, 1e-6)).toBe(true);
+    // 14 px of the F label's unit (styleFontPt), whatever the paper size
+    expect(close(tick.sizeMm, styleFontPt(14) * MM_PER_PT, 1e-6)).toBe(true);
     const v = view.texts.find((t) => t.text === "2" && close(t.x, tick.x, 0.05) && close(t.y, tick.y, 0.05));
     expect(v).toBeDefined();
   });

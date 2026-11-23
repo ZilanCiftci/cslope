@@ -13,7 +13,7 @@ import { GroupHeading } from "../properties/GroupHeading";
 import { useAppStore } from "../../store/app-store";
 import type { Annotation, PlotStyle } from "../../store/types";
 import { getPaperDimensions } from "../view/paper";
-import { ANNOTATION_SCALE_DIVISOR, PLOT_AXIS_FONT_PX, STYLE_PX_PER_MM } from "../rendering/style-spec";
+import { ANNOTATION_SCALE_DIVISOR, PLOT_TEXT_DEFAULT_PX, STYLE_PX_PER_MM } from "../rendering/style-spec";
 import {
   defaultPlotLineWidthMm,
   defaultPlotMarkerSizeMm,
@@ -134,8 +134,9 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
   const showLine = line !== "none";
   const filledShape = marker === "circle" || marker === "square" || marker === "triangle";
   const color = stored(plots, "color");
-  const fontSize = common(styles, "textScale");
-  const textValue = fontSize === null ? null : Math.round(fontSize * PLOT_AXIS_FONT_PX * 100) / 100;
+  // The text size in px (a size read from an older file may have decimals: shown to two).
+  const sizes = plots.map((p) => p.plotStyle?.fontSizePx ?? PLOT_TEXT_DEFAULT_PX);
+  const textValue = sizes.every((v) => v === sizes[0]) ? (sizes[0] ?? null) : null;
 
   const end = (key: "xMin" | "xMax" | "yMin" | "yMax", label: string, title: string) => (
     <NumberField
@@ -266,7 +267,7 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
                 onChange={(e) => {
                   if (e.target.value === MIXED) return;
                   const v = Number(e.target.value);
-                  set({ fontSize: v === PLOT_AXIS_FONT_PX ? undefined : v });
+                  set({ fontSizePx: v === PLOT_TEXT_DEFAULT_PX ? undefined : v });
                 }}
                 className="w-full"
               >
@@ -275,7 +276,7 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
                   .sort((a, b) => a - b)
                   .map((v) => (
                     <option key={v} value={v}>
-                      {v}
+                      {Math.round(v * 100) / 100}
                     </option>
                   ))}
               </select>
@@ -311,7 +312,7 @@ const RESET: Partial<PlotStyle> = {
   showAxisTitle: undefined,
   showGrid: undefined,
   showBorder: undefined,
-  fontSize: undefined,
+  fontSizePx: undefined,
   xMin: undefined,
   xMax: undefined,
   yMin: undefined,

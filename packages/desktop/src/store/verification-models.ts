@@ -29,6 +29,7 @@ import { createDefaultProjectInfo } from "./defaults";
 import { modelFromDefinition } from "./definition-model";
 import type { Annotation, ModelEntry } from "./types";
 import { paperContentOf } from "../features/view/extents";
+import { annotationPxToTextPx } from "../features/rendering/style-spec";
 
 type PresentedAnalysis = ReturnType<typeof presentedAnalyses>[number];
 
@@ -118,7 +119,8 @@ function titleBlockAnnotations(title: string, reference: string[]): Annotation[]
   let y = 0.08;
   const out: Annotation[] = [];
   const add = (id: string, text: string, fontSize: number, lines = 1) => {
-    out.push({ id: `anno-benchmark-${id}`, type: "text", x, y, text, fontSize });
+    // (the sizes here in annotation px of A4, as they always were: the same size as px of the F label's unit)
+    out.push({ id: `anno-benchmark-${id}`, type: "text", x, y, text, fontSizePx: annotationPxToTextPx(fontSize) });
     y += textHeight(fontSize, lines) + LINE_GAP;
   };
   if (title.length * TITLE_MIN_SIZE <= TITLE_WIDTH) add("title", "#Title", Math.min(TITLE_SIZE, Math.floor(TITLE_WIDTH / title.length)));

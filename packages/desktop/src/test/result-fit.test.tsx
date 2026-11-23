@@ -121,7 +121,7 @@ describe("fit to screen in the result view", () => {
               y: 0.3,
               anchor: "top-left",
               text: "A long annotation label",
-              fontSize: 16,
+              fontSizePx: 19,
             } as never,
           ],
         },

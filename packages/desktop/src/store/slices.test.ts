@@ -1146,8 +1146,8 @@ describe("store slices", () => {
       expect(a.x).toBeGreaterThan(0.9);
       expect(a.y).toBeGreaterThan(PLOT_MARGINS.T);
     }
-    // Readable at 100 %.
-    expect(table.fontSize).toBe(8);
+    // Readable at 100 % (px of the F label's unit, about the 8 annotation px it was on A4).
+    expect(table.fontSizePx).toBe(10);
   });
 
   it("resultViewSlice updateAnnotation patches an existing annotation", () => {
@@ -1155,12 +1155,12 @@ describe("store slices", () => {
     const annos = useAppStore.getState().resultViewSettings.annotations;
     const { id, y } = annos[annos.length - 1];
 
-    useAppStore.getState().updateAnnotation(id, { x: 0.9, fontSize: 20 });
+    useAppStore.getState().updateAnnotation(id, { x: 0.9, fontSizePx: 20 });
     const updated = useAppStore
       .getState()
       .resultViewSettings.annotations.find((a) => a.id === id)!;
     expect(updated.x).toBe(0.9);
-    expect(updated.fontSize).toBe(20);
+    expect(updated.fontSizePx).toBe(20);
     expect(updated.y).toBe(y); // unchanged
   });
 

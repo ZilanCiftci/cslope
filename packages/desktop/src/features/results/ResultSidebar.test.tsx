@@ -28,8 +28,8 @@ function result(over: Partial<AnalysisResult> = {}): AnalysisResult {
 }
 
 const ANNOS: Annotation[] = [
-  { id: "t1", type: "text", x: 0.1, y: 0.1, text: "Title", fontSize: 24 },
-  { id: "t2", type: "text", x: 0.1, y: 0.2, text: "Sub", fontSize: 14, bold: true },
+  { id: "t1", type: "text", x: 0.1, y: 0.1, text: "Title", fontSizePx: 28 },
+  { id: "t2", type: "text", x: 0.1, y: 0.2, text: "Sub", fontSizePx: 17, bold: true },
   { id: "m", type: "material-table", x: 0.9, y: 0.05, anchor: "top-right" },
   { id: "p", type: "plot", x: 0.5, y: 0.6 },
   { id: "c", type: "color-bar", x: 0.8, y: 0.3 },
@@ -786,7 +786,7 @@ describe("ResultSidebar annotation properties", () => {
     fireEvent.change(field("Text"), { target: { value: "Same" } });
     expect([anno("t1").text, anno("t2").text]).toEqual(["Same", "Same"]);
     fireEvent.change(field("Size (px)"), { target: { value: "16" } });
-    expect([anno("t1").fontSize, anno("t2").fontSize]).toEqual([16, 16]);
+    expect([anno("t1").fontSizePx, anno("t2").fontSizePx]).toEqual([16, 16]);
     // Mixed bold → bold for all; then toggled off.
     fireEvent.click(screen.getByRole("button", { name: "B" }));
     expect([anno("t1").bold, anno("t2").bold]).toEqual([true, true]);
@@ -802,9 +802,22 @@ describe("ResultSidebar annotation properties", () => {
   it("sets the text size of material tables", () => {
     select(["m"]);
     render(<ResultSidebar />);
-    expect(field("Text size (px)").value).toBe("6");
+    // A table without a size of its own: 7 px of the F label's unit (about the 6 annotation px it was on A4).
+    expect(field("Text size (px)").value).toBe("7");
     fireEvent.change(field("Text size (px)"), { target: { value: "10" } });
-    expect(anno("m").fontSize).toBe(10);
+    expect(anno("m").fontSizePx).toBe(10);
+  });
+
+  it("offers a text size read from an older file (converted, with decimals) among the sizes", () => {
+    useAppStore.getState().setResultViewSettings({
+      annotations: annotations().map((a) => (a.id === "t1" && a.type !== "reference" ? { ...a, fontSizePx: 14.285714 } : a)),
+    });
+    select(["t1"]);
+    render(<ResultSidebar />);
+    const size = field("Size (px)");
+    expect(size.value).toBe("14.285714");
+    expect(within(size).getByRole("option", { name: "14.29" })).toBeInTheDocument();
+    expect(within(size).getByRole("option", { name: "14" })).toBeInTheDocument();
   });
 
   it("sets the range of the colour bar: fixed bounds start from the shown range, and must be in order", () => {

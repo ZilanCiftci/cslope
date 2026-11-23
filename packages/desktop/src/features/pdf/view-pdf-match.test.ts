@@ -32,6 +32,7 @@ import {
   RULER_COLOR,
   SLIP_SURFACE_LINE_WIDTH_PX,
   STYLE_PX_PER_MM,
+  styleFontPt,
 } from "../rendering/style-spec";
 import { REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
 import { hexRgb } from "../results/layer-styles";
@@ -481,6 +482,62 @@ describe("the sheet's frame", () => {
     expect(view.rects).toHaveLength(0);
     expect(view.ticks).toHaveLength(0);
     expect(view.labels).toHaveLength(0);
+  });
+});
+
+describe("the text annotations', the material table's and the plots' text", () => {
+  /** The user's model on `paperSize` with a text annotation, its table and two slice plots (one with a text size of its own). */
+  const textModel = (paperSize: PaperSize): ModelEntry => {
+    const m = userModel();
+    const rvs = m.resultViewSettings!;
+    return {
+      ...m,
+      resultViewSettings: {
+        ...rvs,
+        paperFrame: { ...rvs.paperFrame, paperSize },
+        annotations: [
+          ...rvs.annotations.map((a) => (a.type === "material-table" ? { ...a, fontSizePx: 10 } : a)),
+          { id: "note", type: "text", x: 0.3, y: 0.7, text: "A note\non two lines", fontSizePx: 20, bold: true },
+          { id: "p1", type: "plot", x: 0.12, y: 0.4, width: 0.24, height: 0.18, plotStyle: { fontSizePx: 14 } },
+          { id: "p2", type: "plot", x: 0.5, y: 0.4, width: 0.24, height: 0.18 },
+        ],
+      },
+    };
+  };
+  /** A size in px of the F label's unit in mm on the paper (12 px = 10 pt). */
+  const mmOf = (px: number) => styleFontPt(px) * MM_PER_PT;
+
+  it.each(["A4", "A1"] as const)("on %s: in the same place, at the same size in mm in the view and the PDF, whatever the paper", (paperSize) => {
+    const model = textModel(paperSize);
+    const view = canvasTexts(model);
+    const pdf = pdfTexts(model);
+    for (const p of pdf) {
+      const v = view.find((t) => t.text === p.text && Math.abs(t.x - p.x) < 0.01 && Math.abs(t.y - p.y) < 0.02);
+      expect(v, `"${p.text}" at ${p.x.toFixed(3)}, ${p.y.toFixed(3)}`).toBeDefined();
+      expect(Math.abs(v!.x - p.x), p.text).toBeLessThan(0.001);
+      expect(v!.sizeMm, p.text).toBeCloseTo(p.sizeMm, 4);
+    }
+    const sizeOf = (texts: { text: string; x: number; sizeMm: number }[], text: string, near?: number) =>
+      texts.filter((t) => t.text === text && (near === undefined || Math.abs(t.x - near) < 0.2)).map((t) => t.sizeMm);
+    for (const texts of [view, pdf]) {
+      // The text annotation: 20 px.
+      expect(sizeOf(texts, "A note")).toEqual([expect.closeTo(mmOf(20), 4)]);
+      expect(sizeOf(texts, "on two lines")).toEqual([expect.closeTo(mmOf(20), 4)]);
+      // The table: 10 px, its header and its body.
+      expect(sizeOf(texts, "Name")[0]).toBeCloseTo(mmOf(10), 4);
+      expect(sizeOf(texts, model.materials[0].name)[0]).toBeCloseTo(mmOf(10), 4);
+      // The plots: their tick values (here the note in an empty chart) at 14 px and at the default 11 px, the title 10/9 of it.
+      expect(sizeOf(texts, "No slice data", 0.24)).toEqual([expect.closeTo(mmOf(14), 4)]);
+      expect(sizeOf(texts, "No slice data", 0.62)).toEqual([expect.closeTo(mmOf(11), 4)]);
+    }
+  });
+
+  it("are the same size in mm on A4 and on A1 (no longer growing with the paper)", () => {
+    const a4 = canvasTexts(textModel("A4"));
+    const a1 = canvasTexts(textModel("A1"));
+    for (const text of ["A note", "Name", "No slice data"]) {
+      expect(a1.find((t) => t.text === text)!.sizeMm, text).toBeCloseTo(a4.find((t) => t.text === text)!.sizeMm, 6);
+    }
   });
 });
 

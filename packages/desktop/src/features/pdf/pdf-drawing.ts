@@ -60,6 +60,8 @@ import {
   ANNOTATION_LINE_HEIGHT,
   GRID_COLOR,
   ANNOTATION_SCALE_DIVISOR,
+  SHEET_LAYOUT_MM_PER_PX,
+  textLayoutPx,
   COLOR_BAR_NUM_TICKS,
   CRACK_WATER_OPACITY,
   CRACK_WATER_WIDTH_PX,
@@ -162,7 +164,7 @@ import {
   tensionCrackFace,
 } from "../../utils/slip-mass";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
-import { layoutMaterialTable } from "../annotations/materialTableLayout";
+import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
@@ -1390,7 +1392,7 @@ function measureTextAnnotationPdf(
   result: AnalysisResult,
   parameters: ParameterDef[],
 ): { w: number; h: number } {
-  const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
+  const fontSize = textLayoutPx(anno.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
   const ptSize = fontSize / 0.3528;
   const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);
   const style = mapFontStyle(anno.bold, anno.italic);
@@ -1446,7 +1448,7 @@ const MM_PER_PT = 0.3528;
 /**
  * Material table layout in mm.  Uses exactly the canvas layout
  * (layoutMaterialTable, as features/canvas/helpers.ts drawTable) with the
- * annotation scale in mm instead of px, so the PDF table has the same
+ * layout scale in mm instead of px, so the PDF table has the same
  * proportions as on screen.  (It used to convert px to mm twice and clamp
  * fonts to 8 pt, making the table ~3.7× too small with every cell cut off.)
  */
@@ -1457,7 +1459,7 @@ function layoutMaterialTablePdf(
   piezometricLine: PiezometricLineState,
   scale: number,
 ) {
-  const fontSize = annotation.fontSize ?? 6;
+  const fontSize = textLayoutPx(annotation.fontSizePx ?? MATERIAL_TABLE_FONT_SIZE);
   const { columnKeys, header, rows } = buildMaterialTableData(
     annotation,
     materials,
@@ -1512,7 +1514,12 @@ export function drawAnnotations(
   /** The surface filter, which a colour bar's "filter" range follows. */
   scaleFilter?: ScaleFilter,
 ) {
+  // The color bar's sizes grow with the paper (annotation px); the text
+  // annotations', the table's and the plots' layouts are in layout px, mm
+  // per layout px the same on every paper size (and their text sizes in
+  // px of the F label's unit, textLayoutPx).
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
+  const layoutScale = SHEET_LAYOUT_MM_PER_PX;
 
   for (const anno of annotations) {
     // Reference annotations are drawn with the result (pdf-reference.ts).
@@ -1524,7 +1531,7 @@ export function drawAnnotations(
       const size = measureTextAnnotationPdf(
         pdf,
         anno,
-        annoScale,
+        layoutScale,
         projectInfo,
         result,
         parameters,
@@ -1541,7 +1548,7 @@ export function drawAnnotations(
         drawX,
         drawY,
         anno,
-        annoScale,
+        layoutScale,
         projectInfo,
         result,
         parameters,
@@ -1564,7 +1571,7 @@ export function drawAnnotations(
         anno,
         materials,
         piezometricLine,
-        annoScale,
+        layoutScale,
       );
       const { x: drawX, y: drawY } = anchoredTopLeft(
         ax,
@@ -1580,7 +1587,7 @@ export function drawAnnotations(
         anno,
         materials,
         piezometricLine,
-        annoScale,
+        layoutScale,
       );
     } else if (anno.type === "plot") {
       const plotW = paperFrame.w * (anno.width ?? 0.24);
@@ -1600,6 +1607,7 @@ export function drawAnnotations(
         plotH,
         anno,
         result,
+        layoutScale,
         annoScale,
       );
     }
@@ -1615,10 +1623,13 @@ function drawPlotAnnotationPdf(
   h: number,
   anno: Annotation,
   result: AnalysisResult,
+  /** mm per layout px (SHEET_LAYOUT_MM_PER_PX). */
   scale: number,
+  /** mm per annotation px of this paper: the series' default line and markers. */
+  mmPerAnnoPx: number,
 ) {
   const plot = computeSlicePlotData(result, anno.plotAxisX, anno.plotAxisY);
-  const style = resolvePlotStyle(anno.plotStyle, scale);
+  const style = resolvePlotStyle(anno.plotStyle, mmPerAnnoPx);
   const L = plotLayout(x, y, w, h, scale, 1, style);
 
   pdf.setFillColor(255, 255, 255);
@@ -1752,7 +1763,7 @@ function drawTextAnnotation(
 ) {
   // Same size as on the canvas (no 8 pt floor, which made small text
   // overlap because the line spacing used the unclamped size).
-  const fontSize = (anno.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
+  const fontSize = textLayoutPx(anno.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE) * scale;
   const ptSize = fontSize / 0.3528;
 
   const family = mapFont(anno.fontFamily ?? ANNOTATION_DEFAULT_FONT_FAMILY);

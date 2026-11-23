@@ -55,6 +55,12 @@ The review is in `packages/desktop/tools/design-review`; each decision had two o
 
 Implemented in PRs #28–#30, #32–#35 and #37.
 
+## Result sheet
+
+### 2026-11-23: Text, the material table and plot text have a fixed size, in the F label's px; sizes saved before are converted on reading
+
+The text sizes of text annotations, the material table and slice plots are px of the F label's unit (12 px = 10 pt, `styleFontPt`), the same on every paper size, as the F label's, the custom surfaces' and the frame's labels (#190 found the two units). Sizes saved in annotation px (the paper's shorter side / 600) are converted when a file is read, × (210 / 600) / (10 / 12 × 0.3528), about 1.19, so they look as before on A4; on A3 and larger such text is smaller than before, which was accepted. The stored keys are renamed (`fontSize` to `fontSizePx`, on the annotation and in `plotStyle`) so a converted file saved again is not converted twice, as #187 did for the plot's widths; the format version stays 1. The defaults are the A4 look rounded to a whole px (text 14, new table 10, table 7, plot 11). The table's cells and the plot's margins stay in a fixed unit with the text (an annotation px of A4, `SHEET_LAYOUT_MM_PER_PX`); the color bar, which has no size setting, still grows with the paper. Turned down: keeping the paper-scaled px for these three (two units in one panel), and converting in place under the same key (a file could not tell an old value from a new one). Implemented in `features/rendering/style-spec.ts` (`textLayoutPx`, `annotationPxToTextPx`), `store/persistence.ts` (`normalizeFontSizePx`), `features/annotations/plotStyle.ts` and the Rust reader (`crates/cslope-project/src/normalize.rs`).
+
 ## Import and export
 
 ### 2026-11-11: The .gsz export writes a water line as drawn, also when free water is off (issue #149)

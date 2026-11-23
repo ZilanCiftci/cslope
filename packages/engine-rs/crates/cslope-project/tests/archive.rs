@@ -3,10 +3,13 @@
 //! project): opened and saved again, every JSON entry is the app's but the
 //! manifest's `modified`, `appVersion` and `generator`; the results stay
 //! (their input is unchanged), and the save policy drops a result, and the
-//! thumbnail, once the model's input changes.
+//! thumbnail, once the model's input changes. (A text size the fixtures
+//! hold in annotation px, `fontSize`, is written as `fontSizePx`, px of the
+//! F label's unit: docs/file-format.md.)
 #![cfg(feature = "native")]
 
 use cslope_project::archive::{read_project, write_project, Writer};
+use cslope_project::canonical::canonical_json;
 use cslope_project::project::{EngineInfo, ProjectReadOptions, SavedResult};
 use cslope_project::{input_hash, ModelEntry};
 use serde_json::{json, Value};
@@ -42,6 +45,46 @@ fn writer() -> Writer {
     }
 }
 
+/// A text size in annotation px (the first form, `fontSize`) as px of the
+/// F label's unit, as docs/file-format.md gives it: x (210 / 600 mm) /
+/// (10 / 12 pt x 0.3528 mm), to 6 decimals.
+fn text_px(annotation_px: f64) -> f64 {
+    let factor = (210.0 / 600.0) / ((10.0 / 12.0) * 0.3528);
+    cslope_engine::js::math::round(annotation_px * factor * 1e6) / 1e6
+}
+
+/// A model.json as the app saved it, with its annotations' and plot
+/// styles' text sizes of the first form (`fontSize`) in px (`fontSizePx`),
+/// as it is saved now: canonical, as the app writes it. Whether any was.
+fn with_text_px(app: &[u8]) -> (Vec<u8>, bool) {
+    let mut v = as_json(app);
+    let mut converted = false;
+    let mut convert = |o: &mut serde_json::Map<String, Value>| {
+        if o.contains_key("fontSizePx") {
+            return;
+        }
+        if let Some(px) = o.remove("fontSize").and_then(|s| s.as_f64()) {
+            o.insert("fontSizePx".into(), json!(text_px(px)));
+            converted = true;
+        }
+    };
+    if let Some(annos) = v
+        .pointer_mut("/resultViewSettings/annotations")
+        .and_then(Value::as_array_mut)
+    {
+        for a in annos.iter_mut().filter_map(Value::as_object_mut) {
+            if a.get("type").and_then(Value::as_str) == Some("reference") {
+                continue;
+            }
+            convert(a);
+            if let Some(style) = a.get_mut("plotStyle").and_then(Value::as_object_mut) {
+                convert(style);
+            }
+        }
+    }
+    (canonical_json(&v).into_bytes(), converted)
+}
+
 /// Every entry of an archive: name, bytes and whether it is deflated.
 fn entries(bytes: &[u8]) -> Vec<(String, Vec<u8>, bool)> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes)).unwrap();
@@ -63,6 +106,7 @@ fn as_json(bytes: &[u8]) -> Value {
 #[test]
 fn app_files_save_to_the_same_entries() {
     let mut seen = 0;
+    let mut text_sizes = 0;
     for rel in FIXTURES {
         let Some(bytes) = fixture(rel) else { continue };
         seen += 1;
@@ -96,6 +140,15 @@ fn app_files_save_to_the_same_entries() {
             if legacy {
                 continue;
             }
+            // text sizes of the first form are written in px
+            let converted = name.ends_with("model.json").then(|| with_text_px(b));
+            let b = match &converted {
+                Some((now, true)) => {
+                    text_sizes += 1;
+                    now
+                }
+                _ => b,
+            };
             assert!(
                 a == b,
                 "{rel}: {name} differs:\n--- written\n{}\n--- app\n{}",
@@ -108,6 +161,8 @@ fn app_files_save_to_the_same_entries() {
         assert_eq!(again, project, "{rel}: read back");
     }
     assert!(seen >= 2, "the fixtures are not in this checkout");
+    // (the fixtures were saved with text sizes in annotation px)
+    assert!(text_sizes >= 2, "no text size of the first form converted");
 }
 
 #[test]
@@ -379,7 +434,7 @@ fn a_plot_style_reads_and_writes_back() {
     let style = json!({
         "color": "#cc0000", "line": "dashed", "lineWidthPx": 5, "marker": "plus",
         "markerSizePx": 30, "markerOpen": true, "showTitle": false, "showAxisTitle": false,
-        "showGrid": false, "showBorder": false, "fontSize": 12,
+        "showGrid": false, "showBorder": false, "fontSizePx": 14,
         "xMin": 1, "xMax": 9.5, "yMin": -5, "yMax": 100
     });
     let bytes = edited(rel, "models/model-1/model.json", &|v| {
@@ -403,12 +458,60 @@ fn a_plot_style_reads_and_writes_back() {
     assert_eq!(annos[0]["plotStyle"], style);
     assert!(annos[1].get("plotStyle").is_none());
     assert!(annos[2].get("plotStyle").is_none());
-    // a plot saved before the style is written as it was
+    // a plot saved before the style is written as it was, its (unused)
+    // text size in px of the F label's unit
     assert_eq!(
         annos[3],
-        json!({ "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength" })
+        json!({ "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSizePx": 14.285714, "plotAxisX": "slice", "plotAxisY": "shearStrength" })
     );
     // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}
+
+#[test]
+fn text_sizes_in_annotation_px_read_as_px_of_the_f_label_and_write_once() {
+    // (`fontSize` in annotation px, the paper's shorter side / 600, as files
+    // saved before the sizes were fixed: read as px of the F label's unit,
+    // x (210 / 600) / (10 / 12 x 0.3528), the same size on A4, as the app
+    // reads them; a px member comes first; only `fontSizePx` is written, so
+    // a file saved again is not converted twice)
+    let bytes = edited(FIXTURES[0], "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["annotations"] = json!([
+            { "id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "fontSize": 24.0 },
+            { "id": "m", "type": "material-table", "x": 0.9, "y": 0.1, "fontSize": 6.0 },
+            { "id": "u", "type": "text", "x": 0.1, "y": 0.2, "text": "U", "fontSizePx": 17.0, "fontSize": 40.0 },
+            { "id": "w", "type": "text", "x": 0.1, "y": 0.3, "text": "W", "fontSizePx": "big", "fontSize": 12.0 },
+            { "id": "p", "type": "plot", "x": 0.3, "y": 0.6, "plotStyle": { "fontSize": 9.0 } },
+            { "id": "q", "type": "plot", "x": 0.6, "y": 0.6, "plotStyle": { "fontSizePx": 11.0, "fontSize": 30.0 } },
+            { "id": "r", "type": "plot", "x": 0.6, "y": 0.3, "plotStyle": { "fontSizePx": 60.0, "fontSize": 12.0 } }
+        ]);
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let annos = model["resultViewSettings"]["annotations"]
+        .as_array()
+        .unwrap();
+    assert_eq!(
+        annos[0],
+        json!({ "id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "fontSizePx": 28.571429 })
+    );
+    assert_eq!(
+        annos[1],
+        json!({ "id": "m", "type": "material-table", "x": 0.9, "y": 0.1, "fontSizePx": 7.142857 })
+    );
+    assert_eq!(annos[2]["fontSizePx"], json!(17));
+    assert!(annos[3].get("fontSizePx").is_none() && annos[3].get("fontSize").is_none());
+    assert_eq!(annos[4]["plotStyle"], json!({ "fontSizePx": 10.714286 }));
+    assert_eq!(annos[5]["plotStyle"], json!({ "fontSizePx": 11 }));
+    assert!(annos[6].get("plotStyle").is_none());
     let mut again = read_project(out.clone(), &options()).unwrap();
     assert_eq!(again, project);
     let (out2, _) = write_project(&mut again, &writer()).unwrap();

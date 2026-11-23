@@ -1,6 +1,6 @@
 import type { Annotation, PaperAnnotation, ResultViewSettings, ViewLock } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
-import { ANNOTATION_DEFAULT_FONT_SIZE, ANNOTATION_LINE_HEIGHT, ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
+import { ANNOTATION_DEFAULT_FONT_SIZE, ANNOTATION_LINE_HEIGHT, ANNOTATION_SCALE_DIVISOR, textLayoutPx } from "../rendering/style-spec";
 import { getPlotAspectRatio } from "./paper";
 import { boundsOf, paperContentBounds, type Bounds, type PaperContent } from "./extents";
 
@@ -135,19 +135,19 @@ const TITLE_BLOCK_GAP = 0.01;
 
 /**
  * Bottom of a text annotation that hangs from its point (top-left, the
- * default), as a share of the paper height: its lines at their font size,
- * which scales with the shorter side of the paper (so on a landscape
- * sheet, the height, and less on a portrait one). A tag (#Title) counts
- * as one line.
+ * default), as a share of the paper height: its lines at their font size
+ * on an A4 landscape sheet (210 mm high, so ANNOTATION_SCALE_DIVISOR
+ * layout px; the text is the same size in mm on every paper, so it takes
+ * less of a larger or a portrait one). A tag (#Title) counts as one line.
  */
 function textBottom(a: PaperExtent): number {
   if (a.type !== "text" || (a.anchor && !a.anchor.startsWith("top"))) return a.y;
   const lines = (a.text ?? "").split("\n").length;
-  return a.y + (lines * (a.fontSize ?? ANNOTATION_DEFAULT_FONT_SIZE) * ANNOTATION_LINE_HEIGHT) / ANNOTATION_SCALE_DIVISOR;
+  return a.y + (lines * textLayoutPx(a.fontSizePx ?? ANNOTATION_DEFAULT_FONT_SIZE) * ANNOTATION_LINE_HEIGHT) / ANNOTATION_SCALE_DIVISOR;
 }
 
 /** What `paperTopBand` reads of a paper annotation; a reference annotation (model coordinates) is skipped. */
-type PaperExtent = Pick<PaperAnnotation, "y"> & Partial<Pick<PaperAnnotation, "type" | "text" | "fontSize" | "anchor">>;
+type PaperExtent = Pick<PaperAnnotation, "y"> & Partial<Pick<PaperAnnotation, "type" | "text" | "fontSizePx" | "anchor">>;
 type AnnotationExtent = PaperExtent | Pick<Extract<Annotation, { type: "reference" }>, "type">;
 
 function onPaper(a: AnnotationExtent): a is PaperExtent {

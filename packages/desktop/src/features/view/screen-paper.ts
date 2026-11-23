@@ -1,7 +1,7 @@
 import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../constants";
 import type { PaperFrameSettings } from "../../store/types";
-import { ANNOTATION_SCALE_DIVISOR } from "../rendering/style-spec";
-import { computePaperFrame, type Rect } from "./paper";
+import { SHEET_LAYOUT_MM_PER_PX } from "../rendering/style-spec";
+import { computePaperFrame, getPaperDimensions, type Rect } from "./paper";
 
 /**
  * The sheet on the result canvas (CSS px), as drawCanvas lays it out, with
@@ -28,13 +28,13 @@ export function screenPaper(
 }
 
 /**
- * The scale of the sheet's annotations on screen (px per annotation px, as
- * drawCanvas's annoScale), or undefined without a canvas.
+ * The scale of the sheet's material table on screen (px per layout px, as
+ * drawCanvas's layoutScale), or undefined without a canvas.
  */
 export function screenSheetScale(
   paperFrame: Pick<PaperFrameSettings, "paperSize" | "landscape" | "zoom" | "offsetX" | "offsetY">,
 ): number | undefined {
   const pf = screenPaper(paperFrame)?.pf;
-  const scale = pf ? Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR : 0;
+  const scale = pf ? (SHEET_LAYOUT_MM_PER_PX * pf.w) / getPaperDimensions(paperFrame.paperSize, paperFrame.landscape).width : 0;
   return scale > 0 ? scale : undefined;
 }
