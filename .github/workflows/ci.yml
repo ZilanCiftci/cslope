@@ -7,6 +7,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Once a week every job runs on main, also the engine and Python jobs
+  # that a pull request skips when its change does not touch them; and on
+  # demand (Actions › CI › Run workflow).
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
@@ -18,8 +24,9 @@ permissions:
 # Kept lean (the engine port to Rust is done and verified):
 # - The engine jobs (rust, engine) run only when the engine changed
 #   (packages/engine-rs, packages/engine); the app's own changes do not
-#   rebuild or retest the engine. The weekly verification-full workflow
-#   runs everything on a schedule.
+#   rebuild or retest the engine. Every job runs once a week on main (the
+#   schedule below), and the verification-full workflow runs the
+#   verification problems with the full search.
 # - The engine's verification checks run once, in Rust, against the golden
 #   results (golden/verification.json); the TypeScript test suite runs its
 #   quick set (the API over the engine), not the verification problems again.
@@ -37,13 +44,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      engine: ${{ steps.filter.outputs.engine }}
-      python: ${{ steps.filter.outputs.python }}
+      engine: ${{ steps.everything.outputs.all == 'true' || steps.filter.outputs.engine == 'true' }}
+      python: ${{ steps.everything.outputs.all == 'true' || steps.filter.outputs.python == 'true' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The weekly and on-demand runs test everything, without a filter.
+      - name: Everything
+        id: everything
+        run: echo "all=${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}" >> "$GITHUB_OUTPUT"
       - name: Filter
         id: filter
+        if: steps.everything.outputs.all != 'true'
         uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         with:
           filters: |
