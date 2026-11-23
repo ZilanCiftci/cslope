@@ -18,6 +18,7 @@ import { BENCHMARK_MODELS } from "../../store/benchmarks";
 import { DEFAULT_PIEZO_LINE } from "../../store/defaults";
 import type { PaperAnnotation, PlotStyle } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
+import { normalizePlotStyle } from "../annotations/plotStyle";
 import { MM_PER_PT, PLOT_LINE_COLOR } from "../rendering/style-spec";
 
 const W = 1200;
@@ -233,7 +234,8 @@ describe("a slice plot without a style", () => {
 });
 
 describe("a styled slice plot in the view and the PDF", () => {
-  const styled = plot({ color: COLOR, line: "dashed", lineWidth: 0.5, marker: "plus", markerSize: 3, yMin: 0, yMax: 100 });
+  // 5 px and 30 px: a 0.5 mm line and 3 mm markers (1 px = 0.1 mm).
+  const styled = plot({ color: COLOR, line: "dashed", lineWidthPx: 5, marker: "plus", markerSizePx: 30, yMin: 0, yMax: 100 });
 
   it("draws the dashed series line in the same place, width, dash and color", () => {
     const view = viewOf(styled);
@@ -330,5 +332,16 @@ describe("a styled slice plot in the view and the PDF", () => {
     expect(close(tick.sizeMm, (12 * 210) / 600, 1e-6)).toBe(true);
     const v = view.texts.find((t) => t.text === "2" && close(t.x, tick.x, 0.05) && close(t.y, tick.y, 0.05));
     expect(v).toBeDefined();
+  });
+});
+
+describe("a plot's sizes in px", () => {
+  it("draw as the same sizes in mm did: a development build's file (mm) opens with the same line and markers", () => {
+    const px = plot({ color: COLOR, line: "dashed", lineWidthPx: 5, marker: "square", markerSizePx: 30 });
+    const mm = plot(normalizePlotStyle({ color: COLOR, line: "dashed", lineWidth: 0.5, marker: "square", markerSize: 3 })!);
+    expect(mm.plotStyle).toEqual(px.plotStyle);
+    for (const of of [viewOf, pdfOf]) expect(JSON.stringify(of(mm))).toBe(JSON.stringify(of(px)));
+    // 5 px: the 0.5 mm line.
+    expect(close(viewOf(px).line[0].widthMm, 0.5, 1e-6)).toBe(true);
   });
 });

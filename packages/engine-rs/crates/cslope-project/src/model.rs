@@ -575,15 +575,15 @@ pub struct PlotStyle {
     /// "dashed" or "none" (absent: solid).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line: Option<String>,
-    /// mm on the paper.
+    /// px, 1 px = 0.1 mm on the paper.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub line_width: Option<f64>,
+    pub line_width_px: Option<f64>,
     /// "none", "square", "triangle", "plus" or "cross" (absent: circle).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marker: Option<String>,
-    /// The markers' diameter, mm on the paper.
+    /// The markers' diameter, px (1 px = 0.1 mm on the paper).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub marker_size: Option<f64>,
+    pub marker_size_px: Option<f64>,
     /// Written only as `true`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marker_open: Option<bool>,
@@ -636,6 +636,9 @@ pub struct ResultLayerStyles {
     /// The sheet's grid (color, width, subdivisions, minorWidth).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<LayerStyle>,
+    /// The sheet's frame (color, width, fontSize in pt, labels).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame: Option<LayerStyle>,
 }
 
 /// The style of one display layer: the fields a layer may have (the
@@ -667,6 +670,9 @@ pub struct LayerStyle {
     /// The grid's minor lines' width.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_width: Option<f64>,
+    /// The frame's tick labels: written only as `false` by the app.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<bool>,
 }
 
 /// The colors of materials without one (`MATERIAL_COLORS`).

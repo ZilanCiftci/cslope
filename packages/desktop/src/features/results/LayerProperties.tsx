@@ -20,17 +20,22 @@ import {
   FEM_PLASTIC_ZONE_OPACITY,
   FOS_LABEL_DECIMALS,
   FOS_LABEL_FONT_PX,
+  FRAME_LINE_WIDTH_PX,
   GRID_DEFAULT_SUBDIVISIONS,
   GRID_LINE_WIDTH_PX,
   GRID_MINOR_LINE_WIDTH_PX,
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
+  RULER_FONT_PT,
 } from "../rendering/style-spec";
+import { clampMinorTicks } from "../../utils/ruler";
 import { DISPLAY_LAYER_NAMES, type DisplayLayerKey } from "./layers";
 import { LAYER_FONT_FAMILIES, LAYER_STYLE_LIMITS, layerStyleCleared, layerStylePatch } from "./layer-styles";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
+/** The tick labels' sizes offered (pt; a file may hold another from 4 to 72). */
+const TICK_LABEL_SIZES = [6, 7, 8, 9, 10, 11, 12, 14];
 /** The minor grid lines' subdivisions offered (a file may hold another from 2 to 10). */
 const GRID_SUBDIVISIONS = [2, 4, 5, 10];
 const labelStyle = { color: "var(--color-vsc-text-muted)" };
@@ -189,7 +194,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
     setRvs(layerStylePatch(rvs, key, patch));
   const W = LAYER_STYLE_LIMITS.width;
 
-  const colorField = <K extends "femMesh" | "femPlasticZone" | "customSurfaces" | "criticalSurface" | "slices" | "center" | "fosLabel" | "grid">(
+  const colorField = <K extends "femMesh" | "femPlasticZone" | "customSurfaces" | "criticalSurface" | "slices" | "center" | "fosLabel" | "grid" | "frame">(
     key: K,
     title?: string,
   ) => (
@@ -229,7 +234,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
                 step="any"
                 placeholder="Auto"
                 value={rvs.gridLineSpacing}
-                title="Distance between the grid lines; empty: at the labelled ticks. Without a tick spacing of your own the labels follow the grid"
+                title="Distance between the grid lines; empty: at the labelled ticks. Without a tick spacing of your own (Frame) the labels follow the grid"
                 onValueChange={(v) => setRvs({ gridLineSpacing: v > 0 ? v : undefined })}
                 onClear={() => setRvs({ gridLineSpacing: undefined })}
                 className="w-full tabular-nums"
@@ -272,6 +277,77 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
               />
             </div>
           )}
+        </>
+      );
+      break;
+    }
+    case "frame": {
+      const f = styles.frame;
+      const labels = f?.labels !== false;
+      const size = f?.fontSize ?? RULER_FONT_PT;
+      body = (
+        <>
+          {colorField("frame", "Dark grey, as in the PDF (light grey on the dark sheet)")}
+          <div className="flex gap-2">
+            <NumberField
+              label={LINE_WIDTH}
+              value={f?.width}
+              placeholder={FRAME_LINE_WIDTH_PX}
+              {...W}
+              title={`The plot frame's line; from ${W.min} to ${W.max}, empty: ${FRAME_LINE_WIDTH_PX}`}
+              onChange={(v) => set("frame", { width: v })}
+            />
+            <Field label="Tick spacing (m)" className="flex-1 min-w-0">
+              <DraftNumberInput
+                min={0}
+                step="any"
+                placeholder="Auto"
+                value={rvs.gridSpacing}
+                title="Distance between the labelled ticks, and the grid lines unless the grid has its own spacing"
+                onValueChange={(v) => setRvs({ gridSpacing: v > 0 ? v : undefined })}
+                onClear={() => setRvs({ gridSpacing: undefined })}
+                className="w-full tabular-nums"
+              />
+            </Field>
+          </div>
+          <div className="flex gap-2">
+            <Field label="Minor ticks" className="flex-1 min-w-0">
+              <DraftNumberInput
+                min={0}
+                max={20}
+                step={1}
+                value={rvs.minorTicks ?? 0}
+                title="Short ticks between the labelled ones, 0 to 20"
+                onValueChange={(v) => setRvs({ minorTicks: clampMinorTicks(v) || undefined })}
+                onClear={() => setRvs({ minorTicks: undefined })}
+                className="w-full tabular-nums"
+              />
+            </Field>
+            <Field label="Label size (pt)" className="flex-1 min-w-0">
+              <select
+                value={size}
+                disabled={!labels}
+                title="Size of the tick labels"
+                onChange={(e) => {
+                  const v = Number(e.target.value);
+                  set("frame", { fontSize: v === RULER_FONT_PT ? undefined : v });
+                }}
+                className="w-full"
+              >
+                {[...new Set([...TICK_LABEL_SIZES, size])]
+                  .sort((a, b) => a - b)
+                  .map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+              </select>
+            </Field>
+          </div>
+          <label className="flex items-center gap-2 text-[11px]">
+            <input type="checkbox" checked={labels} onChange={(e) => set("frame", { labels: e.target.checked ? undefined : false })} />
+            Tick labels
+          </label>
         </>
       );
       break;
@@ -475,13 +551,18 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
   const name = DISPLAY_LAYER_NAMES[layer];
   // The surfaces layer holds the critical surface's style too.
   const styleKeys: (keyof ResultLayerStyles)[] = layer === "surfaces" ? ["criticalSurface", "surfaces"] : [layer];
-  // The grid's spacing is one of its settings too.
-  const styled = styleKeys.some((k) => styles[k] !== undefined) || (layer === "grid" && rvs.gridLineSpacing !== undefined);
+  // The grid's spacing is one of its settings too, and the frame's tick spacing and minor ticks.
+  const styled =
+    styleKeys.some((k) => styles[k] !== undefined) ||
+    (layer === "grid" && rvs.gridLineSpacing !== undefined) ||
+    (layer === "frame" && (rvs.gridSpacing !== undefined || rvs.minorTicks !== undefined));
   const reset = () => {
     let next: Pick<typeof rvs, "layerStyles"> = rvs;
     for (const k of styleKeys) next = layerStyleCleared(next, k);
     // One change: one undo step.
-    setRvs(layer === "grid" ? { ...next, gridLineSpacing: undefined } : next);
+    if (layer === "grid") setRvs({ ...next, gridLineSpacing: undefined });
+    else if (layer === "frame") setRvs({ ...next, gridSpacing: undefined, minorTicks: undefined });
+    else setRvs(next);
   };
   return (
     <div className="space-y-2" role="group" aria-label={`${name} properties`}>

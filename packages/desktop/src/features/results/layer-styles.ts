@@ -29,6 +29,7 @@ const FIELDS: { [K in keyof ResultLayerStyles]-?: Record<string, FieldKind> } = 
   center: { color: "color", size: "size", radiusLines: "bool" },
   fosLabel: { fontSize: "fontSize", fontFamily: "fontFamily", color: "color", bold: "bool", decimals: "decimals" },
   grid: { color: "color", width: "width", subdivisions: "subdivisions", minorWidth: "width" },
+  frame: { color: "color", width: "width", fontSize: "fontSize", labels: "bool" },
 };
 
 /** The bounds of the numbers (line widths and sizes in px at paper zoom 1). */

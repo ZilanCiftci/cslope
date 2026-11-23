@@ -731,6 +731,34 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-frame-properties",
+    title: "Result sidebar, the Frame layer selected: color, line width, tick spacing, minor ticks, label size, tick labels",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6 } } }); s.setSelectedResultLayer("frame"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-frame-styled",
+    title: "Result view with a styled frame (blue, 6 px, 11 pt labels, ticks every 5 m with 4 minor ticks), the Frame properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6, fontSize: 11 } } }); s.setSelectedResultLayer("frame"); }`);
+    },
+  },
+  {
+    id: "main-result-frame-off",
+    title: "Result view with the Frame layer turned off (greyed in Layers; no frame, ticks or labels), its properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ paperFrame: { ...s.resultViewSettings.paperFrame, showFrame: false } }); s.setSelectedResultLayer("frame"); }`);
+    },
+  },
+  {
     id: "main-result-table-off-reopened",
     title: "Result view after the material table was turned off and the project saved and opened again: the table listed off, not drawn",
     area: "main-result",
@@ -866,8 +894,8 @@ const sidebarScenes: Scene[] = [
       await ctx.store(`(s) => {
         const plots = s.resultViewSettings.annotations.filter((a) => a.type === "plot");
         const styles = [
-          { x: 0.1, y: 0.56, plotAxisY: "shearStrength", plotStyle: { color: "#cc0000", line: "dashed", lineWidth: 0.4, marker: "plus", markerSize: 2 } },
-          { x: 0.39, y: 0.56, plotAxisY: "sliceWeight", plotAxisX: "x", plotStyle: { color: "#00cc00", line: "none", marker: "triangle", markerSize: 1.8, yMin: 0, yMax: 400 } },
+          { x: 0.1, y: 0.56, plotAxisY: "shearStrength", plotStyle: { color: "#cc0000", line: "dashed", lineWidthPx: 4, marker: "plus", markerSizePx: 20 } },
+          { x: 0.39, y: 0.56, plotAxisY: "sliceWeight", plotAxisX: "x", plotStyle: { color: "#00cc00", line: "none", marker: "triangle", markerSizePx: 18, yMin: 0, yMax: 400 } },
           { x: 0.68, y: 0.56, plotAxisY: "resistingForce", plotStyle: { color: "#a21caf", marker: "cross", showGrid: false, showBorder: false, showAxisTitle: false, fontSize: 11 } },
         ];
         plots.slice(-3).forEach((a, i) => s.updateAnnotation(a.id, { ...styles[i], width: 0.27, height: 0.3 }));

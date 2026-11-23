@@ -291,6 +291,11 @@ export interface ProjectInfo {
 export interface PaperFrameSettings {
   paperSize: PaperSize;
   landscape: boolean;
+  /**
+   * Draw the sheet's frame (Layers › Frame): the plot frame, its ticks and
+   * their labels; its style in `ResultViewSettings.layerStyles.frame`.
+   * Always saved; absent in a file: drawn.
+   */
   showFrame: boolean;
   zoom?: number;
   offsetX?: number;
@@ -342,11 +347,14 @@ export interface PlotStyle {
   /** The series' color, "#rrggbb"; absent: the theme's plot color. */
   color?: string;
   line?: PlotLineStyle;
-  /** The series' line width in mm on the paper. */
-  lineWidth?: number;
+  /**
+   * The series' line width in px, 1 px = 0.1 mm on the paper. (A file of
+   * a development build may hold `lineWidth` in mm: read as px × 10.)
+   */
+  lineWidthPx?: number;
   marker?: PlotMarker;
-  /** The markers' size (diameter) in mm on the paper. */
-  markerSize?: number;
+  /** The markers' size (diameter) in px, 1 px = 0.1 mm (`markerSize` in mm read likewise). */
+  markerSizePx?: number;
   /** Circles, squares and triangles drawn as outlines. */
   markerOpen?: boolean;
   /** The plot's title (the quantity and its unit). */
@@ -527,7 +535,10 @@ export interface ResultViewSettings {
    * with its own factor of safety (default: hidden).
    */
   showCustomSurfaces?: boolean;
-  /** Grid / major-tick spacing in world units. undefined or 0 = auto. */
+  /**
+   * The labelled ticks' spacing in world units (Layers › Frame › Tick
+   * spacing); the grid's too unless it has its own. undefined or 0 = auto.
+   */
   gridSpacing?: number;
   /**
    * Grid line spacing in world units (Layers › Grid › Spacing). undefined
@@ -535,7 +546,7 @@ export interface ResultViewSettings {
    * labelled ticks follow it (utils/ruler.ts sheetTickStep).
    */
   gridLineSpacing?: number;
-  /** Number of minor tick subdivisions between major ticks. 0 = none. */
+  /** Number of minor ticks between the labelled ticks (Layers › Frame › Minor ticks). 0 = none. */
   minorTicks?: number;
   annotations: Annotation[];
   /**
@@ -588,6 +599,13 @@ export interface ResultLayerStyles {
    * each grid interval, `minorWidth` wide (px), in the same color.
    */
   grid?: { color?: string; width?: number; subdivisions?: number; minorWidth?: number };
+  /**
+   * The sheet's frame (Layers › Frame): the color of the frame, the ticks
+   * and their labels; the plot frame's width (px, 1 px = 0.1 mm on the
+   * paper, as the grid's); the tick labels' size (pt) and, with `labels`
+   * false, no tick labels.
+   */
+  frame?: { color?: string; width?: number; fontSize?: number; labels?: boolean };
   /** fontSize in px at paper zoom 1; decimals of the factor of safety. */
   fosLabel?: { fontSize?: number; fontFamily?: string; color?: string; bold?: boolean; decimals?: number };
 }

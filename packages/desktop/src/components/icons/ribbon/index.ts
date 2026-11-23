@@ -36,6 +36,7 @@ export { SlicesIcon } from "./outline/SlicesIcon";
 export { FosLabelIcon } from "./technical/FosLabelIcon";
 export { CentreIcon } from "./outline/CentreIcon";
 export { GridIcon } from "./outline/GridIcon";
+export { FrameIcon } from "./outline/FrameIcon";
 export { SoilColorsIcon } from "./outline/SoilColorsIcon";
 export { PlasticZoneIcon } from "./outline/PlasticZoneIcon";
 export { FeMeshIcon } from "./outline/FeMeshIcon";

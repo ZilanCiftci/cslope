@@ -583,7 +583,11 @@ export function exportVectorPdf(data: PdfExportData): void {
     };
     if (lastModelStep < 0) finishModel();
     steps.forEach((step, i) => {
-      if (step.kind === "paper") {
+      if (step.kind === "display" && step.layer === "frame") {
+        // The frame (Layers › Frame) on the paper's margin, unclipped, where it stands.
+        unclip();
+        drawRulerFrame(pdf, tf, viewScale, innerFrame, rvs.gridSpacing, clampMinorTicks(rvs.minorTicks ?? 0), rvs.gridLineSpacing, rvs.layerStyles?.frame);
+      } else if (step.kind === "paper") {
         unclip();
         drawAnnotations(
           pdf,
@@ -633,25 +637,6 @@ export function exportVectorPdf(data: PdfExportData): void {
       }
       if (i === lastModelStep) finishModel();
     });
-
-    drawRulerFrame(
-
-      pdf,
-
-      tf,
-
-      viewScale,
-
-      innerFrame,
-
-      rvs.gridSpacing,
-
-      clampMinorTicks(rvs.minorTicks ?? 0),
-
-      rvs.gridLineSpacing,
-
-    );
-
 
     // Both are the user's choice (the PDF button's menu) and on by default
     // (pdfPageOptions): the title line, so that page 1 printed on its own

@@ -36,6 +36,7 @@ import {
   sheetTickStep,
 } from "../../utils/ruler";
 import { gridLinePositions, sheetGridStyle } from "../rendering/sheet-grid";
+import { sheetFrameStyle } from "../rendering/sheet-frame";
 import {
   buildMaterialTableData,
   computePaperFrame,
@@ -102,15 +103,11 @@ import {
   FEM_PLASTIC_ZONE_OPACITY,
   SLIP_SURFACE_LINE_WIDTH_PX,
   MM_PER_PT,
-  PLOT_FRAME_LINE_MM,
-  RULER_FONT_PT,
   RULER_LABEL_GAP_MM,
   RULER_MINOR_TICK_LINE_MM,
   RULER_MINOR_TICK_MM,
   RULER_TICK_LINE_MM,
   RULER_TICK_MM,
-  RULER_X_LABEL_BASELINE_MM,
-  RULER_Y_LABEL_BASELINE_MM,
   SHEET_SANS_FAMILY,
   sheetCanvasFamily,
   COLOR_BAR_LINE_MM,
@@ -3159,10 +3156,11 @@ export function drawCanvas(
       }
     };
 
-    // ── Paper frame ──────────────────────────────────────
-    // Ticks and labels between the paper edge and the plot area, over the
-    // geometry (drawn unclipped).
+    // ── The frame (Layers › Frame) ───────────────────────
+    // The plot frame, and the ticks and their labels between the paper
+    // edge and the plot area, in the frame's style (drawn unclipped).
     const drawFrame = () => {
+      const fs = sheetFrameStyle(LS.frame);
       // Inner frame (plot area) inset from paper (using standardized percentages)
       const PLOT_PAD_L = pf.w * PLOT_MARGINS.L;
       const PLOT_PAD_B = pf.h * PLOT_MARGINS.B;
@@ -3180,7 +3178,7 @@ export function drawCanvas(
       const pxPerMm = pf.w / (paperFrame.landscape ? Math.max(dimW0, dimH0) : Math.min(dimW0, dimH0));
       const TICK_LEN = RULER_TICK_MM * pxPerMm;
       const MINI_TICK = RULER_MINOR_TICK_MM * pxPerMm;
-      const rulerFont = `${RULER_FONT_PT * MM_PER_PT * pxPerMm}px ${SHEET_SANS_FAMILY}`;
+      const rulerFont = `${fs.fontPt * MM_PER_PT * pxPerMm}px ${SHEET_SANS_FAMILY}`;
 
       // World coords at inner frame edges
       const [worldLeftTick] = canvasToWorld(ifx, ify, w, h);
@@ -3207,8 +3205,8 @@ export function drawCanvas(
       const minorTickCount = clampMinorTicks(resultViewSettings.minorTicks ?? 0);
 
       ctx.save();
-      ctx.fillStyle = PAPER_TICK_COLOR;
-      ctx.strokeStyle = PAPER_TICK_COLOR;
+      ctx.fillStyle = fs.color ?? PAPER_TICK_COLOR;
+      ctx.strokeStyle = fs.color ?? PAPER_TICK_COLOR;
       ctx.lineWidth = RULER_TICK_LINE_MM * pxPerMm;
       ctx.font = rulerFont;
 
@@ -3224,8 +3222,7 @@ export function drawCanvas(
         ctx.moveTo(px, btmY);
         ctx.lineTo(px, btmY + TICK_LEN);
         ctx.stroke();
-        const label = formatRulerLabel(gx, rulerStep);
-        ctx.fillText(label, px, btmY + TICK_LEN + RULER_X_LABEL_BASELINE_MM * pxPerMm);
+        if (fs.labels) ctx.fillText(formatRulerLabel(gx, rulerStep), px, btmY + TICK_LEN + fs.xLabelBaselineMm * pxPerMm);
       }
       // Minor ticks (X axis)
       if (minorTickCount > 0) {
@@ -3256,8 +3253,7 @@ export function drawCanvas(
         ctx.moveTo(ifx, py);
         ctx.lineTo(ifx - TICK_LEN, py);
         ctx.stroke();
-        const label = formatRulerLabel(gy, rulerStep);
-        ctx.fillText(label, ifx - TICK_LEN - RULER_LABEL_GAP_MM * pxPerMm, py + RULER_Y_LABEL_BASELINE_MM * pxPerMm);
+        if (fs.labels) ctx.fillText(formatRulerLabel(gy, rulerStep), ifx - TICK_LEN - RULER_LABEL_GAP_MM * pxPerMm, py + fs.yLabelBaselineMm * pxPerMm);
       }
       // Minor ticks (Y axis)
       if (minorTickCount > 0) {
@@ -3279,9 +3275,11 @@ export function drawCanvas(
       ctx.restore();
 
       // Inner frame border (plot area)
-      ctx.strokeStyle = PAPER_BORDER_COLOR;
-      ctx.lineWidth = PLOT_FRAME_LINE_MM * pxPerMm;
+      ctx.save();
+      ctx.strokeStyle = fs.color ?? PAPER_BORDER_COLOR;
+      ctx.lineWidth = fs.frameMm * pxPerMm;
       ctx.strokeRect(ifx, ify, ifw, ifh);
+      ctx.restore();
     };
 
     // ── Page 1's title line (drawDrawingTitle, drawOutOfDateNote) ──
@@ -3685,7 +3683,6 @@ export function drawCanvas(
       clipToPlot();
       drawReferenceLabelsStep();
       unclip();
-      drawFrame();
       drawPageTitle();
     };
     if (lastModelStep < 0) finishModel();
@@ -3693,6 +3690,10 @@ export function drawCanvas(
       if (step.kind === "paper") {
         unclip();
         drawPaperAnnotation(step.annotation as PaperAnnotation);
+      } else if (step.kind === "display" && step.layer === "frame") {
+        // The frame on the paper's margin, unclipped, where it stands.
+        unclip();
+        drawFrame();
       } else {
         clipToPlot();
         if (step.kind === "critical") drawCriticalLayer(step);

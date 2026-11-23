@@ -646,6 +646,9 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
           },
           { id: "q", type: "plot", x: 0.6, y: 0.6, plotStyle: { color: "red", line: "solid", marker: "circle", markerOpen: false, lineWidth: 9, showTitle: true, xMin: "1" } },
           { id: "t", type: "text", x: 0.1, y: 0.1, text: "T", plotStyle: { color: "#cc0000" } },
+          // the sizes in px (the "p" plot's in mm are a development build's, read as px)
+          { id: "r", type: "plot", x: 0.6, y: 0.3, plotStyle: { lineWidthPx: 4, lineWidth: 1, markerSizePx: 25, markerSize: "2" } },
+          { id: "s", type: "plot", x: 0.1, y: 0.3, plotStyle: { lineWidthPx: 0.1, markerSizePx: 500 } },
         ],
       },
     },
@@ -683,6 +686,33 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
           grid: { color: "#336699", width: 2, subdivisions: 4, minorWidth: 0.5 },
           slices: { width: 0.4 },
         },
+      },
+    },
+  },
+  {
+    name: "result sheet: the frame off, on top, with its ticks and a style",
+    raw: {
+      id: "sheet-frame",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        paperFrame: { paperSize: "A3", landscape: true, showFrame: false },
+        gridSpacing: 5,
+        minorTicks: 4,
+        annotations: [{ id: "t", type: "text", x: 0.1, y: 0.1, text: "T" }],
+        layerOrder: ["soilColor", "surfaces", "t", "frame"],
+        layerStyles: { frame: { color: "#CC0000", width: 6, fontSize: 11, labels: false } },
+      },
+    },
+  },
+  {
+    name: "result sheet: a frame style with values out of bounds (dropped)",
+    raw: {
+      id: "sheet-frame-bad",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        layerStyles: { frame: { color: "red", width: 20, fontSize: 2, labels: "no" } },
       },
     },
   },

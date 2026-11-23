@@ -43,8 +43,9 @@ describe("the plot's style properties", () => {
     expect(within(p).getByRole("button", { name: "Default" })).toHaveAttribute("aria-pressed", "true");
     expect(within(p).getByRole("button", { name: "Solid" })).toHaveAttribute("aria-pressed", "true");
     expect(within(p).getByLabelText("Markers")).toHaveValue("circle");
-    expect(within(p).getByLabelText("Line width (mm)")).toHaveAttribute("placeholder", "0.25");
-    expect(within(p).getByLabelText("Marker size (mm)")).toHaveAttribute("placeholder", "1.26");
+    // In px, 1 px = 0.1 mm: the default 0.25 mm line and 1.26 mm markers.
+    expect(within(p).getByLabelText("Line width (px)")).toHaveAttribute("placeholder", "2.5");
+    expect(within(p).getByLabelText("Marker size (px)")).toHaveAttribute("placeholder", "12.6");
     expect(within(p).getByLabelText("Y max")).toHaveAttribute("placeholder", "Auto");
     expect(within(p).getByRole("checkbox", { name: "Gridlines" })).toBeChecked();
     expect(within(p).getByRole("checkbox", { name: "Title" })).toBeChecked();
@@ -58,9 +59,9 @@ describe("the plot's style properties", () => {
     const steps: [string, () => void, Partial<PaperAnnotation["plotStyle"]>][] = [
       ["color", () => fireEvent.click(within(p).getByRole("button", { name: "Color #cc0000" })), { color: "#cc0000" }],
       ["line", () => fireEvent.click(within(p).getByRole("button", { name: "Dashed" })), { line: "dashed" }],
-      ["width", () => fireEvent.change(within(p).getByLabelText("Line width (mm)"), { target: { value: "0,5" } }), { lineWidth: 0.5 }],
+      ["width", () => fireEvent.change(within(p).getByLabelText("Line width (px)"), { target: { value: "5,5" } }), { lineWidthPx: 5.5 }],
       ["marker", () => fireEvent.change(within(p).getByLabelText("Markers"), { target: { value: "square" } }), { marker: "square" }],
-      ["size", () => fireEvent.change(within(p).getByLabelText("Marker size (mm)"), { target: { value: "2.5" } }), { markerSize: 2.5 }],
+      ["size", () => fireEvent.change(within(p).getByLabelText("Marker size (px)"), { target: { value: "25" } }), { markerSizePx: 25 }],
       ["open", () => fireEvent.click(within(p).getByRole("checkbox", { name: "Open markers" })), { markerOpen: true }],
       ["x min", () => fireEvent.change(within(p).getByLabelText("X min"), { target: { value: "2" } }), { xMin: 2 }],
       ["x max", () => fireEvent.change(within(p).getByLabelText("X max"), { target: { value: "9" } }), { xMax: 9 }],
@@ -122,16 +123,16 @@ describe("the plot's style properties", () => {
       selectedAnnotationIds: ["p1", "p2"],
       resultViewSettings: {
         ...s.resultViewSettings,
-        annotations: s.resultViewSettings.annotations.map((a): Annotation => (a.id === "p2" && a.type === "plot" ? { ...a, plotStyle: { lineWidth: 1 } } : a)),
+        annotations: s.resultViewSettings.annotations.map((a): Annotation => (a.id === "p2" && a.type === "plot" ? { ...a, plotStyle: { lineWidthPx: 10 } } : a)),
       },
     }));
     render(<ResultSidebar />);
     const p = panel();
     history().clear();
-    expect(within(p).getByLabelText("Line width (mm)")).toHaveAttribute("placeholder", "Mixed");
+    expect(within(p).getByLabelText("Line width (px)")).toHaveAttribute("placeholder", "Mixed");
     fireEvent.click(within(p).getByRole("button", { name: "Dashed" }));
     expect(plotOf("p1").plotStyle).toEqual({ line: "dashed" });
-    expect(plotOf("p2").plotStyle).toEqual({ line: "dashed", lineWidth: 1 });
+    expect(plotOf("p2").plotStyle).toEqual({ line: "dashed", lineWidthPx: 10 });
     expect(history().pastStates).toHaveLength(1);
   });
 });

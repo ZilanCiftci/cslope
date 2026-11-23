@@ -115,8 +115,8 @@ function usableSpacing(spacing: number | undefined, autoStep: number): number | 
 }
 
 /**
- * The step of the sheet's labelled ticks: the user's tick spacing (Sheet ›
- * Tick spacing); without one, and with a grid spacing of the user's (Layers
+ * The step of the sheet's labelled ticks: the user's tick spacing (Layers ›
+ * Frame › Tick spacing); without one, and with a grid spacing of the user's (Layers
  * › Grid › Spacing), the smallest multiple of the grid spacing that is at
  * least the automatic step, so every label sits on a grid line and labels
  * never crowd; otherwise the automatic step. The canvas and the PDF use it

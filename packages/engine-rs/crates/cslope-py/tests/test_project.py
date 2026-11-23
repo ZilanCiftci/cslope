@@ -214,7 +214,7 @@ def test_a_name_that_is_not_unicode_is_named(tmp_path):
 def test_keeps_a_plot_style(tmp_path):
     # (a slice plot styled in Properties › Plot, as the app writes it; a
     # plot saved before the style stays as it was)
-    style = {"color": "#cc0000", "line": "dashed", "lineWidth": 0.5, "marker": "plus", "markerSize": 3,
+    style = {"color": "#cc0000", "line": "dashed", "lineWidthPx": 5, "marker": "plus", "markerSizePx": 30,
              "showGrid": False, "fontSize": 12, "yMin": 0, "yMax": 100}
     old = {"id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength"}
 
@@ -234,6 +234,21 @@ def test_keeps_a_plot_style(tmp_path):
     again = tmp_path / "again.cslp"
     project.open(target).save(again)
     assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
+
+
+@needs_fixtures
+def test_reads_a_plot_style_in_mm_of_a_development_build_as_px(tmp_path):
+    # (`lineWidth` and `markerSize` in mm, the sizes' first form: written back in px, 1 px = 0.1 mm)
+    def edit(v):
+        v["resultViewSettings"]["annotations"] = [
+            {"id": "p", "type": "plot", "x": 0.3, "y": 0.3, "plotStyle": {"lineWidth": 0.35, "markerSize": 1.26}},
+        ]
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "plot-mm.cslp", "models/model-1/model.json", edit)
+    target = tmp_path / "saved.cslp"
+    project.open(src).save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["annotations"][0]["plotStyle"] == {"lineWidthPx": 3.5, "markerSizePx": 12.6}
 
 
 @needs_fixtures
@@ -258,6 +273,34 @@ def test_keeps_a_table_and_a_bar_turned_off_and_surfaces_off(tmp_path):
     assert [(a["id"], a.get("hidden")) for a in view["annotations"]] == [("m", True), ("c", True)]
     assert view["annotations"][1]["scaleMax"] == 2
     assert view["layerOrder"] == ["soilColor", "surfaces", "m", "c"]
+    # saved again, the same entry
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
+
+
+@needs_fixtures
+def test_keeps_the_frame_layer_its_style_and_place(tmp_path):
+    # (as the app writes them: the frame off, the ticks, its style, and its
+    # place in the layer order)
+    def edit(v):
+        view = v["resultViewSettings"]
+        view["paperFrame"]["showFrame"] = False
+        view["gridSpacing"] = 5
+        view["minorTicks"] = 4
+        view["layerOrder"] = ["soilColor", "surfaces", "fosLabel", "frame"]
+        view["layerStyles"] = {"frame": {"color": "#cc0000", "width": 6, "fontSize": 11, "labels": False}}
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "frame.cslp", "models/model-1/model.json", edit)
+    p = project.open(src)
+    target = tmp_path / "saved.cslp"
+    p.save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["paperFrame"]["showFrame"] is False
+    assert view["gridSpacing"] == 5
+    assert view["minorTicks"] == 4
+    assert view["layerOrder"] == ["soilColor", "surfaces", "fosLabel", "frame"]
+    assert view["layerStyles"] == {"frame": {"color": "#cc0000", "width": 6, "fontSize": 11, "labels": False}}
     # saved again, the same entry
     again = tmp_path / "again.cslp"
     project.open(target).save(again)

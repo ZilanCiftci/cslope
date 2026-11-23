@@ -4,6 +4,7 @@ import {
   annotationsInLayerOrder,
   baseLayerCount,
   defaultLayers,
+  isPaperStep,
   layerSteps,
   mergeLayerOrder,
   movedLayerOrder,
@@ -25,8 +26,14 @@ const CS = { cx: 10, cy: 12, radius: 10, fos: 1.2, entryPoint: [2, 8], exitPoint
 
 function src(over: Partial<ResultViewSettings> = {}, extra: Partial<LayerSource> = {}): LayerSource {
   return {
-    // (the grid off unless a test turns it on: its place is tested on its own)
-    resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, showGrid: false, annotations: ANNOS, ...over },
+    // (the grid and the frame off unless a test turns them on: their places are tested on their own)
+    resultViewSettings: {
+      ...DEFAULT_RESULT_VIEW_SETTINGS,
+      showGrid: false,
+      paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, showFrame: false },
+      annotations: ANNOS,
+      ...over,
+    },
     result: { criticalSurface: CS } as unknown as AnalysisResult,
     ...extra,
   };
@@ -160,7 +167,7 @@ describe("listed layers (Properties › Layers)", () => {
     const s = src({ showSlices: false, showSurfaces: false, annotations: ANNOS.filter((a) => a.type !== "material-table") });
     expect(resultLayerKeys(s)).not.toContain("slices");
     const listed = resultLayers(s, true);
-    expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["grid", "surfaces", "slices", "material-table", "color-bar"]);
+    expect(listed.filter((l) => l.off).map((l) => l.key)).toEqual(["grid", "surfaces", "slices", "frame", "material-table", "color-bar"]);
     // Off layers of a kind the result has nothing for are not listed.
     expect(listed.map((l) => l.key)).not.toContain("femMesh");
     expect(listed.map((l) => l.key)).not.toContain("customSurfaces");
@@ -202,5 +209,45 @@ describe("listed layers (Properties › Layers)", () => {
     // a stored order of an older file (without the grid) puts it in its default place
     expect(resultLayerKeys(src({ showGrid: true, layerOrder: ["soilColor", "r", "surfaces"] })).slice(0, 2)).toEqual(["soilColor", "grid"]);
     expect(normalizeLayerOrder(["grid", "soilColor"], [])).toEqual(["grid", "soilColor"]);
+  });
+
+  it("lists the frame as a built-in layer over the model's layers, under the paper annotations, on or off by the paper frame's showFrame", () => {
+    const frameOn = (over: Partial<ResultViewSettings> = {}) =>
+      src({ paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, showFrame: true }, ...over });
+    const on = frameOn();
+    expect(resultLayerKeys(on)).toEqual(["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "frame", "t", "m"]);
+    // a step on the paper (unclipped), after the topmost of the model's layers
+    const steps = layerSteps(resultLayers(on).slice(baseLayerCount(resultLayers(on))));
+    const frameAt = steps.findIndex((st) => st.kind === "display" && st.layer === "frame");
+    expect(frameAt).toBeGreaterThan(0);
+    expect(isPaperStep(steps[frameAt])).toBe(true);
+    expect(steps.slice(frameAt + 1).every((st) => st.kind === "paper")).toBe(true);
+    // off: not drawn, listed greyed where it stands
+    const off = src();
+    expect(resultLayerKeys(off)).not.toContain("frame");
+    expect(resultLayers(off, true).find((l) => l.key === "frame")).toMatchObject({ kind: "display", off: true });
+    // a project without the paper frame's switch draws it
+    const bare = src();
+    const { showFrame: _drop, ...paperFrame } = bare.resultViewSettings.paperFrame;
+    void _drop;
+    expect(resultLayerKeys({ ...bare, resultViewSettings: { ...bare.resultViewSettings, paperFrame: paperFrame as typeof bare.resultViewSettings.paperFrame } })).toContain("frame");
+    // a stored order of an older file (without the frame) puts it after the F label
+    expect(resultLayerKeys(frameOn({ layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "m", "t"] }))).toEqual([
+      "soilColor",
+      "r",
+      "surfaces",
+      "slices",
+      "center",
+      "fosLabel",
+      "frame",
+      "m",
+      "t",
+    ]);
+    // moved to the top: over the paper annotations
+    expect(layerSteps(resultLayers(frameOn({ layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "t", "m", "frame"] }))).at(-1)).toEqual({
+      kind: "display",
+      layer: "frame",
+    });
+    expect(normalizeLayerOrder(["frame", "soilColor"], [])).toEqual(["frame", "soilColor"]);
   });
 });

@@ -15,6 +15,7 @@ import {
   PLOT_MARKER_PX,
   PLOT_SERIES_DASH,
   PLOT_TITLE_FONT_PX,
+  STYLE_PX_PER_MM,
 } from "../rendering/style-spec";
 
 export const PLOT_LINE_STYLES: readonly { value: PlotLineStyle; label: string }[] = [
@@ -32,12 +33,25 @@ export const PLOT_MARKERS: readonly { value: PlotMarker; label: string }[] = [
   { value: "none", label: "None" },
 ];
 
-/** The bounds of the sizes: line width and marker size in mm, text in annotation px. */
+/** The bounds of the sizes: line width and marker size in px (1 px = 0.1 mm on the paper), text in annotation px. */
 export const PLOT_STYLE_LIMITS = {
-  lineWidth: { min: 0.05, max: 3 },
-  markerSize: { min: 0.2, max: 10 },
+  lineWidthPx: { min: 0.5, max: 30 },
+  markerSizePx: { min: 2, max: 100 },
   fontSize: { min: 4, max: 36 },
 } as const;
+
+/**
+ * The bounds of the sizes in mm of the style's first form (`lineWidth`,
+ * `markerSize`), written by development builds before the sizes were in
+ * px; read as px (× STYLE_PX_PER_MM) when the px member is absent.
+ */
+const LEGACY_MM_LIMITS = {
+  lineWidth: { min: 0.05, max: 3 },
+  markerSize: { min: 0.2, max: 10 },
+} as const;
+
+/** A size in mm as px (1 px = 0.1 mm), without the binary fraction's noise (0.35 mm: 3.5 px). */
+const mmToStylePx = (mm: number) => Math.round(mm * STYLE_PX_PER_MM * 1e6) / 1e6;
 
 /** The text sizes offered (annotation px). */
 export const PLOT_FONT_SIZES = [6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24];
@@ -60,9 +74,11 @@ export function normalizePlotStyle(raw: unknown): PlotStyle | undefined {
   const out: PlotStyle = {};
   if (typeof r.color === "string" && HEX_COLOR.test(r.color)) out.color = r.color.toLowerCase();
   if (r.line === "dashed" || r.line === "none") out.line = r.line;
-  if (inRange(r.lineWidth, PLOT_STYLE_LIMITS.lineWidth)) out.lineWidth = r.lineWidth;
+  if (inRange(r.lineWidthPx, PLOT_STYLE_LIMITS.lineWidthPx)) out.lineWidthPx = r.lineWidthPx;
+  else if (r.lineWidthPx === undefined && inRange(r.lineWidth, LEGACY_MM_LIMITS.lineWidth)) out.lineWidthPx = mmToStylePx(r.lineWidth);
   if (PLOT_MARKERS.some((m) => m.value === r.marker) && r.marker !== "circle") out.marker = r.marker as PlotMarker;
-  if (inRange(r.markerSize, PLOT_STYLE_LIMITS.markerSize)) out.markerSize = r.markerSize;
+  if (inRange(r.markerSizePx, PLOT_STYLE_LIMITS.markerSizePx)) out.markerSizePx = r.markerSizePx;
+  else if (r.markerSizePx === undefined && inRange(r.markerSize, LEGACY_MM_LIMITS.markerSize)) out.markerSizePx = mmToStylePx(r.markerSize);
   if (r.markerOpen === true) out.markerOpen = true;
   for (const k of SWITCHES) if (r[k] === false) out[k] = false;
   if (inRange(r.fontSize, PLOT_STYLE_LIMITS.fontSize)) out.fontSize = r.fontSize;
@@ -124,14 +140,14 @@ export function defaultPlotMarkerSizeMm(mmPerAnnoPx: number): number {
 export function resolvePlotStyle(style: PlotStyle | undefined, mmPerAnnoPx: number): ResolvedPlotStyle {
   const s = style ?? {};
   const line = s.line ?? "solid";
-  const lineWidthMm = s.lineWidth ?? defaultPlotLineWidthMm(mmPerAnnoPx);
+  const lineWidthMm = s.lineWidthPx === undefined ? defaultPlotLineWidthMm(mmPerAnnoPx) : s.lineWidthPx / STYLE_PX_PER_MM;
   return {
     color: s.color,
     line,
     lineWidthMm,
     dashMm: line === "dashed" ? PLOT_SERIES_DASH.map((d) => d * lineWidthMm) : [],
     marker: s.marker ?? "circle",
-    markerRadiusMm: (s.markerSize ?? defaultPlotMarkerSizeMm(mmPerAnnoPx)) / 2,
+    markerRadiusMm: (s.markerSizePx === undefined ? defaultPlotMarkerSizeMm(mmPerAnnoPx) : s.markerSizePx / STYLE_PX_PER_MM) / 2,
     markerOpen: s.markerOpen === true,
     showTitle: s.showTitle !== false,
     showAxisTitle: s.showAxisTitle !== false,

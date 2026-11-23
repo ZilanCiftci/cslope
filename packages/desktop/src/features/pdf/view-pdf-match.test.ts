@@ -21,7 +21,7 @@ import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import { BENCHMARK_MODELS } from "../../store/benchmarks";
 import { verificationModel } from "../../store/verification-models";
 import { DEFAULT_PIEZO_LINE, PLOT_MARGINS } from "../../store/defaults";
-import type { ModelEntry } from "../../store/types";
+import type { ModelEntry, ResultLayerStyles } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
 import { GRID_COLOR, MM_PER_PT, RULER_COLOR } from "../rendering/style-spec";
 import { hexRgb } from "../results/layer-styles";
@@ -160,6 +160,30 @@ const MODELS: [string, () => ModelEntry][] = [
   ["a user's model with a table and a color bar", userModel],
 ];
 
+/** The PDF's transform of the same sheet (the canvas's view on the PDF's page). */
+function pdfSheet(model: ModelEntry) {
+  const rvs = model.resultViewSettings!;
+  const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+  const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+  const mmPerPx = paper.width / pf.w;
+  const canvasToPdf = (cx: number, cy: number): [number, number] => [(cx - pf.x) * mmPerPx, (cy - pf.y) * mmPerPx];
+  const tf = {
+    canvasToPdf,
+    worldToPdf: (x: number, y: number) => canvasToPdf(W / 2 + (x - 30) * 10, H / 2 - (y - 10) * 10),
+    mmPerPx,
+    paperW: paper.width,
+    paperH: paper.height,
+  };
+  const frame = {
+    x: paper.width * PLOT_MARGINS.L,
+    y: paper.height * PLOT_MARGINS.T,
+    w: paper.width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
+    h: paper.height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B),
+  };
+  const pdf = new jsPDF({ unit: "mm", format: [paper.width, paper.height], orientation: "landscape" });
+  return { pdf, tf, frame, paper, rvs };
+}
+
 describe("the result view and the PDF draw the sheet alike", () => {
   it.each(MODELS)("%s: the title block, the material table and the color bar in the same place and size", (_, make) => {
     const model = make();
@@ -249,30 +273,6 @@ describe("the sheet's grid", () => {
     return out;
   }
 
-  /** The PDF's transform of the same sheet (the canvas's view on the PDF's page). */
-  function pdfSheet(model: ModelEntry) {
-    const rvs = model.resultViewSettings!;
-    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
-    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
-    const mmPerPx = paper.width / pf.w;
-    const canvasToPdf = (cx: number, cy: number): [number, number] => [(cx - pf.x) * mmPerPx, (cy - pf.y) * mmPerPx];
-    const tf = {
-      canvasToPdf,
-      worldToPdf: (x: number, y: number) => canvasToPdf(W / 2 + (x - 30) * 10, H / 2 - (y - 10) * 10),
-      mmPerPx,
-      paperW: paper.width,
-      paperH: paper.height,
-    };
-    const frame = {
-      x: paper.width * PLOT_MARGINS.L,
-      y: paper.height * PLOT_MARGINS.T,
-      w: paper.width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R),
-      h: paper.height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B),
-    };
-    const pdf = new jsPDF({ unit: "mm", format: [paper.width, paper.height], orientation: "landscape" });
-    return { pdf, tf, frame, paper, rvs };
-  }
-
   function pdfLines(model: ModelEntry): Line[] {
     const { pdf, tf, frame, paper, rvs } = pdfSheet(model);
     const out: Line[] = [];
@@ -335,5 +335,135 @@ describe("the sheet's grid", () => {
       .filter((t) => /^-?\d+$/.test(t.text) && t.y > 0.95)
       .map((t) => t.text);
     expect(viewLabels).toEqual(labels.map((l) => l.text));
+  });
+});
+
+describe("the sheet's frame", () => {
+  /** The user's model with ticks every 5 m, 4 minor ticks between, the grid off, the frame in `style` (or off). */
+  const frameModel = (style?: ResultLayerStyles["frame"], showFrame = true): ModelEntry => {
+    const m = userModel();
+    const rvs = m.resultViewSettings!;
+    return {
+      ...m,
+      resultViewSettings: {
+        ...rvs,
+        showGrid: false,
+        gridSpacing: 5,
+        minorTicks: 4,
+        paperFrame: { ...rvs.paperFrame, showFrame },
+        layerStyles: style ? { frame: style } : undefined,
+      },
+    };
+  };
+  type Rect = { x: number; y: number; w: number; h: number; widthMm: number; color: string };
+  type Tick = { x: number; y: number; lengthMm: number; widthMm: number };
+  type Label = { text: string; x: number; y: number; sizeMm: number; color: string };
+  /** In the margin, outside the plot frame (as shares of the paper). */
+  const inMargin = (x: number, y: number) => x < PLOT_MARGINS.L - 1e-6 || y > 1 - PLOT_MARGINS.B + 1e-6;
+
+  /** The frame as the canvas draws it: the plot frame, the ticks and the labels, as shares of the paper and mm. */
+  function viewFrame(model: ModelEntry) {
+    const rec = drawSheet(model);
+    const rvs = model.resultViewSettings!;
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const mm = (px: number) => (px / pf.w) * paper.width;
+    const rects: Rect[] = rec.calls
+      .filter((c) => c.name === "strokeRect")
+      .map((c) => {
+        const [x, y, w, h] = c.args as number[];
+        return { x: (x - pf.x) / pf.w, y: (y - pf.y) / pf.h, w: w / pf.w, h: h / pf.h, widthMm: mm(c.state.lineWidth), color: String(c.state.strokeStyle).toLowerCase() };
+      })
+      .filter((r) => Math.abs(r.x - PLOT_MARGINS.L) < 1e-6);
+    const ticks: Tick[] = rec
+      .strokes()
+      .flatMap((p) => {
+        const pts = p.segments.filter((g): g is { op: "moveTo" | "lineTo"; x: number; y: number } => "x" in g);
+        if (pts.length !== 2) return [];
+        const [a, b] = pts;
+        const x = (b.x - pf.x) / pf.w;
+        const y = (b.y - pf.y) / pf.h;
+        return inMargin(x, y) ? [{ x, y, lengthMm: mm(Math.hypot(b.x - a.x, b.y - a.y)), widthMm: mm(p.state.lineWidth) }] : [];
+      });
+    const labels: Label[] = canvasTexts(model).filter((t) => /^-?\d+$/.test(t.text) && inMargin(t.x, t.y));
+    return { rects, ticks, labels };
+  }
+
+  /** The same frame as the PDF draws it. */
+  function pdfFrame(model: ModelEntry) {
+    const { pdf, tf, frame, paper, rvs } = pdfSheet(model);
+    let width = 0;
+    const setLineWidth = pdf.setLineWidth.bind(pdf);
+    pdf.setLineWidth = (w: number) => {
+      width = w;
+      return setLineWidth(w);
+    };
+    const rects: Rect[] = [];
+    const ticks: Tick[] = [];
+    const labels: Label[] = [];
+    pdf.rect = ((x: number, y: number, w: number, h: number) => {
+      rects.push({ x: x / paper.width, y: y / paper.height, w: w / paper.width, h: h / paper.height, widthMm: width, color: pdf.getDrawColor().toLowerCase() });
+      return pdf;
+    });
+    pdf.line = (x1: number, y1: number, x2: number, y2: number) => {
+      ticks.push({ x: x2 / paper.width, y: y2 / paper.height, lengthMm: Math.hypot(x2 - x1, y2 - y1), widthMm: width });
+      return pdf;
+    };
+    const text = pdf.text.bind(pdf);
+    pdf.text = ((...args: Parameters<typeof pdf.text>) => {
+      const [t, x, y] = args as unknown as [string, number, number];
+      labels.push({ text: String(t), x: x / paper.width, y: y / paper.height, sizeMm: pdf.getFontSize() * MM_PER_PT, color: pdf.getTextColor().toLowerCase() });
+      return text(...args);
+    }) as typeof pdf.text;
+    drawRulerFrame(pdf, tf, 10, frame, rvs.gridSpacing, rvs.minorTicks, rvs.gridLineSpacing, rvs.layerStyles?.frame);
+    return { rects, ticks, labels };
+  }
+
+  it.each([
+    ["the default style", undefined],
+    ["a style of the user's (color, 8 px, 12 pt labels)", { color: "#cc0000", width: 8, fontSize: 12 }],
+    ["a style without tick labels", { labels: false }],
+  ] as [string, ResultLayerStyles["frame"]][])("%s: the same plot frame, ticks and labels in the view and the PDF", (_, style) => {
+    const model = frameModel(style);
+    const view = viewFrame(model);
+    const pdf = pdfFrame(model);
+    // The plot frame: one, in the same place, as wide.
+    expect(pdf.rects).toHaveLength(1);
+    expect(view.rects).toHaveLength(1);
+    for (const k of ["x", "y", "w", "h"] as const) expect(view.rects[0][k]).toBeCloseTo(pdf.rects[0][k], 6);
+    expect(view.rects[0].widthMm).toBeCloseTo(style?.width ? style.width / 10 : 0.4, 6);
+    expect(pdf.rects[0].widthMm).toBeCloseTo(view.rects[0].widthMm, 6);
+    // The ticks: the same, major (2 mm) and minor (1 mm).
+    expect(pdf.ticks.length).toBeGreaterThan(20);
+    expect(view.ticks).toHaveLength(pdf.ticks.length);
+    const tickKey = (t: Tick) => `${t.x.toFixed(4)},${t.y.toFixed(4)},${t.lengthMm.toFixed(3)},${t.widthMm.toFixed(3)}`;
+    expect(view.ticks.map(tickKey).sort()).toEqual(pdf.ticks.map(tickKey).sort());
+    // The labels: the same text, place, size and color.
+    if (style?.labels === false) {
+      expect(pdf.labels).toHaveLength(0);
+      expect(view.labels).toHaveLength(0);
+      return;
+    }
+    expect(pdf.labels.length).toBeGreaterThan(4);
+    expect(view.labels.map((l) => l.text)).toEqual(pdf.labels.map((l) => l.text));
+    view.labels.forEach((v, i) => {
+      const p = pdf.labels[i];
+      expect(Math.abs(v.x - p.x), v.text).toBeLessThan(0.001);
+      expect(Math.abs(v.y - p.y), v.text).toBeLessThan(0.001);
+      expect(v.sizeMm).toBeCloseTo((style?.fontSize ?? 9) * MM_PER_PT, 6);
+      expect(p.sizeMm).toBeCloseTo(v.sizeMm, 6);
+    });
+    if (style?.color) {
+      expect(view.rects[0].color).toBe(style.color);
+      expect(pdf.rects[0].color).toBe(style.color);
+      for (const l of [...view.labels, ...pdf.labels]) expect(l.color).toBe(style.color);
+    }
+  });
+
+  it("is not drawn when it is off: no plot frame, ticks or labels in the view (the PDF: pdf-layer-order.test.ts)", () => {
+    const view = viewFrame(frameModel({ color: "#cc0000" }, false));
+    expect(view.rects).toHaveLength(0);
+    expect(view.ticks).toHaveLength(0);
+    expect(view.labels).toHaveLength(0);
   });
 });
