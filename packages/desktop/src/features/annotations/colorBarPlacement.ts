@@ -9,7 +9,7 @@ import { buildMaterialTableData } from "../canvas/helpers";
 import { SHEET_LAYOUT_MM_PER_PX, SHEET_SANS_FAMILY, textLayoutPx } from "../rendering/style-spec";
 import { getPaperDimensions } from "../view/paper";
 import { anchoredTopLeft } from "./anchorPosition";
-import { colorBarLayout } from "./colorBarLayout";
+import { COLOR_BAR_FONT_LAYOUT_PX, colorBarLayout } from "./colorBarLayout";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "./materialTableLayout";
 
 /**
@@ -113,13 +113,30 @@ export function colorBarHeight(paper: Pick<PaperFrameSettings, "paperSize" | "la
   return paperFractions(paper).h(colorBarLayout(1, 0).h);
 }
 
+/** The widest value the bar shows, about (a capped F of two digits). */
+const WIDEST_VALUE = "≥ 00.00";
+
+/** Width of the color bar with its values, as a fraction of the paper width (the same mm on every paper size). */
+export function colorBarWidth(
+  paper: Pick<PaperFrameSettings, "paperSize" | "landscape">,
+  measure: TextMeasure = measureSansText,
+): number {
+  const value = measure(WIDEST_VALUE, COLOR_BAR_FONT_LAYOUT_PX, false);
+  return paperFractions(paper).w(colorBarLayout(1, value).w);
+}
+
 /**
- * The anchor point (top right) of a new color bar: right below the lowest
- * material table, at the right edge of the plot frame. When the bar would
- * run past the bottom of the frame there, it goes to the left of the
- * table at the top instead; without a table, where it always went.
- * `sheetScale` is the sheet's scale on screen (see materialTableBox): the
- * table as it is drawn there, which on a small sheet is larger than on paper.
+ * The anchor point (top right) of a new color bar: the first of these
+ * places where the whole bar lies inside the plot frame and clear of the
+ * material tables. Right below the lowest table, at the right edge of the
+ * plot frame; to the left of the tables, at the top of the frame; to the
+ * right of the tables, at their top. Where none is free, below the tables
+ * at the right edge, as low as the frame lets it. Without a table, where it
+ * always went. (A sheet whose table is at the left, as a benchmark's, put
+ * the bar left of the table, off the paper, before the second and third
+ * places were checked against the frame.) `sheetScale` is the sheet's
+ * scale on screen (see materialTableBox): the table as it is drawn there,
+ * which on a small sheet is larger than on paper.
  */
 export function colorBarDefaultPosition(
   annotations: Annotation[],
@@ -132,10 +149,28 @@ export function colorBarDefaultPosition(
   const tables = annotations.filter((a) => a.type === "material-table");
   if (tables.length === 0) return { x: RIGHT_INSIDE_FRAME, y: COLOR_BAR_DEFAULT_Y };
   const boxes = tables.map((t) => materialTableBox(t, materials, piezometricLine, paper, measure, sheetScale));
+  const r = (v: number) => Math.round(v * 1000) / 1000;
   const bottom = Math.max(...boxes.map((b) => b.y + b.h));
-  const y = Math.round((bottom + GAP) * 1000) / 1000;
-  const frameBottom = 1 - PLOT_MARGINS.B - FRAME_INSET;
-  if (y + colorBarHeight(paper) <= frameBottom) return { x: RIGHT_INSIDE_FRAME, y };
   const left = Math.min(...boxes.map((b) => b.x));
-  return { x: Math.round((left - GAP) * 1000) / 1000, y: TOP_INSIDE_FRAME };
+  const right = Math.max(...boxes.map((b) => b.x + b.w));
+  const top = Math.min(...boxes.map((b) => b.y));
+  const w = colorBarWidth(paper, measure);
+  const h = colorBarHeight(paper);
+  const frameLeft = PLOT_MARGINS.L + FRAME_INSET;
+  const frameBottom = 1 - PLOT_MARGINS.B - FRAME_INSET;
+  const below = { x: RIGHT_INSIDE_FRAME, y: r(bottom + GAP) };
+  const candidates = [
+    below,
+    { x: r(left - GAP), y: TOP_INSIDE_FRAME },
+    { x: r(right + GAP + w), y: r(Math.max(top, TOP_INSIDE_FRAME)) },
+  ];
+  // The bar hangs from its top-right corner.
+  const free = candidates.find(
+    (c) =>
+      c.x - w >= frameLeft &&
+      c.x <= RIGHT_INSIDE_FRAME &&
+      c.y + h <= frameBottom &&
+      boxes.every((b) => c.x <= b.x || c.x - w >= b.x + b.w || c.y >= b.y + b.h || c.y + h <= b.y),
+  );
+  return free ?? { x: RIGHT_INSIDE_FRAME, y: r(Math.max(TOP_INSIDE_FRAME, Math.min(below.y, frameBottom - h))) };
 }

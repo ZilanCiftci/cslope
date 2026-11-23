@@ -38,7 +38,7 @@ import {
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
-import { colorBarFontSize, colorBarLayout } from "../annotations/colorBarLayout";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { fosTickLabel } from "../../utils/fos-color";
 import { colorBarRange, type ScaleFilter } from "../annotations/colorScale";
 import { mainPiezoLine } from "../../utils/piezo";
@@ -462,14 +462,10 @@ export function getAnnotationBoundsPx(
     for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
       maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS)).width);
     }
-    const { w: contentW, h: contentH } = colorBarLayout(layoutScale, maxLabelW);
-    const { x: tlx, y: tly } = anchoredTopLeft(
-      ax,
-      ay,
-      contentW,
-      contentH,
-      anno.anchor,
-    );
+    const bar = colorBarLayout(layoutScale, maxLabelW);
+    const { w: contentW, h: contentH } = bar;
+    // Inside the plot frame, as drawn (colorBarTopLeft).
+    const { x: tlx, y: tly } = colorBarTopLeft(ax, ay, bar, anno.anchor, pf);
 
     return {
       x: tlx - hitPad,

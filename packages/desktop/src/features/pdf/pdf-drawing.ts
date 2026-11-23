@@ -165,7 +165,7 @@ import {
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
-import { colorBarFontSize, colorBarLayout } from "../annotations/colorBarLayout";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
 import { hasFixedRange, markerShape, markerStroked, plotAxisTicks, plotLayout, resolvePlotStyle } from "../annotations/plotStyle";
@@ -1548,13 +1548,8 @@ export function drawAnnotations(
       // Drawn whenever the canvas draws it (also for a single surface).
       const colorScale = colorScaleOfBar(anno, result, scaleFilter);
       const size = layoutColorBarPdf(pdf, colorScale, layoutScale);
-      const { x: drawX, y: drawY } = anchoredTopLeft(
-        ax,
-        ay,
-        size.w,
-        size.h,
-        anno.anchor,
-      );
+      // Inside the plot frame, wherever its point is (as the canvas, colorBarTopLeft).
+      const { x: drawX, y: drawY } = colorBarTopLeft(ax, ay, size, anno.anchor, paperFrame);
       drawColorBarAnnotation(pdf, drawX, drawY, colorScale, layoutScale);
     } else if (anno.type === "material-table") {
       const size = measureTablePdf(

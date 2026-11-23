@@ -49,7 +49,7 @@ import { getPaperDimensions, sheetMmPerPx, sheetPxScale } from "../view/paper";
 import type { PageTitleLine } from "../export/page-title";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
-import { colorBarFontSize, colorBarLayout } from "../annotations/colorBarLayout";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
@@ -3385,13 +3385,8 @@ export function drawCanvas(
         }
         const bar = colorBarLayout(layoutScale, maxLabelW);
         const { barW, barH, titleExtraTop, w: contentW, h: contentH } = bar;
-        const { x: drawX, y: drawY } = anchoredTopLeft(
-          ax,
-          ay,
-          contentW,
-          contentH,
-          anno.anchor,
-        );
+        // Inside the plot frame, wherever its point is (colorBarTopLeft).
+        const { x: drawX, y: drawY } = colorBarTopLeft(ax, ay, bar, anno.anchor, pf);
         const barX = drawX;
         const barY = drawY + titleExtraTop;
 
