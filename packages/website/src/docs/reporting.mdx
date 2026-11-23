@@ -15,7 +15,7 @@ Click an empty part of the sheet to select the paper and edit it in the **Sheet*
 
 - **Paper size** A4 to A0 and **orientation** portrait or landscape.
 - **Plot extents**: *Left x*, *Right x*, *Bottom y* and *Top y* (m), the part of the model shown on the sheet. The scale of the drawing follows from the extents and the paper. **Use model bounds** fits the whole model.
-- **Ticks**: the tick spacing (*Auto* when empty) and the number of minor ticks. The grid is a layer of its own: turn it on and off and set it in [**Layers**](#layers) › *Grid*.
+The frame around the drawing, with its ticks and their labels, and the grid are layers of their own: turn them on and off and set them in [**Layers**](#layers) › *Frame* (tick spacing, minor ticks) and *Grid*.
 
 Zooming and panning in result mode move the sheet on the screen; they do not change the drawing.
 
@@ -64,7 +64,7 @@ Reference lines belong to the model: they are saved with it and left out of view
 
 ## Layers
 
-The **Layers** list in the result sidebar shows what the sheet draws, topmost first, as in a drawing program: every annotation, the built-in layers (*Soil colors*, *Grid*, *Surfaces* (the critical surface and the others), *Custom surfaces* when the model has custom surfaces, *Slices*, *Center*, *F label*, the *Material table*, the *Color bar*, and with a finite element result *Plastic zone* and *FE mesh*) and each drawing shown in results.
+The **Layers** list in the result sidebar shows what the sheet draws, topmost first, as in a drawing program: every annotation, the built-in layers (*Soil colors*, *Grid*, *Surfaces* (the critical surface and the others), *Custom surfaces* when the model has custom surfaces, *Slices*, *Center*, *F label*, *Frame*, the *Material table*, the *Color bar*, and with a finite element result *Plastic zone* and *FE mesh*) and each drawing shown in results.
 
 A built-in layer is turned on and off, never deleted. A layer that is off stays in the list, greyed, with a crossed-out eye at the end of its row: click the eye to turn it on again. The eye of a layer that is on shows when you point at the row; click it to turn the layer off. This list is the one place to turn them on and off.
 
@@ -77,6 +77,7 @@ A built-in layer is turned on and off, never deleted. A layer that is off stays 
   | F label | Font, size, bold, decimals, color (custom surfaces' labels use the same font) |
   | Soil colors | Opacity |
   | Grid | Color, line width, spacing, minor lines (subdivisions, minor line width) |
+  | Frame | Color, line width, tick spacing, minor ticks, label size, tick labels on or off |
   | Slices | Color, line width |
   | Center | Color, dot radius, radius lines on or off |
   | Surfaces | Show (*Critical surface* or *All surfaces*), filter on F; *Critical surface*: color, line width; *Other surfaces*: line width, opacity |
@@ -86,11 +87,13 @@ A built-in layer is turned on and off, never deleted. A layer that is off stays 
 
   The *Surfaces* layer is the critical surface (its sliding mass, line and reinforcement forces) and the other analyzed surfaces; its eye turns them all off. **Surfaces › Show** chooses between the critical surface only and all surfaces; with *All surfaces*, **Filter on F** draws only the surfaces with F at or below the limit in **Show surfaces with F ≤** (default 1.5; a decimal comma works too). A line under it counts the surfaces drawn ("124 of 1290 surfaces"). The sheet, the PDF and a color bar that follows the surface filter use these settings alike. A project saved before the critical surface was part of this layer opens with the one *Surfaces* layer where the first of the two stood, with the settings of both.
 
-  The *Grid*'s **Spacing (m)** is *Auto* when empty: the lines run through the labelled ticks of the frame. A spacing of your own (a decimal comma works too) draws the lines that far apart; unless **Tick spacing** under Sheet is set too, the labelled ticks then follow the grid, on every line or on every few lines (the fewest that leave the labels room), so every label sits on a grid line. **Minor lines** (off by default) divide each grid interval into 2, 4, 5 or 10 parts with thinner lines in the grid's color (half the width by default); minor lines less than 1 mm apart on the paper are left out. The widths are in px like the other layers' (1 px is 0.1 mm on the paper for the grid), and the view and the PDF draw the grid alike: light grey on white, a darker grey on the dark theme's sheet unless you choose a color. **Reset to default** also clears the spacing.
+  The *Grid*'s **Spacing (m)** is *Auto* when empty: the lines run through the labelled ticks of the frame. A spacing of your own (a decimal comma works too) draws the lines that far apart; unless the *Frame*'s **Tick spacing** is set too, the labelled ticks then follow the grid, on every line or on every few lines (the fewest that leave the labels room), so every label sits on a grid line. **Minor lines** (off by default) divide each grid interval into 2, 4, 5 or 10 parts with thinner lines in the grid's color (half the width by default); minor lines less than 1 mm apart on the paper are left out. The widths are in px like the other layers' (1 px is 0.1 mm on the paper for the grid), and the view and the PDF draw the grid alike: light grey on white, a darker grey on the dark theme's sheet unless you choose a color. **Reset to default** also clears the spacing.
+
+  The *Frame* is the line around the drawing area (the plot frame), the ticks along its left and bottom edges and their labels, the coordinates. Turned off, none of them is drawn, on the screen, in the PDF or in the PNG export. Its **Tick spacing (m)** is *Auto* when empty (a round step that leaves the labels room); **Minor ticks** puts that many short ticks between the labelled ones (0 to 20). **Line width (px)** is the plot frame's line (4 px, 0.4 mm on the paper, by default; the ticks keep their widths), **Label size (pt)** the labels' size (9 pt by default), and **Tick labels** turns the labels off and keeps the ticks. A **Color** of your own is used for the frame, the ticks and the labels. By default the frame lies over the model's layers and under the annotations on the sheet. **Reset to default** also clears the tick spacing and the minor ticks.
 
   An empty field or **Default** draws the layer as by default: the theme's ink on screen, black in the PDF. A chosen color is drawn as chosen in both themes and in the PDF. **Reset to default** clears the layer's settings. Each change is one undo step; the settings are saved with the model and in templates.
 
-A model without an order of its own draws in the default order: the soil colors and drawings at the bottom, the grid over them (under the model's outline, boundaries, water lines and loads), then the finite element layers, the reference lines, the custom surfaces, the surfaces (the others, then the critical surface) with the slices, center and F label, and the annotations on the sheet on top. The labels of the reference lines and the reinforcement forces stay over the model's layers.
+A model without an order of its own draws in the default order: the soil colors and drawings at the bottom, the grid over them (under the model's outline, boundaries, water lines and loads), then the finite element layers, the reference lines, the custom surfaces, the surfaces (the others, then the critical surface) with the slices, center and F label, then the frame, and the annotations on the sheet on top. The labels of the reference lines and the reinforcement forces stay over the model's layers.
 
 ## Templates
 

@@ -1575,6 +1575,41 @@ describe("drawCanvas — result mode", () => {
     expect(tickLens.filter((l) => Math.abs(l - 2 * PX_PER_MM) < 1e-9).length).toBeGreaterThanOrEqual(xLabels.length);
   });
 
+  it("draws the frame as Layers › Frame says: off, no plot frame, ticks or labels; its style sets color, width, label size and labels", () => {
+    const numbers = (rec: ReturnType<typeof drawResult>) => rec.texts.filter((t) => /^-?\d+(\.\d+)?$/.test(t.text));
+    const frameRects = (rec: ReturnType<typeof drawResult>, widthMm: number) =>
+      rec.calls.filter((c) => c.name === "strokeRect" && Math.abs(c.state.lineWidth - widthMm * PX_PER_MM) < 1e-9);
+    const ticks = (rec: ReturnType<typeof drawResult>) =>
+      rec
+        .strokes()
+        .map(pathPoints)
+        .filter((p) => p.length === 2 && p[0][0] === p[1][0] && Math.abs(Math.abs(p[1][1] - p[0][1]) - 2 * PX_PER_MM) < 1e-9);
+    const on = drawResult({ resultViewSettings: rvs() });
+    expect(numbers(on).length).toBeGreaterThan(2);
+    expect(frameRects(on, 0.4)).toHaveLength(1);
+    expect(ticks(on).length).toBeGreaterThan(2);
+    // Off: none of the three.
+    const off = drawResult({ resultViewSettings: rvs({ paperFrame: { ...rvs().paperFrame, showFrame: false } }) });
+    expect(numbers(off)).toHaveLength(0);
+    expect(frameRects(off, 0.4)).toHaveLength(0);
+    expect(ticks(off)).toHaveLength(0);
+    // Styled: 8 px = 0.8 mm, red, 12 pt labels.
+    const styled = drawResult({ resultViewSettings: rvs({ layerStyles: { frame: { color: "#cc0000", width: 8, fontSize: 12 } } }) });
+    const rect = frameRects(styled, 0.8);
+    expect(rect).toHaveLength(1);
+    expect(rect[0].state.strokeStyle).toBe("#cc0000");
+    expect(numbers(styled).length).toBe(numbers(on).length);
+    for (const t of numbers(styled)) {
+      expect(t.state.fillStyle).toBe("#cc0000");
+      expect(t.state.font).toBe(`${12 * MM_PER_PT * PX_PER_MM}px ${SHEET_SANS_FAMILY}`);
+    }
+    // Without labels: the ticks and the frame stay.
+    const bare = drawResult({ resultViewSettings: rvs({ layerStyles: { frame: { labels: false } } }) });
+    expect(numbers(bare)).toHaveLength(0);
+    expect(ticks(bare).length).toBe(ticks(on).length);
+    expect(frameRects(bare, 0.4)).toHaveLength(1);
+  });
+
   it("draws a grid line at every labelled tick (one spacing for grid and ticks)", () => {
     for (const scale of [6, 10, 14, 20, 35]) {
       const w2c = (wx: number, wy: number, w: number, h: number): [number, number] => [

@@ -33,6 +33,7 @@ export const DISPLAY_LAYER_KEYS = [
   "slices",
   "center",
   "fosLabel",
+  "frame",
 ] as const;
 
 /**
@@ -55,6 +56,7 @@ export const DISPLAY_LAYER_NAMES: Record<DisplayLayerKey, string> = {
   slices: "Slices",
   center: "Center",
   fosLabel: "F label",
+  frame: "Frame",
 };
 
 /** The prefix of a drawing's layer key. */
@@ -83,6 +85,7 @@ export interface LayerSource {
     | "showFemPlasticZone"
     | "showFemMesh"
     | "showCustomSurfaces"
+    | "paperFrame"
   >;
   result?: Pick<AnalysisResult, "fem" | "criticalSurface" | "customSurfaces"> | null;
   backgrounds?: readonly BackgroundImage[];
@@ -149,6 +152,9 @@ export function displayLayerOn(key: DisplayLayerKey, rvs: LayerSource["resultVie
       return rvs.showCentreMarker;
     case "fosLabel":
       return rvs.showFosLabel;
+    case "frame":
+      // (optional here: a source made without the paper frame draws the frame)
+      return (rvs.paperFrame as Partial<typeof rvs.paperFrame> | undefined)?.showFrame !== false;
   }
 }
 
@@ -215,6 +221,10 @@ export function defaultLayers(src: LayerSource, listed = false): ResultLayer[] {
     ...display("slices"),
     ...display("center"),
     ...display("fosLabel"),
+    // the frame (plot frame, ticks, their labels): on the paper's margin,
+    // over the model's layers and under the paper annotations, where the
+    // result view always drew it
+    ...display("frame"),
     // paper annotations: on the sheet, over the drawing
     ...annos(false),
   ];
@@ -397,8 +407,11 @@ export function layerSteps(layers: readonly ResultLayer[]): LayerStep[] {
   return steps;
 }
 
-/** Whether a step draws on the paper (over the plot frame) rather than in the model. */
-export const isPaperStep = (s: LayerStep) => s.kind === "paper";
+/**
+ * Whether a step draws on the paper, unclipped (a paper annotation, the
+ * frame), rather than in the model (clipped to the plot frame).
+ */
+export const isPaperStep = (s: LayerStep) => s.kind === "paper" || (s.kind === "display" && s.layer === "frame");
 
 /**
  * The layers drawn with the model's base drawing, under the model's

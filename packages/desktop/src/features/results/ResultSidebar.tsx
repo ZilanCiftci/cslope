@@ -896,58 +896,6 @@ export function ResultSidebar() {
               Use model bounds
             </button>
 
-            <div
-              className="grid gap-2"
-              style={{
-                gridTemplateColumns: "repeat(auto-fit, minmax(64px, 1fr))",
-              }}
-            >
-              <div>
-                <label
-                  htmlFor={fieldId("tick-spacing-m")}
-                  className="text-[10px] block mb-0.5"
-                  style={{ color: "var(--color-vsc-text-muted)" }}
-                >
-                  Tick spacing (m)
-                </label>
-                <DraftNumberInput
-                  id={fieldId("tick-spacing-m")}
-                  min={0}
-                  step="any"
-                  placeholder="Auto"
-                  value={rvs.gridSpacing}
-                  onValueChange={(value) =>
-                    setRvs({ gridSpacing: value > 0 ? value : undefined })
-                  }
-                  onClear={() => setRvs({ gridSpacing: undefined })}
-                  className="w-full tabular-nums"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor={fieldId("minor-ticks")}
-                  className="text-[10px] block mb-0.5"
-                  style={{ color: "var(--color-vsc-text-muted)" }}
-                >
-                  Minor ticks
-                </label>
-                <DraftNumberInput
-                  id={fieldId("minor-ticks")}
-                  min={0}
-                  max={20}
-                  step={1}
-                  value={rvs.minorTicks ?? 0}
-                  onValueChange={(parsed) => {
-                    const value = Math.max(0, Math.min(20, Math.round(parsed)));
-                    setRvs({ minorTicks: value || undefined });
-                  }}
-                  onClear={() => setRvs({ minorTicks: undefined })}
-                  className="w-full tabular-nums"
-                />
-              </div>
-            </div>
-
             <div>
               <label
                 htmlFor={fieldId("paper-size")}

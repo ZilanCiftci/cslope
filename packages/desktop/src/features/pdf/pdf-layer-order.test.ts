@@ -48,6 +48,7 @@ vi.mock("./pdf-drawing", async (importOriginal) =>
     "drawCriticalFosLabelPdf",
     "drawCustomSurfaceLabels",
     "drawAnnotations",
+    "drawRulerFrame",
   ]),
 );
 vi.mock("./pdf-reference", async (importOriginal) =>
@@ -133,6 +134,7 @@ describe("exportVectorPdf — layer order", () => {
       "drawCriticalSurface",
       "drawCustomSurfaceLabels",
       "drawReferenceLabelsPdf",
+      "drawRulerFrame",
       "annotation:m",
       "annotation:t",
     ]);
@@ -160,6 +162,7 @@ describe("exportVectorPdf — layer order", () => {
       "drawCriticalFosLabelPdf",
       "drawCustomSurfaceLabels",
       "drawReferenceLabelsPdf",
+      "drawRulerFrame",
       "annotation:m",
       "annotation:t",
     ]);
@@ -183,7 +186,22 @@ describe("exportVectorPdf — layer order", () => {
       "drawCriticalSurface",
       "drawCustomSurfaceLabels",
       "drawReferenceLabelsPdf",
+      "drawRulerFrame",
       "annotation:m",
     ]);
+  });
+
+  it("draws the frame where it stands in the order, and none when it is off", () => {
+    // On top: over the paper annotations.
+    expect(exportNamed({ layerOrder: ["soilColor", "r", "surfaces", "slices", "center", "fosLabel", "m", "t", "frame"] }).slice(-3)).toEqual([
+      "annotation:m",
+      "annotation:t",
+      "drawRulerFrame",
+    ]);
+    // Off (Layers › Frame's eye): no plot frame, ticks or labels.
+    expect(exportNamed({ paperFrame: { ...DEFAULT_RESULT_VIEW_SETTINGS.paperFrame, showFrame: false } })).not.toContain("drawRulerFrame");
+    // Its style reaches the PDF.
+    exportNamed({ layerStyles: { frame: { color: "#cc0000", width: 8 } } });
+    expect(calls.find((c) => c.name === "drawRulerFrame")!.args[7]).toEqual({ color: "#cc0000", width: 8 });
   });
 });

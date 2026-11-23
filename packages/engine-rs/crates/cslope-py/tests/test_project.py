@@ -265,6 +265,34 @@ def test_keeps_a_table_and_a_bar_turned_off_and_surfaces_off(tmp_path):
 
 
 @needs_fixtures
+def test_keeps_the_frame_layer_its_style_and_place(tmp_path):
+    # (as the app writes them: the frame off, the ticks, its style, and its
+    # place in the layer order)
+    def edit(v):
+        view = v["resultViewSettings"]
+        view["paperFrame"]["showFrame"] = False
+        view["gridSpacing"] = 5
+        view["minorTicks"] = 4
+        view["layerOrder"] = ["soilColor", "surfaces", "fosLabel", "frame"]
+        view["layerStyles"] = {"frame": {"color": "#cc0000", "width": 6, "fontSize": 11, "labels": False}}
+
+    src = rewritten(FIXTURES / "cslp-v1.cslp", tmp_path / "frame.cslp", "models/model-1/model.json", edit)
+    p = project.open(src)
+    target = tmp_path / "saved.cslp"
+    p.save(target)
+    view = json.loads(entries(target)["models/model-1/model.json"])["resultViewSettings"]
+    assert view["paperFrame"]["showFrame"] is False
+    assert view["gridSpacing"] == 5
+    assert view["minorTicks"] == 4
+    assert view["layerOrder"] == ["soilColor", "surfaces", "fosLabel", "frame"]
+    assert view["layerStyles"] == {"frame": {"color": "#cc0000", "width": 6, "fontSize": 11, "labels": False}}
+    # saved again, the same entry
+    again = tmp_path / "again.cslp"
+    project.open(target).save(again)
+    assert entries(again)["models/model-1/model.json"] == entries(target)["models/model-1/model.json"]
+
+
+@needs_fixtures
 def test_keeps_the_grid_layer_its_style_and_place(tmp_path):
     # (as the app writes them: the grid off, a fixed spacing, its style with
     # minor lines, and its place in the layer order)

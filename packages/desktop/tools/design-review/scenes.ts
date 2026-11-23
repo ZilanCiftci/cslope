@@ -731,6 +731,34 @@ const sidebarScenes: Scene[] = [
     },
   },
   {
+    id: "result-frame-properties",
+    title: "Result sidebar, the Frame layer selected: color, line width, tick spacing, minor ticks, label size, tick labels",
+    area: "sidebar",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6 } } }); s.setSelectedResultLayer("frame"); }`);
+      return { focus: sidebar(ctx) };
+    },
+  },
+  {
+    id: "main-result-frame-styled",
+    title: "Result view with a styled frame (blue, 6 px, 11 pt labels, ticks every 5 m with 4 minor ticks), the Frame properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ gridSpacing: 5, minorTicks: 4, layerStyles: { frame: { color: "#0066cc", width: 6, fontSize: 11 } } }); s.setSelectedResultLayer("frame"); }`);
+    },
+  },
+  {
+    id: "main-result-frame-off",
+    title: "Result view with the Frame layer turned off (greyed in Layers; no frame, ticks or labels), its properties shown",
+    area: "main-result",
+    result: true,
+    open: async (ctx) => {
+      await ctx.store(`(s) => { s.setResultViewSettings({ paperFrame: { ...s.resultViewSettings.paperFrame, showFrame: false } }); s.setSelectedResultLayer("frame"); }`);
+    },
+  },
+  {
     id: "main-result-table-off-reopened",
     title: "Result view after the material table was turned off and the project saved and opened again: the table listed off, not drawn",
     area: "main-result",

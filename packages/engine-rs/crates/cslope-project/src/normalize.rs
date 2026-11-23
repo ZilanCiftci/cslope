@@ -2162,7 +2162,7 @@ fn stage_udl(raw: &Value, names: &[&str]) -> Option<Value> {
 const PAPER_SIZES: [&str; 5] = ["A4", "A3", "A2", "A1", "A0"];
 
 /// `DISPLAY_LAYER_KEYS` (features/results/layers.ts).
-const DISPLAY_LAYER_KEYS: [&str; 9] = [
+const DISPLAY_LAYER_KEYS: [&str; 10] = [
     "soilColor",
     "grid",
     "femMesh",
@@ -2172,6 +2172,7 @@ const DISPLAY_LAYER_KEYS: [&str; 9] = [
     "slices",
     "center",
     "fosLabel",
+    "frame",
 ];
 /// `LEGACY_CRITICAL_SURFACE_KEY`: the critical surface's layer before it was
 /// one with the other surfaces; a stored order reads it as "surfaces".
@@ -2635,7 +2636,7 @@ fn reference_annotation(o: &Obj, path: &str, cx: &Ctx) -> Option<Value> {
 
 /// The fields of each layer's style and what each holds
 /// (`FIELDS`, features/results/layer-styles.ts).
-const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 10] = [
+const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 11] = [
     ("soilColor", &[("opacity", "opacity")]),
     (
         "femMesh",
@@ -2685,6 +2686,15 @@ const LAYER_STYLE_FIELDS: [(&str, &[(&str, &str)]); 10] = [
             ("width", "width"),
             ("subdivisions", "subdivisions"),
             ("minorWidth", "width"),
+        ],
+    ),
+    (
+        "frame",
+        &[
+            ("color", "color"),
+            ("width", "width"),
+            ("fontSize", "fontSize"),
+            ("labels", "bool"),
         ],
     ),
 ];

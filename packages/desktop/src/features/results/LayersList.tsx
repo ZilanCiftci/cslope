@@ -24,6 +24,7 @@ import {
   DrawingIcon,
   FeMeshIcon,
   FosLabelIcon,
+  FrameIcon,
   GridIcon,
   MaterialTableIcon,
   PlasticZoneIcon,
@@ -52,7 +53,9 @@ import {
 // The icon of each thing (the domain icons of the ribbon), at list size.
 const ICON = { size: 14, strokeWidth: 1.75, "aria-hidden": true } as const;
 
-type Toggle = { off: Partial<ResultViewSettings>; on: Partial<ResultViewSettings> };
+/** What turns a layer off and on: a patch, or one made from the settings (a field of an object). */
+type TogglePatch = Partial<ResultViewSettings> | ((rvs: ResultViewSettings) => Partial<ResultViewSettings>);
+type Toggle = { off: TogglePatch; on: TogglePatch };
 
 /** A display layer's icon and what turns it off and on (its name: DISPLAY_LAYER_NAMES). */
 const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; toggle?: Toggle }> = {
@@ -72,6 +75,14 @@ const DISPLAY: Record<DisplayLayerKey, { icon: ReactNode; toggle?: Toggle }> = {
   slices: { icon: <SlicesIcon {...ICON} />, toggle: { off: { showSlices: false }, on: { showSlices: true } } },
   center: { icon: <CentreIcon {...ICON} />, toggle: { off: { showCentreMarker: false }, on: { showCentreMarker: true } } },
   fosLabel: { icon: <FosLabelIcon {...ICON} />, toggle: { off: { showFosLabel: false }, on: { showFosLabel: true } } },
+  // The plot frame, its ticks and their labels (the paper frame's own switch).
+  frame: {
+    icon: <FrameIcon {...ICON} />,
+    toggle: {
+      off: (rvs) => ({ paperFrame: { ...rvs.paperFrame, showFrame: false } }),
+      on: (rvs) => ({ paperFrame: { ...rvs.paperFrame, showFrame: true } }),
+    },
+  },
 };
 
 /** The names of the built-in annotations. */
@@ -196,7 +207,10 @@ export function LayersList({ resolveText }: { resolveText: (text: string) => str
     if (type) setBuiltInShown(type, layer.off === true);
     else if (layer.kind === "display") {
       const t = DISPLAY[layer.layer].toggle;
-      if (t) setRvs(layer.off ? t.on : t.off);
+      if (t) {
+        const patch = layer.off ? t.on : t.off;
+        setRvs(typeof patch === "function" ? patch(rvs) : patch);
+      }
     }
   };
 

@@ -109,20 +109,17 @@ import {
   FOS_LABEL_RAISE_MM,
   FOS_LABEL_STACK_GAP_MM,
   FOS_LABEL_UNDERLINE_MM,
-  PLOT_FRAME_LINE_MM,
   PLOT_LINE_COLOR,
   RULER_COLOR,
-  RULER_FONT_PT,
   RULER_LABEL_GAP_MM,
   RULER_MINOR_TICK_LINE_MM,
   RULER_MINOR_TICK_MM,
   RULER_TICK_LINE_MM,
   RULER_TICK_MM,
-  RULER_X_LABEL_BASELINE_MM,
-  RULER_Y_LABEL_BASELINE_MM,
 } from "../rendering/style-spec";
 import { fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
 import { gridLinePositions, sheetGridStyle } from "../rendering/sheet-grid";
+import { sheetFrameStyle } from "../rendering/sheet-frame";
 import { drawPdfHatch, drawPdfHatchLabel } from "../rendering/hatch";
 import { boxesOverlap } from "../canvas/label-layout";
 import { piezoExtensions, piezoPonds } from "../../utils/piezo";
@@ -231,6 +228,11 @@ export function drawGrid(
   // (No heavier line at x = 0 and y = 0: every grid line is drawn alike.)
 }
 
+/**
+ * The sheet's frame (Layers › Frame): the plot frame, the ticks and their
+ * labels in the frame's style, as the result view draws them
+ * (features/rendering/sheet-frame.ts).
+ */
 export function drawRulerFrame(
   pdf: jsPDF,
   tf: PdfTransform,
@@ -239,7 +241,10 @@ export function drawRulerFrame(
   gridSpacing?: number,
   minorTicks?: number,
   gridLineSpacing?: number,
+  style?: ResultLayerStyles["frame"],
 ) {
+  const fs = sheetFrameStyle(style);
+  const ink: [number, number, number] = fs.color ? hexRgb(fs.color) : RULER_COLOR.rgb;
   const TICK_LEN = RULER_TICK_MM;
   const MINI_TICK = RULER_MINOR_TICK_MM;
 
@@ -262,10 +267,10 @@ export function drawRulerFrame(
   );
   const minorTickCount = minorTicks ?? 0;
 
-  pdf.setFontSize(RULER_FONT_PT);
+  pdf.setFontSize(fs.fontPt);
   setSansFont(pdf, "normal");
-  pdf.setTextColor(...RULER_COLOR.rgb);
-  pdf.setDrawColor(...RULER_COLOR.rgb);
+  pdf.setTextColor(...ink);
+  pdf.setDrawColor(...ink);
 
   const ifx = innerFrame.x;
   const ify = innerFrame.y;
@@ -279,10 +284,7 @@ export function drawRulerFrame(
     if (px < ifx || px > ifx + ifw) continue;
     pdf.setLineWidth(RULER_TICK_LINE_MM);
     pdf.line(px, btmY, px, btmY + TICK_LEN);
-    const label = formatRulerLabel(gx, rulerStep);
-    pdf.text(label, px, btmY + TICK_LEN + RULER_X_LABEL_BASELINE_MM, {
-      align: "center",
-    });
+    if (fs.labels) pdf.text(formatRulerLabel(gx, rulerStep), px, btmY + TICK_LEN + fs.xLabelBaselineMm, { align: "center" });
   }
 
   if (minorTickCount > 0) {
@@ -304,10 +306,7 @@ export function drawRulerFrame(
     if (py < ify || py > ify + ifh) continue;
     pdf.setLineWidth(RULER_TICK_LINE_MM);
     pdf.line(ifx, py, ifx - TICK_LEN, py);
-    const label = formatRulerLabel(gy, rulerStep);
-    pdf.text(label, ifx - TICK_LEN - RULER_LABEL_GAP_MM, py + RULER_Y_LABEL_BASELINE_MM, {
-      align: "right",
-    });
+    if (fs.labels) pdf.text(formatRulerLabel(gy, rulerStep), ifx - TICK_LEN - RULER_LABEL_GAP_MM, py + fs.yLabelBaselineMm, { align: "right" });
   }
 
   if (minorTickCount > 0) {
@@ -323,8 +322,9 @@ export function drawRulerFrame(
     }
   }
 
-  pdf.setDrawColor(0, 0, 0);
-  pdf.setLineWidth(PLOT_FRAME_LINE_MM);
+  const frameInk: [number, number, number] = fs.color ? hexRgb(fs.color) : [0, 0, 0];
+  pdf.setDrawColor(...frameInk);
+  pdf.setLineWidth(fs.frameMm);
   pdf.rect(ifx, ify, ifw, ifh, "S");
 }
 

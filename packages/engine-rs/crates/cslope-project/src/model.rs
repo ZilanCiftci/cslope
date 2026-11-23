@@ -636,6 +636,9 @@ pub struct ResultLayerStyles {
     /// The sheet's grid (color, width, subdivisions, minorWidth).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid: Option<LayerStyle>,
+    /// The sheet's frame (color, width, fontSize in pt, labels).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub frame: Option<LayerStyle>,
 }
 
 /// The style of one display layer: the fields a layer may have (the
@@ -667,6 +670,9 @@ pub struct LayerStyle {
     /// The grid's minor lines' width.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_width: Option<f64>,
+    /// The frame's tick labels: written only as `false` by the app.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub labels: Option<bool>,
 }
 
 /// The colors of materials without one (`MATERIAL_COLORS`).

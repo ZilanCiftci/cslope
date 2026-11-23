@@ -225,6 +225,14 @@ export const RULER_COLOR: DualColor = { hex: "#323232", rgb: [50, 50, 50] };
 /** The plot frame's line. */
 export const PLOT_FRAME_LINE_MM = 0.4;
 /**
+ * Px per millimetre on the paper of a width in the result view's
+ * properties (the frame's width, the plot's line width and marker size):
+ * 1 px = 0.1 mm. (Divide by it: 4 / 10 is 0.4 exactly, 4 * 0.1 is not.)
+ */
+export const STYLE_PX_PER_MM = 10;
+/** The frame's width in those px (Layers › Frame; the default PLOT_FRAME_LINE_MM). */
+export const FRAME_LINE_WIDTH_PX = PLOT_FRAME_LINE_MM * STYLE_PX_PER_MM;
+/**
  * The sheet's grid (Layers › Grid): light grey on white paper, its lines
  * GRID_LINE_MM wide on the paper at the style's default width
  * (GRID_LINE_WIDTH_PX); a style's width scales it (width / that default),

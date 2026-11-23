@@ -521,6 +521,70 @@ fn a_grid_layer_style_and_order_read_and_write_back() {
 }
 
 #[test]
+fn a_frame_layer_its_style_and_order_read_and_write_back() {
+    // (the frame off, its style, the ticks and the frame's key in the layer
+    // order, as the app writes them)
+    let rel = FIXTURES[0];
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        let view = &mut v["resultViewSettings"];
+        view["paperFrame"]["showFrame"] = json!(false);
+        view["gridSpacing"] = json!(5.0);
+        view["minorTicks"] = json!(4.0);
+        view["layerOrder"] = json!(["soilColor", "surfaces", "fosLabel", "frame"]);
+        view["layerStyles"] = json!({
+            "frame": { "color": "#cc0000", "width": 6.0, "fontSize": 11.0, "labels": false }
+        });
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let view = &model["resultViewSettings"];
+    assert_eq!(view["paperFrame"]["showFrame"], json!(false));
+    assert_eq!(view["gridSpacing"], json!(5));
+    assert_eq!(view["minorTicks"], json!(4));
+    assert_eq!(
+        view["layerOrder"],
+        json!(["soilColor", "surfaces", "fosLabel", "frame"])
+    );
+    assert_eq!(
+        view["layerStyles"],
+        json!({ "frame": { "color": "#cc0000", "width": 6, "fontSize": 11, "labels": false } })
+    );
+    // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}
+
+#[test]
+fn a_frame_style_out_of_bounds_is_dropped_and_an_unknown_field_refused() {
+    let rel = FIXTURES[0];
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["layerStyles"] = json!({
+            "frame": { "width": 50.0, "fontSize": 2.0, "color": "red", "labels": "no" }
+        });
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    assert!(model["resultViewSettings"].get("layerStyles").is_none());
+    let bytes = edited(rel, "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["layerStyles"] = json!({ "frame": { "dash": "dotted" } });
+    });
+    let e = read_project(bytes, &options()).unwrap_err();
+    assert!(e.contains("layerStyles.frame.dash"), "{e}");
+}
+
+#[test]
 fn a_grid_style_out_of_bounds_is_dropped() {
     let rel = FIXTURES[0];
     let bytes = edited(rel, "models/model-1/model.json", &|v| {
