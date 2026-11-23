@@ -27,15 +27,15 @@ import {
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
-  RULER_FONT_PT,
+  RULER_FONT_PX,
 } from "../rendering/style-spec";
 import { clampMinorTicks } from "../../utils/ruler";
 import { DISPLAY_LAYER_NAMES, type DisplayLayerKey } from "./layers";
 import { LAYER_FONT_FAMILIES, LAYER_STYLE_LIMITS, layerStyleCleared, layerStylePatch } from "./layer-styles";
 
 const FONT_SIZES = [6, 8, 10, 12, 14, 16, 18, 20, 24, 28, 32];
-/** The tick labels' sizes offered (pt; a file may hold another from 4 to 72). */
-const TICK_LABEL_SIZES = [6, 7, 8, 9, 10, 11, 12, 14];
+/** The tick labels' sizes offered (px of the F label's unit, about 6 to 14 pt; a file may hold another from 4 to 72). */
+const TICK_LABEL_SIZES = [7, 8, 9, 10, 11, 12, 13, 14, 16, 17];
 /** The minor grid lines' subdivisions offered (a file may hold another from 2 to 10). */
 const GRID_SUBDIVISIONS = [2, 4, 5, 10];
 const labelStyle = { color: "var(--color-vsc-text-muted)" };
@@ -284,7 +284,7 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
     case "frame": {
       const f = styles.frame;
       const labels = f?.labels !== false;
-      const size = f?.fontSize ?? RULER_FONT_PT;
+      const size = f?.fontSize ?? RULER_FONT_PX;
       body = (
         <>
           {colorField("frame", "Dark grey, as in the PDF (light grey on the dark sheet)")}
@@ -323,14 +323,14 @@ export function LayerProperties({ layer }: { layer: DisplayLayerKey }) {
                 className="w-full tabular-nums"
               />
             </Field>
-            <Field label="Label size (pt)" className="flex-1 min-w-0">
+            <Field label="Label size (px)" className="flex-1 min-w-0">
               <select
                 value={size}
                 disabled={!labels}
-                title="Size of the tick labels"
+                title="Size of the tick labels; 12 px = 10 pt"
                 onChange={(e) => {
                   const v = Number(e.target.value);
-                  set("frame", { fontSize: v === RULER_FONT_PT ? undefined : v });
+                  set("frame", { fontSize: v === RULER_FONT_PX ? undefined : v });
                 }}
                 className="w-full"
               >

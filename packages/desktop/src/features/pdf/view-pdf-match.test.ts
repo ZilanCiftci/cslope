@@ -349,8 +349,8 @@ describe("the sheet's grid", () => {
 });
 
 describe("the sheet's frame", () => {
-  /** The user's model with ticks every 5 m, 4 minor ticks between, the grid off, the frame in `style` (or off). */
-  const frameModel = (style?: ResultLayerStyles["frame"], showFrame = true): ModelEntry => {
+  /** The user's model with ticks every 5 m, 4 minor ticks between, the grid off, the frame in `style` (or off), on its own paper or `paperSize`. */
+  const frameModel = (style?: ResultLayerStyles["frame"], showFrame = true, paperSize?: PaperSize): ModelEntry => {
     const m = userModel();
     const rvs = m.resultViewSettings!;
     return {
@@ -360,7 +360,7 @@ describe("the sheet's frame", () => {
         showGrid: false,
         gridSpacing: 5,
         minorTicks: 4,
-        paperFrame: { ...rvs.paperFrame, showFrame },
+        paperFrame: { ...rvs.paperFrame, showFrame, ...(paperSize ? { paperSize } : {}) },
         layerStyles: style ? { frame: style } : undefined,
       },
     };
@@ -430,11 +430,16 @@ describe("the sheet's frame", () => {
   }
 
   it.each([
-    ["the default style", undefined],
-    ["a style of the user's (color, 8 px, 12 pt labels)", { color: "#cc0000", width: 8, fontSize: 12 }],
-    ["a style without tick labels", { labels: false }],
-  ] as [string, ResultLayerStyles["frame"]][])("%s: the same plot frame, ticks and labels in the view and the PDF", (_, style) => {
-    const model = frameModel(style);
+    ["the default style", undefined, undefined],
+    ["the default style on A4", undefined, "A4"],
+    ["the default style on A1", undefined, "A1"],
+    ["a style of the user's (color, 8 px, 12 px labels)", { color: "#cc0000", width: 8, fontSize: 12 }, undefined],
+    ["12 px labels on A4", { fontSize: 12 }, "A4"],
+    ["12 px labels on A1", { fontSize: 12 }, "A1"],
+    ["17 px labels on A3", { fontSize: 17 }, "A3"],
+    ["a style without tick labels", { labels: false }, undefined],
+  ] as [string, ResultLayerStyles["frame"], PaperSize | undefined][])("%s: the same plot frame, ticks and labels in the view and the PDF", (_, style, paperSize) => {
+    const model = frameModel(style, true, paperSize);
     const view = viewFrame(model);
     const pdf = pdfFrame(model);
     // The plot frame: one, in the same place, as wide.
@@ -460,7 +465,8 @@ describe("the sheet's frame", () => {
       const p = pdf.labels[i];
       expect(Math.abs(v.x - p.x), v.text).toBeLessThan(0.001);
       expect(Math.abs(v.y - p.y), v.text).toBeLessThan(0.001);
-      expect(v.sizeMm).toBeCloseTo((style?.fontSize ?? 9) * MM_PER_PT, 6);
+      // The label size in px of the F label's unit, 12 px = 10 pt, on every paper (default 11 px).
+      expect(v.sizeMm).toBeCloseTo((((style?.fontSize ?? 11) * 10) / 12) * MM_PER_PT, 6);
       expect(p.sizeMm).toBeCloseTo(v.sizeMm, 6);
     });
     if (style?.color) {

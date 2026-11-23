@@ -323,8 +323,8 @@ describe("exportVectorPdf — full model", () => {
     const label = recordedTexts(doc).find((t) => t.text === "0");
     expect(label).toBeDefined();
     const yFromTopMm = label!.y;
-    // Left ruler label of y = 0 sits at the frame bottom (+ its baseline shift).
-    expect(yFromTopMm).toBeCloseTo(210 * (1 - PLOT_MARGINS.B) + 9 * 0.12, 2);
+    // Left ruler label of y = 0 sits at the frame bottom (+ its baseline shift: 0.12 of its size, 11 px = 11 * 10 / 12 pt).
+    expect(yFromTopMm).toBeCloseTo(210 * (1 - PLOT_MARGINS.B) + ((11 * 10) / 12) * 0.12, 2);
   });
 
   it("reports an error instead of throwing when drawing fails", () => {

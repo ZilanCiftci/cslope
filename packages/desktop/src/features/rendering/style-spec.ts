@@ -218,11 +218,9 @@ export const RULER_MINOR_TICK_MM = 1;
 /** Their lines. */
 export const RULER_TICK_LINE_MM = 0.2;
 export const RULER_MINOR_TICK_LINE_MM = 0.15;
-/** The tick labels (pt), between the tick and the label, and the label's baseline below its tick (x axis, mm) or beside it (y axis, mm). */
-export const RULER_FONT_PT = 9;
+/** The tick labels (px of the F label's unit, `styleFontPt`; Layers › Frame › Label size) and between the tick and the label (mm). */
+export const RULER_FONT_PX = 11;
 export const RULER_LABEL_GAP_MM = 1;
-export const RULER_X_LABEL_BASELINE_MM = RULER_FONT_PT * 0.35 + RULER_LABEL_GAP_MM;
-export const RULER_Y_LABEL_BASELINE_MM = RULER_FONT_PT * 0.12;
 /** The ticks and their labels: dark grey on white paper. */
 export const RULER_COLOR: DualColor = { hex: "#323232", rgb: [50, 50, 50] };
 /** The plot frame's line. */
@@ -272,6 +270,18 @@ export function sheetCanvasFamily(family: string): string {
 
 /** Its text (pt at the default size, bold sans-serif). */
 export const FOS_LABEL_FONT_PT = 10;
+
+/**
+ * A text size in the F label's px in pt: FOS_LABEL_FONT_PX is
+ * FOS_LABEL_FONT_PT (12 px = 10 pt, 1 px about 0.294 mm), whatever the
+ * paper size. The F label's, the custom surfaces' and the frame's labels.
+ */
+export function styleFontPt(px: number): number {
+  return (px * FOS_LABEL_FONT_PT) / FOS_LABEL_FONT_PX;
+}
+/** The frame's tick labels at the default size: their baseline below their tick (x axis, mm) or beside it (y axis, mm). */
+export const RULER_X_LABEL_BASELINE_MM = styleFontPt(RULER_FONT_PX) * 0.35 + RULER_LABEL_GAP_MM;
+export const RULER_Y_LABEL_BASELINE_MM = styleFontPt(RULER_FONT_PX) * 0.12;
 /** From the anchor (the circle's centre) to the text. */
 export const FOS_LABEL_OFFSET_MM = 3;
 /** The text's baseline above the underline, at the default size. */
