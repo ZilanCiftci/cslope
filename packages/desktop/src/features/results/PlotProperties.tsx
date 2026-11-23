@@ -13,7 +13,7 @@ import { GroupHeading } from "../properties/GroupHeading";
 import { useAppStore } from "../../store/app-store";
 import type { Annotation, PlotStyle } from "../../store/types";
 import { getPaperDimensions } from "../view/paper";
-import { ANNOTATION_SCALE_DIVISOR, PLOT_AXIS_FONT_PX } from "../rendering/style-spec";
+import { ANNOTATION_SCALE_DIVISOR, PLOT_AXIS_FONT_PX, STYLE_PX_PER_MM } from "../rendering/style-spec";
 import {
   defaultPlotLineWidthMm,
   defaultPlotMarkerSizeMm,
@@ -106,8 +106,8 @@ function Check({ label, checked, title, onChange }: { label: string; checked: bo
   );
 }
 
-/** Two decimals, without trailing zeros. */
-const mmText = (v: number) => String(Math.round(v * 100) / 100);
+/** A size in mm as px (1 px = 0.1 mm), one decimal, without a trailing zero. */
+const pxText = (mm: number) => String(Math.round(mm * STYLE_PX_PER_MM * 10) / 10);
 
 export function PlotProperties({ plots }: { plots: Annotation[] }) {
   const rvs = useAppStore((s) => s.resultViewSettings);
@@ -182,12 +182,12 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
         <div className="flex gap-2">
           {showLine && (
             <NumberField
-              label="Line width (mm)"
-              value={stored(plots, "lineWidth")}
-              placeholder={mmText(defaultPlotLineWidthMm(mmPerAnnoPx))}
-              {...PLOT_STYLE_LIMITS.lineWidth}
-              title={`From ${PLOT_STYLE_LIMITS.lineWidth.min} to ${PLOT_STYLE_LIMITS.lineWidth.max} mm on the paper; empty: the default`}
-              onChange={(v) => set({ lineWidth: v })}
+              label="Line width (px)"
+              value={stored(plots, "lineWidthPx")}
+              placeholder={pxText(defaultPlotLineWidthMm(mmPerAnnoPx))}
+              {...PLOT_STYLE_LIMITS.lineWidthPx}
+              title={`From ${PLOT_STYLE_LIMITS.lineWidthPx.min} to ${PLOT_STYLE_LIMITS.lineWidthPx.max} px (1 px = 0.1 mm on the paper); empty: the default`}
+              onChange={(v) => set({ lineWidthPx: v })}
             />
           )}
           <Field label="Markers" className="flex-1 min-w-0">
@@ -214,12 +214,12 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
         {marker !== "none" && (
           <div className="flex gap-2 items-end">
             <NumberField
-              label="Marker size (mm)"
-              value={stored(plots, "markerSize")}
-              placeholder={mmText(defaultPlotMarkerSizeMm(mmPerAnnoPx))}
-              {...PLOT_STYLE_LIMITS.markerSize}
-              title={`The markers' width, from ${PLOT_STYLE_LIMITS.markerSize.min} to ${PLOT_STYLE_LIMITS.markerSize.max} mm on the paper; empty: the default`}
-              onChange={(v) => set({ markerSize: v })}
+              label="Marker size (px)"
+              value={stored(plots, "markerSizePx")}
+              placeholder={pxText(defaultPlotMarkerSizeMm(mmPerAnnoPx))}
+              {...PLOT_STYLE_LIMITS.markerSizePx}
+              title={`The markers' width, from ${PLOT_STYLE_LIMITS.markerSizePx.min} to ${PLOT_STYLE_LIMITS.markerSizePx.max} px (1 px = 0.1 mm on the paper); empty: the default`}
+              onChange={(v) => set({ markerSizePx: v })}
             />
             <div className="flex-1 min-w-0 h-[22px] flex items-center">
               {filledShape && (
@@ -303,9 +303,9 @@ export function PlotProperties({ plots }: { plots: Annotation[] }) {
 const RESET: Partial<PlotStyle> = {
   color: undefined,
   line: undefined,
-  lineWidth: undefined,
+  lineWidthPx: undefined,
   marker: undefined,
-  markerSize: undefined,
+  markerSizePx: undefined,
   markerOpen: undefined,
   showTitle: undefined,
   showAxisTitle: undefined,

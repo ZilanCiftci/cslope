@@ -377,15 +377,15 @@ fn a_plot_style_reads_and_writes_back() {
     // members, defaults and a style on another annotation are dropped)
     let rel = FIXTURES[0];
     let style = json!({
-        "color": "#cc0000", "line": "dashed", "lineWidth": 0.5, "marker": "plus",
-        "markerSize": 3, "markerOpen": true, "showTitle": false, "showAxisTitle": false,
+        "color": "#cc0000", "line": "dashed", "lineWidthPx": 5, "marker": "plus",
+        "markerSizePx": 30, "markerOpen": true, "showTitle": false, "showAxisTitle": false,
         "showGrid": false, "showBorder": false, "fontSize": 12,
         "xMin": 1, "xMax": 9.5, "yMin": -5, "yMax": 100
     });
     let bytes = edited(rel, "models/model-1/model.json", &|v| {
         v["resultViewSettings"]["annotations"] = json!([
             { "id": "p", "type": "plot", "x": 0.3, "y": 0.3, "fontSize": 12.0, "plotAxisX": "x", "plotAxisY": "porePressure", "plotStyle": style.clone() },
-            { "id": "q", "type": "plot", "x": 0.6, "y": 0.3, "plotStyle": { "color": "red", "line": "solid", "marker": "circle", "lineWidth": 9.0, "showGrid": true } },
+            { "id": "q", "type": "plot", "x": 0.6, "y": 0.3, "plotStyle": { "color": "red", "line": "solid", "marker": "circle", "lineWidthPx": 90.0, "showGrid": true } },
             { "id": "t", "type": "text", "x": 0.1, "y": 0.1, "text": "T", "plotStyle": { "color": "#cc0000" } },
             { "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12.0, "plotAxisX": "slice", "plotAxisY": "shearStrength" }
         ]);
@@ -409,6 +409,40 @@ fn a_plot_style_reads_and_writes_back() {
         json!({ "id": "o", "type": "plot", "x": 0.1, "y": 0.6, "fontSize": 12, "plotAxisX": "slice", "plotAxisY": "shearStrength" })
     );
     // written back, it reads as the same project, and writes the same again
+    let mut again = read_project(out.clone(), &options()).unwrap();
+    assert_eq!(again, project);
+    let (out2, _) = write_project(&mut again, &writer()).unwrap();
+    assert_eq!(entries(&out2), entries(&out));
+}
+
+#[test]
+fn a_plot_style_of_a_development_build_in_mm_reads_as_px() {
+    // (`lineWidth` and `markerSize` in mm, the sizes' first form: read as
+    // px, 1 px = 0.1 mm, as the app reads them; a px member comes first)
+    let bytes = edited(FIXTURES[0], "models/model-1/model.json", &|v| {
+        v["resultViewSettings"]["annotations"] = json!([
+            { "id": "p", "type": "plot", "x": 0.3, "y": 0.3, "plotStyle": { "lineWidth": 0.35, "markerSize": 1.26 } },
+            { "id": "q", "type": "plot", "x": 0.6, "y": 0.3, "plotStyle": { "lineWidthPx": 2.0, "lineWidth": 0.5, "markerSize": 3.0 } }
+        ]);
+    });
+    let mut project = read_project(bytes, &options()).unwrap();
+    let (out, _) = write_project(&mut project, &writer()).unwrap();
+    let model = entries(&out)
+        .into_iter()
+        .find(|(n, ..)| n == "models/model-1/model.json")
+        .map(|(_, data, _)| as_json(&data))
+        .unwrap();
+    let annos = model["resultViewSettings"]["annotations"]
+        .as_array()
+        .unwrap();
+    assert_eq!(
+        annos[0]["plotStyle"],
+        json!({ "lineWidthPx": 3.5, "markerSizePx": 12.6 })
+    );
+    assert_eq!(
+        annos[1]["plotStyle"],
+        json!({ "lineWidthPx": 2, "markerSizePx": 30 })
+    );
     let mut again = read_project(out.clone(), &options()).unwrap();
     assert_eq!(again, project);
     let (out2, _) = write_project(&mut again, &writer()).unwrap();

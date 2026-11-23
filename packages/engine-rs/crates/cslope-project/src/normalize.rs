@@ -2501,12 +2501,16 @@ fn paper_and_reference_annotations(raw: Option<&Value>, cx: &Ctx) -> Vec<Value> 
         .collect()
 }
 
-/// The members of a slice plot's style (`PlotStyle`, store/types.ts).
-const PLOT_STYLE_KEYS: [&str; 15] = [
+/// The members of a slice plot's style (`PlotStyle`, store/types.ts);
+/// `lineWidth` and `markerSize` (mm) are the sizes' first form, written by
+/// development builds before they were in px, read as px.
+const PLOT_STYLE_KEYS: [&str; 17] = [
     "color",
     "line",
+    "lineWidthPx",
     "lineWidth",
     "marker",
+    "markerSizePx",
     "markerSize",
     "markerOpen",
     "showTitle",
@@ -2537,16 +2541,26 @@ fn plot_style(raw: Option<&Value>, path: &str, cx: &Ctx) -> Option<Value> {
     if let Some(l) = str_of(r.get("line")).filter(|l| matches!(*l, "dashed" | "none")) {
         out.insert("line".into(), json!(l));
     }
-    if let Some(v) = in_range("lineWidth", 0.05, 3.0) {
-        out.insert("lineWidth".into(), json!(v));
+    // px (1 px = 0.1 mm); else the first form's mm as px (`mmToStylePx`)
+    let mm_to_px = |mm: f64| cslope_engine::js::math::round(mm * 10.0 * 1e6) / 1e6;
+    if let Some(v) = in_range("lineWidthPx", 0.5, 30.0) {
+        out.insert("lineWidthPx".into(), json!(v));
+    } else if r.get("lineWidthPx").is_none() {
+        if let Some(v) = in_range("lineWidth", 0.05, 3.0) {
+            out.insert("lineWidthPx".into(), json!(mm_to_px(v)));
+        }
     }
     if let Some(m) = str_of(r.get("marker"))
         .filter(|m| matches!(*m, "none" | "square" | "triangle" | "plus" | "cross"))
     {
         out.insert("marker".into(), json!(m));
     }
-    if let Some(v) = in_range("markerSize", 0.2, 10.0) {
-        out.insert("markerSize".into(), json!(v));
+    if let Some(v) = in_range("markerSizePx", 2.0, 100.0) {
+        out.insert("markerSizePx".into(), json!(v));
+    } else if r.get("markerSizePx").is_none() {
+        if let Some(v) = in_range("markerSize", 0.2, 10.0) {
+            out.insert("markerSizePx".into(), json!(mm_to_px(v)));
+        }
     }
     if bool_of(r.get("markerOpen")) == Some(true) {
         out.insert("markerOpen".into(), json!(true));

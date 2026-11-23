@@ -17,9 +17,9 @@ describe("normalizePlotStyle", () => {
       normalizePlotStyle({
         color: "#CC0000",
         line: "dashed",
-        lineWidth: 0.5,
+        lineWidthPx: 5,
         marker: "plus",
-        markerSize: 2,
+        markerSizePx: 20,
         markerOpen: true,
         showTitle: false,
         showAxisTitle: false,
@@ -34,9 +34,9 @@ describe("normalizePlotStyle", () => {
     ).toEqual({
       color: "#cc0000",
       line: "dashed",
-      lineWidth: 0.5,
+      lineWidthPx: 5,
       marker: "plus",
-      markerSize: 2,
+      markerSizePx: 20,
       markerOpen: true,
       showTitle: false,
       showAxisTitle: false,
@@ -55,8 +55,10 @@ describe("normalizePlotStyle", () => {
       normalizePlotStyle({
         color: "red",
         line: "solid",
+        lineWidthPx: 50,
         lineWidth: 50,
         marker: "circle",
+        markerSizePx: 1,
         markerSize: -1,
         markerOpen: false,
         showTitle: true,
@@ -70,6 +72,13 @@ describe("normalizePlotStyle", () => {
     expect(normalizePlotStyle(null)).toBeUndefined();
     expect(normalizePlotStyle([1])).toBeUndefined();
     expect(normalizePlotStyle("dashed")).toBeUndefined();
+  });
+
+  it("reads the sizes of a development build's file in mm as px (1 px = 0.1 mm), the px members first", () => {
+    expect(normalizePlotStyle({ lineWidth: 0.35, markerSize: 1.26 })).toEqual({ lineWidthPx: 3.5, markerSizePx: 12.6 });
+    expect(normalizePlotStyle({ lineWidthPx: 2, lineWidth: 0.5, markerSizePx: 8, markerSize: 3 })).toEqual({ lineWidthPx: 2, markerSizePx: 8 });
+    // a bad px member is dropped, not replaced by the mm one
+    expect(normalizePlotStyle({ lineWidthPx: 99, lineWidth: 0.5 })).toBeUndefined();
   });
 });
 
@@ -107,8 +116,8 @@ describe("resolvePlotStyle", () => {
     }
   });
 
-  it("takes the style's sizes in mm and a dash in line widths", () => {
-    const s = resolvePlotStyle({ line: "dashed", lineWidth: 0.4, markerSize: 3, fontSize: 18 }, 0.35);
+  it("takes the style's sizes in px (1 px = 0.1 mm) and a dash in line widths", () => {
+    const s = resolvePlotStyle({ line: "dashed", lineWidthPx: 4, markerSizePx: 30, fontSize: 18 }, 0.35);
     expect(s.lineWidthMm).toBe(0.4);
     expect(s.dashMm.map((d) => Math.round(d * 1000) / 1000)).toEqual([2.4, 1.2]);
     expect(s.markerRadiusMm).toBe(1.5);

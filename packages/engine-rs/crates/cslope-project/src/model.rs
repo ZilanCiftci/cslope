@@ -575,15 +575,15 @@ pub struct PlotStyle {
     /// "dashed" or "none" (absent: solid).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line: Option<String>,
-    /// mm on the paper.
+    /// px, 1 px = 0.1 mm on the paper.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub line_width: Option<f64>,
+    pub line_width_px: Option<f64>,
     /// "none", "square", "triangle", "plus" or "cross" (absent: circle).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marker: Option<String>,
-    /// The markers' diameter, mm on the paper.
+    /// The markers' diameter, px (1 px = 0.1 mm on the paper).
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub marker_size: Option<f64>,
+    pub marker_size_px: Option<f64>,
     /// Written only as `true`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub marker_open: Option<bool>,

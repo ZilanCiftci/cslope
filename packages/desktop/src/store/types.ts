@@ -347,11 +347,14 @@ export interface PlotStyle {
   /** The series' color, "#rrggbb"; absent: the theme's plot color. */
   color?: string;
   line?: PlotLineStyle;
-  /** The series' line width in mm on the paper. */
-  lineWidth?: number;
+  /**
+   * The series' line width in px, 1 px = 0.1 mm on the paper. (A file of
+   * a development build may hold `lineWidth` in mm: read as px × 10.)
+   */
+  lineWidthPx?: number;
   marker?: PlotMarker;
-  /** The markers' size (diameter) in mm on the paper. */
-  markerSize?: number;
+  /** The markers' size (diameter) in px, 1 px = 0.1 mm (`markerSize` in mm read likewise). */
+  markerSizePx?: number;
   /** Circles, squares and triangles drawn as outlines. */
   markerOpen?: boolean;
   /** The plot's title (the quantity and its unit). */

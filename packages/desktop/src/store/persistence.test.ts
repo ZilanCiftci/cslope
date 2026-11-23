@@ -734,10 +734,10 @@ describe("normalizeResultView (also used for view templates)", () => {
   });
 
   it("keeps a slice plot's style (also in a template), its valid members only", () => {
-    const style = { color: "#cc0000", line: "dashed", marker: "plus", lineWidth: 0.5, yMin: 0, yMax: 100, showGrid: false };
+    const style = { color: "#cc0000", line: "dashed", marker: "plus", lineWidthPx: 5, yMin: 0, yMax: 100, showGrid: false };
     const view = normalizeResultView({
       annotations: [
-        { id: "p", type: "plot", x: 0.3, y: 0.3, plotStyle: { ...style, line: "dotted", legend: true, markerSize: "big" } },
+        { id: "p", type: "plot", x: 0.3, y: 0.3, plotStyle: { ...style, line: "dotted", legend: true, markerSizePx: "big" } },
         { id: "q", type: "plot", x: 0.6, y: 0.3, plotStyle: { color: "red", line: "solid" } },
         { id: "t", type: "text", x: 0.1, y: 0.1, plotStyle: style },
       ],
