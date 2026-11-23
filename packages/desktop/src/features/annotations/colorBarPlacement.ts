@@ -6,9 +6,10 @@ import type {
 } from "../../store/types";
 import { PLOT_MARGINS } from "../../store/defaults";
 import { buildMaterialTableData } from "../canvas/helpers";
-import { ANNOTATION_SCALE_DIVISOR, SHEET_LAYOUT_MM_PER_PX, SHEET_SANS_FAMILY, textLayoutPx } from "../rendering/style-spec";
+import { SHEET_LAYOUT_MM_PER_PX, SHEET_SANS_FAMILY, textLayoutPx } from "../rendering/style-spec";
 import { getPaperDimensions } from "../view/paper";
 import { anchoredTopLeft } from "./anchorPosition";
+import { colorBarLayout } from "./colorBarLayout";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "./materialTableLayout";
 
 /**
@@ -59,14 +60,12 @@ export const measureSansText: TextMeasure = (text, fontPx, bold) => {
 };
 
 /**
- * Size of an annotation drawn at `px` sheet pixels, as fractions of the
- * paper: annotation px (the color bar's, min(paper width, height) /
- * divisor) or, with `layout`, layout px (the table's, the same mm on every
- * paper size).
+ * Size of an annotation drawn at `px` layout px (the table's and the color
+ * bar's, the same mm on every paper size), as fractions of the paper.
  */
-function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape">, layout = false) {
+function paperFractions(paper: Pick<PaperFrameSettings, "paperSize" | "landscape">) {
   const { width, height } = getPaperDimensions(paper.paperSize, paper.landscape);
-  const unit = layout ? SHEET_LAYOUT_MM_PER_PX : Math.min(width, height) / ANNOTATION_SCALE_DIVISOR;
+  const unit = SHEET_LAYOUT_MM_PER_PX;
   return { w: (px: number) => (px * unit) / width, h: (px: number) => (px * unit) / height };
 }
 
@@ -101,17 +100,17 @@ export function materialTableBox(
     sheet,
     fontSize,
   );
-  const frac = paperFractions(paper, true);
+  const frac = paperFractions(paper);
   const w = frac.w(layout.totalW / sheet);
   const h = frac.h(layout.totalH / sheet);
   const { x, y } = anchoredTopLeft(table.x ?? 0, table.y ?? 0, w, h, table.anchor);
   return { x, y, w, h };
 }
 
-/** Height of the color bar with its title, as a fraction of the paper height. */
+/** Height of the color bar with its title, as a fraction of the paper height (the same mm on every paper size). */
 export function colorBarHeight(paper: Pick<PaperFrameSettings, "paperSize" | "landscape">): number {
-  // As drawn: a 200 px bar under a title line of 11 px text and 4 px space.
-  return paperFractions(paper).h(200 + 11 + 4);
+  // As drawn: the bar under a title line and its space (layout px).
+  return paperFractions(paper).h(colorBarLayout(1, 0).h);
 }
 
 /**

@@ -19,7 +19,7 @@ import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_LINE_HEIGHT,
-  ANNOTATION_SCALE_DIVISOR,
+  COLOR_BAR_NUM_TICKS,
   MATERIAL_TABLE_RULE_MM,
   MATERIAL_TABLE_SWATCH_BORDER_MM,
   MODEL_SHORT_LABELS,
@@ -38,6 +38,7 @@ import {
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { colorBarFontSize, colorBarLayout } from "../annotations/colorBarLayout";
 import { fosTickLabel } from "../../utils/fos-color";
 import { colorBarRange, type ScaleFilter } from "../annotations/colorScale";
 import { mainPiezoLine } from "../../utils/piezo";
@@ -409,9 +410,8 @@ export function getAnnotationBoundsPx(
   // (it is hit-tested through canvas/reference-geometry.ts).
   if (anno.type === "reference") return { x: 0, y: 0, w: 0, h: 0 };
 
-  // The color bar's px grow with the paper; the text's and the table's
-  // layout px (and their text) are the same in mm on every paper size.
-  const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
+  // The text's, the table's and the color bar's layout px (and their
+  // text) are the same in mm on every paper size.
   const layoutScale = (SHEET_LAYOUT_MM_PER_PX * pf.w) / getPaperDimensions(paper.paperSize, paper.landscape).width;
   const ax = pf.x + anno.x * pf.w;
   const ay = pf.y + anno.y * pf.h;
@@ -456,22 +456,13 @@ export function getAnnotationBoundsPx(
   }
 
   if (anno.type === "color-bar") {
-    const barW = 20 * annoScale;
-    const barH = 200 * annoScale;
-    const numTicks = 5;
-    const labelPad = 5 * annoScale;
-    const labelFontSize = 11 * annoScale;
-
-    ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
+    ctx.font = `${colorBarFontSize(layoutScale)}px ${SHEET_SANS_FAMILY}`;
     let maxLabelW = 0;
     const fosScale = colorBarRange(anno, result, resultView);
-    for (let t = 0; t <= numTicks; t++) {
-      maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width);
+    for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
+      maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS)).width);
     }
-
-    const titleExtraTop = labelFontSize + 4 * annoScale;
-    const contentW = barW + labelPad + maxLabelW;
-    const contentH = barH + titleExtraTop;
+    const { w: contentW, h: contentH } = colorBarLayout(layoutScale, maxLabelW);
     const { x: tlx, y: tly } = anchoredTopLeft(
       ax,
       ay,
