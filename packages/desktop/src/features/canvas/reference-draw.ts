@@ -14,6 +14,7 @@ import {
   referenceWorldPoints,
   type GroundYAt,
 } from "../annotations/reference";
+import { styleMm } from "../rendering/style-spec";
 import { POINT_COLOR_HOVER } from "./constants";
 import { boxAround, pointLabelCandidates, type Box, type LabelLayout, type Seg } from "./label-layout";
 import { referenceHitId } from "./reference-geometry";
@@ -39,7 +40,8 @@ export interface ReferenceSceneParams {
   mode: "edit" | "result";
   toC: (x: number, y: number) => [number, number];
   groundYAt: GroundYAt;
-  paperZoom: number;
+  /** Screen px per mm of the paper: the lines' widths are style px (1 px = 0.1 mm). */
+  pxPerMm: number;
   /** The theme's reference colour, for annotations without one of their own. */
   defaultColor: string;
 }
@@ -78,12 +80,11 @@ export function drawReferenceLines(
   },
 ): DrawnReference[] {
   const drawn: DrawnReference[] = [];
-  const z = p.paperZoom;
   const hoverId = referenceHitId(p.hoverHit ?? null);
   for (const anno of visibleReferences(p.annotations, p.mode)) {
     const pts = referenceWorldPoints(anno, p.groundYAt).map(([x, y]) => p.toC(x, y));
     const color = anno.color ?? p.defaultColor;
-    const width = referenceWidth(anno) * z;
+    const width = styleMm(referenceWidth(anno)) * p.pxPerMm;
     const hovered = p.mode === "result" && hoverId === anno.id;
     ctx.save();
     ctx.lineJoin = "round";
@@ -99,7 +100,7 @@ export function drawReferenceLines(
       }
       ctx.strokeStyle = color;
       ctx.lineWidth = width;
-      ctx.setLineDash(referenceDashPattern(anno.dash, referenceWidth(anno)).map((d) => d * z));
+      ctx.setLineDash(referenceDashPattern(anno.dash, referenceWidth(anno)).map((d) => styleMm(d) * p.pxPerMm));
       strokePolyline(ctx, pts);
     }
     ctx.restore();

@@ -32,10 +32,10 @@ const FIELDS: { [K in keyof ResultLayerStyles]-?: Record<string, FieldKind> } = 
   frame: { color: "color", width: "width", fontSize: "fontSize", labels: "bool" },
 };
 
-/** The bounds of the numbers (line widths and sizes in px at paper zoom 1). */
+/** The bounds of the numbers (line widths and sizes in px, 1 px = 0.1 mm on the paper; font sizes in their own px or pt). */
 export const LAYER_STYLE_LIMITS = {
-  width: { min: 0.1, max: 10 },
-  size: { min: 0.5, max: 20 },
+  width: { min: 0.1, max: 30 },
+  size: { min: 0.5, max: 50 },
   fontSize: { min: 4, max: 72 },
   decimals: { min: 0, max: 4 },
   subdivisions: { min: 2, max: 10 },

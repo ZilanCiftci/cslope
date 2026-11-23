@@ -1081,11 +1081,11 @@ describe("display layer styles in the PDF", () => {
       COORDS,
     );
     expect(rec.balanced()).toBe(true);
-    // Twice the canvas default (1.5 px): twice the PDF default (0.38 mm).
-    expect(rec.of("setLineWidth").some((c) => Math.abs((c.args[0] as number) - 0.76) < 1e-9)).toBe(true);
+    // 3 px: 0.3 mm on the paper (1 px = 0.1 mm).
+    expect(rec.of("setLineWidth").some((c) => Math.abs((c.args[0] as number) - 0.3) < 1e-9)).toBe(true);
     expect(rec.of("setDrawColor").some((c) => c.args.join() === "204,0,0")).toBe(true);
-    // The center: a dot twice the default (0.8 mm), no radius lines.
-    expect(rec.of("circle")[0].args[2]).toBeCloseTo(1.6, 9);
+    // The center: a dot of 6 px radius (0.6 mm), no radius lines.
+    expect(rec.of("circle")[0].args[2]).toBeCloseTo(0.6, 9);
     expect(rec.of("setFillColor").some((c) => c.args.join() === "0,204,0")).toBe(true);
     const [cx, cy] = tf.worldToPdf(CIRCLE.cx, CIRCLE.cy);
     expect(rec.of("line").some((c) => c.args[0] === cx && c.args[1] === cy)).toBe(false);
@@ -1110,7 +1110,7 @@ describe("display layer styles in the PDF", () => {
     const two = surface({ fos: 1.6, cy: 16 });
     const surf = recorder();
     drawSlipSurfaces(surf.pdf, tf, result({ allSurfaces: [surface(), two] }), rvs({ surfaceDisplay: "all", layerStyles: { surfaces: { width: 2 } } }));
-    expect(surf.of("setLineWidth").map((c) => c.args[0])).toEqual([expect.closeTo(0.3, 9)]);
+    expect(surf.of("setLineWidth").map((c) => c.args[0])).toEqual([expect.closeTo(0.2, 9)]);
   });
 
   it("draws the custom surfaces in their color and width", () => {
@@ -1119,6 +1119,6 @@ describe("display layer styles in the PDF", () => {
     const rec = recorder();
     drawCustomSurfaceLines(rec.pdf, tf, res, rvs({ showCustomSurfaces: true, layerStyles: { customSurfaces: { color: "#6600cc", width: 2 } } }));
     expect(rec.of("setDrawColor")[0].args).toEqual([102, 0, 204]);
-    expect(rec.of("setLineWidth")[0].args[0]).toBeCloseTo(0.5, 9);
+    expect(rec.of("setLineWidth")[0].args[0]).toBeCloseTo(0.2, 9);
   });
 });

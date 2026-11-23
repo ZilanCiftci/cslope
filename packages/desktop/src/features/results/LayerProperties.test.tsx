@@ -96,12 +96,12 @@ describe("display layer properties", () => {
     fireEvent.click(row("surfaces"));
     const group = within(screen.getByRole("group", { name: "Surfaces properties" })).getByRole("group", { name: "Other surfaces" });
     const width = within(group).getByLabelText("Line width (px)");
-    expect(width).toHaveAttribute("placeholder", "1");
+    expect(width).toHaveAttribute("placeholder", "1.5");
     fireEvent.change(width, { target: { value: "2.5" } });
     fireEvent.change(within(group).getByLabelText("Opacity (%)"), { target: { value: "30" } });
     expect(rvs().layerStyles).toEqual({ surfaces: { width: 2.5, opacity: 0.3 } });
     expect(history().pastStates).toHaveLength(2);
-    fireEvent.change(width, { target: { value: "50" } });
+    fireEvent.change(width, { target: { value: "31" } });
     expect(rvs().layerStyles?.surfaces?.width).toBe(2.5);
     fireEvent.change(width, { target: { value: "" } });
     expect(rvs().layerStyles).toEqual({ surfaces: { opacity: 0.3 } });

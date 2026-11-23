@@ -90,12 +90,13 @@ describe("reference annotations: geometry", () => {
   });
 
   it("gives the width, dash patterns and list name", () => {
-    expect(referenceWidth(LINE)).toBe(1.5);
+    // px of 0.1 mm: 4 px (0.4 mm) by default.
+    expect(referenceWidth(LINE)).toBe(4);
     expect(referenceWidth({ ...LINE, width: 3 })).toBe(3);
-    expect(referenceWidth({ ...LINE, width: -1 })).toBe(1.5);
-    expect(referenceDashPattern(undefined, 1.5)).toEqual([]);
-    expect(referenceDashPattern("dashed", 1.5)).toEqual([8, 5]);
-    expect(referenceDashPattern("dotted", 2)).toEqual([2, 5]);
+    expect(referenceWidth({ ...LINE, width: -1 })).toBe(4);
+    expect(referenceDashPattern(undefined, 4)).toEqual([]);
+    expect(referenceDashPattern("dashed", 4)).toEqual([21, 13]);
+    expect(referenceDashPattern("dotted", 2)).toEqual([2, 6.5]);
     expect(referenceListName(LINE)).toBe("Reference line");
     expect(referenceListName(CIRCLE)).toBe("Reference circle");
     expect(referenceListName({ ...LINE, label: " F = 0.66 (other program) " })).toBe("F = 0.66 (other program)");

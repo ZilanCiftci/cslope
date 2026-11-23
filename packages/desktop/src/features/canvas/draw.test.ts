@@ -33,6 +33,9 @@ import {
   MM_PER_PT,
   RULER_Y_LABEL_BASELINE_MM,
   SHEET_SANS_FAMILY,
+  CRITICAL_SURFACE_LINE_WIDTH_PX,
+  CUSTOM_SURFACE_LINE_WIDTH_PX,
+  STYLE_PX_PER_MM,
 } from "../rendering/style-spec";
 import { REINFORCEMENT_COLOR, PILE_COLOR } from "./reinforcement-draw";
 import { INK_TOKENS, PRINT_INK, themeInk, type CanvasInk } from "./ink";
@@ -183,6 +186,10 @@ function result(over: Partial<AnalysisResult> = {}): AnalysisResult {
 const UNIT_SHEET_ZOOM = virtualPaperFrame("A4", true).w / computePaperFrame(W, H, "A4", true).w;
 /** Screen px per mm of the A4 paper at that zoom: the PDF's sizes in mm on this sheet. */
 const PX_PER_MM = virtualPaperFrame("A4", true).w / 297;
+/** A width or size in style px (1 px = 0.1 mm on the paper) on this sheet. */
+const stylePx = (px: number) => (px / STYLE_PX_PER_MM) * PX_PER_MM;
+/** Whether a path is stroked `px` style px wide. */
+const strokedAt = (p: PaintedPath, px: number) => Math.abs(p.state.lineWidth - stylePx(px)) < 1e-9;
 
 function rvs(over: Partial<ResultViewSettings> = {}): ResultViewSettings {
   return {
@@ -1212,7 +1219,7 @@ describe("drawCanvas — result mode", () => {
 
   it("strokes the critical surface along the circle from entry to exit", () => {
     const rec = drawResult();
-    const arc = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
+    const arc = rec.strokes().find((p) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length > 20)!;
     const pts = pathPoints(arc).map(([x, y]) => canvasToWorld(x, y, W, H));
     expect(pts[0][0]).toBeCloseTo(ENTRY_X, 6);
     expect(pts[0][1]).toBeCloseTo(10, 6);
@@ -1389,7 +1396,7 @@ describe("drawCanvas — result mode", () => {
       result: result({ criticalSurface: cs, allSurfaces: [cs] }),
       options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
     });
-    const line = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length === 4)!;
+    const line = rec.strokes().find((p) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length === 4)!;
     expect(pathPoints(line)[0]).toEqual(toC(6, 10));
     expect(pathPoints(line)[1]).toEqual(toC(6, 7));
     // Water from the crack bottom up to half the crack depth, in the crack:
@@ -1412,7 +1419,7 @@ describe("drawCanvas — result mode", () => {
       result: result({ criticalSurface: plain, allSurfaces: [plain] }),
       options: { ...DEFAULT_ANALYSIS_OPTIONS, tensionCrackDepth: 3, tensionCrackWater: 0.5 },
     });
-    expect(none.strokes().some((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 0 && close(pathPoints(p)[0], toC(6, 10)))).toBe(false);
+    expect(none.strokes().some((p) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length > 0 && close(pathPoints(p)[0], toC(6, 10)))).toBe(false);
     expect(none.fills(POND_COLOR.hex).filter((p) => p.segments[0].op === "rect")).toHaveLength(0);
   });
 
@@ -1507,7 +1514,7 @@ describe("drawCanvas — result mode", () => {
       ],
     });
     const dashed = (rec: ReturnType<typeof draw>) =>
-      rec.strokes(CUSTOM_SURFACE_COLOR.hex).filter((p) => p.state.lineDash.length > 0 && p.state.lineWidth === 1.5);
+      rec.strokes(CUSTOM_SURFACE_COLOR.hex).filter((p) => p.state.lineDash.length > 0 && strokedAt(p, CUSTOM_SURFACE_LINE_WIDTH_PX));
     // Off by default, whatever the surface display.
     expect(dashed(drawResult({ result: res }))).toHaveLength(0);
     expect(dashed(drawResult({ result: res, resultViewSettings: rvs({ surfaceDisplay: "all" }) }))).toHaveLength(0);
@@ -1521,7 +1528,7 @@ describe("drawCanvas — result mode", () => {
     for (const [x, y] of pathPoints(lines[0])) expect(Math.hypot(x - ccx, y - ccy)).toBeCloseTo(R * SCALE, 6);
     // Each on a wider solid halo; the critical surface is still the one bold solid arc.
     expect(on.strokes().filter((p) => p.state.lineDash.length === 0 && p.state.lineWidth === 4)).toHaveLength(2);
-    expect(on.strokes().filter((p) => p.state.lineWidth === 1.5 && p.state.lineDash.length === 0 && pathPoints(p).length > 20)).toHaveLength(1);
+    expect(on.strokes().filter((p) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && p.state.lineDash.length === 0 && pathPoints(p).length > 20)).toHaveLength(1);
     // Labels in the custom colour: the first at its centre, the second moved below the critical label.
     const label = on.findText("1.500")!;
     expect(label.state.fillStyle).toBe(CUSTOM_SURFACE_COLOR.hex);
@@ -1897,9 +1904,9 @@ describe("drawCanvas — reference annotations", () => {
     const line = rec.strokes("#a21caf").find((p) => pathPoints(p).length === 3)!;
     expect(line).toBeDefined();
     expect(hasPoints(line, (LINE as { points: [number, number][] }).points.map(([x, y]) => toC(x, y)))).toBe(true);
-    expect(line.state.lineDash).toEqual([8, 5]);
-    expect(line.state.lineWidth).toBe(1.5);
-    const critical = rec.strokes().find((p) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
+    expect(line.state.lineDash).toEqual([21, 13].map((d) => expect.closeTo(stylePx(d), 9)));
+    expect(line.state.lineWidth).toBeCloseTo(stylePx(4), 9);
+    const critical = rec.strokes().find((p) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length > 20)!;
     expect(rec.paths.indexOf(line)).toBeLessThan(rec.paths.indexOf(critical));
   });
 
@@ -1988,7 +1995,7 @@ describe("drawCanvas — reference annotations", () => {
     }
     // The circle's arc itself stays under the critical surface.
     const arc = rec.strokes("#ff0000").find((p) => pathPoints(p).length > 8)!;
-    const critical = rec.strokes().find((p) => p !== arc && p.state.lineWidth === 1.5 && pathPoints(p).length > 20)!;
+    const critical = rec.strokes().find((p) => p !== arc && strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length > 20)!;
     expect(critical).toBeDefined();
     expect(rec.paths.indexOf(arc)).toBeLessThan(rec.paths.indexOf(critical));
     expect(rec.depth()).toBe(0);
@@ -2040,7 +2047,7 @@ describe("drawCanvas — dark theme ink", () => {
       resultViewSettings: rvs({ showFosLabel: true, showCentreMarker: true, showSlices: true, ...over }),
       ...params,
     });
-  const isArc = (p: PaintedPath) => p.state.lineWidth === 1.5 && pathPoints(p).length > 20;
+  const isArc = (p: PaintedPath) => strokedAt(p, CRITICAL_SURFACE_LINE_WIDTH_PX) && pathPoints(p).length > 20;
 
   it("reads the tokens (the print colours where none is set)", () => {
     expect(themeInk().critical).toBe("#eef0f2");
@@ -2064,7 +2071,7 @@ describe("drawCanvas — dark theme ink", () => {
     const arcs = rec.strokes().filter(isArc);
     expect(arcs.map((p) => p.state.strokeStyle)).toEqual(["#eef0f2"]);
     // the halo: the same arc 2 px wider, in the sheet's colour, under it
-    const halo = rec.strokes().filter((p) => p.state.lineWidth === 3.5 && pathPoints(p).length > 20);
+    const halo = rec.strokes().filter((p) => Math.abs(p.state.lineWidth - (stylePx(CRITICAL_SURFACE_LINE_WIDTH_PX) + 2)) < 1e-9 && pathPoints(p).length > 20);
     expect(halo).toHaveLength(1);
     expect(halo[0].state.strokeStyle).not.toBe("#eef0f2");
     expect(rec.paths.indexOf(halo[0])).toBeLessThan(rec.paths.indexOf(arcs[0]));
@@ -2126,7 +2133,7 @@ describe("drawCanvas — dark theme ink", () => {
     expect(rec.findText("q = 15 kPa")!.state.fillStyle).toBe(UDL_LOAD_COLOR.hex);
     // one pass: no even-odd clips for the lines over the fills, and no halo
     expect(rec.paths.filter((p) => p.kind === "clip" && p.fillRule === "evenodd")).toHaveLength(0);
-    expect(rec.strokes().filter((p) => p.state.lineWidth === 3.5 && pathPoints(p).length > 20)).toHaveLength(0);
+    expect(rec.strokes().filter((p) => Math.abs(p.state.lineWidth - (stylePx(CRITICAL_SURFACE_LINE_WIDTH_PX) + 2)) < 1e-9 && pathPoints(p).length > 20)).toHaveLength(0);
   });
 });
 
@@ -2236,16 +2243,16 @@ describe("drawCanvas — display layer styles", () => {
       { showCentreMarker: true, showSlices: true },
       result({ criticalSlices: [slice(8, 12), slice(12, 16)] }),
     );
-    const arcs = rec.strokes().filter((p) => pathPoints(p).length > 20 && p.state.lineWidth === 3);
+    const arcs = rec.strokes().filter((p) => pathPoints(p).length > 20 && strokedAt(p, 3));
     expect(arcs.map((p) => p.state.strokeStyle)).toEqual(["#cc0000"]);
     const dot = rec.fills("#00cc00").find((p) => p.segments[0].op === "arc")!;
-    expect(dot.segments[0]).toMatchObject({ op: "arc", r: 6 });
+    expect(dot.segments[0]).toMatchObject({ op: "arc", r: expect.closeTo(stylePx(6), 9) });
     // no radius lines
     expect(rec.strokes().filter((p) => pathPoints(p).length === 2 && close(pathPoints(p)[0], c))).toHaveLength(0);
     const slices = rec.strokes().filter((p) => p.state.globalAlpha < 1 && pathPoints(p).length === 2);
     expect(slices.length).toBeGreaterThan(0);
     expect(new Set(slices.map((p) => p.state.strokeStyle))).toEqual(new Set(["#0066cc"]));
-    expect(slices.every((p) => p.state.lineWidth >= 2 * 0.6)).toBe(true);
+    expect(slices.every((p) => p.state.lineWidth >= stylePx(2) * 0.6 - 1e-9)).toBe(true);
   });
 
   it("draws the other surfaces with their width and opacity, and the soil colors with their opacity", () => {
@@ -2255,8 +2262,8 @@ describe("drawCanvas — display layer styles", () => {
       { surfaceDisplay: "all" },
       result({ allSurfaces: [surface(), two] }),
     );
-    // 2.5 times the default width, the PDF's 0.15 mm times 2.5 on this sheet.
-    const other = rec.strokes().filter((p) => pathPoints(p).length > 20 && Math.abs(p.state.lineWidth - 0.15 * 2.5 * PX_PER_MM) < 1e-9);
+    // 2.5 px: 0.25 mm on the paper, as the PDF prints it.
+    const other = rec.strokes().filter((p) => pathPoints(p).length > 20 && strokedAt(p, 2.5));
     expect(other).toHaveLength(1);
     expect(other[0].state.globalAlpha).toBe(0.3);
     const soil = rec.fills(DEFAULT_MATERIAL.color);
@@ -2271,7 +2278,7 @@ describe("drawCanvas — display layer styles", () => {
     const custom = surface({ fos: 1.5, cy: 17, entryPoint: [ENTRY_X + 1, 10] });
     const res = result({ customSurfaces: [{ kind: "circle", index: 0, surface: custom }] });
     const rec = styled({ customSurfaces: { color: "#6600cc", width: 2.5, fontSize: 16 } }, { showCustomSurfaces: true, showFosLabel: true }, res);
-    expect(rec.strokes("#6600cc").some((p) => p.state.lineWidth === 2.5 && p.state.lineDash.length > 0)).toBe(true);
+    expect(rec.strokes("#6600cc").some((p) => strokedAt(p, 2.5) && p.state.lineDash.length > 0)).toBe(true);
     const label = rec.findText("1.500")!;
     expect(label.state.fillStyle).toBe("#6600cc");
     // 16 px: 4/3 of the default size, as the PDF prints it.

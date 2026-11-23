@@ -712,7 +712,7 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
       coordinates: GROUND,
       materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
       resultViewSettings: {
-        layerStyles: { frame: { color: "red", width: 20, fontSize: 2, labels: "no" } },
+        layerStyles: { frame: { color: "red", width: 40, fontSize: 2, labels: "no" } },
       },
     },
   },
@@ -723,7 +723,25 @@ const SAVED: { name: string; raw: Record<string, unknown> }[] = [
       coordinates: GROUND,
       materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
       resultViewSettings: {
-        layerStyles: { grid: { color: "blue", width: 0, subdivisions: 3.5, minorWidth: 12 } },
+        layerStyles: { grid: { color: "blue", width: 0, subdivisions: 3.5, minorWidth: 35 } },
+      },
+    },
+  },
+  {
+    name: "result sheet: layer widths and sizes in px of 0.1 mm, up to their bounds (kept) and past them (dropped)",
+    raw: {
+      id: "sheet-style-px",
+      coordinates: GROUND,
+      materials: [{ id: "m1", name: "Soil", model: mc(18, 5, 28) }],
+      resultViewSettings: {
+        layerStyles: {
+          criticalSurface: { width: 30 },
+          surfaces: { width: 30.5 },
+          customSurfaces: { width: 25 },
+          slices: { width: 0.05 },
+          femMesh: { width: 0.1 },
+          center: { size: 50 },
+        },
       },
     },
   },

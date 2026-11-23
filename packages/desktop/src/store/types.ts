@@ -471,7 +471,7 @@ interface ReferenceAnnotationBase extends NotOnReference {
   color?: string;
   /** Absent: solid. */
   dash?: ReferenceDash;
-  /** Line width in paper px; absent: REFERENCE_DEFAULT_WIDTH (1.5). */
+  /** Line width in px, 1 px = 0.1 mm on the paper; absent: REFERENCE_DEFAULT_WIDTH (4). */
   width?: number;
   /** Also drawn in the edit view; absent: result view only. */
   showInEdit?: boolean;
@@ -581,6 +581,8 @@ export interface ResultViewSettings {
 
 /** The styles of the result sheet's display layers (ResultViewSettings.layerStyles). */
 export interface ResultLayerStyles {
+  // Widths and sizes (`width`, `minorWidth`, `size`) are px, 1 px = 0.1 mm
+  // on the paper (STYLE_PX_PER_MM), whatever the paper size.
   /** Opacity of the soil colors, 0 to 1. */
   soilColor?: { opacity?: number };
   femMesh?: { color?: string; width?: number; opacity?: number };
@@ -591,7 +593,7 @@ export interface ResultLayerStyles {
   customSurfaces?: { color?: string; width?: number; fontSize?: number };
   criticalSurface?: { color?: string; width?: number };
   slices?: { color?: string; width?: number };
-  /** size: the radius of the center dot (px); radiusLines: the lines to the entry and exit. */
+  /** size: the radius of the center dot (px, 0.1 mm); radiusLines: the lines to the entry and exit. */
   center?: { color?: string; size?: number; radiusLines?: boolean };
   /**
    * The sheet's grid: its lines' color and width (px, as the other layers'

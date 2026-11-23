@@ -61,9 +61,10 @@ describe("reference annotations in the PDF", () => {
       [130, 125],
     ]);
     expect(of("setDrawColor")[0].args).toEqual(REFERENCE_ANNOTATION_COLOR.rgb);
-    expect(of("setLineWidth")[0].args).toEqual([0.5]);
-    // Dashed for width 2: [10, 6] px → mm; reset after.
-    expect(of("setLineDashPattern").map((c) => c.args[0])).toEqual([[2.5, 1.5], []]);
+    // Width 2 px: 0.2 mm on the paper (1 px = 0.1 mm), whatever the sheet's scale.
+    expect(of("setLineWidth")[0].args).toEqual([0.2]);
+    // Dashed for width 2: [13, 9] px → mm; reset after.
+    expect(of("setLineDashPattern").map((c) => c.args[0])).toEqual([[1.3, 0.9], []]);
     expect(of("moveTo")).toHaveLength(1);
     expect(of("lineTo")).toHaveLength(2);
     expect(of("stroke")).toHaveLength(1);

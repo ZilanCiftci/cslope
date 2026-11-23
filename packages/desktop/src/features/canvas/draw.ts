@@ -45,7 +45,7 @@ import {
   measureTable,
 } from "./helpers";
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
-import { getPaperDimensions, sheetPxScale } from "../view/paper";
+import { getPaperDimensions, sheetMmPerPx, sheetPxScale } from "../view/paper";
 import type { PageTitleLine } from "../export/page-title";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
@@ -111,7 +111,7 @@ import {
   SHEET_SANS_FAMILY,
   sheetCanvasFamily,
   COLOR_BAR_LINE_MM,
-  SLIP_SURFACE_LINE_MM,
+  styleMm,
   PAGE_TITLE_GAP_MM,
   PAGE_TITLE_MIN_ROOM_MM,
   PAGE_TITLE_PT,
@@ -125,7 +125,7 @@ import {
   FOS_LABEL_STACK_GAP_MM,
   FOS_LABEL_UNDERLINE_MM,
 } from "../rendering/style-spec";
-import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb, pdfScaled } from "../results/layer-styles";
+import { fosLabelCanvasFont, fosLabelScale, fosLabelText, hexRgb } from "../results/layer-styles";
 import { drawCanvasHatch, drawCanvasHatchLabel } from "../rendering/hatch";
 import {
   canvasForceLayout,
@@ -1637,7 +1637,8 @@ export function drawCanvas(
       mode: "edit",
       toC: (x, y) => worldToCanvas(x, y, w, h),
       groundYAt: surfaceYAtX,
-      paperZoom: 1,
+      // The edit view draws no sheet: the widths as on an A4 sheet at zoom 1, as its other symbols.
+      pxPerMm: 1 / sheetMmPerPx("A4"),
       defaultColor: REFERENCE_COLOR,
     });
     if (drawnRefs.length > 0) {
@@ -2629,7 +2630,7 @@ export function drawCanvas(
           result.fem,
           (x, y) => worldToCanvas(x, y, w, h),
           LS.femMesh?.color ?? POLY_STROKE,
-          (LS.femMesh?.width ?? FEM_MESH_LINE_WIDTH_PX) * paperZoom,
+          styleMm(LS.femMesh?.width ?? FEM_MESH_LINE_WIDTH_PX) * pxPerMmSheet,
           LS.femMesh?.opacity ?? FEM_MESH_OPACITY,
         );
       }
@@ -2652,7 +2653,7 @@ export function drawCanvas(
           mode: "result",
           toC: (x, y) => worldToCanvas(x, y, w, h),
           groundYAt: surfaceYAtX,
-          paperZoom,
+          pxPerMm: pxPerMmSheet,
           defaultColor: REFERENCE_COLOR,
           hoverHit,
         }),
@@ -2676,7 +2677,7 @@ export function drawCanvas(
           const arcPts = getArcPoints(surf);
           ctx.strokeStyle = fosScale.colorOf(surf.fos);
           // As wide on the sheet as in the PDF (mm).
-          ctx.lineWidth = pdfScaled(SLIP_SURFACE_LINE_MM, LS.surfaces?.width, SLIP_SURFACE_LINE_WIDTH_PX) * pxPerMmSheet;
+          ctx.lineWidth = styleMm(LS.surfaces?.width ?? SLIP_SURFACE_LINE_WIDTH_PX) * pxPerMmSheet;
           ctx.globalAlpha = LS.surfaces?.opacity ?? SLIP_SURFACE_OPACITY;
           ctx.beginPath();
           for (let i = 0; i < arcPts.length; i++) {
@@ -2752,12 +2753,12 @@ export function drawCanvas(
           ctx.setLineDash([]);
           ctx.strokeStyle = PAPER_FILL_COLOR || BG_COLOR;
           ctx.globalAlpha = 0.55;
-          ctx.lineWidth = Math.max(4, (LS.customSurfaces?.width ?? 0) + 2.5) * paperZoom;
+          ctx.lineWidth = Math.max(4 * paperZoom, styleMm(LS.customSurfaces?.width ?? 0) * pxPerMmSheet + 2.5 * paperZoom);
           path();
           ctx.stroke();
           ctx.strokeStyle = LS.customSurfaces?.color ?? CUSTOM_SURFACE;
           ctx.globalAlpha = 1;
-          ctx.lineWidth = (LS.customSurfaces?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX) * paperZoom;
+          ctx.lineWidth = styleMm(LS.customSurfaces?.width ?? CUSTOM_SURFACE_LINE_WIDTH_PX) * pxPerMmSheet;
           ctx.setLineDash(CUSTOM_SURFACE_DASH_PX.map((d) => d * paperZoom));
           path();
           ctx.stroke();
@@ -2805,7 +2806,7 @@ export function drawCanvas(
         );
 
         ctx.save();
-        const sliceWidth = (LS.slices?.width ?? SLICE_LINE_WIDTH_PX) * paperZoom * Math.max(0.6, density);
+        const sliceWidth = styleMm(LS.slices?.width ?? SLICE_LINE_WIDTH_PX) * pxPerMmSheet * Math.max(0.6, density);
         ctx.lineWidth = sliceWidth;
         ctx.globalAlpha = SLICE_LINE_OPACITY * density;
         if (DARK_THEME) {
@@ -2888,7 +2889,7 @@ export function drawCanvas(
           // Small filled circle at centre
           ctx.fillStyle = color;
           ctx.beginPath();
-          ctx.arc(ccx, ccy, (LS.center?.size ?? CENTER_DOT_RADIUS_PX) * paperZoom + halo / 2, 0, Math.PI * 2);
+          ctx.arc(ccx, ccy, styleMm(LS.center?.size ?? CENTER_DOT_RADIUS_PX) * pxPerMmSheet + halo / 2, 0, Math.PI * 2);
           ctx.fill();
         }, LS.center?.color);
       }
@@ -3035,7 +3036,7 @@ export function drawCanvas(
       // tension crack (its face is part of the slip surface) to the exit.
       paintCritical((color, halo) => {
         ctx.strokeStyle = color;
-        ctx.lineWidth = (LS.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX) * paperZoom + halo;
+        ctx.lineWidth = styleMm(LS.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX) * pxPerMmSheet + halo;
         ctx.beginPath();
         if (crack) {
           const [tx, ty] = worldToCanvas(crack.x, crack.top, w, h);

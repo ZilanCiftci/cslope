@@ -13,7 +13,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import { jsPDF } from "jspdf";
 import type { AnalysisResult, SlipSurfaceResult } from "@cslope/engine";
 import { VERIFICATION_CASES } from "@cslope/engine/verification";
-import { drawAnnotations, drawGrid, drawRulerFrame } from "./pdf-drawing";
+import { drawAnnotations, drawCriticalSurface, drawGrid, drawRulerFrame, drawSlipSurfaces } from "./pdf-drawing";
+import { drawReferenceLinesPdf } from "./pdf-reference";
 import { setSansFont } from "./pdf-fonts";
 import { drawCanvas, type DrawCanvasParams } from "../canvas/draw";
 import { createRecordingContext, type TextCall } from "../../test/recording-context";
@@ -21,9 +22,18 @@ import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import { BENCHMARK_MODELS } from "../../store/benchmarks";
 import { verificationModel } from "../../store/verification-models";
 import { DEFAULT_PIEZO_LINE, PLOT_MARGINS } from "../../store/defaults";
-import type { ModelEntry, ResultLayerStyles } from "../../store/types";
+import type { ModelEntry, PaperSize, ResultLayerStyles } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
-import { GRID_COLOR, MM_PER_PT, RULER_COLOR } from "../rendering/style-spec";
+import {
+  CENTER_DOT_RADIUS_PX,
+  CRITICAL_SURFACE_LINE_WIDTH_PX,
+  GRID_COLOR,
+  MM_PER_PT,
+  RULER_COLOR,
+  SLIP_SURFACE_LINE_WIDTH_PX,
+  STYLE_PX_PER_MM,
+} from "../rendering/style-spec";
+import { REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
 import { hexRgb } from "../results/layer-styles";
 
 // The PDF's virtual canvas: the sheet as wide as the PDF lays it out (any size would do).
@@ -466,4 +476,113 @@ describe("the sheet's frame", () => {
     expect(view.ticks).toHaveLength(0);
     expect(view.labels).toHaveLength(0);
   });
+});
+
+describe("the result layers' line widths and the center's dot", () => {
+  const REFERENCE_COLOR = "#123456";
+  /** The user's model on `paperSize` with every surface, the center and a reference line, in `styles` (or the defaults). */
+  const layersModel = (paperSize: PaperSize, styles?: ResultLayerStyles, referenceWidth?: number): ModelEntry => {
+    const m = userModel();
+    const rvs = m.resultViewSettings!;
+    return {
+      ...m,
+      resultViewSettings: {
+        ...rvs,
+        annotations: [
+          {
+            id: "ref",
+            type: "reference",
+            shape: "polyline",
+            points: [
+              [12, 2],
+              [30, 6],
+              [44, 4],
+            ],
+            color: REFERENCE_COLOR,
+            ...(referenceWidth === undefined ? {} : { width: referenceWidth }),
+          },
+        ],
+        paperFrame: { ...rvs.paperFrame, paperSize },
+        surfaceDisplay: "all",
+        showCentreMarker: true,
+        showSlices: false,
+        showFosLabel: false,
+        layerStyles: styles,
+      },
+    };
+  };
+  type Widths = { critical: number; other: number; reference: number; dot: number };
+
+  /** The widths (mm on the paper) the view draws. */
+  function viewWidths(model: ModelEntry): Widths {
+    const rec = drawSheet(model);
+    const rvs = model.resultViewSettings!;
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const mm = (px: number) => (px / pf.w) * paper.width;
+    const arcs = rec.strokes().filter((p) => p.segments.length > 20);
+    const critical = arcs.filter((p) => p.state.globalAlpha === 1);
+    const other = arcs.filter((p) => p.state.globalAlpha < 1);
+    expect(critical).toHaveLength(1);
+    expect(other).toHaveLength(1);
+    const reference = rec.strokes(REFERENCE_COLOR);
+    expect(reference).toHaveLength(1);
+    const dot = rec.fills().find((p) => p.segments[0]?.op === "arc")!;
+    expect(dot).toBeDefined();
+    return {
+      critical: mm(critical[0].state.lineWidth),
+      other: mm(other[0].state.lineWidth),
+      reference: mm(reference[0].state.lineWidth),
+      dot: mm((dot.segments[0] as { r: number }).r),
+    };
+  }
+
+  /** The same widths as the PDF prints them (mm). */
+  function pdfWidths(model: ModelEntry): Widths {
+    const { pdf, tf, rvs } = pdfSheet(model);
+    const widths: number[] = [];
+    const setLineWidth = pdf.setLineWidth.bind(pdf);
+    pdf.setLineWidth = (w: number) => {
+      widths.push(w);
+      return setLineWidth(w);
+    };
+    const radii: number[] = [];
+    const circle = pdf.circle.bind(pdf);
+    pdf.circle = (x: number, y: number, r: number, style?: string | null) => {
+      radii.push(r);
+      return circle(x, y, r, style);
+    };
+    drawSlipSurfaces(pdf, tf, RESULT, rvs);
+    const other = widths.at(-1)!;
+    drawCriticalSurface(pdf, tf, RESULT, rvs, model.coordinates, {}, { fosLabel: false });
+    // The surface's line, then the center's radius lines.
+    const critical = widths.at(-2)!;
+    drawReferenceLinesPdf(pdf, tf, rvs.annotations, model.coordinates);
+    expect(radii).toHaveLength(1);
+    return { critical, other, reference: widths.at(-1)!, dot: radii[0] };
+  }
+
+  const mm = (px: number) => px / STYLE_PX_PER_MM;
+  it.each([
+    ["A4", undefined, undefined],
+    ["A1", undefined, undefined],
+    ["A3", { criticalSurface: { width: 6 }, surfaces: { width: 3 }, center: { size: 12 } }, 7],
+  ] as [PaperSize, ResultLayerStyles | undefined, number | undefined][])(
+    "%s, %j: as wide in the view as in the PDF, 1 px = 0.1 mm whatever the paper",
+    (paperSize, styles, referenceWidth) => {
+      const model = layersModel(paperSize, styles, referenceWidth);
+      const view = viewWidths(model);
+      const pdf = pdfWidths(model);
+      const expected: Widths = {
+        critical: mm(styles?.criticalSurface?.width ?? CRITICAL_SURFACE_LINE_WIDTH_PX),
+        other: mm(styles?.surfaces?.width ?? SLIP_SURFACE_LINE_WIDTH_PX),
+        reference: mm(referenceWidth ?? REFERENCE_DEFAULT_WIDTH),
+        dot: mm(styles?.center?.size ?? CENTER_DOT_RADIUS_PX),
+      };
+      for (const k of ["critical", "other", "reference", "dot"] as const) {
+        expect(pdf[k], `PDF ${k}`).toBeCloseTo(expected[k], 9);
+        expect(view[k], `view ${k}`).toBeCloseTo(expected[k], 6);
+      }
+    },
+  );
 });
