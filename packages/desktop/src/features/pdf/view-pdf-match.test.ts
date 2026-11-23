@@ -26,14 +26,21 @@ import type { ModelEntry, PaperSize, ResultLayerStyles } from "../../store/types
 import { surfaceYAtX } from "../view/surface";
 import {
   CENTER_DOT_RADIUS_PX,
+  COLOR_BAR_FONT_PX,
+  COLOR_BAR_H,
+  COLOR_BAR_NUM_TICKS,
+  COLOR_BAR_PLATE_PAD,
+  COLOR_BAR_W,
   CRITICAL_SURFACE_LINE_WIDTH_PX,
   GRID_COLOR,
   MM_PER_PT,
   RULER_COLOR,
+  SHEET_LAYOUT_MM_PER_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
   STYLE_PX_PER_MM,
   styleFontPt,
 } from "../rendering/style-spec";
+import { colorBarDefaultPosition } from "../annotations/colorBarPlacement";
 import { REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
 import { hexRgb } from "../results/layer-styles";
 
@@ -648,4 +655,151 @@ describe("the result layers' line widths and the center's dot", () => {
       }
     },
   );
+});
+
+describe("the color bar", () => {
+  type Box = { x: number; y: number; w: number; h: number };
+  type Text = { text: string; x: number; y: number; sizeMm: number };
+  /** The bar (its gradient's border) and its plate as shares of the paper, the bar's size in mm, its title and values. */
+  type Drawn = { bar: Box; plate: Box; barMm: { w: number; h: number }; texts: Text[] };
+
+  /**
+   * V085's benchmark sheet on `paperSize`, its material table at the left
+   * under the title block (where the sheet's layout puts it after a run:
+   * there is no room below it for the bar), with a color bar at `at`, or
+   * where the Color bar button puts it on A4.
+   */
+  const barModel = (paperSize: PaperSize, at?: { x: number; y: number }): ModelEntry => {
+    const m = benchmark("V085");
+    const rvs = m.resultViewSettings!;
+    const annotations = rvs.annotations.map((a) => (a.type === "material-table" ? { ...a, x: 0.45, y: 0.26, anchor: "top-right" as const } : a));
+    const a4 = { paperSize: "A4" as const, landscape: rvs.paperFrame.landscape };
+    const place = at ?? colorBarDefaultPosition(annotations, m.materials, m.piezometricLine, a4);
+    return {
+      ...m,
+      resultViewSettings: {
+        ...rvs,
+        paperFrame: { ...rvs.paperFrame, paperSize },
+        annotations: [...annotations, { id: "bar", type: "color-bar", ...place, anchor: "top-right" }],
+      },
+    };
+  };
+  const BAR_MM = { w: COLOR_BAR_W * SHEET_LAYOUT_MM_PER_PX, h: COLOR_BAR_H * SHEET_LAYOUT_MM_PER_PX };
+  const PLATE_MM = COLOR_BAR_PLATE_PAD * SHEET_LAYOUT_MM_PER_PX;
+  const BAR_TEXT = /^(F|(≥ |≤ )?\d+\.\d\d)$/;
+
+  function viewBar(model: ModelEntry): Drawn {
+    const rec = drawSheet(model);
+    const rvs = model.resultViewSettings!;
+    const pf = computePaperFrame(W, H, rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const mm = (px: number) => (px / pf.w) * paper.width;
+    const share = ([x, y, w, h]: number[]): Box => ({ x: (x - pf.x) / pf.w, y: (y - pf.y) / pf.h, w: w / pf.w, h: h / pf.h });
+    const bars = rec.calls.filter((c) => c.name === "strokeRect" && Math.abs(mm(c.args[2] as number) - BAR_MM.w) < 1e-6);
+    expect(bars).toHaveLength(1);
+    const box = bars[0].args as number[];
+    // The plate: a pad left of the bar and above its title.
+    const plate = rec.calls.find(
+      (c) => c.name === "fillRect" && Math.abs(mm(box[0] - (c.args[0] as number)) - PLATE_MM) < 1e-6 && (c.args[1] as number) < box[1] - 1,
+    );
+    expect(plate).toBeDefined();
+    const left = share(box).x;
+    const texts = canvasTexts(model).filter((t) => BAR_TEXT.test(t.text) && t.x > left - 1e-6 && t.x < left + 0.1);
+    return { bar: share(box), plate: share(plate!.args as number[]), barMm: { w: mm(box[2]), h: mm(box[3]) }, texts };
+  }
+
+  function pdfBar(model: ModelEntry): Drawn {
+    const rvs = model.resultViewSettings!;
+    const paper = getPaperDimensions(rvs.paperFrame.paperSize, rvs.paperFrame.landscape);
+    const pdf = new jsPDF({ unit: "mm", format: [paper.width, paper.height], orientation: "landscape" });
+    const rects: { box: number[]; style: string }[] = [];
+    const rect = pdf.rect.bind(pdf);
+    pdf.rect = ((x: number, y: number, w: number, h: number, style?: string | null) => {
+      rects.push({ box: [x, y, w, h], style: String(style) });
+      return rect(x, y, w, h, style);
+    });
+    const texts: Text[] = [];
+    const text = pdf.text.bind(pdf);
+    pdf.text = ((...args: Parameters<typeof pdf.text>) => {
+      const [t, x, y] = args as unknown as [string, number, number];
+      texts.push({ text: String(t), x: x / paper.width, y: y / paper.height, sizeMm: pdf.getFontSize() * MM_PER_PT });
+      return text(...args);
+    }) as typeof pdf.text;
+    drawAnnotations(
+      pdf,
+      { paperW: paper.width, paperH: paper.height } as never,
+      rvs.annotations.filter((a) => a.type === "color-bar"),
+      RESULT,
+      model.materials,
+      model.piezometricLine ?? DEFAULT_PIEZO_LINE,
+      model.projectInfo!,
+      [],
+      { x: 0, y: 0, w: paper.width, h: paper.height },
+    );
+    const share = ([x, y, w, h]: number[]): Box => ({ x: x / paper.width, y: y / paper.height, w: w / paper.width, h: h / paper.height });
+    const bars = rects.filter((r) => r.style === "S");
+    expect(bars).toHaveLength(1);
+    // The plate: the first fill, under the bar.
+    const plate = rects.find((r) => r.style === "F")!;
+    const box = bars[0].box;
+    return { bar: share(box), plate: share(plate.box), barMm: { w: box[2], h: box[3] }, texts: texts.filter((t) => BAR_TEXT.test(t.text)) };
+  }
+
+  /** Whether a box (shares of the paper) lies inside the plot frame (PLOT_MARGINS), and so on the paper. */
+  const insideFrame = (b: Box) =>
+    b.x >= PLOT_MARGINS.L - 1e-9 &&
+    b.y >= PLOT_MARGINS.T - 1e-9 &&
+    b.x + b.w <= 1 - PLOT_MARGINS.R + 1e-9 &&
+    b.y + b.h <= 1 - PLOT_MARGINS.B + 1e-9;
+
+  it.each(["A4", "A1"] as const)("on %s: in the same place and at the same size in the view and the PDF, inside the frame", (paperSize) => {
+    const model = barModel(paperSize);
+    const view = viewBar(model);
+    const pdf = pdfBar(model);
+    for (const k of ["x", "y", "w", "h"] as const) {
+      expect(view.bar[k], `bar ${k}`).toBeCloseTo(pdf.bar[k], 5);
+      expect(view.plate[k], `plate ${k}`).toBeCloseTo(pdf.plate[k], 5);
+    }
+    // On the paper and inside the plot frame, its plate too (it was left of the frame, off the paper).
+    expect(insideFrame(view.plate), JSON.stringify(view.plate)).toBe(true);
+    expect(insideFrame(pdf.plate), JSON.stringify(pdf.plate)).toBe(true);
+    // Its title and values: the same, in the same place and at the same size, 11 layout px.
+    expect(pdf.texts).toHaveLength(1 + COLOR_BAR_NUM_TICKS + 1);
+    expect(view.texts.map((t) => t.text)).toEqual(pdf.texts.map((t) => t.text));
+    view.texts.forEach((v, i) => {
+      expect(Math.abs(v.x - pdf.texts[i].x), v.text).toBeLessThan(0.001);
+      expect(v.sizeMm, v.text).toBeCloseTo(pdf.texts[i].sizeMm, 4);
+      expect(v.sizeMm, v.text).toBeCloseTo(11 * SHEET_LAYOUT_MM_PER_PX, 6);
+    });
+  });
+
+  it("is the same size in mm on A4 and on A1, the size it had on A4: a 7 × 70 mm bar, 3.85 mm text", () => {
+    const drawn = [viewBar(barModel("A4")), viewBar(barModel("A1")), pdfBar(barModel("A4")), pdfBar(barModel("A1"))];
+    for (const d of drawn) {
+      expect(d.barMm.w).toBeCloseTo(7, 6);
+      expect(d.barMm.h).toBeCloseTo(70, 6);
+      expect(d.texts[0].sizeMm).toBeCloseTo(3.85, 4);
+    }
+    expect(styleFontPt(COLOR_BAR_FONT_PX) * MM_PER_PT).toBeCloseTo(3.85, 9);
+  });
+
+  it.each([
+    ["left of the frame, off the paper (a file saved before)", "A4", { x: 0.02, y: 0.3 }],
+    ["low at the right, placed on A1, shown on A4", "A4", { x: 0.95, y: 0.8 }],
+    ["past the paper's corner", "A1", { x: 1.2, y: 1.1 }],
+  ] as [string, PaperSize, { x: number; y: number }][])("at a stored point %s: drawn inside the frame, alike in the view and the PDF", (_, paperSize, at) => {
+    const model = barModel(paperSize, at);
+    const view = viewBar(model);
+    const pdf = pdfBar(model);
+    expect(insideFrame(view.plate), JSON.stringify(view.plate)).toBe(true);
+    for (const k of ["x", "y", "w", "h"] as const) expect(view.plate[k], k).toBeCloseTo(pdf.plate[k], 5);
+  });
+
+  it("is drawn where its point puts it when it lies inside the frame (an A4 sheet as before)", () => {
+    const at = { x: 0.6, y: 0.3 };
+    const view = viewBar(barModel("A4", at));
+    // Hung from its top-right corner: the plate's top a pad above the point, the bar's left edge 7 mm and its values left of it.
+    expect(view.plate.y).toBeCloseTo(at.y - PLATE_MM / 210, 9);
+    expect(view.bar.x).toBeLessThan(at.x - BAR_MM.w / 297);
+  });
 });
