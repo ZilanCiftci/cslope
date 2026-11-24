@@ -13,6 +13,8 @@ import {
   type TextMeasure,
 } from "./colorBarPlacement";
 import { buildMaterialTableData, measureTable } from "../canvas/helpers";
+import { benchmarkSheetOf, boxClearOfShapes, drawnViewLock, sheetShapes } from "../../store/benchmark-sheet";
+import { paperContentOf } from "../view/extents";
 import { getPaperDimensions } from "../view/paper";
 import { annotationPxToTextPx, SHEET_LAYOUT_MM_PER_PX, textLayoutPx } from "../rendering/style-spec";
 
@@ -203,6 +205,28 @@ describe("color bar default position on screen (#70)", () => {
 describe("Color bar button", () => {
   beforeEach(() => {
     useAppStore.getState().newProject();
+    // The table alone: without a view lock the model's place on the sheet is not known, so the bar keeps clear of the
+    // tables only (a locked view also keeps it clear of the model: the last test, and benchmark-sheet.test.ts).
+    const rvs = useAppStore.getState().resultViewSettings;
+    useAppStore.getState().setResultViewSettings({ ...rvs, viewLock: undefined });
+  });
+
+  it("in a locked view, goes over empty sky when the place below a tall table reaches the model's ground", () => {
+    useAppStore.getState().newProject();
+    useAppStore.setState({ materials: materials(10) });
+    const s = useAppStore.getState();
+    const rvs = s.resultViewSettings;
+    const lock = drawnViewLock(rvs.viewLock!, rvs.paperFrame);
+    s.addAnnotation("color-bar");
+    const bar = useAppStore.getState().resultViewSettings.annotations.find((a): a is PaperAnnotation => a.type === "color-bar")!;
+    const w = colorBarWidth(rvs.paperFrame);
+    const h = colorBarHeight(rvs.paperFrame);
+    const box = { x: bar.x - w, y: bar.y, w, h };
+    const shapes = sheetShapes(benchmarkSheetOf(s), paperContentOf(s), lock, rvs.paperFrame);
+    expect(boxClearOfShapes(box, shapes, lock, rvs.paperFrame, 0)).toBe(true);
+    // Not below the table at the frame's right edge, where it would lie on the ground.
+    const below = colorBarDefaultPosition(rvs.annotations, materials(10), undefined, rvs.paperFrame);
+    expect(boxClearOfShapes({ x: below.x - w, y: below.y, w, h }, shapes, lock, rvs.paperFrame, 0)).toBe(false);
   });
 
   it("puts the bar below the sheet's table for the model's materials", () => {

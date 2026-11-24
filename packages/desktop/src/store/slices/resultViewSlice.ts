@@ -6,6 +6,8 @@ import { isPaperAnnotation, referenceFromCustomPlane } from "../../features/anno
 import { NEW_MATERIAL_TABLE_FONT_SIZE } from "../../features/annotations/materialTableLayout";
 import { ANNOTATION_DEFAULT_FONT_SIZE } from "../../features/rendering/style-spec";
 import { screenSheetScale } from "../../features/view/screen-paper";
+import { paperContentOf } from "../../features/view/extents";
+import { benchmarkSheetOf, sheetObstacles } from "../benchmark-sheet";
 import {
   colorBarDefaultPosition,
   RIGHT_INSIDE_FRAME,
@@ -82,16 +84,22 @@ export const createResultViewSlice: SliceCreator<ResultViewSlice> = (set, get) =
     if (isBuiltInAnnotationType(type) && state.resultViewSettings.annotations.some((a) => a.type === type)) return;
     // The color bar right below the material table as it is drawn (its
     // height for these materials, columns, text size and paper, and on
-    // screen its least text size), at the right edge of the plot frame.
+    // screen its least text size), at the right edge of the plot frame;
+    // in a locked view clear of the model's drawing and the title block,
+    // over empty sky where the places by the table are not free.
+    const rvs = state.resultViewSettings;
     const bar =
       type === "color-bar"
         ? colorBarDefaultPosition(
-            state.resultViewSettings.annotations,
+            rvs.annotations,
             state.materials,
             state.piezometricLine,
-            state.resultViewSettings.paperFrame,
+            rvs.paperFrame,
             undefined,
-            options?.sheetScale ?? screenSheetScale(state.resultViewSettings.paperFrame),
+            options?.sheetScale ?? screenSheetScale(rvs.paperFrame),
+            rvs.viewLock
+              ? sheetObstacles(benchmarkSheetOf(state), paperContentOf(state), rvs.annotations, rvs.paperFrame, rvs.viewLock)
+              : undefined,
           )
         : null;
     // Text and plots start in the middle, or by the ones there, so a new

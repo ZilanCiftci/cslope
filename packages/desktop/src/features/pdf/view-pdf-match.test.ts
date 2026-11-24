@@ -22,7 +22,7 @@ import { computePaperFrame, getPaperDimensions } from "../view/paper";
 import { BENCHMARK_MODELS } from "../../store/benchmarks";
 import { verificationModel } from "../../store/verification-models";
 import { DEFAULT_PIEZO_LINE, PLOT_MARGINS } from "../../store/defaults";
-import type { ModelEntry, PaperSize, ResultLayerStyles } from "../../store/types";
+import type { ModelEntry, PaperAnnotation, PaperSize, ResultLayerStyles } from "../../store/types";
 import { surfaceYAtX } from "../view/surface";
 import {
   CENTER_DOT_RADIUS_PX,
@@ -41,6 +41,7 @@ import {
   styleFontPt,
 } from "../rendering/style-spec";
 import { colorBarDefaultPosition } from "../annotations/colorBarPlacement";
+import { v085AfterRunWithColorBar } from "../../test/v085-sheet";
 import { REFERENCE_DEFAULT_WIDTH } from "../annotations/reference";
 import { hexRgb } from "../results/layer-styles";
 
@@ -794,6 +795,25 @@ describe("the color bar", () => {
     expect(insideFrame(view.plate), JSON.stringify(view.plate)).toBe(true);
     for (const k of ["x", "y", "w", "h"] as const) expect(view.plate[k], k).toBeCloseTo(pdf.plate[k], 5);
   });
+
+  it.each(["A4", "A1"] as const)(
+    "placed by the Color bar button on V085's sheet after a run on %s: drawn where it is stored, alike in the view and the PDF",
+    (paperSize) => {
+      const model = v085AfterRunWithColorBar(paperSize);
+      const stored = model.resultViewSettings!.annotations.find((a): a is PaperAnnotation => a.type === "color-bar")!;
+      const view = viewBar(model);
+      const pdf = pdfBar(model);
+      for (const k of ["x", "y", "w", "h"] as const) {
+        expect(view.bar[k], `bar ${k}`).toBeCloseTo(pdf.bar[k], 5);
+        expect(view.plate[k], `plate ${k}`).toBeCloseTo(pdf.plate[k], 5);
+      }
+      expect(insideFrame(view.plate), JSON.stringify(view.plate)).toBe(true);
+      // Hung from its stored top-right corner, not moved by the frame: the plate's top a pad above the point.
+      const paper = getPaperDimensions(paperSize, model.resultViewSettings!.paperFrame.landscape);
+      expect(view.plate.y).toBeCloseTo(stored.y - PLATE_MM / paper.height, 9);
+      expect(pdf.plate.y).toBeCloseTo(stored.y - PLATE_MM / paper.height, 9);
+    },
+  );
 
   it("is drawn where its point puts it when it lies inside the frame (an A4 sheet as before)", () => {
     const at = { x: 0.6, y: 0.3 };
