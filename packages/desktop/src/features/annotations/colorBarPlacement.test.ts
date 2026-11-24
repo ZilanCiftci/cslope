@@ -6,12 +6,15 @@ import {
   COLOR_BAR_DEFAULT_Y,
   colorBarDefaultPosition,
   colorBarHeight,
+  colorBarWidth,
   materialTableBox,
   RIGHT_INSIDE_FRAME,
   TOP_INSIDE_FRAME,
   type TextMeasure,
 } from "./colorBarPlacement";
 import { buildMaterialTableData, measureTable } from "../canvas/helpers";
+import { benchmarkSheetOf, boxClearOfShapes, drawnViewLock, sheetShapes } from "../../store/benchmark-sheet";
+import { paperContentOf } from "../view/extents";
 import { getPaperDimensions } from "../view/paper";
 import { annotationPxToTextPx, SHEET_LAYOUT_MM_PER_PX, textLayoutPx } from "../rendering/style-spec";
 
@@ -82,6 +85,45 @@ describe("color bar default position", () => {
     const pos = colorBarDefaultPosition([TABLE], mats, undefined, A4, measure);
     expect(pos.y).toBe(TOP_INSIDE_FRAME);
     expect(pos.x).toBeLessThan(box.x);
+  });
+
+  it("right of the table at its top when the table is at the left with no room below or beside it at the left (a benchmark's sheet)", () => {
+    const mats = materials(10);
+    // At the left under a title block, as a benchmark's sheet lays it out after a run.
+    const left: Annotation = { ...TABLE, x: 0.45, y: 0.4 };
+    const box = materialTableBox(left, mats, undefined, A4, measure);
+    expect(box.x).toBeLessThan(0.1);
+    const pos = colorBarDefaultPosition([left], mats, undefined, A4, measure);
+    // Hung from its top-right corner: its left edge past the table's right, its top at the table's.
+    expect(pos.x - colorBarWidth(A4, measure)).toBeGreaterThan(box.x + box.w);
+    expect(pos.y).toBeCloseTo(box.y, 3);
+    // Inside the plot frame (it went left of the table, off the paper, before).
+    expect(pos.x - colorBarWidth(A4, measure)).toBeGreaterThanOrEqual(PLOT_MARGINS.L);
+    expect(pos.x).toBeLessThanOrEqual(RIGHT_INSIDE_FRAME);
+    expect(pos.y + colorBarHeight(A4)).toBeLessThanOrEqual(frameBottom);
+  });
+
+  it.each([
+    ["A4", 0.2, 0.06],
+    ["A4", 0.5, 0.5],
+    ["A4", 0.94, 0.5],
+    ["A1", 0.2, 0.06],
+    ["A3", 0.94, 0.065],
+  ] as const)("on %s with a table hung at %f, %f: the whole bar inside the plot frame", (paperSize, x, y) => {
+    const paper = { paperSize, landscape: true } as const;
+    const mats = materials(12);
+    const pos = colorBarDefaultPosition([{ ...TABLE, x, y }], mats, undefined, paper, measure);
+    expect(pos.x - colorBarWidth(paper, measure)).toBeGreaterThanOrEqual(PLOT_MARGINS.L);
+    expect(pos.x).toBeLessThanOrEqual(1 - PLOT_MARGINS.R);
+    expect(pos.y).toBeGreaterThanOrEqual(PLOT_MARGINS.T);
+    expect(pos.y + colorBarHeight(paper)).toBeLessThanOrEqual(1 - PLOT_MARGINS.B);
+  });
+
+  it("is the same height in mm on every paper size: 75.25 mm, as on A4", () => {
+    for (const paperSize of ["A4", "A3", "A1"] as const) {
+      const { height } = getPaperDimensions(paperSize, true);
+      expect(colorBarHeight({ paperSize, landscape: true }) * height).toBeCloseTo((200 + 11 + 4) * 0.35, 6);
+    }
   });
 
   it("below the lowest of several tables, whatever their anchor", () => {
@@ -163,6 +205,28 @@ describe("color bar default position on screen (#70)", () => {
 describe("Color bar button", () => {
   beforeEach(() => {
     useAppStore.getState().newProject();
+    // The table alone: without a view lock the model's place on the sheet is not known, so the bar keeps clear of the
+    // tables only (a locked view also keeps it clear of the model: the last test, and benchmark-sheet.test.ts).
+    const rvs = useAppStore.getState().resultViewSettings;
+    useAppStore.getState().setResultViewSettings({ ...rvs, viewLock: undefined });
+  });
+
+  it("in a locked view, goes over empty sky when the place below a tall table reaches the model's ground", () => {
+    useAppStore.getState().newProject();
+    useAppStore.setState({ materials: materials(10) });
+    const s = useAppStore.getState();
+    const rvs = s.resultViewSettings;
+    const lock = drawnViewLock(rvs.viewLock!, rvs.paperFrame);
+    s.addAnnotation("color-bar");
+    const bar = useAppStore.getState().resultViewSettings.annotations.find((a): a is PaperAnnotation => a.type === "color-bar")!;
+    const w = colorBarWidth(rvs.paperFrame);
+    const h = colorBarHeight(rvs.paperFrame);
+    const box = { x: bar.x - w, y: bar.y, w, h };
+    const shapes = sheetShapes(benchmarkSheetOf(s), paperContentOf(s), lock, rvs.paperFrame);
+    expect(boxClearOfShapes(box, shapes, lock, rvs.paperFrame, 0)).toBe(true);
+    // Not below the table at the frame's right edge, where it would lie on the ground.
+    const below = colorBarDefaultPosition(rvs.annotations, materials(10), undefined, rvs.paperFrame);
+    expect(boxClearOfShapes({ x: below.x - w, y: below.y, w, h }, shapes, lock, rvs.paperFrame, 0)).toBe(false);
   });
 
   it("puts the bar below the sheet's table for the model's materials", () => {

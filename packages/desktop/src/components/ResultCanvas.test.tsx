@@ -5,9 +5,9 @@ import { ResultCanvas } from "./ResultCanvas";
 import { useAppStore } from "../store/app-store";
 import { DEFAULT_RESULT_VIEW_SETTINGS } from "../store/defaults";
 import { createRecordingContext } from "../test/recording-context";
-import { computePaperFrame } from "../features/canvas/helpers";
+import { colorBarDrawnPoint, computePaperFrame } from "../features/canvas/helpers";
 import { PLOT_MARGINS } from "../store/defaults";
-import type { Annotation } from "../store/types";
+import type { Annotation, PaperAnnotation } from "../store/types";
 import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../constants";
 
 const W = 1000;
@@ -274,5 +274,78 @@ describe("ResultCanvas paper zoom and pan", () => {
     // Clicking empty paper selects the paper frame.
     fireEvent.pointerDown(canvas(), { button: 0, clientX: pf.x + 0.4 * pf.w, clientY: pf.y + 0.9 * pf.h, pointerId: 1 });
     expect(useAppStore.getState().selectedResultObject).toBe("paper-frame");
+  });
+});
+
+describe("the color bar moved past the plot frame", () => {
+  // The sheet sits above the floating toolbar's band.
+  const pf = () => computePaperFrame(W, H, "A4", true, 1, 0, 0, SCREEN_PAPER_BOTTOM_RESERVE_PX);
+  const bar = () => anno("c") as PaperAnnotation;
+  /** Where the view draws the bar (held inside the frame), as a stored point. */
+  const drawn = () =>
+    colorBarDrawnPoint(createRecordingContext(W, H).ctx, {
+      annotation: bar(),
+      paperFrame: pf(),
+      paper: paper(),
+      result: useAppStore.getState().result!,
+      resultView: useAppStore.getState().resultViewSettings,
+    });
+  const history = () => useAppStore.temporal.getState().pastStates.length;
+
+  beforeEach(() => {
+    useAppStore.setState({
+      resultViewSettings: { ...DEFAULT_RESULT_VIEW_SETTINGS, annotations: [{ id: "c", type: "color-bar", x: 0.6, y: 0.3, anchor: "top-right" }] },
+      selectedAnnotationIds: ["c"],
+    });
+    useAppStore.temporal.getState().clear();
+  });
+
+  it("stores the point it is drawn at when a drag past the frame ends, in one undo step; dragged back, it moves at once", () => {
+    renderCanvas();
+    const f = pf();
+    const [x, y] = [f.x + 0.59 * f.w, f.y + 0.35 * f.h];
+    fireEvent.pointerDown(canvas(), { button: 0, clientX: x, clientY: y, pointerId: 1 });
+    // Far past the left edge of the paper: the pointer's point would be at x = -0.1.
+    fireEvent.pointerMove(canvas(), { clientX: x - 0.7 * f.w, clientY: y, pointerId: 1 });
+    fireEvent.pointerUp(canvas(), { button: 0, clientX: x - 0.7 * f.w, clientY: y, pointerId: 1 });
+    // The stored point is where it is drawn: inside the frame, not at -0.1.
+    expect(bar().x).toBeGreaterThan(PLOT_MARGINS.L);
+    expect(drawn()).toEqual({ x: bar().x, y: bar().y });
+    expect(bar().y).toBeCloseTo(0.3, 9);
+    expect(history()).toBe(1);
+    // Dragged back, it follows the pointer from where it is drawn (no dead travel).
+    const held = bar().x;
+    const [bx, by] = [f.x + (held - 0.01) * f.w, y];
+    fireEvent.pointerDown(canvas(), { button: 0, clientX: bx, clientY: by, pointerId: 1 });
+    fireEvent.pointerMove(canvas(), { clientX: bx + 0.05 * f.w, clientY: by, pointerId: 1 });
+    fireEvent.pointerUp(canvas(), { button: 0, clientX: bx + 0.05 * f.w, clientY: by, pointerId: 1 });
+    expect(bar().x).toBeCloseTo(held + 0.05, 9);
+    expect(history()).toBe(2);
+    // One undo step each: the first undo takes it back to the frame's edge, the second to where it was.
+    act(() => useAppStore.temporal.getState().undo());
+    expect(bar().x).toBe(held);
+    act(() => useAppStore.temporal.getState().undo());
+    expect([bar().x, bar().y]).toEqual([0.6, 0.3]);
+  });
+
+  it("stores the point it is drawn at after a nudge past the frame; nudged back, it moves at once", () => {
+    act(() => useAppStore.getState().updateAnnotation("c", { x: 0.99 }));
+    useAppStore.temporal.getState().clear();
+    renderCanvas();
+    // Drawn at the frame's right edge from a point outside it: nudged further, it is stored at that edge.
+    const edge = drawn().x;
+    expect(edge).toBeLessThan(1 - PLOT_MARGINS.R);
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(bar().x).toBe(edge);
+    expect(drawn()).toEqual({ x: bar().x, y: bar().y });
+    expect(history()).toBe(1);
+    // Nudged back, it moves at once.
+    fireEvent.keyDown(document, { key: "ArrowLeft" });
+    expect(bar().x).toBeCloseTo(edge - 0.01, 9);
+    // Against the edge again: stored there, and a further press adds no undo step.
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(bar().x).toBe(edge);
+    expect(history()).toBe(3);
   });
 });

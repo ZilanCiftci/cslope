@@ -95,7 +95,6 @@ import {
   SLIP_SURFACE_OPACITY,
   UDL_LOAD_COLOR,
   MODEL_HATCH_PATTERNS,
-  COLOR_BAR_PLATE_PAD,
   CENTER_DOT_RADIUS_PX,
   CRITICAL_SURFACE_LINE_WIDTH_PX,
   SLIP_SURFACE_LINE_WIDTH_PX,
@@ -166,6 +165,7 @@ import {
 import { resolveAnnotationText } from "../annotations/resolveAnnotationText";
 import { layoutMaterialTable, MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
 import { hasFixedRange, markerShape, markerStroked, plotAxisTicks, plotLayout, resolvePlotStyle } from "../annotations/plotStyle";
@@ -1413,15 +1413,12 @@ function measureTextAnnotationPdf(
 }
 
 /**
- * Colour bar layout in mm, using the canvas proportions (bar 20 × 200,
- * labels 11, title above the bar) with the annotation scale in mm.
+ * Colour bar layout in mm: the canvas's (colorBarLayout) at the layout
+ * scale in mm, the same in mm on every paper size.
  */
 function layoutColorBarPdf(pdf: jsPDF, colorScale: FosColorScale, scale: number) {
-  const barW = 20 * scale;
-  const barH = 200 * scale;
-  const labelMm = 11 * scale;
-  const labelPt = labelMm / 0.3528;
-  const titleExtraTop = labelMm + 4 * scale;
+  // The title's and the values' size in pt (styleFontPt of COLOR_BAR_FONT_PX).
+  const labelPt = colorBarFontSize(scale) / MM_PER_PT;
   setSansFont(pdf, "normal");
   pdf.setFontSize(labelPt);
   let maxLabelW = 0;
@@ -1432,14 +1429,7 @@ function layoutColorBarPdf(pdf: jsPDF, colorScale: FosColorScale, scale: number)
       pdf.getTextWidth(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE)),
     );
   }
-  return {
-    barW,
-    barH,
-    labelPt,
-    titleExtraTop,
-    w: barW + 5 * scale + maxLabelW,
-    h: barH + titleExtraTop,
-  };
+  return { ...colorBarLayout(scale, maxLabelW), labelPt };
 }
 
 /** Points per millimetre-sized font (1 pt = 0.3528 mm). */
@@ -1514,10 +1504,11 @@ export function drawAnnotations(
   /** The surface filter, which a colour bar's "filter" range follows. */
   scaleFilter?: ScaleFilter,
 ) {
-  // The color bar's sizes grow with the paper (annotation px); the text
-  // annotations', the table's and the plots' layouts are in layout px, mm
-  // per layout px the same on every paper size (and their text sizes in
-  // px of the F label's unit, textLayoutPx).
+  // The text annotations', the table's, the plots' and the color bar's
+  // layouts are in layout px, mm per layout px the same on every paper
+  // size (and their text sizes in px of the F label's unit, textLayoutPx);
+  // a plot series' default line and markers grow with the paper
+  // (annotation px).
   const annoScale = Math.min(tf.paperW, tf.paperH) / ANNOTATION_SCALE_DIVISOR;
   const layoutScale = SHEET_LAYOUT_MM_PER_PX;
 
@@ -1556,15 +1547,10 @@ export function drawAnnotations(
     } else if (anno.type === "color-bar") {
       // Drawn whenever the canvas draws it (also for a single surface).
       const colorScale = colorScaleOfBar(anno, result, scaleFilter);
-      const size = layoutColorBarPdf(pdf, colorScale, annoScale);
-      const { x: drawX, y: drawY } = anchoredTopLeft(
-        ax,
-        ay,
-        size.w,
-        size.h,
-        anno.anchor,
-      );
-      drawColorBarAnnotation(pdf, drawX, drawY, colorScale, annoScale);
+      const size = layoutColorBarPdf(pdf, colorScale, layoutScale);
+      // Inside the plot frame, wherever its point is (as the canvas, colorBarTopLeft).
+      const { x: drawX, y: drawY } = colorBarTopLeft(ax, ay, size, anno.anchor, paperFrame);
+      drawColorBarAnnotation(pdf, drawX, drawY, colorScale, layoutScale);
     } else if (anno.type === "material-table") {
       const size = measureTablePdf(
         pdf,
@@ -1795,15 +1781,11 @@ function drawColorBarAnnotation(
   colorScale: FosColorScale,
   scale: number,
 ) {
-  const { barW, barH, labelPt, titleExtraTop, w, h } = layoutColorBarPdf(
-    pdf,
-    colorScale,
-    scale,
-  );
+  const layout = layoutColorBarPdf(pdf, colorScale, scale);
+  const { barW, barH, labelPt, titleExtraTop, w, h, plate } = layout;
   const barY = y + titleExtraTop;
 
   // On a white plate, as the canvas draws it (and the table is).
-  const plate = COLOR_BAR_PLATE_PAD * scale;
   pdf.setFillColor(255, 255, 255);
   pdf.rect(x - plate, y - plate, w + 2 * plate, h + 2 * plate, "F");
 
@@ -1827,17 +1809,17 @@ function drawColorBarAnnotation(
   pdf.setFontSize(labelPt);
   setSansFont(pdf, "bold");
   pdf.setTextColor(...MARKER_COLOR.rgb);
-  pdf.text("F", x, barY - 4 * scale, { baseline: "bottom" });
+  pdf.text("F", x, barY - layout.titleGap, { baseline: "bottom" });
 
   setSansFont(pdf, "normal");
-  const labelX = x + barW + 5 * scale;
+  const labelX = x + barW + layout.labelGap;
   for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
     const frac = t / COLOR_BAR_NUM_TICKS;
     const ty = barY + frac * barH;
 
     pdf.setDrawColor(...MARKER_COLOR.rgb);
     pdf.setLineWidth(COLOR_BAR_LINE_MM);
-    pdf.line(x + barW, ty, x + barW + 3 * scale, ty);
+    pdf.line(x + barW, ty, x + barW + layout.tick, ty);
 
     pdf.text(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS, PDF_GE, PDF_LE), labelX, ty, {
       baseline: "middle",

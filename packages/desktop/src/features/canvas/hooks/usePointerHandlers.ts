@@ -28,7 +28,7 @@ import {
   isSameCustomPlaneHit,
 } from "../custom-plane-geometry";
 import { isSameReferenceHit, referenceHitId } from "../reference-geometry";
-import { findResultHitAt, resultHitId } from "../result-hits";
+import { annotationPointAsDrawn, findResultHitAt, resultHitId } from "../result-hits";
 import { isPaperAnnotation, MIN_REFERENCE_RADIUS, translateReference } from "../../annotations/reference";
 import type { Annotation, BackgroundImage, ReferenceAnnotation } from "../../../store/types";
 import { translateCalibration } from "../../drawings/placement";
@@ -242,6 +242,25 @@ export function usePointerHandlers(deps: PointerDeps) {
 
     dragStartSnapshotRef.current = null;
   }, []);
+
+  /** At the end of a drag of paper annotations: each stored where it is drawn (a color bar inside the plot frame). */
+  const storeDraggedPointsAsDrawn = useCallback(
+    (draggedId: string) => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const s = useAppStore.getState();
+      const ids = s.selectedAnnotationIds.includes(draggedId) ? s.selectedAnnotationIds : [draggedId];
+      const rect = canvas.getBoundingClientRect();
+      const ctx = canvas.getContext("2d");
+      for (const id of ids) {
+        const a = s.resultViewSettings.annotations.find((an) => an.id === id);
+        if (!a || a.type === "reference") continue;
+        const p = annotationPointAsDrawn(ctx, s, rect, a);
+        if (p && (p.x !== a.x || p.y !== a.y)) s.updateAnnotation(id, p);
+      }
+    },
+    [canvasRef],
+  );
 
   const [mouseWorld, setMouseWorld] = useState<[number, number] | null>(null);
   const [hoverHit, setHoverHit] = useState<PointHit | null>(null);
@@ -913,6 +932,10 @@ export function usePointerHandlers(deps: PointerDeps) {
     (e: RPointerEvent<HTMLCanvasElement>, click: boolean) => {
       const press = pressRef.current;
       const drag = dragRef.current;
+      // A color bar dragged past the plot frame is drawn at its edge: its
+      // point is stored there too, in the drag's undo step, so dragging it
+      // back moves it at once.
+      if (drag?.hit.kind === "annotation" && drag.moved) storeDraggedPointsAsDrawn(drag.hit.annoId);
       if (drag) commitDragHistoryBatch();
       dragRef.current = null;
       panRef.current = null;
@@ -929,7 +952,7 @@ export function usePointerHandlers(deps: PointerDeps) {
         updateEditHover(press.candidates);
       }
     },
-    [commitDragHistoryBatch, handleEditClick, stopAutoPan, updateEditHover],
+    [commitDragHistoryBatch, handleEditClick, stopAutoPan, storeDraggedPointsAsDrawn, updateEditHover],
   );
 
   const handlePointerUp = useCallback(

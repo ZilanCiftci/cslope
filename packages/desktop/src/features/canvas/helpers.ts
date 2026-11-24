@@ -19,7 +19,7 @@ import {
   ANNOTATION_DEFAULT_FONT_FAMILY,
   ANNOTATION_DEFAULT_FONT_SIZE,
   ANNOTATION_LINE_HEIGHT,
-  ANNOTATION_SCALE_DIVISOR,
+  COLOR_BAR_NUM_TICKS,
   MATERIAL_TABLE_RULE_MM,
   MATERIAL_TABLE_SWATCH_BORDER_MM,
   MODEL_SHORT_LABELS,
@@ -37,7 +37,8 @@ import {
   MATERIAL_TABLE_FONT_SIZE,
   type MaterialTableRenderColumnKey,
 } from "../annotations/materialTableLayout";
-import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { anchoredTopLeft, anchorPointFromTopLeft } from "../annotations/anchorPosition";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { fosTickLabel } from "../../utils/fos-color";
 import { colorBarRange, type ScaleFilter } from "../annotations/colorScale";
 import { mainPiezoLine } from "../../utils/piezo";
@@ -377,6 +378,55 @@ export function measureTable(
   return { w: totalW, h: totalH };
 }
 
+/** The color bar's layout and its content's top-left corner in canvas px, as the view draws it (inside the plot frame, colorBarTopLeft). */
+function colorBarBoxPx(
+  ctx: CanvasRenderingContext2D,
+  anno: Annotation & { x: number; y: number },
+  pf: { x: number; y: number; w: number; h: number },
+  layoutScale: number,
+  result: AnalysisResult,
+  resultView: ScaleFilter | undefined,
+) {
+  ctx.font = `${colorBarFontSize(layoutScale)}px ${SHEET_SANS_FAMILY}`;
+  let maxLabelW = 0;
+  const fosScale = colorBarRange(anno, result, resultView);
+  for (let t = 0; t <= COLOR_BAR_NUM_TICKS; t++) {
+    maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, COLOR_BAR_NUM_TICKS)).width);
+  }
+  const bar = colorBarLayout(layoutScale, maxLabelW);
+  const { x, y } = colorBarTopLeft(pf.x + anno.x * pf.w, pf.y + anno.y * pf.h, bar, anno.anchor, pf);
+  return { bar, x, y };
+}
+
+/**
+ * The point a color bar is drawn at, as fractions of the paper (as its x
+ * and y are stored): its stored point, or, for a point outside the plot
+ * frame, the one the frame holds it at (colorBarTopLeft). A drag or a
+ * nudge stores this, so the stored point is where the bar is drawn.
+ */
+export function colorBarDrawnPoint(
+  ctx: CanvasRenderingContext2D,
+  params: {
+    annotation: Annotation & { x: number; y: number };
+    paperFrame: { x: number; y: number; w: number; h: number };
+    paper: Pick<ResultViewSettings["paperFrame"], "paperSize" | "landscape">;
+    result: AnalysisResult;
+    resultView?: ScaleFilter;
+  },
+): { x: number; y: number } {
+  const { annotation: anno, paperFrame: pf, paper, result, resultView } = params;
+  const layoutScale = (SHEET_LAYOUT_MM_PER_PX * pf.w) / getPaperDimensions(paper.paperSize, paper.landscape).width;
+  const { bar, x, y } = colorBarBoxPx(ctx, anno, pf, layoutScale, result, resultView);
+  const p = anchorPointFromTopLeft(x, y, bar.w, bar.h, anno.anchor);
+  const fx = (p.x - pf.x) / pf.w;
+  const fy = (p.y - pf.y) / pf.h;
+  // A point inside the frame stays exactly as stored (no rounding through px).
+  return {
+    x: Math.abs(fx - anno.x) < 1e-9 ? anno.x : fx,
+    y: Math.abs(fy - anno.y) < 1e-9 ? anno.y : fy,
+  };
+}
+
 export function getAnnotationBoundsPx(
   ctx: CanvasRenderingContext2D,
   params: {
@@ -409,9 +459,8 @@ export function getAnnotationBoundsPx(
   // (it is hit-tested through canvas/reference-geometry.ts).
   if (anno.type === "reference") return { x: 0, y: 0, w: 0, h: 0 };
 
-  // The color bar's px grow with the paper; the text's and the table's
-  // layout px (and their text) are the same in mm on every paper size.
-  const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
+  // The text's, the table's and the color bar's layout px (and their
+  // text) are the same in mm on every paper size.
   const layoutScale = (SHEET_LAYOUT_MM_PER_PX * pf.w) / getPaperDimensions(paper.paperSize, paper.landscape).width;
   const ax = pf.x + anno.x * pf.w;
   const ay = pf.y + anno.y * pf.h;
@@ -456,29 +505,8 @@ export function getAnnotationBoundsPx(
   }
 
   if (anno.type === "color-bar") {
-    const barW = 20 * annoScale;
-    const barH = 200 * annoScale;
-    const numTicks = 5;
-    const labelPad = 5 * annoScale;
-    const labelFontSize = 11 * annoScale;
-
-    ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
-    let maxLabelW = 0;
-    const fosScale = colorBarRange(anno, result, resultView);
-    for (let t = 0; t <= numTicks; t++) {
-      maxLabelW = Math.max(maxLabelW, ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width);
-    }
-
-    const titleExtraTop = labelFontSize + 4 * annoScale;
-    const contentW = barW + labelPad + maxLabelW;
-    const contentH = barH + titleExtraTop;
-    const { x: tlx, y: tly } = anchoredTopLeft(
-      ax,
-      ay,
-      contentW,
-      contentH,
-      anno.anchor,
-    );
+    const { bar, x: tlx, y: tly } = colorBarBoxPx(ctx, anno, pf, layoutScale, result, resultView);
+    const { w: contentW, h: contentH } = bar;
 
     return {
       x: tlx - hitPad,

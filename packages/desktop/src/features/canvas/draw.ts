@@ -49,6 +49,7 @@ import { getPaperDimensions, sheetMmPerPx, sheetPxScale } from "../view/paper";
 import type { PageTitleLine } from "../export/page-title";
 import { RESULT_OUT_OF_DATE_NOTE } from "../../store/out-of-date";
 import { anchoredTopLeft } from "../annotations/anchorPosition";
+import { colorBarFontSize, colorBarLayout, colorBarTopLeft } from "../annotations/colorBarLayout";
 import { MATERIAL_TABLE_FONT_SIZE } from "../annotations/materialTableLayout";
 import { computeSlicePlotData } from "../annotations/slicePlotData";
 import { tickLabel } from "../annotations/plotAxis";
@@ -96,7 +97,6 @@ import {
   SLICE_LINE_WIDTH_PX,
   SLIP_SURFACE_OPACITY,
   MODEL_HATCH_PATTERNS,
-  COLOR_BAR_PLATE_PAD,
   CENTER_DOT_RADIUS_PX,
   CENTER_LINE_WIDTH_PX,
   CRITICAL_SURFACE_LINE_WIDTH_PX,
@@ -2613,15 +2613,14 @@ export function drawCanvas(
       paperFrame.offsetY ?? 0,
       paperBottomReserve,
     );
-    // Scale factor for annotations based on paper frame size (the color bar's).
-    const annoScale = Math.min(pf.w, pf.h) / ANNOTATION_SCALE_DIVISOR;
-    // Millimetres of the paper per annotation px (the PDF's annotation scale).
+    // Millimetres of the paper per annotation px (a slice plot series' default sizes).
     const paperMm = getPaperDimensions(paperFrame.paperSize, paperFrame.landscape);
     const mmPerAnnoPx = Math.min(paperMm.width, paperMm.height) / ANNOTATION_SCALE_DIVISOR;
     // Screen px per mm of the paper: the PDF's mm sizes on the sheet.
     const pxPerMmSheet = pf.w / paperMm.width;
-    // Screen px per layout px: the text annotations', the material table's
-    // and the slice plot's layouts, the same in mm on every paper size.
+    // Screen px per layout px: the text annotations', the material table's,
+    // the slice plot's and the color bar's layouts, the same in mm on every
+    // paper size.
     const layoutScale = SHEET_LAYOUT_MM_PER_PX * pxPerMmSheet;
 
     // The layers, each drawn by a step below, in the model's order
@@ -3368,10 +3367,9 @@ export function drawCanvas(
           ctx.fillText(line, drawX, drawY + i * lineHeight);
         });
       } else if (anno.type === "color-bar") {
-        const barW = 20 * annoScale;
-        const barH = 200 * annoScale;
-        const labelFontSize = 11 * annoScale;
-        const titleExtraTop = labelFontSize + 4 * annoScale;
+        // Its sizes in layout px and its text in px of the F label's
+        // unit: the same in mm on every paper size (colorBarLayout).
+        const labelFontSize = colorBarFontSize(layoutScale);
 
         // Measure label width for total content size
         ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
@@ -3385,21 +3383,16 @@ export function drawCanvas(
             ctx.measureText(fosTickLabel(fosScale, t, numTicks)).width,
           );
         }
-        const contentW = barW + 5 * annoScale + maxLabelW;
-        const contentH = barH + titleExtraTop;
-        const { x: drawX, y: drawY } = anchoredTopLeft(
-          ax,
-          ay,
-          contentW,
-          contentH,
-          anno.anchor,
-        );
+        const bar = colorBarLayout(layoutScale, maxLabelW);
+        const { barW, barH, titleExtraTop, w: contentW, h: contentH } = bar;
+        // Inside the plot frame, wherever its point is (colorBarTopLeft).
+        const { x: drawX, y: drawY } = colorBarTopLeft(ax, ay, bar, anno.anchor, pf);
         const barX = drawX;
         const barY = drawY + titleExtraTop;
 
         // On a plate, as the table: its values stay readable over the
         // model, the water-line labels and the result's surfaces.
-        const plate = COLOR_BAR_PLATE_PAD * annoScale;
+        const plate = bar.plate;
         ctx.save();
         ctx.fillStyle = INK.tableBg;
         ctx.fillRect(drawX - plate, drawY - plate, contentW + 2 * plate, contentH + 2 * plate);
@@ -3427,12 +3420,12 @@ export function drawCanvas(
         ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        const labelX2 = barX + barW + 5 * annoScale;
+        const labelX2 = barX + barW + bar.labelGap;
 
         // Title
         ctx.font = `bold ${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textBaseline = "bottom";
-        ctx.fillText("F", barX, barY - 4 * annoScale);
+        ctx.fillText("F", barX, barY - bar.titleGap);
         ctx.font = `${labelFontSize}px ${SHEET_SANS_FAMILY}`;
         ctx.textBaseline = "middle";
 
@@ -3446,7 +3439,7 @@ export function drawCanvas(
           ctx.lineWidth = COLOR_BAR_LINE_MM * pxPerMmSheet;
           ctx.beginPath();
           ctx.moveTo(barX + barW, y);
-          ctx.lineTo(barX + barW + 3 * annoScale, y);
+          ctx.lineTo(barX + barW + bar.tick, y);
           ctx.stroke();
 
           // Label

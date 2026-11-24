@@ -6,16 +6,20 @@ import {
   benchmarkSheetOf,
   boxClearOfShapes,
   boxesOverlap,
+  drawnViewLock,
   isBenchmarkSheet,
   MODEL_BOTTOM_MM,
   sheetShapes,
   worldBox,
 } from "./benchmark-sheet";
 import { PAPER_DIMENSIONS, PLOT_MARGINS } from "./defaults";
-import type { ModelEntry } from "./types";
+import type { ModelEntry, PaperAnnotation } from "./types";
 import { verificationModel, verificationModels } from "./verification-models";
 import { boundsOf, paperContentBounds, paperContentOf } from "../features/view/extents";
-import { virtualPaperFrame } from "../features/view/paper";
+import { getPaperDimensions, virtualPaperFrame } from "../features/view/paper";
+import { colorBarHeight, colorBarWidth } from "../features/annotations/colorBarPlacement";
+import { COLOR_BAR_PLATE_PAD, SHEET_LAYOUT_MM_PER_PX } from "../features/rendering/style-spec";
+import { v085AfterRunWithColorBar } from "../test/v085-sheet";
 
 type Sheet = Pick<ModelEntry, "projectInfo" | "materials" | "piezometricLine" | "resultViewSettings" | "coordinates" | "analysisLimits"> &
   Partial<Pick<ModelEntry, "result">>;
@@ -112,4 +116,42 @@ describe("the sheet of a benchmark opened from Help › Benchmarks", () => {
     expect(boxClearOfShapes(sheet.tables[0], sheet.shapes, sheet.lock, sheet.paper, 2.5)).toBe(true);
     expect(anyOverlap(sheet.tables, sheet.texts)).toBe(false);
   });
+});
+
+describe("a new color bar on a benchmark's sheet after a run", () => {
+  it.each(["A4", "A1"] as const)(
+    "V085 on %s: over empty sky inside the frame, clear of the model's box, its search limit markers, its F label and the text",
+    (paperSize) => {
+      const m = v085AfterRunWithColorBar(paperSize);
+      const rvs = m.resultViewSettings!;
+      const paper = rvs.paperFrame;
+      expect(paper.paperSize).toBe(paperSize);
+      const lock = drawnViewLock(rvs.viewLock!, paper);
+      const bar = rvs.annotations.find((a): a is PaperAnnotation => a.type === "color-bar")!;
+      // The bar with its plate, hung from its top-right corner (the sizes colorBarDefaultPosition places it by).
+      const { width, height } = getPaperDimensions(paper.paperSize, paper.landscape);
+      const pw = (COLOR_BAR_PLATE_PAD * SHEET_LAYOUT_MM_PER_PX) / width;
+      const ph = (COLOR_BAR_PLATE_PAD * SHEET_LAYOUT_MM_PER_PX) / height;
+      const w = colorBarWidth(paper);
+      const h = colorBarHeight(paper);
+      const box = { x: bar.x - w - pw, y: bar.y - ph, w: w + 2 * pw, h: h + 2 * ph };
+      // Inside the plot frame, so drawn where it is stored.
+      expect(box.x).toBeGreaterThanOrEqual(PLOT_MARGINS.L);
+      expect(box.y).toBeGreaterThanOrEqual(PLOT_MARGINS.T);
+      expect(box.x + box.w).toBeLessThanOrEqual(1 - PLOT_MARGINS.R);
+      expect(box.y + box.h).toBeLessThanOrEqual(1 - PLOT_MARGINS.B);
+      // Clear of the model's bounding box (its geometry, the ground and what lies under it).
+      const model = worldBox(boundsOf(m.coordinates)!, lock);
+      expect(boxesOverlap(box, model), `bar ${JSON.stringify(box)} over the model ${JSON.stringify(model)}`).toBe(false);
+      // Clear of everything the model draws: the search limit markers, the F label, the ground, water and loads.
+      const sheet = benchmarkSheetOf(m);
+      const content = paperContentOf(m);
+      const shapes = sheetShapes(sheet, content, lock, paper);
+      expect(m.analysisLimits?.enabled).toBe(true);
+      expect(boxClearOfShapes(box, shapes, lock, paper, 0), "bar over the model's drawing").toBe(true);
+      // Clear of the title block and the material table.
+      const { texts, tables } = annotationBoxes(sheet, rvs.annotations, paper);
+      expect(anyOverlap([box], [...texts, ...tables])).toBe(false);
+    },
+  );
 });

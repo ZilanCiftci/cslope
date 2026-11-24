@@ -35,7 +35,7 @@ import type {
   ProjectInfo,
   ViewLock,
 } from "./types";
-import { materialTableBox, type TextMeasure } from "../features/annotations/colorBarPlacement";
+import { materialTableBox, type SheetObstacles, type TextMeasure } from "../features/annotations/colorBarPlacement";
 import { resolveAnnotationText } from "../features/annotations/resolveAnnotationText";
 import {
   ANNOTATION_DEFAULT_FONT_SIZE,
@@ -382,19 +382,29 @@ function fitScale(content: PaperContent, paper: Paper, top: number): number | nu
   return s;
 }
 
+/** Whether a box comes within the gaps of one of the texts (under the block, beside its text). */
+function besideText(box: SheetBox, texts: SheetBox[]): boolean {
+  const beside = { x: box.x - SIDE_GAP, y: box.y - GAP / 2, w: box.w + SIDE_GAP, h: box.h + GAP };
+  return texts.some((t) => boxesOverlap(beside, t));
+}
+
 /**
  * The table's place in a frame: its top-right corner, from the top right
  * down and then further left, the first where it is clear of the title
  * block's text and (on the grid) of what the model draws. Null where none.
  */
-function placeTable(size: { w: number; h: number }, texts: SheetBox[], occupancy: Occupancy): { x: number; y: number } | null {
+function placeTable(
+  size: { w: number; h: number },
+  texts: SheetBox[],
+  occupancy: Occupancy,
+  start: { right: number; top: number } = { right: TABLE_RIGHT, top: TABLE_TOP },
+): { x: number; y: number } | null {
   const left = PLOT_MARGINS.L + 0.01;
   const bottom = 1 - PLOT_MARGINS.B - 0.01;
-  for (let right = TABLE_RIGHT; right - size.w >= left - 1e-9; right -= STEP) {
-    for (let top = TABLE_TOP; top + size.h <= bottom + 1e-9; top += STEP) {
+  for (let right = start.right; right - size.w >= left - 1e-9; right -= STEP) {
+    for (let top = start.top; top + size.h <= bottom + 1e-9; top += STEP) {
       const box = { x: right - size.w, y: top, w: size.w, h: size.h };
-      const beside = { x: box.x - SIDE_GAP, y: box.y - GAP / 2, w: box.w + SIDE_GAP, h: box.h + GAP };
-      if (texts.some((t) => boxesOverlap(beside, t))) continue;
+      if (besideText(box, texts)) continue;
       if (!occupancy.free(box)) continue;
       return { x: Math.round(right * 1000) / 1000, y: Math.round(top * 1000) / 1000 };
     }
@@ -470,6 +480,57 @@ export function layoutBenchmarkSheet(
   return {
     annotations: annotations.map((a): Annotation => (a === table ? { ...table, x: at.x, y: at.y, anchor: "top-right" } : a)),
     viewLock: lock,
+  };
+}
+
+/**
+ * The frame a locked view is drawn in: a lock whose shape differs from the
+ * drawing area's is widened (or heightened) to it, centred across and
+ * with its bottom on the bottom of the area, as the view and the PDF fit
+ * it (computeViewLockFit).
+ */
+export function drawnViewLock(lock: ViewLock, paper: Paper): ViewLock {
+  const { width, height } = getPaperDimensions(paper.paperSize, paper.landscape);
+  const plotW = width * (1 - PLOT_MARGINS.L - PLOT_MARGINS.R);
+  const plotH = height * (1 - PLOT_MARGINS.T - PLOT_MARGINS.B);
+  const worldW = lock.topRight[0] - lock.bottomLeft[0];
+  const worldH = lock.topRight[1] - lock.bottomLeft[1];
+  if (!(worldW > 0 && worldH > 0)) return lock;
+  const mmPerWorld = Math.min(plotW / worldW, plotH / worldH);
+  const w = plotW / mmPerWorld;
+  const h = plotH / mmPerWorld;
+  const cx = (lock.bottomLeft[0] + lock.topRight[0]) / 2;
+  const y0 = lock.bottomLeft[1];
+  return { bottomLeft: [cx - w / 2, y0], topRight: [cx + w / 2, y0 + h] };
+}
+
+/**
+ * What a new color bar keeps clear of on a sheet in a locked view (any
+ * model's, not only a benchmark's): everything the model draws there, by
+ * TABLE_GAP_MM (sheetShapes on the occupancy grid, as the benchmark's
+ * table), and the text on the sheet (a title block) with the gaps the
+ * table keeps from it; its place over empty sky is found as the table's
+ * (placeTable). See colorBarDefaultPosition.
+ */
+export function sheetObstacles(
+  model: BenchmarkSheetModel,
+  content: PaperContent,
+  annotations: Annotation[],
+  paper: Paper,
+  lock: ViewLock,
+): SheetObstacles {
+  const drawn = drawnViewLock(lock, paper);
+  const occupancy = new Occupancy(sheetShapes(model, content, drawn, paper), drawn, paper, TABLE_GAP_MM);
+  const { texts } = annotationBoxes(
+    model,
+    annotations.filter((a) => a.hidden !== true),
+    paper,
+  );
+  return {
+    clear: (box) => occupancy.free(box) && !besideText(box, texts),
+    // The tables as texts (with the gap at the side of each, too).
+    place: (size, avoid, start) =>
+      placeTable(size, [...texts, ...avoid.map((b) => ({ ...b, w: b.w + SIDE_GAP }))], occupancy, start),
   };
 }
 
