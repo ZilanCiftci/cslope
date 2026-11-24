@@ -9,7 +9,7 @@
 import type { Annotation, AppState } from "../../store/types";
 import { annotationsInLayerOrder } from "../results/layers";
 import { SCREEN_PAPER_BOTTOM_RESERVE_PX } from "../../constants";
-import { computePaperFrame, getAnnotationBoundsPx } from "./helpers";
+import { colorBarDrawnPoint, computePaperFrame, getAnnotationBoundsPx } from "./helpers";
 import { findReferencePartsAt } from "./reference-geometry";
 import type { PointHit } from "./types";
 
@@ -68,6 +68,40 @@ export function findPaperAnnotationAt(
     }
   }
   return null;
+}
+
+/**
+ * Where a color bar at `anno`'s point is drawn on the sheet in `rect`
+ * (colorBarDrawnPoint: held inside the plot frame), as its x and y are
+ * stored; its own point for any other annotation, or without a result or
+ * a context to measure it with.
+ */
+export function annotationPointAsDrawn(
+  ctx: CanvasRenderingContext2D | null,
+  state: AppState,
+  rect: ClientRect,
+  anno: Annotation,
+): { x: number; y: number } | null {
+  if (anno.type === "reference") return null;
+  if (anno.type !== "color-bar" || !ctx || !state.result) return { x: anno.x, y: anno.y };
+  const frame = state.resultViewSettings.paperFrame;
+  const pf = computePaperFrame(
+    rect.width,
+    rect.height,
+    frame.paperSize,
+    frame.landscape,
+    frame.zoom ?? 1,
+    frame.offsetX ?? 0,
+    frame.offsetY ?? 0,
+    SCREEN_PAPER_BOTTOM_RESERVE_PX,
+  );
+  return colorBarDrawnPoint(ctx, {
+    annotation: anno,
+    paperFrame: pf,
+    paper: frame,
+    result: state.result,
+    resultView: state.resultViewSettings,
+  });
 }
 
 /** The annotation a result-view hit names. */

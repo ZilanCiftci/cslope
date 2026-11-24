@@ -24,6 +24,7 @@ import {
   type CanvasWheelEvent,
 } from "../features/canvas/hooks/useNonPassiveWheel";
 import { drawCanvas, type DrawCanvasParams } from "../features/canvas/draw";
+import { annotationPointAsDrawn } from "../features/canvas/result-hits";
 import { pageTitleLine } from "../features/export/page-title";
 import { PAPER_ZOOM_MAX, PAPER_ZOOM_MIN,
   ARROW_HEIGHT_PX,
@@ -556,11 +557,18 @@ export function ResultCanvas() {
         if (e.key === "ArrowUp") dy = -step;
         if (e.key === "ArrowDown") dy = step;
 
-        const annos = useAppStore.getState().resultViewSettings.annotations;
+        const state = useAppStore.getState();
+        const canvas = canvasRef.current;
         for (const id of selectedAnnotationIds) {
-          const a = annos.find((an) => an.id === id);
+          const a = state.resultViewSettings.annotations.find((an) => an.id === id);
           // A reference annotation lies in model coordinates: dragged, not nudged.
-          if (a && a.type !== "reference") updateAnnotation(id, { x: a.x + dx, y: a.y + dy });
+          if (!a || a.type === "reference") continue;
+          const moved = { ...a, x: a.x + dx, y: a.y + dy };
+          // Stored where it is drawn: a color bar is held inside the plot frame.
+          const p =
+            (canvas && annotationPointAsDrawn(canvas.getContext("2d"), state, canvas.getBoundingClientRect(), moved)) ||
+            { x: moved.x, y: moved.y };
+          if (p.x !== a.x || p.y !== a.y) updateAnnotation(id, p);
         }
       }
     };
